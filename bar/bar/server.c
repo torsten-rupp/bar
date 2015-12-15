@@ -8513,8 +8513,8 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *            entryType=<type>
-*            patternType=<type>
 *            pattern=<text>
+*            [patternType=<type>]
 *          Result:
 \***********************************************************************/
 
@@ -8523,7 +8523,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   EntryTypes    entryType;
   PatternTypes  patternType;
-  String        pattern;
+  String        patternString;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -8541,17 +8541,14 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
     return;
   }
-  pattern = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
-    return;
-  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -8559,14 +8556,14 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
-      String_delete(pattern);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      String_delete(patternString);
       return;
     }
 
     // add to include list
-    EntryList_append(&jobNode->includeEntryList,entryType,pattern,patternType);
+    EntryList_append(&jobNode->includeEntryList,entryType,patternString,patternType);
     jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
@@ -8576,7 +8573,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(pattern);
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -8700,8 +8697,8 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
-*            patternType=<type>
 *            pattern=<text>
+*            [patternType=<type>]
 *          Result:
 \***********************************************************************/
 
@@ -8709,7 +8706,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   PatternTypes  patternType;
-  String        pattern;
+  String        patternString;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -8722,17 +8719,14 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
     return;
   }
-  pattern = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
-    return;
-  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -8740,14 +8734,14 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
-      String_delete(pattern);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      String_delete(patternString);
       return;
     }
 
     // add to exclude list
-    PatternList_append(&jobNode->excludePatternList,pattern,patternType);
+    PatternList_append(&jobNode->excludePatternList,patternString,patternType);
     jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
@@ -8757,7 +8751,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(pattern);
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -8879,8 +8873,8 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
-*            patternType=<pattern type>
 *            pattern=<text>
+*            [patternType=<type>]
 *          Result:
 \***********************************************************************/
 
@@ -8888,7 +8882,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   PatternTypes  patternType;
-  String        pattern;
+  String        patternString;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -8901,17 +8895,14 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
     return;
   }
-  pattern = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
-    return;
-  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -8921,15 +8912,19 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
+      String_delete(patternString);
       return;
     }
 
     // add to source list
-    DeltaSourceList_append(&jobNode->deltaSourceList,pattern,patternType);
+    DeltaSourceList_append(&jobNode->deltaSourceList,patternString,patternType);
     jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -9050,8 +9045,8 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
-*            patternType=<type>
 *            pattern=<text>
+*            [patternType=<type>]
 *          Result:
 \***********************************************************************/
 
@@ -9059,7 +9054,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   PatternTypes  patternType;
-  String        pattern;
+  String        patternString;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -9072,17 +9067,14 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
     return;
   }
-  pattern = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
-    return;
-  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -9090,17 +9082,21 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      String_delete(patternString);
       return;
     }
 
     // add to exclude list
-    PatternList_append(&jobNode->compressExcludePatternList,pattern,patternType);
+    PatternList_append(&jobNode->compressExcludePatternList,patternString,patternType);
     jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -11643,7 +11639,7 @@ restoreCommandInfo.clientInfo->abortFlag = FALSE;
 * Return : -
 * Notes  : Arguments:
 *            maxCount=<n>|0
-*            pattern=<pattern>
+*            pattern=<text>
 *          Result:
 *            jobUUID=<uuid> \
 *            name=<name> \
@@ -11749,7 +11745,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   }
 
   uint             maxCount;
-  String           pattern;
+  String           patternString;
   UUIDDataList     uuidDataList;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -11766,11 +11762,11 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
   // get max. count, index state, filter pattern
   StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
-  pattern = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
-    String_delete(pattern);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
     return;
   }
 
@@ -11778,7 +11774,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(pattern);
+    String_delete(patternString);
     return;
   }
 
@@ -11811,7 +11807,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
           sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
 
-          String_delete(pattern);
+          String_delete(patternString);
           return;
         }
         uuidDataNode->jobUUID             = String_duplicate(jobNode->uuid);
@@ -11843,7 +11839,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
 
-    String_delete(pattern);
+    String_delete(patternString);
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
@@ -11870,7 +11866,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
 
-        String_delete(pattern);
+        String_delete(patternString);
         return;
       }
       uuidDataNode->jobUUID             = String_duplicate(jobUUID);
@@ -11924,7 +11920,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   // free resources
   String_delete(lastErrorMessage);
   List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
-  String_delete(pattern);
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -12174,7 +12170,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 *            maxCount=<n>|0
 *            indexState=<state>|*
 *            indexMode=<mode>|*
-*            pattern=<pattern>
+*            pattern=<text>
 *          Result:
 *            storageId=<id>
 *            entityId=<id>
@@ -12197,7 +12193,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   uint             maxCount;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
-  String           pattern;
+  String           patternString;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   StorageSpecifier storageSpecifier;
@@ -12245,11 +12241,11 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
     return;
   }
-  pattern = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
-    String_delete(pattern);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
     return;
   }
 
@@ -12257,7 +12253,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(pattern);
+    String_delete(patternString);
     return;
   }
 
@@ -12274,7 +12270,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                 NULL, // uuid
                                 entityId,
                                 STORAGE_TYPE_ANY,
-                                pattern,
+                                patternString,
                                 NULL, // hostName
                                 NULL, // loginName
                                 NULL, // deviceName
@@ -12293,7 +12289,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
 
-    String_delete(pattern);
+    String_delete(patternString);
     return;
   }
   count = 0;
@@ -12366,7 +12362,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   String_delete(storageName);
   String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
-  String_delete(pattern);
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -12379,9 +12375,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            storageName=<storage name pattern>
-*            patternType=<type>
 *            pattern=<text>
+*            [patternType=<type>]
 *          Result:
 *            storageId=<id>
 \***********************************************************************/
@@ -12389,7 +12384,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   PatternTypes patternType;
-  String       pattern;
+  String       patternString;
   DatabaseId   storageId;
   Errors       error;
 
@@ -12397,28 +12392,25 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   assert(argumentMap != NULL);
 
   // get pattern type, pattern
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
     return;
   }
-  pattern = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
-    return;
-  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
   // check if index database is available
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(pattern);
+    String_delete(patternString);
     return;
   }
 
   // create index for matching files
-  error = Storage_forAll(pattern,
+  error = Storage_forAll(patternString,
                          CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
                          {
                            StorageSpecifier storageSpecifier;
@@ -12484,7 +12476,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
   }
 
   // free resources
-  String_delete(pattern);
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -12728,10 +12720,12 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <state>|*
+*            state=<state>|*
 *            jobUUID=<uuid>|"" and/or
 *            entityId=<id>|0 and/or
-*            storageId=<id>|0
+*            storageId=<id>|0 and/or
+*            pattern=<text>
+*            [patternType=<type>]
 *          Result:
 \***********************************************************************/
 
@@ -12742,9 +12736,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   DatabaseId       entityId;
   DatabaseId       storageId;
+  PatternTypes     patternType;
+  String           patternString;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexStates      indexState;
+//  String           storageName;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12763,23 +12760,28 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
+  patternString = String_new();
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+      && !StringMap_getString(argumentMap,"pattern",patternString,NULL)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id> or pattern=<text>");
+    String_delete(patternString);
     return;
   }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
   // check if index database is available
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(patternString);
     return;
   }
 
-  if (String_isEmpty(jobUUID) && (storageId == DATABASE_ID_NONE) && (entityId == DATABASE_ID_NONE))
+  if (String_isEmpty(jobUUID) && (storageId == DATABASE_ID_NONE) && (entityId == DATABASE_ID_NONE) && String_isEmpty(patternString))
   {
     // refresh all storage with specific state
     error = Index_initListStorage(&indexQueryHandle,
@@ -12799,6 +12801,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(patternString);
       return;
     }
     while (   !isCommandAborted(clientInfo,id)
@@ -12853,6 +12856,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(patternString);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
@@ -12903,6 +12907,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(patternString);
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
@@ -12944,9 +12949,64 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                   );
   }
 
+  if (!String_isEmpty(patternString))
+  {
+    // refresh all storage which match pattern
+    error = Index_initListStorage(&indexQueryHandle,
+                                  indexHandle,
+                                  NULL, // uuid
+                                  DATABASE_ID_ANY, // entityId,
+                                  STORAGE_TYPE_ANY,
+                                  patternString,//NULL, // storageName
+                                  NULL, // hostName
+                                  NULL, // loginName
+                                  NULL, // deviceName
+                                  NULL, // fileName
+                                  INDEX_STATE_SET_ALL,
+                                  NULL,  // storageIds
+                                  0   // storageIdCount
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(patternString);
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
+                                NULL, // archive type
+                                NULL, // storageName,
+                                NULL, // createdDateTime
+                                NULL, // entries
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+//      if (Pattern_match(&pattern,storageName,patternType,PATTERN_MATCH_MODE_EXACT))
+      {
+        // set state
+        Index_setState(indexHandle,
+                       storageId,
+                       INDEX_STATE_UPDATE_REQUESTED,
+                       0LL,
+                       NULL
+                      );
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -13152,7 +13212,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 *            isCheckedStorageOnly=0|1
 *            entryMaxCount=<n>|0
 *            isNewestEntriesOnly=0|1
-*            entryPattern=<pattern>
+*            entryPattern=<text>
 *          Result:
 *            entryType=FILE entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
@@ -13487,7 +13547,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     return foundIndexNode;
   }
 
-  String           entryPattern;
+  String           entryPatternString;
   bool             checkedStorageOnly;
   uint             entryMaxCount;
   bool             newestEntriesOnly;
@@ -13514,29 +13574,29 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   assert(argumentMap != NULL);
 
   // entry pattern, get max. count, new entries only
-  entryPattern = String_new();
-  if (!StringMap_getString(argumentMap,"entryPattern",entryPattern,NULL))
+  entryPatternString = String_new();
+  if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryPattern=<pattern>");
-    String_delete(entryPattern);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryPattern=<text>");
+    String_delete(entryPatternString);
     return;
   }
   if (!StringMap_getBool(argumentMap,"checkedStorageOnly",&checkedStorageOnly,FALSE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected checkedStorageOnly=yes|no");
-    String_delete(entryPattern);
+    String_delete(entryPatternString);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"entryMaxCount",&entryMaxCount,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryMaxCount=<n>");
-    String_delete(entryPattern);
+    String_delete(entryPatternString);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestEntriesOnly",&newestEntriesOnly,FALSE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestEntriesOnly=yes|no");
-    String_delete(entryPattern);
+    String_delete(entryPatternString);
     return;
   }
 
@@ -13544,7 +13604,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(entryPattern);
+    String_delete(entryPatternString);
     return;
   }
 
@@ -13566,7 +13626,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                   Array_length(&clientInfo->storageIdArray),
                                   NULL,  // entryIds
                                   0,  // entryIdCount
-                                  entryPattern
+                                  entryPatternString
                                  );
     }
     else
@@ -13577,7 +13637,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                   0,  // storageIdCount
                                   NULL,  // entryIds
                                   0,  // entryIdCount
-                                  entryPattern
+                                  entryPatternString
                                  );
     }
     if (error != ERROR_NONE)
@@ -13587,7 +13647,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-      String_delete(entryPattern);
+      String_delete(entryPatternString);
       return;
     }
     while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
@@ -13652,7 +13712,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                    Array_length(&clientInfo->storageIdArray),
                                    NULL,  // entryIds
                                    0,  // entryIdCount
-                                   entryPattern
+                                   entryPatternString
                                   );
     }
     else
@@ -13663,7 +13723,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                    0,  // storageIdCount
                                    NULL,  // entryIds
                                    0,  // entryIdCount
-                                   entryPattern
+                                   entryPatternString
                                   );
     }
     if (error != ERROR_NONE)
@@ -13673,7 +13733,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-      String_delete(entryPattern);
+      String_delete(entryPatternString);
       return;
     }
     while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
@@ -13733,7 +13793,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                         Array_length(&clientInfo->storageIdArray),
                                         NULL,  // entryIds
                                         0,  // entryIdCount
-                                        entryPattern
+                                        entryPatternString
                                        );
     }
     else
@@ -13744,7 +13804,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                         0,  // storageIdCount
                                         NULL,  // entryIds
                                         0,  // entryIdCount
-                                        entryPattern
+                                        entryPatternString
                                        );
     }
     if (error != ERROR_NONE)
@@ -13754,7 +13814,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-      String_delete(entryPattern);
+      String_delete(entryPatternString);
       return;
     }
     while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
@@ -13813,7 +13873,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                   Array_length(&clientInfo->storageIdArray),
                                   NULL,  // entryIds
                                   0,  // entryIdCount
-                                  entryPattern
+                                  entryPatternString
                                  );
     }
     else
@@ -13824,7 +13884,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                   0,  // storageIdCount
                                   NULL,  // entryIds
                                   0,  // entryIdCount
-                                  entryPattern
+                                  entryPatternString
                                  );
     }
     if (error != ERROR_NONE)
@@ -13834,7 +13894,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-      String_delete(entryPattern);
+      String_delete(entryPatternString);
       return;
     }
     destinationName = String_new();
@@ -13897,7 +13957,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                       Array_length(&clientInfo->storageIdArray),
                                       NULL,  // storageIds
                                       0,  // storageIdCount
-                                      entryPattern
+                                      entryPatternString
                                      );
     }
     else
@@ -13908,7 +13968,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                       0,  // storageIdCount
                                       NULL,  // entryIds
                                       0,  // entryIdCount
-                                      entryPattern
+                                      entryPatternString
                                      );
     }
     if (error != ERROR_NONE)
@@ -13918,7 +13978,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-      String_delete(entryPattern);
+      String_delete(entryPatternString);
       return;
     }
     destinationName = String_new();
@@ -13985,7 +14045,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                     Array_length(&clientInfo->storageIdArray),
                                     NULL,  // entryIds
                                     0,  // entryIdCount
-                                    entryPattern
+                                    entryPatternString
                                    );
     }
     else
@@ -13996,7 +14056,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                     0,  // storageIdCount
                                     NULL,  // entryIds
                                     0,  // entryIdCount
-                                    entryPattern
+                                    entryPatternString
                                    );
     }
     if (error != ERROR_NONE)
@@ -14006,7 +14066,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-      String_delete(entryPattern);
+      String_delete(entryPatternString);
       return;
     }
     while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
@@ -14156,7 +14216,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   String_delete(storageName);
   String_delete(regexpString);
   List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
-  String_delete(entryPattern);
+  String_delete(entryPatternString);
 }
 
 #ifndef NDEBUG
