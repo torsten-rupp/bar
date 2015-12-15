@@ -4062,6 +4062,111 @@ LOCAL void remoteThreadCode(void)
 
 /*---------------------------------------------------------------------*/
 
+typedef Errors(*StorageFunction)(ConstString storageName, const FileInfo *fileInfo, void *userData);
+
+LOCAL Errors forAllStorage(ConstString storagePattern, StorageFunction storageFunction, void *storageUserData)
+{
+  StorageSpecifier           storageSpecifier;
+  JobOptions                 jobOptions;
+  StringList                 directoryList;
+  String                     fileName;
+  String                     printableStorageName;
+  String                     storageName;
+  String                     storageDirectoryName;
+  Errors                     error;
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  FileInfo                   fileInfo;
+
+  assert(storageName != NULL);
+  assert(storageFunction != NULL);
+
+  Storage_initSpecifier(&storageSpecifier);
+  initJobOptions(&jobOptions);
+  copyJobOptions(serverDefaultJobOptions,&jobOptions);
+  StringList_init(&directoryList);
+  fileName             = String_new();
+  printableStorageName = String_new();
+  storageName          = String_new();
+
+  error = Storage_parseName(&storageSpecifier,storagePattern);
+  if (error == ERROR_NONE)
+  {
+    // get base directory
+    String_set(fileName,storageSpecifier.archiveName);
+    do
+    {
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        &jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH,
+                                        fileName
+                                       );
+      if (error == ERROR_NONE)
+      {
+        StringList_append(&directoryList,fileName);
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
+      else
+      {
+        File_getFilePathName(fileName,fileName);
+      }
+    }
+    while ((error != ERROR_NONE) && !String_isEmpty(fileName));
+
+    // read directory and scan all sub-directories
+    while (!StringList_isEmpty(&directoryList))
+    {
+      StringList_getLast(&directoryList,fileName);
+
+      // open directory
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        &jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_LOW,
+                                        fileName
+                                       );
+
+      if (error == ERROR_NONE)
+      {
+        // read directory
+        while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
+               && (error == ERROR_NONE)
+              )
+        {
+          // read next directory entry
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+          if (error != ERROR_NONE)
+          {
+            continue;
+          }
+
+          // check entry type and file name
+          if (fileInfo.type == FILE_TYPE_DIRECTORY)
+          {
+            StringList_append(&directoryList,fileName);
+          }
+
+          // callback
+          error = storageFunction(Storage_getName(&storageSpecifier,fileName),&fileInfo,storageUserData);
+        }
+
+        // close directory
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
+    }
+  }
+
+  // free resources
+  String_delete(storageName);
+  String_delete(printableStorageName);
+  String_delete(fileName);
+  StringList_done(&directoryList);
+  doneJobOptions(&jobOptions);
+  Storage_doneSpecifier(&storageSpecifier);
+
+  return error;
+}
+
 /***********************************************************************\
 * Name   : deleteStorage
 * Purpose: delete storage
@@ -5090,7 +5195,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
   String                     storageName;
   String                     storageDirectoryName;
   JobOptions                 jobOptions;
-  StringNode                 *storageDirectoryNode;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   FileInfo                   fileInfo;
@@ -5108,8 +5212,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
 
   // initialize variables
   StringList_init(&storageDirectoryList);
-  StringList_init(&directoryList);
   Storage_initSpecifier(&storageSpecifier);
+  StringList_init(&directoryList);
   fileName             = String_new();
   printableStorageName = String_new();
   storageName          = String_new();
@@ -5352,8 +5456,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
   String_delete(storageName);
   String_delete(printableStorageName);
   String_delete(fileName);
-  Storage_doneSpecifier(&storageSpecifier);
   StringList_done(&directoryList);
+  Storage_doneSpecifier(&storageSpecifier);
   StringList_done(&storageDirectoryList);
 }
 
@@ -8544,7 +8648,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
   }
   if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
     return;
   }
   pattern = String_new();
@@ -8725,7 +8829,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
   }
   if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=GLOB|REGEX|EXTENDED_REGEX");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
     return;
   }
   pattern = String_new();
@@ -12380,26 +12484,33 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <storage name>
+*            storageName=<storage name pattern>
+*            patternType=<type>
+*            pattern=<text>
 *          Result:
 *            storageId=<id>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String     storageName;
-  DatabaseId storageId;
-  Errors     error;
+  PatternTypes patternType;
+  String       pattern;
+  DatabaseId   storageId;
+  Errors       error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get storage name
-  storageName = String_new();
-  if (!StringMap_getString(argumentMap,"name",storageName,NULL))
+  // get pattern type, pattern
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
-    String_delete(storageName);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
+    return;
+  }
+  pattern = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<pattern>");
     return;
   }
 
@@ -12407,29 +12518,78 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(storageName);
+    String_delete(pattern);
     return;
   }
 
-  // create index
-  error = Index_newStorage(indexHandle,
-                           DATABASE_ID_NONE, // entityId
-                           storageName,
-                           INDEX_STATE_UPDATE_REQUESTED,
-                           INDEX_MODE_MANUAL,
-                           &storageId
-                          );
-  if (error != ERROR_NONE)
+  // create index for matching files
+  error = forAllStorage(pattern,
+                        CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
+                        {
+                          StorageSpecifier storageSpecifier;
+
+                          UNUSED_VARIABLE(fileInfo);
+                          UNUSED_VARIABLE(userData);
+
+                          // init variables
+                          Storage_initSpecifier(&storageSpecifier);
+
+                          error = Storage_parseName(&storageSpecifier,storageName);
+                          if (error == ERROR_NONE)
+                          {
+                            if (String_endsWithCString(storageSpecifier.archiveName,".bar"))
+                            {
+fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPrintableName(&storageSpecifier,NULL)));
+                              if (!Index_findByName(indexHandle,
+                                                    storageSpecifier.type,
+                                                    storageSpecifier.hostName,
+                                                    storageSpecifier.loginName,
+                                                    storageSpecifier.deviceName,
+                                                    storageSpecifier.archiveName,
+                                                    NULL,  // jobUUID
+                                                    NULL,  // scheduleUUID
+  //TODO NULL
+                                                    &storageId,
+                                                    NULL,  // indexState,
+                                                    NULL  // lastCheckedTimestamp
+                                                   )
+                                 )
+                              {
+                                error = Index_newStorage(indexHandle,
+                                                         DATABASE_ID_NONE, // entityId
+                                                         storageName,
+                                                         INDEX_STATE_UPDATE_REQUESTED,
+                                                         INDEX_MODE_MANUAL,
+                                                         &storageId
+                                                        );
+                                if (error != ERROR_NONE)
+                                {
+                                  return error;
+                                }
+
+                                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu",storageId);
+                              }
+                            }
+                          }
+
+                          // free resources
+                          Storage_doneSpecifier(&storageSpecifier);
+
+                          return ERROR_NONE;
+                        },NULL)
+                       );
+
+  if (error == ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"add storage fail");
-    String_delete(storageName);
-    return;
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageId=%llu",storageId);
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"add storage to index fail");
+  }
 
   // free resources
-  String_delete(storageName);
+  String_delete(pattern);
 }
 
 /***********************************************************************\
@@ -14291,7 +14451,7 @@ SERVER_COMMANDS[] =
 
   { "INDEX_ENTRIES_LIST",         serverCommand_indexEntriesList,        AUTHORIZATION_STATE_OK      },
 
-  // obsolote
+  // obsolete
   { "OPTION_GET",                 serverCommand_jobOptionGet,            AUTHORIZATION_STATE_OK      },
   { "OPTION_SET",                 serverCommand_jobOptionSet,            AUTHORIZATION_STATE_OK      },
   { "OPTION_DELETE",              serverCommand_jobOptionDelete,         AUTHORIZATION_STATE_OK      },
