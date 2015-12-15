@@ -427,6 +427,7 @@ public class Settings
   public static String                abortJobName                    = null;
   public static String                indexDatabaseAddStorageName     = null;
   public static String                indexDatabaseRemoveStorageName  = null;
+  public static String                indexDatabaseRefreshStorageName = null;
   public static String                indexDatabaseStorageListPattern = null;
   public static String                indexDatabaseEntriesListPattern = null;
   public static int                   pauseTime                       = 0;
