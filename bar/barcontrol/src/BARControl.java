@@ -1996,14 +1996,14 @@ public class BARControl
 
           // remote index for storage
           error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH name=%'S",
-                                                               Settings.indexDatabaseRemoveStorageName
+                                                               Settings.indexDatabaseRefreshStorageName
                                                               ),
                                            0,
                                            errorMessage
                                           );
           if (error != Errors.NONE)
           {
-            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,errorMessage[0]);
+            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
