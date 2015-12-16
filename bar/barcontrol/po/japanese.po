@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-12-15 11:59+0100\n"
+"POT-Creation-Date: 2015-12-16 16:41+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -43,25 +43,25 @@ msgstr "キロバイト"
 msgid "bytes"
 msgstr "バイト"
 
-#: src/BARControl.java:1342
+#: src/BARControl.java:1348
 msgid "Login BAR server"
 msgstr "ログインBARサーバ"
 
-#: src/BARControl.java:1354 src/TabJobs.java:5514 src/TabJobs.java:5979
+#: src/BARControl.java:1368 src/TabJobs.java:5514 src/TabJobs.java:5979
 msgid "Server"
 msgstr "サーバ"
 
-#: src/BARControl.java:1376 src/Dialogs.java:2545 src/TabJobs.java:5396
+#: src/BARControl.java:1388 src/Dialogs.java:2545 src/TabJobs.java:5396
 #: src/TabRestore.java:6728 src/TabRestore.java:7167 src/TabRestore.java:7201
 #: src/TabRestore.java:7235 src/TabRestore.java:7269
 msgid "Password"
 msgstr "パスワード"
 
-#: src/BARControl.java:1389 src/TabJobs.java:5520 src/TabJobs.java:5985
+#: src/BARControl.java:1401 src/TabJobs.java:5520 src/TabJobs.java:5985
 msgid "Login"
 msgstr "ログイン"
 
-#: src/BARControl.java:1406 src/BARControl.java:2530 src/Dialogs.java:1914
+#: src/BARControl.java:1418 src/BARControl.java:2556 src/Dialogs.java:1914
 #: src/Dialogs.java:1984 src/Dialogs.java:2485 src/Dialogs.java:2668
 #: src/Dialogs.java:3269 src/Dialogs.java:4015 src/Dialogs.java:4181
 #: src/Dialogs.java:4367 src/Dialogs.java:4697 src/TabJobs.java:7485
@@ -72,72 +72,72 @@ msgstr "ログイン"
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: src/BARControl.java:1562 src/BARControl.java:1608
+#: src/BARControl.java:1584 src/BARControl.java:1634
 #, fuzzy
 msgid "Connection fail: "
 msgstr "接続ミス"
 
-#: src/BARControl.java:1580
+#: src/BARControl.java:1602
 msgid "Program"
 msgstr "プログラム"
 
-#: src/BARControl.java:1582
+#: src/BARControl.java:1604
 #, fuzzy
 msgid "Connect"
 msgstr "接続ミス"
 
-#: src/BARControl.java:1621
+#: src/BARControl.java:1647
 msgid "Start"
 msgstr "スタート"
 
-#: src/BARControl.java:1634 src/BusyDialog.java:263 src/Dialogs.java:153
+#: src/BARControl.java:1660 src/BusyDialog.java:263 src/Dialogs.java:153
 #: src/TabRestore.java:6549 src/TabRestore.java:6770 src/TabRestore.java:7312
 #: src/TabStatus.java:1872
 msgid "Abort"
 msgstr "中止"
 
-#: src/BARControl.java:1647 src/TabStatus.java:706 src/TabStatus.java:1298
+#: src/BARControl.java:1673 src/TabStatus.java:706 src/TabStatus.java:1298
 #: src/TabStatus.java:1611 src/TabStatus.java:1623
 msgid "Pause"
 msgstr "一時停止"
 
-#: src/BARControl.java:1649
+#: src/BARControl.java:1675
 msgid "10min"
 msgstr "10分"
 
-#: src/BARControl.java:1662
+#: src/BARControl.java:1688
 msgid "60min"
 msgstr "60分"
 
-#: src/BARControl.java:1675
+#: src/BARControl.java:1701
 msgid "120min"
 msgstr "120分"
 
-#: src/BARControl.java:1690
+#: src/BARControl.java:1716
 msgid "Create operation"
 msgstr "作成作業"
 
-#: src/BARControl.java:1704
+#: src/BARControl.java:1730
 msgid "Storage operation"
 msgstr "保存作業"
 
-#: src/BARControl.java:1718
+#: src/BARControl.java:1744
 msgid "Restore operation"
 msgstr "復元作業"
 
-#: src/BARControl.java:1731
+#: src/BARControl.java:1757
 msgid "Index update operation"
 msgstr "インデックス更新作業"
 
-#: src/BARControl.java:1745
+#: src/BARControl.java:1771
 msgid "Toggle suspend/continue"
 msgstr "切り替え　一時停止/継続"
 
-#: src/BARControl.java:1758
+#: src/BARControl.java:1784
 msgid "Clear stored passwords on server"
 msgstr "サーバに保存したパスワードの消去"
 
-#: src/BARControl.java:1770
+#: src/BARControl.java:1796
 msgid ""
 "Cannot clear passwords on server:\n"
 "\n"
@@ -145,31 +145,31 @@ msgstr ""
 "サーバ上のパスワードを消去できません:\n"
 "\n"
 
-#: src/BARControl.java:1777 src/TabStatus.java:1344
+#: src/BARControl.java:1803 src/TabStatus.java:1344
 msgid "Quit"
 msgstr "終了"
 
-#: src/BARControl.java:1792
+#: src/BARControl.java:1818
 msgid "Help"
 msgstr "ヘルプ"
 
-#: src/BARControl.java:1794 src/BARControl.java:1803
+#: src/BARControl.java:1820 src/BARControl.java:1829
 msgid "About"
 msgstr "インフォメーション"
 
-#: src/BARControl.java:1803
+#: src/BARControl.java:1829
 msgid "Written by Torsten Rupp"
 msgstr "作成者　トルステン・ルップ"
 
-#: src/BARControl.java:2530
+#: src/BARControl.java:2556
 msgid "Connection fail"
 msgstr "接続ミス"
 
-#: src/BARControl.java:2530
+#: src/BARControl.java:2556
 msgid "Error: "
 msgstr "エラー："
 
-#: src/BARControl.java:2530
+#: src/BARControl.java:2556
 msgid "Try again"
 msgstr "再試行"
 

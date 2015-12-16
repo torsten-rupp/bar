@@ -374,6 +374,19 @@ public class Settings
   {
     public String name;
     public int    port;
+    public String password;
+
+    /** create server
+     * @param name server name
+     * @param port server port number
+     * @param password server login password
+     */
+    Server(String name, int port, String password)
+    {
+      this.name     = name;
+      this.port     = port;
+      this.password = password;
+    }
 
     /** create server
      * @param name server name
@@ -381,8 +394,7 @@ public class Settings
      */
     Server(String name, int port)
     {
-      this.name            = name;
-      this.port        = port;
+      this(name,port,"");
     }
 
     /** create server
@@ -397,7 +409,7 @@ public class Settings
      */
     public Server clone()
     {
-      return new Server(name,port);
+      return new Server(name,port,password);
     }
 
     /** convert data to string
@@ -405,7 +417,7 @@ public class Settings
      */
     public String toString()
     {
-      return "Server {"+name+", "+port+"}";
+      return name+((port != DEFAULT_SERVER_PORT) ? ":"+port : "");
     }
   }
 
@@ -460,8 +472,6 @@ public class Settings
   {
     public Object run(Object value)
     {
-Dprintf.dprintf("^^^^^^^^^^^^^^^^^^^^^pull!");
-Dprintf.dprintf("value=%s",value);
       Server servers[] = (Server[])value;
 
       for (String serverName : Settings.serverNames)
@@ -481,7 +491,7 @@ Dprintf.dprintf("value=%s",value);
         if (!existsFlag)
         {
           Server newServers[] = Arrays.copyOf(servers,servers.length+1);
-          newServers[newServers.length-1] = new Server(serverName,Settings.serverPort);
+          newServers[newServers.length-1] = new Server(serverName,Settings.serverPort,Settings.serverPassword);
           servers = newServers;
         }
       }
@@ -550,7 +560,7 @@ Dprintf.dprintf("value=%s",value);
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
   public static Server[]              servers                         = new Server[]{new Server(DEFAULT_SERVER_NAME,DEFAULT_SERVER_PORT)};
   @SettingValue(name="serverName",type=String.class,obsolete=true)
-  public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
+  private static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
   @SettingValue(obsolete=true)
   public static String                serverPassword                  = null;
   @SettingValue(obsolete=true)

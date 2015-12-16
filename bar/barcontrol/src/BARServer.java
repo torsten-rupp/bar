@@ -859,7 +859,8 @@ class BARServer
   private static byte[]      RANDOM_DATA = new byte[64];
 
   // --------------------------- variables --------------------------------
-  private static String         serverName;
+  private static String         name;
+  private static int            port;
 
   private static byte[]         sessionId;
   private static String         passwordEncryptType;
@@ -884,21 +885,20 @@ class BARServer
   }
 
   /** connect to BAR server
-   * @param hostname host name
-   * @param port port number or 0
+   * @param name host name
+   * @param port host port number or 0
    * @param tlsPort TLS port number of 0
    * @param serverPassword server password
    */
-  public static void connect(String hostname, int port, int tlsPort, String serverPassword, String serverKeyFileName)
+  public static void connect(String name, int port, int tlsPort, String serverPassword, String serverKeyFileName)
   {
     final int TIMEOUT = 20;
 
-    String         serverName = null;
-    Socket         socket     = null;
-    BufferedWriter output     = null;
-    BufferedReader input      = null;
+    Socket         socket = null;
+    BufferedWriter output = null;
+    BufferedReader input  = null;
 
-    assert hostname != null;
+    assert name != null;
     assert (port != 0) || (tlsPort != 0);
 
     // get all possible bar.jks file names
@@ -940,7 +940,7 @@ class BARServer
 
             sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
 
-            Socket plainSocket = new Socket(hostname,port);
+            Socket plainSocket = new Socket(name,port);
             plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
             input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream()));
@@ -962,7 +962,7 @@ class BARServer
             }
 
             // create TLS socket on plain socket
-            sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,hostname,tlsPort,false);
+            sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
             sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
             sslSocket.startHandshake();
 
@@ -1005,19 +1005,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           }
           catch (SocketTimeoutException exception)
           {
-            connectErrorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+            connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
           }
           catch (ConnectException exception)
           {
-            connectErrorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+            connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
           }
           catch (NoRouteToHostException exception)
           {
-            connectErrorMessage = "host '"+hostname+"' unreachable (no route to host)";
+            connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
           }
           catch (UnknownHostException exception)
           {
-            connectErrorMessage = "unknown host '"+hostname+"'";
+            connectErrorMessage = "unknown host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
           }
           catch (RuntimeException exception)
           {
@@ -1052,7 +1052,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
 
             // create TLS socket
-            sslSocket = (SSLSocket)sslSocketFactory.createSocket(hostname,tlsPort);
+            sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
             sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
             sslSocket.startHandshake();
 
@@ -1094,19 +1094,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           }
           catch (SocketTimeoutException exception)
           {
-            connectErrorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+            connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
           }
           catch (ConnectException exception)
           {
-            connectErrorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+            connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
           }
           catch (NoRouteToHostException exception)
           {
-            connectErrorMessage = "host '"+hostname+"' unreachable (no route to host)";
+            connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
           }
           catch (UnknownHostException exception)
           {
-            connectErrorMessage = "unknown host '"+hostname+"'";
+            connectErrorMessage = "unknown host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
           }
           catch (RuntimeException exception)
           {
@@ -1127,7 +1127,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       try
       {
-        Socket plainSocket = new Socket(hostname,port);
+        Socket plainSocket = new Socket(name,port);
         plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
         input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream()));
@@ -1147,11 +1147,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (NoRouteToHostException exception)
       {
-        connectErrorMessage = "host '"+hostname+"' unreachable (no route to host)";
+        connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
       }
       catch (UnknownHostException exception)
       {
-        connectErrorMessage = "unknown host '"+hostname+"'";
+        connectErrorMessage = "unknown host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
       }
       catch (Exception exception)
       {
@@ -1198,15 +1198,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                             ) != Errors.NONE
          )
       {
-        throw new ConnectionError("Cannot get protocol version for '"+hostname+"': "+errorMessage[0]);
+        throw new ConnectionError("Cannot get protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': "+errorMessage[0]);
       }
       if (valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR)
       {
-        throw new CommunicationError("Incompatible protocol version for '"+hostname+"': expected "+PROTOCOL_VERSION_MAJOR+", got "+valueMap.getInt("major"));
+        throw new CommunicationError("Incompatible protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': expected "+PROTOCOL_VERSION_MAJOR+", got "+valueMap.getInt("major"));
       }
       if (valueMap.getInt("minor") != PROTOCOL_VERSION_MINOR)
       {
-        BARControl.printWarning("Incompatible minor protocol version for '"+hostname+"': expected "+PROTOCOL_VERSION_MINOR+", got "+valueMap.getInt("minor"));
+        BARControl.printWarning("Incompatible minor protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': expected "+PROTOCOL_VERSION_MINOR+", got "+valueMap.getInt("minor"));
       }
 
       // get file separator character
@@ -1235,10 +1235,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     // setup new connection
-    BARServer.serverName = hostname;
-    BARServer.socket     = socket;
-    BARServer.input      = input;
-    BARServer.output     = output;
+    BARServer.name   = name;
+    BARServer.port   = socket.getPort();
+    BARServer.socket = socket;
+    BARServer.input  = input;
+    BARServer.output = output;
 
     // start read thread
     readThread = new ReadThread(input);
@@ -1313,7 +1314,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     StringBuilder buffer = new StringBuilder();
 
-    buffer.append(serverName);
+    buffer.append(name);
     if (socket instanceof SSLSocket)
     {
       buffer.append(" (TLS)");
