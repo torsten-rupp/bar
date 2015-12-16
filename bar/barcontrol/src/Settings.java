@@ -55,15 +55,29 @@ import org.eclipse.swt.graphics.RGB;
   String[] text() default {""};                  // comment before value
 }
 
+/** setting value migrate interface
+ */
+interface SettingMigrate
+{
+  /** migrate value
+   * @param value current value
+   * @return new value
+   */
+  public Object run(Object value);
+}
+
 /** setting value annotation
  */
 @Target({TYPE,FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @interface SettingValue
 {
-  String name()         default "";              // name of value
-  String defaultValue() default "";              // default value
-  Class  type()         default DEFAULT.class;   // adapter class
+  String  name()         default "";              // name of value
+  String  defaultValue() default "";              // default value
+  Class   type()         default DEFAULT.class;   // adapter class
+  boolean obsolete()     default false;           // true iff obsolete setting
+
+  Class migrate() default DEFAULT.class;
 
   static final class DEFAULT
   {
@@ -93,6 +107,10 @@ abstract class SettingValueAdapter<String,Value>
   public boolean equals(Value value0, Value value1)
   {
     return false;
+  }
+
+  public void migrate()
+  {
   }
 }
 
@@ -350,6 +368,128 @@ public class Settings
     }
   }
 
+  /** server
+   */
+  static class Server implements Cloneable
+  {
+    public String name;
+    public int    port;
+
+    /** create server
+     * @param name server name
+     * @param port server port number
+     */
+    Server(String name, int port)
+    {
+      this.name            = name;
+      this.port        = port;
+    }
+
+    /** create server
+     */
+    Server()
+    {
+      this("",0);
+    }
+
+    /** clone object
+     * @return cloned object
+     */
+    public Server clone()
+    {
+      return new Server(name,port);
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "Server {"+name+", "+port+"}";
+    }
+  }
+
+  /** config value adapter String <-> server
+   */
+  class SettingValueAdapterServer extends SettingValueAdapter<String,Server>
+  {
+    /** convert to value
+     * @param string string
+     * @return value
+     */
+    public Server toValue(String string) throws Exception
+    {
+      Server server = null;
+
+      Object[] data = new Object[2];
+      if      (StringParser.parse(string,"%s:%d",data,StringUtils.QUOTE_CHARS))
+      {
+        String name = (String)data[0];
+        int    port = (Integer)data[1];
+        server = new Server(name,port);
+      }
+      else
+      {
+        throw new Exception(String.format("Cannot parse server definition '%s'",string));
+      }
+
+      return server;
+    }
+
+    /** convert to string
+     * @param server server
+     * @return string
+     */
+    public String toString(Server server) throws Exception
+    {
+      return server.name+":"+server.port;
+    }
+
+    /** compare servers
+     * @param server0,server1 servers to compare
+     * @return true if servers equals
+     */
+    public boolean equals(Server server0, Server server1)
+    {
+      return    server0.name.equals(server1.name)
+             && server0.port ==  server1.port;
+    }
+  }
+
+  class SettingMigrateServer implements SettingMigrate
+  {
+    public Object run(Object value)
+    {
+Dprintf.dprintf("^^^^^^^^^^^^^^^^^^^^^pull!");
+Dprintf.dprintf("value=%s",value);
+      Server servers[] = (Server[])value;
+
+      for (String serverName : Settings.serverNames)
+      {
+        boolean existsFlag = false;
+        for (Server server : servers)
+        {
+          if (   server.name.equals(serverName)
+              && (server.port == Settings.serverPort)
+             )
+          {
+            existsFlag = true;
+            break;
+          }
+        }
+
+        if (!existsFlag)
+        {
+          Server newServers[] = Arrays.copyOf(servers,servers.length+1);
+          newServers[newServers.length-1] = new Server(serverName,Settings.serverPort);
+          servers = newServers;
+        }
+      }
+
+      return servers;
+    }
+  }
+
   // --------------------------- constants --------------------------------
   static final String DEFAULT_SERVER_NAME                 = "localhost";
   static final int    DEFAULT_SERVER_PORT                 = 38523;
@@ -407,13 +547,15 @@ public class Settings
 
   // server settings
   @SettingComment(text={"","Server settings"})
-  @SettingValue(name="serverName",type=String.class)
+  @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
+  public static Server[]              servers                         = new Server[]{new Server(DEFAULT_SERVER_NAME,DEFAULT_SERVER_PORT)};
+  @SettingValue(name="serverName",type=String.class,obsolete=true)
   public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
-  @SettingValue
+  @SettingValue(obsolete=true)
   public static String                serverPassword                  = null;
-  @SettingValue
+  @SettingValue(obsolete=true)
   public static int                   serverPort                      = DEFAULT_SERVER_PORT;
-  @SettingValue
+  @SettingValue(obsolete=true)
   public static int                   serverTLSPort                   = DEFAULT_SERVER_TLS_PORT;
   @SettingValue
   public static String                serverKeyFileName               = null;
@@ -455,12 +597,12 @@ public class Settings
   {
     if (file.exists())
     {
+      // get setting classes
+      Class[] settingClasses = getSettingClasses();
+
       BufferedReader input = null;
       try
       {
-        // get setting classes
-        Class[] settingClasses = getSettingClasses();
-
         // open file
         input = new BufferedReader(new FileReader(file));
 
@@ -754,6 +896,39 @@ exception.printStackTrace();
           // ignored
         }
       }
+
+      // migrate values
+      for (Class clazz : settingClasses)
+      {
+        for (Field field : clazz.getDeclaredFields())
+        {
+          for (Annotation annotation : field.getDeclaredAnnotations())
+          {
+            if (annotation instanceof SettingValue)
+            {
+              SettingValue settingValue = (SettingValue)annotation;
+
+              try
+              {
+                Class migrate = settingValue.migrate();
+                if (migrate != SettingValue.DEFAULT.class)
+                {
+                  Constructor constructor = migrate.getDeclaredConstructor(Settings.class);
+                  SettingMigrate settingMigrate = (SettingMigrate)constructor.newInstance(new Settings());
+//                  settingMigrate.run(settingValue);
+                  field.set(null,settingMigrate.run(field.get(null)));
+                }
+              }
+              catch (Exception exception)
+              {
+Dprintf.dprintf("exception=%s",exception);
+exception.printStackTrace();
+              }
+
+            }
+          }
+        }
+      }
     }
   }
 
@@ -808,6 +983,8 @@ exception.printStackTrace();
             {
               SettingValue settingValue = (SettingValue)annotation;
 
+              if (!settingValue.obsolete())
+              {
               // get value and write to file
               String name = (!settingValue.name().isEmpty()) ? settingValue.name() : field.getName();
               try
@@ -1074,6 +1251,7 @@ Dprintf.dprintf("field.getType()=%s",type);
               {
 Dprintf.dprintf("exception=%s",exception);
 exception.printStackTrace();
+              }
               }
             }
             else if (annotation instanceof SettingComment)
