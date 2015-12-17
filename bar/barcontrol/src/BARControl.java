@@ -933,7 +933,7 @@ public class BARControl
      */
     LoginData(String name, int port, int tlsPort)
     {
-      final Settings.Server defaultServer = (Settings.servers.length > 0) ? Settings.servers[Settings.servers.length-1] : null;
+      final Settings.Server defaultServer = Settings.getLastServer();
 
       this.serverName = !name.equals("") ? name : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME);
       this.password   = (defaultServer != null) ? defaultServer.password : "";
@@ -1562,8 +1562,7 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          final Settings.Server defaultServer = (Settings.servers.length > 0) ? Settings.servers[Settings.servers.length-1] : null;
-
+          final Settings.Server defaultServer = Settings.getLastServer();
           LoginData loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
                                               (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                               (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
@@ -1611,7 +1610,7 @@ public class BARControl
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            final Settings.Server defaultServer = (Settings.servers.length > 0) ? Settings.servers[Settings.servers.length-1] : null;
+            final Settings.Server defaultServer = Settings.getLastServer();
 
             LoginData loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                                 (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
@@ -1925,9 +1924,6 @@ public class BARControl
     {
       // load settings
       Settings.load();
-Dprintf.dprintf("");
-for (Settings.Server s: Settings.servers) Dprintf.dprintf("%s",s);
-//System.exit(3);
 
       // parse arguments
       parseArguments(args);
@@ -1953,7 +1949,7 @@ for (Settings.Server s: Settings.servers) Dprintf.dprintf("%s",s);
         // connect to server
         try
         {
-          final Settings.Server defaultServer = (Settings.servers.length > 0) ? Settings.servers[Settings.servers.length-1] : null;
+          final Settings.Server defaultServer = Settings.getLastServer();
           BARServer.connect((defaultServer != null) ? defaultServer.name     : Settings.DEFAULT_SERVER_NAME,
                             (defaultServer != null) ? defaultServer.port     : Settings.DEFAULT_SERVER_PORT,
                             (defaultServer != null) ? defaultServer.port     : Settings.DEFAULT_SERVER_PORT,
@@ -2476,7 +2472,7 @@ for (Settings.Server s: Settings.servers) Dprintf.dprintf("%s",s);
         display = new Display();
 
         // connect to server
-        final Settings.Server defaultServer = (Settings.servers.length > 0) ? Settings.servers[Settings.servers.length-1] : null;
+        final Settings.Server defaultServer = Settings.getLastServer();
         LoginData loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
                                             (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                             (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
