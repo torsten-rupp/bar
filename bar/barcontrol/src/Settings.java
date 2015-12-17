@@ -36,8 +36,10 @@ import java.util.EnumSet;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.regex.Pattern;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.eclipse.swt.SWT;
@@ -109,7 +111,9 @@ abstract class SettingValueAdapter<String,Value>
     return false;
   }
 
-  public void migrate()
+  /** migrate values
+   */
+  public void Xmigrate(Object value)
   {
   }
 }
@@ -468,11 +472,17 @@ public class Settings
     }
   }
 
+  /** migrate values
+   */
   class SettingMigrateServer implements SettingMigrate
   {
+    /** migrate value
+     * @param value current value
+     * @return new value
+     */
     public Object run(Object value)
     {
-      Server servers[] = (Server[])value;
+      LinkedList<Server> servers = (LinkedList<Server>)value;
 
       for (String serverName : Settings.serverNames)
       {
@@ -490,9 +500,7 @@ public class Settings
 
         if (!existsFlag)
         {
-          Server newServers[] = Arrays.copyOf(servers,servers.length+1);
-          newServers[newServers.length-1] = new Server(serverName,Settings.serverPort,Settings.serverPassword);
-          servers = newServers;
+          servers.add(new Server(serverName,Settings.serverPort,Settings.serverPassword));
         }
       }
 
@@ -558,7 +566,7 @@ public class Settings
   // server settings
   @SettingComment(text={"","Server settings"})
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
-  public static Server[]              servers                         = new Server[]{new Server(DEFAULT_SERVER_NAME,DEFAULT_SERVER_PORT)};
+  public static LinkedList<Server>    servers                         = new LinkedList<Server>();//[]{new Server(DEFAULT_SERVER_NAME,DEFAULT_SERVER_PORT)};
   @SettingValue(name="serverName",type=String.class,obsolete=true)
   private static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
   @SettingValue(obsolete=true)
@@ -654,6 +662,7 @@ public class Settings
                         Class type = field.getType();
                         if      (type.isArray())
                         {
+                          // array type
                           type = type.getComponentType();
                           if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                           {
@@ -721,8 +730,9 @@ public class Settings
 Dprintf.dprintf("field.getType()=%s",type);
                           }
                         }
-                        else if ((type == HashSet.class) || (type == LinkedHashSet.class))
+                        else if (Set.class.isAssignableFrom(type))
                         {
+                          // Set type
                           if (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                           {
                             // instantiate config adapter class
@@ -741,57 +751,127 @@ Dprintf.dprintf("field.getType()=%s",type);
                             // convert to value
                             Object value = settingValueAdapter.toValue(string);
 Dprintf.dprintf("value=%s",value);
-                            ((HashSet)field.get(null)).add(value);
+                            ((Set)field.get(null)).add(value);
                           }
                           else if (settingValue.type() == int.class)
                           {
                             int value = Integer.parseInt(string);
-                            ((HashSet)field.get(null)).add(value);
+                            ((Set)field.get(null)).add(value);
                           }
                           else if (settingValue.type() == Integer.class)
                           {
                             int value = Integer.parseInt(string);
-                            ((HashSet)field.get(null)).add(value);
+                            ((Set)field.get(null)).add(value);
                           }
                           else if (settingValue.type() == long.class)
                           {
                             long value = Long.parseLong(string);
-                            ((HashSet)field.get(null)).add(value);
+                            ((Set)field.get(null)).add(value);
                           }
                           else if (settingValue.type() == Long.class)
                           {
                             long value = Long.parseLong(string);
-                            ((HashSet)field.get(null)).add(value);
+                            ((Set)field.get(null)).add(value);
                           }
                           else if (settingValue.type() == boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
-                            ((HashSet)field.get(null)).add(value);
+                            ((Set)field.get(null)).add(value);
                           }
                           else if (settingValue.type() == Boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
-                            ((HashSet)field.get(null)).add(value);
+                            ((Set)field.get(null)).add(value);
                           }
                           else if (settingValue.type() == String.class)
                           {
-                            ((HashSet)field.get(null)).add(StringUtils.unescape(string));
+                            ((Set)field.get(null)).add(StringUtils.unescape(string));
                           }
                           else if (settingValue.type().isEnum())
                           {
-                            ((HashSet)field.get(null)).add(StringUtils.parseEnum(type,string));
+                            ((Set)field.get(null)).add(StringUtils.parseEnum(type,string));
                           }
                           else if (settingValue.type() == EnumSet.class)
                           {
-                            ((HashSet)field.get(null)).add(StringUtils.parseEnumSet(type,string));
+                            ((Set)field.get(null)).add(StringUtils.parseEnumSet(type,string));
                           }
                           else
                           {
-Dprintf.dprintf("hashSet without value adapter %s",settingValue.type());
+Dprintf.dprintf("Set without value adapter %s",settingValue.type());
+                          }
+                        }
+                        else if (List.class.isAssignableFrom(type))
+                        {
+                          // List type
+                          if (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
+                          {
+                            // instantiate config adapter class
+                            SettingValueAdapter settingValueAdapter;
+                            Class enclosingClass = settingValue.type().getEnclosingClass();
+                            if (enclosingClass == Settings.class)
+                            {
+                              Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                              settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
+                            }
+                            else
+                            {
+                              settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
+                            }
+
+                            // convert to value
+                            Object value = settingValueAdapter.toValue(string);
+                            ((List)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == int.class)
+                          {
+                            int value = Integer.parseInt(string);
+                            ((List)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == Integer.class)
+                          {
+                            int value = Integer.parseInt(string);
+                            ((List)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == long.class)
+                          {
+                            long value = Long.parseLong(string);
+                            ((List)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == Long.class)
+                          {
+                            long value = Long.parseLong(string);
+                            ((List)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == boolean.class)
+                          {
+                            boolean value = StringUtils.parseBoolean(string);
+                            ((List)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == Boolean.class)
+                          {
+                            boolean value = StringUtils.parseBoolean(string);
+                            ((List)field.get(null)).add(value);
+                          }
+                          else if (settingValue.type() == String.class)
+                          {
+                            ((List)field.get(null)).add(StringUtils.unescape(string));
+                          }
+                          else if (settingValue.type().isEnum())
+                          {
+                            ((List)field.get(null)).add(StringUtils.parseEnum(type,string));
+                          }
+                          else if (settingValue.type() == EnumSet.class)
+                          {
+                            ((List)field.get(null)).add(StringUtils.parseEnumSet(type,string));
+                          }
+                          else
+                          {
+Dprintf.dprintf("List without value adapter %s",settingValue.type());
                           }
                         }
                         else
                         {
+                          // primitiv type
                           if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                           {
                             // instantiate config adapter class
@@ -1002,6 +1082,7 @@ exception.printStackTrace();
                 Class type = field.getType();
                 if      (type.isArray())
                 {
+                  // array type
                   type = type.getComponentType();
                   if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
@@ -1093,8 +1174,9 @@ exception.printStackTrace();
 Dprintf.dprintf("field.getType()=%s",type);
                   }
                 }
-                else if ((type == HashSet.class) || (type == LinkedHashSet.class))
+                else if (Set.class.isAssignableFrom(type))
                 {
+                  // Set type
                   if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
@@ -1111,7 +1193,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                     }
 
                     // convert to string
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       String value = (String)settingValueAdapter.toString(object);
                       output.printf("%s = %s\n",name,value);
@@ -1119,74 +1201,168 @@ Dprintf.dprintf("field.getType()=%s",type);
                   }
                   else if (settingValue.type() == int.class)
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %d\n",name,(Integer)object);
                     }
                   }
                   else if (settingValue.type() == Integer.class)
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %d\n",name,(Integer)object);
                     }
                   }
                   else if (settingValue.type() == long.class)
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %ld\n",name,(Long)object);
                     }
                   }
                   else if (settingValue.type() == Long.class)
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %ld\n",name,(Long)object);
                     }
                   }
                   else if (settingValue.type() == boolean.class)
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
                     }
                   }
                   else if (settingValue.type() == Boolean.class)
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
                     }
                   }
                   else if (settingValue.type() == String.class)
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %s\n",name,StringUtils.escape((String)object));
                     }
                   }
                   else if (settingValue.type().isEnum())
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %s\n",name,((Enum)object).toString());
                     }
                   }
                   else if (settingValue.type() == EnumSet.class)
                   {
-                    for (Object object : (HashSet)field.get(null))
+                    for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %s\n",name,StringUtils.join((EnumSet)object,","));
                     }
                   }
                   else
                   {
-Dprintf.dprintf("hashSet without value adapter %s",settingValue.type());
+Dprintf.dprintf("Set without value adapter %s",settingValue.type());
+                  }
+                }
+                else if (List.class.isAssignableFrom(type))
+                {
+                  // List type
+                  if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
+                  {
+                    // instantiate config adapter class
+                    SettingValueAdapter settingValueAdapter;
+                    Class enclosingClass = settingValue.type().getEnclosingClass();
+                    if (enclosingClass == Settings.class)
+                    {
+                      Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                      settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
+                    }
+                    else
+                    {
+                      settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
+                    }
+
+                    // convert to string
+                    for (Object object : (List)field.get(null))
+                    {
+                      String value = (String)settingValueAdapter.toString(object);
+                      output.printf("%s = %s\n",name,value);
+                    }
+                  }
+                  else if (settingValue.type() == int.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %d\n",name,(Integer)object);
+                    }
+                  }
+                  else if (settingValue.type() == Integer.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %d\n",name,(Integer)object);
+                    }
+                  }
+                  else if (settingValue.type() == long.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %ld\n",name,(Long)object);
+                    }
+                  }
+                  else if (settingValue.type() == Long.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %ld\n",name,(Long)object);
+                    }
+                  }
+                  else if (settingValue.type() == boolean.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                    }
+                  }
+                  else if (settingValue.type() == Boolean.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
+                    }
+                  }
+                  else if (settingValue.type() == String.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,StringUtils.escape((String)object));
+                    }
+                  }
+                  else if (settingValue.type().isEnum())
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,((Enum)object).toString());
+                    }
+                  }
+                  else if (settingValue.type() == EnumSet.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,StringUtils.join((EnumSet)object,","));
+                    }
+                  }
+                  else
+                  {
+Dprintf.dprintf("List without value adapter %s",settingValue.type());
                   }
                 }
                 else
                 {
+                  // primitiv type
                   if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
@@ -1318,9 +1494,48 @@ exception.printStackTrace();
   /** check if program settings file is modified
    * @return true iff modified
    */
-  public static boolean isFileModified()
+  public static boolean isModified()
   {
     return (lastModified != 0L) && (new File(DEFAULT_BARCONTROL_CONFIG_FILE_NAME).lastModified() > lastModified);
+  }
+
+  /** get last used server or default server
+   * @return server
+   */
+  public static Server getLastServer()
+  {
+    if (servers.size() > 0)
+    {
+      return servers.getLast();
+    }
+    else
+    {
+      return new Server(DEFAULT_SERVER_NAME,DEFAULT_SERVER_PORT);
+    }
+  }
+
+  /** add or update server
+   * @param name server name
+   * @param port server port
+   * @param password server password
+   */
+  public static void addServer(String name, int port, String password)
+  {
+    for (int i = 0; i < servers.size(); i++)
+    {
+      Server server = servers.get(i);
+      if (   server.name.equals(name)
+          && (server.port == port)
+         )
+      {
+        servers.remove(i);
+        server.password = password;
+        servers.add(server);
+        return;
+      }
+    }
+
+    servers.add(new Server(name,port,password));
   }
 
   //-----------------------------------------------------------------------
