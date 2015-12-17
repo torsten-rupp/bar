@@ -1632,6 +1632,10 @@ public class BARControl
               {
                 Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
               }
+              catch (CommunicationError error)
+              {
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+              }
             }
           }
         });
