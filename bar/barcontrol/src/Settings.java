@@ -20,9 +20,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.regex.Pattern;
-import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.eclipse.swt.SWT;
