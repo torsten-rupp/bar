@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-12-16 16:41+0100\n"
+"POT-Creation-Date: 2015-12-17 11:45+0100\n"
 "PO-Revision-Date: 2015-04-06 13:24+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -66,7 +66,7 @@ msgstr "Passwort"
 msgid "Login"
 msgstr "Login"
 
-#: src/BARControl.java:1418 src/BARControl.java:2556 src/Dialogs.java:1914
+#: src/BARControl.java:1418 src/BARControl.java:2552 src/Dialogs.java:1914
 #: src/Dialogs.java:1984 src/Dialogs.java:2485 src/Dialogs.java:2668
 #: src/Dialogs.java:3269 src/Dialogs.java:4015 src/Dialogs.java:4181
 #: src/Dialogs.java:4367 src/Dialogs.java:4697 src/TabJobs.java:7485
@@ -77,72 +77,72 @@ msgstr "Login"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: src/BARControl.java:1584 src/BARControl.java:1634
+#: src/BARControl.java:1583 src/BARControl.java:1633
 #, fuzzy
 msgid "Connection fail: "
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARControl.java:1602
+#: src/BARControl.java:1601
 msgid "Program"
 msgstr "Programm"
 
-#: src/BARControl.java:1604
+#: src/BARControl.java:1603
 #, fuzzy
 msgid "Connect"
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARControl.java:1647
+#: src/BARControl.java:1646
 msgid "Start"
 msgstr "Start"
 
-#: src/BARControl.java:1660 src/BusyDialog.java:263 src/Dialogs.java:153
+#: src/BARControl.java:1659 src/BusyDialog.java:263 src/Dialogs.java:153
 #: src/TabRestore.java:6549 src/TabRestore.java:6770 src/TabRestore.java:7312
 #: src/TabStatus.java:1872
 msgid "Abort"
 msgstr "Abbrechen"
 
-#: src/BARControl.java:1673 src/TabStatus.java:706 src/TabStatus.java:1298
+#: src/BARControl.java:1672 src/TabStatus.java:706 src/TabStatus.java:1298
 #: src/TabStatus.java:1611 src/TabStatus.java:1623
 msgid "Pause"
 msgstr "Pause"
 
-#: src/BARControl.java:1675
+#: src/BARControl.java:1674
 msgid "10min"
 msgstr "10min"
 
-#: src/BARControl.java:1688
+#: src/BARControl.java:1687
 msgid "60min"
 msgstr "60min"
 
-#: src/BARControl.java:1701
+#: src/BARControl.java:1700
 msgid "120min"
 msgstr "120min"
 
-#: src/BARControl.java:1716
+#: src/BARControl.java:1715
 msgid "Create operation"
 msgstr "Erzeugen"
 
-#: src/BARControl.java:1730
+#: src/BARControl.java:1729
 msgid "Storage operation"
 msgstr "Speichern"
 
-#: src/BARControl.java:1744
+#: src/BARControl.java:1743
 msgid "Restore operation"
 msgstr "Wiederherstellen"
 
-#: src/BARControl.java:1757
+#: src/BARControl.java:1756
 msgid "Index update operation"
 msgstr "Index erneuern"
 
-#: src/BARControl.java:1771
+#: src/BARControl.java:1770
 msgid "Toggle suspend/continue"
 msgstr "Anhalten/Weiter"
 
-#: src/BARControl.java:1784
+#: src/BARControl.java:1783
 msgid "Clear stored passwords on server"
 msgstr "Gespeicherte Passworte auf Server löschen"
 
-#: src/BARControl.java:1796
+#: src/BARControl.java:1795
 msgid ""
 "Cannot clear passwords on server:\n"
 "\n"
@@ -150,31 +150,31 @@ msgstr ""
 "Gespeicherte Passworte auf Server löschen:\n"
 "\n"
 
-#: src/BARControl.java:1803 src/TabStatus.java:1344
+#: src/BARControl.java:1802 src/TabStatus.java:1344
 msgid "Quit"
 msgstr "Beenden"
 
-#: src/BARControl.java:1818
+#: src/BARControl.java:1817
 msgid "Help"
 msgstr "Hilfe"
 
-#: src/BARControl.java:1820 src/BARControl.java:1829
+#: src/BARControl.java:1819 src/BARControl.java:1828
 msgid "About"
 msgstr "Über"
 
-#: src/BARControl.java:1829
+#: src/BARControl.java:1828
 msgid "Written by Torsten Rupp"
 msgstr "Erstellt von Torsten Rupp"
 
-#: src/BARControl.java:2556
+#: src/BARControl.java:2552
 msgid "Connection fail"
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARControl.java:2556
+#: src/BARControl.java:2552
 msgid "Error: "
 msgstr "Fehler:"
 
-#: src/BARControl.java:2556
+#: src/BARControl.java:2552
 msgid "Try again"
 msgstr "Neu versuchen"
 
