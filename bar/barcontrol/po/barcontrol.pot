@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-12-17 11:50+0100\n"
+"POT-Creation-Date: 2015-12-17 12:05+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -65,7 +65,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/BARControl.java:1418 src/BARControl.java:2552 src/Dialogs.java:1914
+#: src/BARControl.java:1418 src/BARControl.java:2556 src/Dialogs.java:1914
 #: src/Dialogs.java:1984 src/Dialogs.java:2485 src/Dialogs.java:2668
 #: src/Dialogs.java:3269 src/Dialogs.java:4015 src/Dialogs.java:4181
 #: src/Dialogs.java:4367 src/Dialogs.java:4697 src/TabJobs.java:7485
@@ -76,7 +76,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/BARControl.java:1583 src/BARControl.java:1633
+#: src/BARControl.java:1583 src/BARControl.java:1633 src/BARControl.java:1637
 msgid "Connection fail: "
 msgstr ""
 
@@ -88,88 +88,88 @@ msgstr ""
 msgid "Connect"
 msgstr ""
 
-#: src/BARControl.java:1646
+#: src/BARControl.java:1650
 msgid "Start"
 msgstr ""
 
-#: src/BARControl.java:1659 src/BusyDialog.java:263 src/Dialogs.java:153
+#: src/BARControl.java:1663 src/BusyDialog.java:263 src/Dialogs.java:153
 #: src/TabRestore.java:6549 src/TabRestore.java:6770 src/TabRestore.java:7312
 #: src/TabStatus.java:1872
 msgid "Abort"
 msgstr ""
 
-#: src/BARControl.java:1672 src/TabStatus.java:706 src/TabStatus.java:1298
+#: src/BARControl.java:1676 src/TabStatus.java:706 src/TabStatus.java:1298
 #: src/TabStatus.java:1611 src/TabStatus.java:1623
 msgid "Pause"
 msgstr ""
 
-#: src/BARControl.java:1674
+#: src/BARControl.java:1678
 msgid "10min"
 msgstr ""
 
-#: src/BARControl.java:1687
+#: src/BARControl.java:1691
 msgid "60min"
 msgstr ""
 
-#: src/BARControl.java:1700
+#: src/BARControl.java:1704
 msgid "120min"
 msgstr ""
 
-#: src/BARControl.java:1715
+#: src/BARControl.java:1719
 msgid "Create operation"
 msgstr ""
 
-#: src/BARControl.java:1729
+#: src/BARControl.java:1733
 msgid "Storage operation"
 msgstr ""
 
-#: src/BARControl.java:1743
+#: src/BARControl.java:1747
 msgid "Restore operation"
 msgstr ""
 
-#: src/BARControl.java:1756
+#: src/BARControl.java:1760
 msgid "Index update operation"
 msgstr ""
 
-#: src/BARControl.java:1770
+#: src/BARControl.java:1774
 msgid "Toggle suspend/continue"
 msgstr ""
 
-#: src/BARControl.java:1783
+#: src/BARControl.java:1787
 msgid "Clear stored passwords on server"
 msgstr ""
 
-#: src/BARControl.java:1795
+#: src/BARControl.java:1799
 msgid ""
 "Cannot clear passwords on server:\n"
 "\n"
 msgstr ""
 
-#: src/BARControl.java:1802 src/TabStatus.java:1344
+#: src/BARControl.java:1806 src/TabStatus.java:1344
 msgid "Quit"
 msgstr ""
 
-#: src/BARControl.java:1817
+#: src/BARControl.java:1821
 msgid "Help"
 msgstr ""
 
-#: src/BARControl.java:1819 src/BARControl.java:1828
+#: src/BARControl.java:1823 src/BARControl.java:1832
 msgid "About"
 msgstr ""
 
-#: src/BARControl.java:1828
+#: src/BARControl.java:1832
 msgid "Written by Torsten Rupp"
 msgstr ""
 
-#: src/BARControl.java:2552
+#: src/BARControl.java:2556
 msgid "Connection fail"
 msgstr ""
 
-#: src/BARControl.java:2552
+#: src/BARControl.java:2556
 msgid "Error: "
 msgstr ""
 
-#: src/BARControl.java:2552
+#: src/BARControl.java:2556
 msgid "Try again"
 msgstr ""
 
