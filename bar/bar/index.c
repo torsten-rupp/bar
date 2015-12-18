@@ -852,19 +852,19 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
       error = Database_execute(&newIndexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "INSERT INTO entities \
-                                  (\
-                                   jobUUID,\
+                                  ( \
+                                   jobUUID, \
                                    scheduleUUID, \
-                                   created,\
-                                   type,\
-                                   bidFlag\
+                                   created, \
+                                   type, \
+                                   bidFlag \
                                   ) \
                                 VALUES \
-                                  (\
-                                   %'S,\
-                                   '',\
-                                   DATETIME(%llu,'unixepoch'),\
-                                   %d,\
+                                  ( \
+                                   %'S, \
+                                   '', \
+                                   DATETIME(%llu,'unixepoch'), \
+                                   %d, \
                                    %d\
                                   ); \
                                ",
@@ -1846,19 +1846,19 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
       error = Database_execute(&newIndexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "INSERT INTO entities \
-                                  (\
-                                   jobUUID,\
+                                  ( \
+                                   jobUUID, \
                                    scheduleUUID, \
-                                   created,\
-                                   type,\
+                                   created, \
+                                   type, \
                                    bidFlag\
                                   ) \
                                 VALUES \
-                                  (\
-                                   %'S,\
-                                   '',\
-                                   DATETIME(%llu,'unixepoch'),\
-                                   %d,\
+                                  ( \
+                                   %'S, \
+                                   '', \
+                                   DATETIME(%llu,'unixepoch'), \
+                                   %d, \
                                    %d\
                                   ); \
                                ",
@@ -2444,7 +2444,7 @@ LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE %s \
                               SET storageId=%lld \
-                              WHERE storageId=%lld;\
+                              WHERE storageId=%lld; \
                              ",
                              ENTRY_TABLE_NAMES[i],
                              toStorageId,
@@ -2626,7 +2626,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE storage \
                             SET entityId=%lld \
-                            WHERE id=%lld;\
+                            WHERE id=%lld; \
                            ",
                            toEntityId,
                            storageId
@@ -2663,7 +2663,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle *indexHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE storage \
                             SET entityId=%lld \
-                            WHERE entityId=%lld;\
+                            WHERE entityId=%lld; \
                            ",
                            toEntityId,
                            entityId
@@ -2763,7 +2763,7 @@ LOCAL Errors assignJobToJob(IndexHandle *indexHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE entity \
                             SET jobUUID=%'S \
-                            WHERE jobUUID=%'S;\
+                            WHERE jobUUID=%'S; \
                            ",
                            toJobUUID,
                            jobUUID
@@ -3127,7 +3127,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
       switch (storageSpecifier.type)
       {
         case STORAGE_TYPE_FILESYSTEM:
-          foundFlag =     ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_FILESYSTEM))
+          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_FILESYSTEM))
                       && ((fileName == NULL) || String_equals(fileName,storageSpecifier.archiveName));
           break;
         case STORAGE_TYPE_FTP:
@@ -3828,21 +3828,21 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "INSERT INTO entities \
-                              (\
-                               jobUUID,\
-                               scheduleUUID,\
-                               created,\
-                               type,\
-                               parentJobUUID,\
+                              ( \
+                               jobUUID, \
+                               scheduleUUID, \
+                               created, \
+                               type, \
+                               parentJobUUID, \
                                bidFlag\
                               ) \
                             VALUES \
-                              (\
-                               %'S,\
-                               %'S,\
-                               DATETIME('now'),\
-                               %u,\
-                               '',\
+                              ( \
+                               %'S, \
+                               %'S, \
+                               DATETIME('now'), \
+                               %u, \
+                               '', \
                                0\
                               ); \
                            ",
@@ -4218,23 +4218,21 @@ Errors Index_newStorage(IndexHandle *indexHandle,
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "INSERT INTO storage \
-                              (\
-                               entityId,\
-                               name,\
-                               created,\
-                               size,\
-                               state,\
-                               mode,\
+                              ( \
+                               entityId, \
+                               name, \
+                               created, \
+                               state, \
+                               mode, \
                                lastChecked\
                               ) \
                             VALUES \
-                              (\
-                               %d,\
-                               %'S,\
-                               DATETIME('now'),\
-                               0,\
-                               %d,\
-                               %d,\
+                              ( \
+                               %d, \
+                               %'S, \
+                               DATETIME('now'), \
+                               %d, \
+                               %d, \
                                DATETIME('now')\
                               ); \
                            ",
@@ -4406,6 +4404,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                             WHERE id=%d \
                            ",
 #else
+#warning TODO replace size
                            "SELECT storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    ( \
@@ -4478,7 +4477,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
                               SET name=%'S \
-                              WHERE id=%lld;\
+                              WHERE id=%lld; \
                              ",
                              storageName,
                              storageId
@@ -4489,12 +4488,13 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
     }
   }
 
+#if 0
   // update size
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE storage \
                             SET size=%llu \
-                            WHERE id=%lld;\
+                            WHERE id=%lld; \
                            ",
                            size,
                            storageId
@@ -4503,6 +4503,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   {
     return error;
   }
+#endif
 
 #if 0
   // count and update entries
@@ -4525,7 +4526,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE storage \
                             SET entries=%llu \
-                            WHERE id=%lld;\
+                            WHERE id=%lld; \
                            ",
                            entries,
                            storageId
@@ -4890,7 +4891,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT directories.id,\
+                           "SELECT directories.id, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    directories.name, \
@@ -5032,7 +5033,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT links.id,\
+                           "SELECT links.id, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    links.name, \
@@ -5177,7 +5178,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT hardlinks.id,\
+                           "SELECT hardlinks.id, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    hardlinks.name, \
@@ -5329,7 +5330,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT special.id,\
+                           "SELECT special.id, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    special.name, \
@@ -5437,6 +5438,9 @@ Errors Index_addFile(IndexHandle *indexHandle,
                      uint64      fragmentSize
                     )
 {
+  Errors     error;
+  DatabaseId fileId;
+
   assert(indexHandle != NULL);
   assert(fileName != NULL);
 
@@ -5446,49 +5450,75 @@ Errors Index_addFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "INSERT INTO files \
-                             (\
-                              storageId,\
-                              name,\
-                              size,\
-                              timeLastAccess,\
-                              timeModified,\
-                              timeLastChanged,\
-                              userId,\
-                              groupId,\
-                              permission,\
-                              fragmentOffset,\
-                              fragmentSize\
-                             ) \
-                           VALUES \
-                             (\
-                              %lu,\
-                              %'S,\
-                              %lu,\
-                              %lu,\
-                              %lu,\
-                              %lu,\
-                              %u,\
-                              %u,\
-                              %u,\
-                              %lu,\
-                              %lu\
-                             ); \
-                          ",
-                          storageId,
-                          fileName,
-                          size,
-                          timeLastAccess,
-                          timeModified,
-                          timeLastChanged,
-                          userId,
-                          groupId,
-                          permission,
-                          fragmentOffset,
-                          fragmentSize
-                         );
+  // add file entry
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO files \
+                              ( \
+                               storageId, \
+                               name, \
+                               size, \
+                               timeLastAccess, \
+                               timeModified, \
+                               timeLastChanged, \
+                               userId, \
+                               groupId, \
+                               permission, \
+                               fragmentOffset, \
+                               fragmentSize\
+                              ) \
+                            VALUES \
+                              ( \
+                               %lu, \
+                               %'S, \
+                               %lu, \
+                               %lu, \
+                               %lu, \
+                               %lu, \
+                               %u, \
+                               %u, \
+                               %u, \
+                               %lu, \
+                               %lu\
+                              ); \
+                           ",
+                           storageId,
+                           fileName,
+                           size,
+                           timeLastAccess,
+                           timeModified,
+                           timeLastChanged,
+                           userId,
+                           groupId,
+                           permission,
+                           fragmentOffset,
+                           fragmentSize
+                          );
+  if (error == ERROR_NONE)
+  {
+    // get file id
+    fileId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+    // add full text search
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO FTS_files \
+                                ( \
+                                 fileId, \
+                                 name \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %lu, \
+                                 %'S \
+                                ); \
+                             ",
+                             fileId,
+                             fileName
+                            );
+  }
+
+  return error;
 }
 
 Errors Index_addImage(IndexHandle     *indexHandle,
@@ -5501,6 +5531,9 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                       uint64          blockCount
                      )
 {
+  Errors     error;
+  DatabaseId imageId;
+
   assert(indexHandle != NULL);
   assert(imageName != NULL);
 
@@ -5510,37 +5543,63 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "INSERT INTO images \
-                             (\
-                              storageId,\
-                              name,\
-                              fileSystemType,\
-                              size,\
-                              blockSize,\
-                              blockOffset,\
-                              blockCount\
-                             ) \
-                           VALUES \
-                             (\
-                              %lu,\
-                              %'S,\
-                              %d,\
-                              %lu,\
-                              %u,\
-                              %lu,\
-                              %lu\
-                             );\
-                          ",
-                          storageId,
-                          imageName,
-                          fileSystemType,
-                          size,
-                          blockSize,
-                          blockOffset,
-                          blockCount
-                         );
+  // add image entry
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO images \
+                              ( \
+                               storageId, \
+                               name, \
+                               fileSystemType, \
+                               size, \
+                               blockSize, \
+                               blockOffset, \
+                               blockCount\
+                              ) \
+                            VALUES \
+                              ( \
+                               %lu, \
+                               %'S, \
+                               %d, \
+                               %lu, \
+                               %u, \
+                               %lu, \
+                               %lu\
+                              ); \
+                           ",
+                           storageId,
+                           imageName,
+                           fileSystemType,
+                           size,
+                           blockSize,
+                           blockOffset,
+                           blockCount
+                          );
+  if (error == ERROR_NONE)
+  {
+    // get image id
+    imageId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+    // add full text search
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO FTS_images \
+                                ( \
+                                 imageId, \
+                                 name \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %lu, \
+                                 %'S \
+                                ); \
+                             ",
+                             imageId,
+                             imageName
+                            );
+  }
+
+  return error;
 }
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
@@ -5554,6 +5613,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                           uint32      permission
                          )
 {
+  Errors     error;
+  DatabaseId directoryId;
+
   assert(indexHandle != NULL);
   assert(directoryName != NULL);
 
@@ -5563,40 +5625,66 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "INSERT INTO directories \
-                             (\
-                              storageId,\
-                              name,\
-                              timeLastAccess,\
-                              timeModified,\
-                              timeLastChanged,\
-                              userId,\
-                              groupId,\
-                              permission\
-                             ) \
-                           VALUES \
-                             (\
-                              %lu,\
-                              %'S,\
-                              %lu,\
-                              %lu,\
-                              %lu,\
-                              %u,\
-                              %u,\
-                              %u \
-                             );\
-                          ",
-                          storageId,
-                          directoryName,
-                          timeLastAccess,
-                          timeModified,
-                          timeLastChanged,
-                          userId,
-                          groupId,
-                          permission
-                         );
+  // add directory entry
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO directories \
+                              ( \
+                               storageId, \
+                               name, \
+                               timeLastAccess, \
+                               timeModified, \
+                               timeLastChanged, \
+                               userId, \
+                               groupId, \
+                               permission \
+                              ) \
+                            VALUES \
+                              ( \
+                               %lu, \
+                               %'S, \
+                               %lu, \
+                               %lu, \
+                               %lu, \
+                               %u, \
+                               %u, \
+                               %u \
+                              ); \
+                           ",
+                           storageId,
+                           directoryName,
+                           timeLastAccess,
+                           timeModified,
+                           timeLastChanged,
+                           userId,
+                           groupId,
+                           permission
+                          );
+  if (error == ERROR_NONE)
+  {
+    // get directory id
+    directoryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+    // add full text search
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO FTS_directory \
+                                ( \
+                                 directoryId, \
+                                 name \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %lu, \
+                                 %'S \
+                                ); \
+                             ",
+                             directoryId,
+                             directoryName
+                            );
+  }
+
+  return error;
 }
 
 Errors Index_addLink(IndexHandle *indexHandle,
@@ -5611,6 +5699,9 @@ Errors Index_addLink(IndexHandle *indexHandle,
                      uint32      permission
                     )
 {
+  Errors     error;
+  DatabaseId linkId;
+
   assert(indexHandle != NULL);
   assert(linkName != NULL);
   assert(destinationName != NULL);
@@ -5623,43 +5714,69 @@ Errors Index_addLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "INSERT INTO links \
-                             (\
-                              storageId,\
-                              name,\
-                              destinationName,\
-                              timeLastAccess,\
-                              timeModified,\
-                              timeLastChanged,\
-                              userId,\
-                              groupId,\
-                              permission\
-                             ) \
-                           VALUES \
-                             (\
-                              %lu,\
-                              %'S,\
-                              %'S,\
-                              %lu,\
-                              %lu,\
-                              %lu,\
-                              %u,\
-                              %u,\
-                              %u\
-                             );\
-                           ",
-                          storageId,
-                          linkName,
-                          destinationName,
-                          timeLastAccess,
-                          timeModified,
-                          timeLastChanged,
-                          userId,
-                          groupId,
-                          permission
-                         );
+  // add link entry
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO links \
+                              ( \
+                               storageId, \
+                               name, \
+                               destinationName, \
+                               timeLastAccess, \
+                               timeModified, \
+                               timeLastChanged, \
+                               userId, \
+                               groupId, \
+                               permission\
+                              ) \
+                            VALUES \
+                              ( \
+                               %lu, \
+                               %'S, \
+                               %'S, \
+                               %lu, \
+                               %lu, \
+                               %lu, \
+                               %u, \
+                               %u, \
+                               %u\
+                              ); \
+                            ",
+                           storageId,
+                           linkName,
+                           destinationName,
+                           timeLastAccess,
+                           timeModified,
+                           timeLastChanged,
+                           userId,
+                           groupId,
+                           permission
+                          );
+  if (error == ERROR_NONE)
+  {
+    // get link id
+    linkId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+    // add full text search
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO FTS_links \
+                                ( \
+                                 linkId, \
+                                 name \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %lu, \
+                                 %'S \
+                                ); \
+                             ",
+                             linkId,
+                             linkName
+                            );
+  }
+
+  return error;
 }
 
 Errors Index_addHardLink(IndexHandle *indexHandle,
@@ -5676,6 +5793,9 @@ Errors Index_addHardLink(IndexHandle *indexHandle,
                          uint64      fragmentSize
                         )
 {
+  Errors     error;
+  DatabaseId hardLinkId;
+
   assert(indexHandle != NULL);
   assert(fileName != NULL);
 
@@ -5685,49 +5805,75 @@ Errors Index_addHardLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "INSERT INTO hardlinks \
-                             (\
-                              storageId,\
-                              name,\
-                              size,\
-                              timeLastAccess,\
-                              timeModified,\
-                              timeLastChanged,\
-                              userId,\
-                              groupId,\
-                              permission,\
-                              fragmentOffset,\
-                              fragmentSize\
-                             ) \
-                           VALUES \
-                             (\
-                              %lu,\
-                              %'S,\
-                              %lu,\
-                              %lu,\
-                              %lu,\
-                              %lu,\
-                              %u,\
-                              %u,\
-                              %u,\
-                              %lu,\
-                              %lu\
-                             ); \
-                          ",
-                          storageId,
-                          fileName,
-                          size,
-                          timeLastAccess,
-                          timeModified,
-                          timeLastChanged,
-                          userId,
-                          groupId,
-                          permission,
-                          fragmentOffset,
-                          fragmentSize
-                         );
+  // add hard link entry
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO hardlinks \
+                              ( \
+                               storageId, \
+                               name, \
+                               size, \
+                               timeLastAccess, \
+                               timeModified, \
+                               timeLastChanged, \
+                               userId, \
+                               groupId, \
+                               permission, \
+                               fragmentOffset, \
+                               fragmentSize\
+                              ) \
+                            VALUES \
+                              ( \
+                               %lu, \
+                               %'S, \
+                               %lu, \
+                               %lu, \
+                               %lu, \
+                               %lu, \
+                               %u, \
+                               %u, \
+                               %u, \
+                               %lu, \
+                               %lu\
+                              ); \
+                           ",
+                           storageId,
+                           fileName,
+                           size,
+                           timeLastAccess,
+                           timeModified,
+                           timeLastChanged,
+                           userId,
+                           groupId,
+                           permission,
+                           fragmentOffset,
+                           fragmentSize
+                          );
+  if (error == ERROR_NONE)
+  {
+    // get hard link id
+    hardLinkId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+    // add full text search
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO FTS_hardLinks \
+                                ( \
+                                 hardLinkId, \
+                                 name \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %lu, \
+                                 %'S \
+                                ); \
+                             ",
+                             hardLinkId,
+                             fileName
+                            );
+  }
+
+  return error;
 }
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
@@ -5744,6 +5890,9 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                         uint32           minor
                        )
 {
+  Errors     error;
+  DatabaseId specialId;
+
   assert(indexHandle != NULL);
   assert(name != NULL);
 
@@ -5753,49 +5902,76 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "INSERT INTO special \
-                             (\
-                              storageId,\
-                              name,\
-                              specialType,\
-                              timeLastAccess,\
-                              timeModified,\
-                              timeLastChanged,\
-                              userId,\
-                              groupId,\
-                              permission,\
-                              major,\
-                              minor \
-                             ) \
-                           VALUES \
-                             (\
-                              %lu,\
-                              %'S,\
-                              %u,\
-                              %lu,\
-                              %lu,\
-                              %lu,\
-                              %u,\
-                              %u,\
-                              %u,\
-                              %d,\
-                              %u\
-                             );\
-                          ",
-                          storageId,
-                          name,
-                          specialType,
-                          timeLastAccess,
-                          timeModified,
-                          timeLastChanged,
-                          userId,
-                          groupId,
-                          permission,
-                          major,
-                          minor
-                         );
+  // add special entry
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO special \
+                              ( \
+                               storageId, \
+                               name, \
+                               specialType, \
+                               timeLastAccess, \
+                               timeModified, \
+                               timeLastChanged, \
+                               userId, \
+                               groupId, \
+                               permission, \
+                               major, \
+                               minor \
+                              ) \
+                            VALUES \
+                              ( \
+                               %lu, \
+                               %'S, \
+                               %u, \
+                               %lu, \
+                               %lu, \
+                               %lu, \
+                               %u, \
+                               %u, \
+                               %u, \
+                               %d, \
+                               %u\
+                              ); \
+                           ",
+                           storageId,
+                           name,
+                           specialType,
+                           timeLastAccess,
+                           timeModified,
+                           timeLastChanged,
+                           userId,
+                           groupId,
+                           permission,
+                           major,
+                           minor
+                          );
+
+  if (error == ERROR_NONE)
+  {
+    // get special id
+    specialId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+    // add full text search
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO FTS_special \
+                                ( \
+                                 specialId, \
+                                 name \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %lu, \
+                                 %'S \
+                                ); \
+                             ",
+                             specialId,
+                             name
+                            );
+  }
+
+  return error;
 }
 
 Errors Index_assignTo(IndexHandle *indexHandle,

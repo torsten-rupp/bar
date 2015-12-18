@@ -214,9 +214,9 @@ void __Index_done(const char  *__fileName__,
 
 /***********************************************************************\
 * Name   : Index_findById
-* Purpose: find index by id
+* Purpose: find storage by id
 * Input  : indexHandle - index handle
-*          storageId   - database id of index
+*          storageId   - database id of storage
 * Output : jobUUID        - unique job id (can be NULL)
 *          scheduleUUID   - unique schedule id (can be NULL)
 *          storageName          - storage name
@@ -238,7 +238,7 @@ bool Index_findById(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : Index_findByName
-* Purpose: find index by name
+* Purpose: find storage by name
 * Input  : indexHandle     - index handle
 *          findStorageType - storage type to find or STORAGE_TYPE_ANY
 *          findHostName    - host naem to find or NULL
@@ -247,7 +247,7 @@ bool Index_findById(IndexHandle *indexHandle,
 *          findFileName    - file name to find or NULL
 * Output : jobUUID              - unique job id (can be NULL)
 *          scheduleUUID         - unique schedule id (can be NULL)
-*          storageId            - database id of index
+*          storageId            - database id of storage
 *          indexState           - index state (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -275,7 +275,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
 *          indexState  - index state
 * Output : jobUUID              - unique job id (can be NULL)
 *          scheduleUUID         - unique schedule id (can be NULL)
-*          storageId            - database id of index
+*          storageId            - database id of storage
 *          storageName          - storage name (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -296,7 +296,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
 * Name   : Index_getState
 * Purpose: get index state
 * Input  : indexHandle - index handle
-*          storageId   - database id of index
+*          storageId   - database id of storage
 * Output : indexState           - index state; see IndexStates
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -314,9 +314,9 @@ Errors Index_getState(IndexHandle  *indexHandle,
 
 /***********************************************************************\
 * Name   : Index_setState
-* Purpose: set index state
+* Purpose: set storage index state
 * Input  : indexHandle          - index handle
-*          storageId            - database id of index
+*          storageId            - database id of storage
 *          indexState           - index state; see IndexStates
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be 0LL)

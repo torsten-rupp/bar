@@ -30,14 +30,15 @@ CREATE TABLE IF NOT EXISTS storage(
   entityId        INTEGER,
   name            TEXT NOT NULL,
   created         INTEGER,
-  entries         INTEGER,
-  size            INTEGER,
+//  entries         INTEGER,
+//  size            INTEGER,
   state           INTEGER,
   mode            INTEGER,
   lastChecked     INTEGER,
-  errorMessage    TEXT,
+  errorMessage    TEXT
 
-  FOREIGN KEY(entityId) REFERENCES entities(id)
+  // Note: no foreign key entityId: storage may be created temporary before an entity
+  // FOREIGN KEY(entityId) REFERENCES entities(id)
 );
 CREATE INDEX IF NOT EXISTS storagesIndex ON storage (entityId,name);
 
@@ -58,6 +59,12 @@ CREATE TABLE IF NOT EXISTS files(
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 CREATE INDEX IF NOT EXISTS filesIndex ON files (storageId,name);
+CREATE VIRTUAL TABLE FTS_files USING FTS4(
+  fileId,
+  name,
+
+  FOREIGN KEY(fileId) REFERENCES files(id)
+);
 
 CREATE TABLE IF NOT EXISTS images(
   id              INTEGER PRIMARY KEY,
@@ -72,6 +79,12 @@ CREATE TABLE IF NOT EXISTS images(
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 CREATE INDEX IF NOT EXISTS imagesIndex ON images (storageId,name);
+CREATE VIRTUAL TABLE FTS_images USING FTS4(
+  imageId,
+  name,
+
+  FOREIGN KEY(imageId) REFERENCES images(id)
+);
 
 CREATE TABLE IF NOT EXISTS directories(
   id              INTEGER PRIMARY KEY,
@@ -87,6 +100,12 @@ CREATE TABLE IF NOT EXISTS directories(
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 CREATE INDEX IF NOT EXISTS directoriesIndex ON directories (storageId,name);
+CREATE VIRTUAL TABLE FTS_directories USING FTS4(
+  directoryId,
+  name,
+
+  FOREIGN KEY(directoryId) REFERENCES directories(id)
+);
 
 CREATE TABLE IF NOT EXISTS links(
   id              INTEGER PRIMARY KEY,
@@ -103,6 +122,12 @@ CREATE TABLE IF NOT EXISTS links(
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 CREATE INDEX IF NOT EXISTS linksIndex ON links (storageId,name);
+CREATE VIRTUAL TABLE FTS_links USING FTS4(
+  linkId,
+  name,
+
+  FOREIGN KEY(linkId) REFERENCES links(id)
+);
 
 CREATE TABLE IF NOT EXISTS hardlinks(
   id              INTEGER PRIMARY KEY,
@@ -121,6 +146,12 @@ CREATE TABLE IF NOT EXISTS hardlinks(
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 CREATE INDEX IF NOT EXISTS hardlinksIndex ON hardlinks (storageId,name);
+CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
+  hardlinkId,
+  name,
+
+  FOREIGN KEY(hardlinkId) REFERENCES hardlinks(id)
+);
 
 CREATE TABLE IF NOT EXISTS special(
   id              INTEGER PRIMARY KEY,
@@ -139,6 +170,12 @@ CREATE TABLE IF NOT EXISTS special(
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 CREATE INDEX IF NOT EXISTS specialIndex ON special (storageId,name);
+CREATE VIRTUAL TABLE FTS_special USING FTS4(
+  specialId,
+  name,
+
+  FOREIGN KEY(specialId) REFERENCES special(id)
+);
 
 /*
 
