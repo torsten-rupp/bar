@@ -5083,8 +5083,8 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 LOCAL void autoIndexUpdateThreadCode(void)
 {
   StringList                 storageDirectoryList;
-  StringList                 directoryList;
   StorageSpecifier           storageSpecifier;
+  String                     baseName;
   String                     fileName;
   String                     printableStorageName;
   String                     storageName;
@@ -5108,7 +5108,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   // initialize variables
   StringList_init(&storageDirectoryList);
   Storage_initSpecifier(&storageSpecifier);
-  StringList_init(&directoryList);
+  baseName             = String_new();
   fileName             = String_new();
   printableStorageName = String_new();
   storageName          = String_new();
@@ -5140,125 +5140,104 @@ LOCAL void autoIndexUpdateThreadCode(void)
             || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
            )
         {
-          assert(StringList_isEmpty(&directoryList));
-
           // get base directory
-          String_set(fileName,storageSpecifier.archiveName);
+          File_setFileName(baseName,storageSpecifier.archiveName);
           do
           {
             error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                               &storageSpecifier,
                                               &jobOptions,
                                               SERVER_CONNECTION_PRIORITY_LOW,
-                                              fileName
+                                              baseName
                                              );
             if (error == ERROR_NONE)
             {
-              StringList_append(&directoryList,fileName);
               Storage_closeDirectoryList(&storageDirectoryListHandle);
             }
             else
             {
-              File_getFilePathName(fileName,fileName);
+              File_getFilePathName(baseName,baseName);
             }
           }
-          while ((error != ERROR_NONE) && !String_isEmpty(fileName));
+          while ((error != ERROR_NONE) && !String_isEmpty(baseName));
 
-          // read directory and scan all sub-directories
-          while (!StringList_isEmpty(&directoryList))
+          if (!String_isEmpty(baseName))
           {
-            StringList_getLast(&directoryList,fileName);
+            // read directory and scan all sub-directories for .bar files
+            pprintInfo(4,
+                       "INDEX",
+                       "Auto-index scan '%s'\n",
+                       String_cString(Storage_getPrintableName(&storageSpecifier,baseName))
+                      );
+            error = Storage_forAll(File_appendFileNameCString(File_setFileName(fileName,baseName),"*.bar"),
+                                   CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
+                                   {
+                                     Errors error;
 
-            // open directory
-            error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                              &storageSpecifier,
-                                              &jobOptions,
-                                              SERVER_CONNECTION_PRIORITY_LOW,
-                                              fileName
-                                             );
+                                     error = Storage_parseName(&storageSpecifier,storageName);
+                                     if (error == ERROR_NONE)
+                                     {
+                                       // check entry type and file name
+                                       switch (fileInfo->type)
+                                       {
+                                         case FILE_TYPE_FILE:
+                                         case FILE_TYPE_LINK:
+                                         case FILE_TYPE_HARDLINK:
+                                           // get index id, request index update
+                                           if (Index_findByName(indexHandle,
+                                                                storageSpecifier.type,
+                                                                storageSpecifier.hostName,
+                                                                storageSpecifier.loginName,
+                                                                storageSpecifier.deviceName,
+                                                                storageSpecifier.archiveName,
+                                                                NULL,  // jobUUID
+                                                                NULL,  // scheduleUUID
+                                                                &storageId,
+                                                                &indexState,
+                                                                NULL  // lastCheckedTimestamp
+                                                               )
+                                              )
+                                           {
+                                             if (indexState == INDEX_STATE_OK)
+                                             {
+                                               // set last checked date/time
+                                               error = Index_setState(indexHandle,
+                                                                      storageId,
+                                                                      INDEX_STATE_OK,
+                                                                      Misc_getCurrentDateTime(),
+                                                                      NULL
+                                                                     );
+                                             }
+                                           }
+                                           else
+                                           {
+                                             // add to index
+                                             error = Index_newStorage(indexHandle,
+                                                                      DATABASE_ID_NONE, // entityId
+                                                                      printableStorageName,
+                                                                      INDEX_STATE_UPDATE_REQUESTED,
+                                                                      INDEX_MODE_AUTO,
+                                                                      &storageId
+                                                                     );
+                                             if (error == ERROR_NONE)
+                                             {
+                                               plogMessage(NULL,  // logHandle,
+                                                           LOG_TYPE_INDEX,
+                                                           "INDEX",
+                                                           "Added auto-index request for '%s'\n",
+                                                           String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                                                          );
+                                             }
+                                           }
+                                           break;
+                                         default:
+                                           break;
+                                       }
+                                     }
 
-            if (error == ERROR_NONE)
-            {
-              // read directory
-              while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && !quitFlag)
-              {
-                // read next directory entry
-                error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
-                if (error != ERROR_NONE)
-                {
-                  continue;
-                }
-
-                // check entry type and file name
-                switch (fileInfo.type)
-                {
-                  case FILE_TYPE_FILE:
-                  case FILE_TYPE_LINK:
-                  case FILE_TYPE_HARDLINK:
-                    if (String_endsWithCString(fileName,".bar"))
-                    {
-                      // get printable storage name
-                      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,fileName));
-
-                      // get index id, request index update
-                      if (Index_findByName(indexHandle,
-                                           storageSpecifier.type,
-                                           storageSpecifier.hostName,
-                                           storageSpecifier.loginName,
-                                           storageSpecifier.deviceName,
-                                           fileName,
-                                           NULL,  // jobUUID
-                                           NULL,  // scheduleUUID
-                                           &storageId,
-                                           &indexState,
-                                           NULL  // lastCheckedTimestamp
-                                          )
-                         )
-                      {
-                        if (indexState == INDEX_STATE_OK)
-                        {
-                          // set checked date/time
-                          error = Index_setState(indexHandle,
-                                                 storageId,
-                                                 INDEX_STATE_OK,
-                                                 Misc_getCurrentDateTime(),
-                                                 NULL
-                                                );
-                          if (error != ERROR_NONE)
-                          {
-                            continue;
-                          }
-                        }
-                      }
-                      else
-                      {
-                        // add to index
-                        error = Index_newStorage(indexHandle,
-                                                 DATABASE_ID_NONE, // entityId
-                                                 printableStorageName,
-                                                 INDEX_STATE_UPDATE_REQUESTED,
-                                                 INDEX_MODE_AUTO,
-                                                 &storageId
-                                                );
-                        if (error != ERROR_NONE)
-                        {
-                          continue;
-                        }
-                        pprintInfo(4,"INDEX: ","Added auto-index request for '%s'\n",String_cString(printableStorageName));
-                      }
-                    }
-                    break;
-                  case FILE_TYPE_DIRECTORY:
-                    StringList_append(&directoryList,fileName);
-                    break;
-                  default:
-                    break;
-                }
-              }
-
-              // close directory
-              Storage_closeDirectoryList(&storageDirectoryListHandle);
-            }
+                                     return error;
+                                   },NULL)
+                                  );
           }
         }
       }
@@ -5351,7 +5330,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
   String_delete(storageName);
   String_delete(printableStorageName);
   String_delete(fileName);
-  StringList_done(&directoryList);
+  String_delete(baseName);
+//  StringList_done(&directoryList);
   Storage_doneSpecifier(&storageSpecifier);
   StringList_done(&storageDirectoryList);
 }
