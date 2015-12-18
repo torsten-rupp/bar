@@ -3086,7 +3086,10 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   return ERROR_NONE;
 }
 
-Errors Storage_forAll(ConstString storagePattern, StorageFunction storageFunction, void *storageUserData)
+Errors Storage_forAll(ConstString     storagePattern,
+                      StorageFunction storageFunction,
+                      void            *storageUserData
+                     )
 {
   StorageSpecifier           storageSpecifier;
   JobOptions                 jobOptions;

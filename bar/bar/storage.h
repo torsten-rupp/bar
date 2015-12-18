@@ -1475,7 +1475,10 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_forAll(ConstString storagePattern, StorageFunction storageFunction, void *storageUserData);
+Errors Storage_forAll(ConstString     storagePattern,
+                      StorageFunction storageFunction,
+                      void            *storageUserData
+                     );
 
 #ifdef __cplusplus
   }
