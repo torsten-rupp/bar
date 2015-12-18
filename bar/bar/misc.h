@@ -167,13 +167,15 @@ typedef struct
   { \
     TEXT_MACRO_TYPE_CSTRING, \
     name, \
-    {0,0LL,0.0,value,NULL} \
+    {0,0LL,0.0,value,NULL}, \
+    pattern \
   }
-#define TEXT_MACRO_STRING(name,value) \
+#define TEXT_MACRO_STRING(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_STRING, \
     name, \
-    {0,0LL,0.0,NULL,value} \
+    {0,0LL,0.0,NULL,value}, \
+    pattern \ \
   }
 
 #define TEXT_MACRO_N_INTEGER(macro,_name,_value,_pattern) \
@@ -209,7 +211,7 @@ typedef struct
     macro.type         = TEXT_MACRO_TYPE_STRING; \
     macro.name         = _name; \
     macro.value.string = (String)_value; \
-    macro.pattern = _pattern; \
+    macro.pattern      = _pattern; \
   } while (0)
 
 /***************************** Forwards ********************************/
