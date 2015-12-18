@@ -154,20 +154,21 @@ SOURCES        = src/BARControl.java \
                  src/BARServer.java \
                  src/Settings.java \
                  \
-                 src/TableLayout.java \
-                 src/TableLayoutData.java \
-                 src/Pane.java \
-                 src/ProgressBar.java \
                  src/BusyDialog.java \
-                 src/Widgets.java \
                  src/Dialogs.java \
-                 src/StringParser.java \
-                 src/StringUtils.java \
+                 src/Dprintf.java \
+                 src/OptionEnumeration.java \
                  src/Option.java \
                  src/Options.java \
-                 src/OptionEnumeration.java \
                  src/OptionSpecial.java \
-                 src/Dprintf.java \
+                 src/Pane.java \
+                 src/ProgressBar.java \
+                 src/SettingUtils.java \
+                 src/StringParser.java \
+                 src/StringUtils.java \
+                 src/TableLayoutData.java \
+                 src/TableLayout.java \
+                 src/Widgets.java \
                  \
                  src/DataModel.java \
 
