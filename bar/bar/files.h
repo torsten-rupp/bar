@@ -383,7 +383,8 @@ void File_deleteFileName(String fileName);
 String File_clearFileName(String fileName);
 
 /***********************************************************************\
-* Name   : File_setFileName
+* Name   : File_setFileName, File_setFileNameCString,
+*          File_setFileNameChar
 * Purpose: set file name
 * Input  : fileName - file name variable
 *          name     - name to set
@@ -397,7 +398,8 @@ String File_setFileNameCString(String fileName, const char *name);
 String File_setFileNameChar(String fileName, char ch);
 
 /***********************************************************************\
-* Name   : File_fileNameAppend
+* Name   : File_appendFileName, File_appendFileNameCString,
+*          File_appendFileNameChar, File_appendFileNameBuffer
 * Purpose: append name to file name
 * Input  : fileName - file name variable
 *          name     - name to append
