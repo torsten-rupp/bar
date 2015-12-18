@@ -477,7 +477,7 @@ public class Settings
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
   public static LinkedList<Server>    servers                         = new LinkedList<Server>();//[]{new Server(DEFAULT_SERVER_NAME,DEFAULT_SERVER_PORT)};
   @SettingValue(name="serverName",type=String.class,obsolete=true)
-  private static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
+  public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
   @SettingValue(obsolete=true)
   public static String                serverPassword                  = null;
   @SettingValue(obsolete=true)
