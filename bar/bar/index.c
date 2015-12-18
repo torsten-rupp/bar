@@ -5668,7 +5668,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     // add full text search
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "INSERT INTO FTS_directory \
+                             "INSERT INTO FTS_directories \
                                 ( \
                                  directoryId, \
                                  name \
