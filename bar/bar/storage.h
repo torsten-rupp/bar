@@ -748,6 +748,19 @@ void Storage_doneAll(void);
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Storage_equalSpecifiers
+* Purpose: compare specifiers if equals
+* Input  : storageSpecifier1,storageSpecifier2 - specifiers
+* Output : -
+* Return : TRUE iff equals
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
+                             const StorageSpecifier *storageSpecifier2
+                            );
+
+/***********************************************************************\
 * Name   : Storage_isInFileSystem
 * Purpose: check if in file system
 * Input  : storageSpecifier - storage specifier

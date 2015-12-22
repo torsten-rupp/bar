@@ -744,6 +744,52 @@ void Storage_doneAll(void)
   String_delete(storageSpecifier->hostName);
 }
 
+bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
+                             const StorageSpecifier *storageSpecifier2
+                            )
+{
+  bool result;
+
+  assert(storageSpecifier1 != NULL);
+  assert(storageSpecifier2 != NULL);
+
+  result = FALSE;
+
+  if (storageSpecifier1->type == storageSpecifier2->type)
+  {
+    switch (storageSpecifier1->type)
+    {
+      case STORAGE_TYPE_FILESYSTEM:
+        result = StorageFile_equalNames(storageSpecifier1,storageSpecifier2);
+        break;
+      case STORAGE_TYPE_FTP:
+        result = StorageFTP_equalNames(storageSpecifier1,storageSpecifier2);
+        break;
+      case STORAGE_TYPE_SSH:
+      case STORAGE_TYPE_SCP:
+        result = StorageSCP_equalNames(storageSpecifier1,storageSpecifier2);
+        break;
+      case STORAGE_TYPE_SFTP:
+        result = StorageSFTP_equalNames(storageSpecifier1,storageSpecifier2);
+        break;
+      case STORAGE_TYPE_WEBDAV:
+        result = StorageWebDAV_equalNames(storageSpecifier1,storageSpecifier2);
+        break;
+      case STORAGE_TYPE_CD:
+      case STORAGE_TYPE_DVD:
+      case STORAGE_TYPE_BD:
+        result = StorageOptical_equalNames(storageSpecifier1,storageSpecifier2);
+        break;
+      case STORAGE_TYPE_DEVICE:
+        result = StorageDevice_equalNames(storageSpecifier1,storageSpecifier2);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return result;
+}
 bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
                                String      hostName,
                                uint        *hostPort,
@@ -1300,51 +1346,18 @@ bool Storage_equalNames(ConstString storageName1,
   StorageSpecifier storageSpecifier1,storageSpecifier2;
   bool             result;
 
-  // parse storage names
+  result = FALSE;
+
+  // init variables
   Storage_initSpecifier(&storageSpecifier1);
   Storage_initSpecifier(&storageSpecifier2);
-  if (   (Storage_parseName(&storageSpecifier1,storageName1) != ERROR_NONE)
-      || (Storage_parseName(&storageSpecifier2,storageName2) != ERROR_NONE)
+
+  // parse storage names and compare
+  if (   (Storage_parseName(&storageSpecifier1,storageName1) == ERROR_NONE)
+      && (Storage_parseName(&storageSpecifier2,storageName2) == ERROR_NONE)
      )
   {
-    Storage_doneSpecifier(&storageSpecifier2);
-    Storage_doneSpecifier(&storageSpecifier1);
-    return FALSE;
-  }
-
-  // compare
-  result = FALSE;
-  if (storageSpecifier1.type == storageSpecifier2.type)
-  {
-    switch (storageSpecifier1.type)
-    {
-      case STORAGE_TYPE_FILESYSTEM:
-        result = StorageFile_equalNames(&storageSpecifier1,&storageSpecifier2);
-        break;
-      case STORAGE_TYPE_FTP:
-        result = StorageFTP_equalNames(&storageSpecifier1,&storageSpecifier2);
-        break;
-      case STORAGE_TYPE_SSH:
-      case STORAGE_TYPE_SCP:
-        result = StorageSCP_equalNames(&storageSpecifier1,&storageSpecifier2);
-        break;
-      case STORAGE_TYPE_SFTP:
-        result = StorageSFTP_equalNames(&storageSpecifier1,&storageSpecifier2);
-        break;
-      case STORAGE_TYPE_WEBDAV:
-        result = StorageWebDAV_equalNames(&storageSpecifier1,&storageSpecifier2);
-        break;
-      case STORAGE_TYPE_CD:
-      case STORAGE_TYPE_DVD:
-      case STORAGE_TYPE_BD:
-        result = StorageOptical_equalNames(&storageSpecifier1,&storageSpecifier2);
-        break;
-      case STORAGE_TYPE_DEVICE:
-        result = StorageDevice_equalNames(&storageSpecifier1,&storageSpecifier2);
-        break;
-      default:
-        break;
-    }
+    result = Storage_equalSpecifiers(&storageSpecifier1,&storageSpecifier2);
   }
 
   // free resources
