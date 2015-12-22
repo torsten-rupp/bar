@@ -134,7 +134,7 @@ LOCAL LIBSSH2_RECV_FUNC(scpReceiveCallback)
 
   assert(abstract != NULL);
 
-  storageArchiveHandle = *((StorageHandle**)abstract);
+  storageArchiveHandle = *((StorageArchiveHandle**)abstract);
   assert(storageArchiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
   assert(storageArchiveHandle->storageHandle != NULL);
@@ -362,7 +362,9 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
     if (storageHandle->storageSpecifier.hostPort == 0) storageHandle->storageSpecifier.hostPort = sshServer.port;
+#ifndef WERROR
 #warning TODO!!!!!
+#endif
 //    storageHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
 //    storageHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
     if (String_isEmpty(storageHandle->storageSpecifier.hostName))
@@ -488,7 +490,7 @@ LOCAL Errors StorageSCP_preProcess(StorageHandle *storageHandle,
 {
   Errors error;
   #ifdef HAVE_SSH2
-    TextMacro textMacros[1];
+    TextMacro textMacros[2];
     String    script;
   #endif /* HAVE_SSH2 */
 
@@ -503,7 +505,8 @@ LOCAL Errors StorageSCP_preProcess(StorageHandle *storageHandle,
         if (!initialFlag)
         {
           // init macros
-          TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
+          TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
           if (globalOptions.scp.writePreProcessCommand != NULL)
           {
@@ -555,7 +558,7 @@ LOCAL Errors StorageSCP_postProcess(StorageHandle *storageHandle,
 {
   Errors error;
   #ifdef HAVE_SSH2
-    TextMacro textMacros[1];
+    TextMacro textMacros[2];
     String    script;
   #endif /* HAVE_SSH2 */
 
@@ -570,7 +573,8 @@ LOCAL Errors StorageSCP_postProcess(StorageHandle *storageHandle,
         if (!finalFlag)
         {
           // init macros
-          TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
+          TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
           if (globalOptions.scp.writePostProcessCommand != NULL)
           {
@@ -614,7 +618,7 @@ LOCAL Errors StorageSCP_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
-bool StorageSCP_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageSCP_exists(StorageHandle *storageHandle, ConstString archiveName)
 {
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));
@@ -1409,6 +1413,7 @@ LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
   UNUSED_VARIABLE(storageSpecifier);
+  UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
   UNUSED_VARIABLE(archiveName);
 

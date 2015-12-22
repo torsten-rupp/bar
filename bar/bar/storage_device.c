@@ -476,7 +476,9 @@ LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
                                       bool          initialFlag
                                      )
 {
-  Errors error;
+  Errors    error;
+  TextMacro textMacros[3];
+  String    script;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -500,6 +502,33 @@ LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
     {
       error = requestNewDeviceVolume(storageHandle,FALSE);
     }
+
+    // init macros
+    TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
+    TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                               NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageHandle->requestedVolumeNumber,      NULL);
+
+    // get pre script
+    script = expandTemplate(String_cString(storageHandle->device.writePreProcessCommand),
+                            EXPAND_MACRO_MODE_STRING,
+                            timestamp,
+                            initialFlag,
+                            textMacros,
+                            SIZE_OF_ARRAY(textMacros)
+                           );
+    if (script != NULL)
+    {
+      // execute script
+      error = Misc_executeScript(String_cString(script),
+                                 CALLBACK(executeIOOutput,NULL),
+                                 CALLBACK(executeIOOutput,NULL)
+                                );
+      String_delete(script);
+    }
+    else
+    {
+      error = ERROR_EXPAND_TEMPLATE;
+    }
   }
 
   return error;
@@ -513,8 +542,9 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
 {
   Errors    error;
   String    imageFileName;
-  TextMacro textMacros[4];
+  TextMacro textMacros[5];
   String    fileName;
+  String    script;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -557,7 +587,8 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
       TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageHandle->storageSpecifier.deviceName,NULL);
       TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageHandle->device.directory,           NULL);
       TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                             NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[3],"%number",   storageHandle->volumeNumber,               NULL);
+      TEXT_MACRO_N_STRING (textMacros[3],"%file",     archiveName,                               NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageHandle->volumeNumber,               NULL);
 
       // create image
       if (error == ERROR_NONE)
@@ -659,6 +690,28 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
       storageHandle->device.newVolumeFlag = TRUE;
       storageHandle->device.totalSize     = 0;
     }
+
+    // get post script
+    script = expandTemplate(String_cString(storageHandle->device.writePostProcessCommand),
+                            EXPAND_MACRO_MODE_STRING,
+                            timestamp,
+                            finalFlag,
+                            textMacros,
+                            SIZE_OF_ARRAY(textMacros)
+                           );
+    if (script != NULL)
+    {
+      // execute script
+      error = Misc_executeScript(String_cString(script),
+                                 CALLBACK(executeIOOutput,NULL),
+                                 CALLBACK(executeIOOutput,NULL)
+                                );
+      String_delete(script);
+    }
+    else
+    {
+      error = ERROR_EXPAND_TEMPLATE;
+    }
   }
   else
   {
@@ -688,7 +741,7 @@ LOCAL Errors StorageDevice_unloadVolume(StorageHandle *storageHandle)
   return error;
 }
 
-bool StorageDevice_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageDevice_exists(StorageHandle *storageHandle, ConstString archiveName)
 {
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));

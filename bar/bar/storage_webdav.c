@@ -739,7 +739,7 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
 {
   Errors error;
   #ifdef HAVE_CURL
-    TextMacro textMacros[1];
+    TextMacro textMacros[2];
     String    script;
   #endif /* HAVE_CURL */
 
@@ -753,7 +753,8 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
       if (!initialFlag)
       {
         // init macros
-        TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
         if (globalOptions.ftp.writePreProcessCommand != NULL)
         {
@@ -807,7 +808,7 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
 {
   Errors error;
   #ifdef HAVE_CURL
-    TextMacro textMacros[1];
+    TextMacro textMacros[2];
     String    script;
   #endif /* HAVE_CURL */
 
@@ -821,7 +822,8 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
       if (!finalFlag)
       {
         // init macros
-        TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
         if (globalOptions.ftp.writePostProcessCommand != NULL)
         {
@@ -867,7 +869,7 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
-bool StorageWebDAV_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageWebDAV_exists(StorageHandle *storageHandle, ConstString archiveName)
 {
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));

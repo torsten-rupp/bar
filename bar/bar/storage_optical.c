@@ -798,7 +798,7 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
                                        bool          initialFlag
                                       )
 {
-  TextMacro textMacros[2];
+  TextMacro textMacros[3];
   Errors    error;
   String    script;
 
@@ -828,7 +828,8 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
 
     // init macros
     TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                               NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageHandle->requestedVolumeNumber,      NULL);
 
     // get pre script
     script = expandTemplate(String_cString(storageHandle->opticalDisk.write.writePreProcessCommand),
@@ -865,7 +866,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
   Errors     error;
   StringList stderrList;
   String     imageFileName;
-  TextMacro  textMacros[5];
+  TextMacro  textMacros[6];
   String     fileName;
   FileInfo   fileInfo;
   bool       retryFlag;
@@ -905,7 +906,8 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageHandle->opticalDisk.write.directory,NULL);
       TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                             NULL);
       TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0,                                         NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageHandle->volumeNumber,               NULL);
+      TEXT_MACRO_N_STRING (textMacros[4],"%file",     archiveName,                               NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[5],"%number",   storageHandle->volumeNumber,               NULL);
 
       if ((storageHandle->jobOptions != NULL) && (storageHandle->jobOptions->alwaysCreateImageFlag || storageHandle->jobOptions->errorCorrectionCodesFlag))
       {
@@ -1151,7 +1153,7 @@ LOCAL Errors StorageOptical_unloadVolume(StorageHandle *storageHandle)
   return error;
 }
 
-bool StorageOptical_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageOptical_exists(StorageHandle *storageHandle, ConstString archiveName)
 {
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));
@@ -1596,6 +1598,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
   assert(jobOptions != NULL);
 
+  UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(serverConnectionPriority);
 
   // initialize variables

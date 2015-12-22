@@ -477,7 +477,7 @@ LOCAL Errors StorageSFTP_preProcess(StorageHandle *storageHandle,
 {
   Errors error;
   #ifdef HAVE_SSH2
-    TextMacro textMacros[1];
+    TextMacro textMacros[2];
     String    script;
   #endif /* HAVE_SSH2 */
 
@@ -492,7 +492,8 @@ LOCAL Errors StorageSFTP_preProcess(StorageHandle *storageHandle,
         if (!initialFlag)
         {
           // init macros
-          TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
+          TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
           if (globalOptions.sftp.writePreProcessCommand != NULL)
           {
@@ -544,7 +545,7 @@ LOCAL Errors StorageSFTP_postProcess(StorageHandle *storageHandle,
 {
   Errors error;
   #ifdef HAVE_SSH2
-    TextMacro textMacros[1];
+    TextMacro textMacros[2];
     String    script;
   #endif /* HAVE_SSH2 */
 
@@ -560,7 +561,8 @@ LOCAL Errors StorageSFTP_postProcess(StorageHandle *storageHandle,
         if (!finalFlag)
         {
           // init macros
-          TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
+          TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
           if (globalOptions.sftp.writePostProcessCommand != NULL)
           {
@@ -604,7 +606,7 @@ LOCAL Errors StorageSFTP_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
-bool StorageSFTP_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageSFTP_exists(StorageHandle *storageHandle, ConstString archiveName)
 {
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));
@@ -1484,9 +1486,8 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
   assert(!String_isEmpty(archiveName));
 
-  #ifdef HAVE_SSH2
-    UNUSED_VARIABLE(serverConnectionPriority);
-  #endif /* HAVE_SSH2 */
+  UNUSED_VARIABLE(storageSpecifier);
+  UNUSED_VARIABLE(serverConnectionPriority);
 
   // initialize variables
   AutoFree_init(&autoFreeList);

@@ -1271,7 +1271,7 @@ LOCAL Errors StorageFTP_preProcess(StorageHandle *storageHandle,
 {
   Errors error;
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    TextMacro textMacros[1];
+    TextMacro textMacros[2];
     String    script;
   #endif /* HAVE_CURL || HAVE_FTP */
 
@@ -1286,7 +1286,8 @@ LOCAL Errors StorageFTP_preProcess(StorageHandle *storageHandle,
       if (!initialFlag)
       {
         // init macros
-        TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
         if (globalOptions.ftp.writePreProcessCommand != NULL)
         {
@@ -1340,7 +1341,7 @@ LOCAL Errors StorageFTP_postProcess(StorageHandle *storageHandle,
 {
   Errors error;
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    TextMacro textMacros[1];
+    TextMacro textMacros[2];
     String    script;
   #endif /* HAVE_CURL || HAVE_FTP */
 
@@ -1355,7 +1356,8 @@ LOCAL Errors StorageFTP_postProcess(StorageHandle *storageHandle,
       if (!finalFlag)
       {
         // init macros
-        TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageHandle->volumeNumber,NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
 
         if (globalOptions.ftp.writePostProcessCommand != NULL)
         {
@@ -1412,22 +1414,16 @@ LOCAL Errors StorageFTP_unloadVolume(StorageHandle *storageHandle)
   return ERROR_NONE;
 }
 
-bool StorageFTP_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageFTP_exists(StorageHandle *storageHandle, ConstString archiveName)
 {
-  assert(storageHandle != NULL);
-  assert(!String_isEmpty(archiveName));
-
   bool existsFlag;
   #if   defined(HAVE_CURL)
     CURL            *curlHandle;
     String          pathName,baseName;
     String          url;
     CURLcode        curlCode;
-    CURLMcode       curlMCode;
     StringTokenizer nameTokenizer;
     ConstString     token;
-    double          fileSize;
-    int             runningHandles;
   #elif defined(HAVE_FTP)
     netbuf     *control;
     const char *plainLoginPassword;
@@ -1643,30 +1639,21 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
     storageArchiveHandle->ftp.curlHandle             = NULL;
     storageArchiveHandle->ftp.index                  = 0LL;
     storageArchiveHandle->ftp.size                   = archiveSize;
+    storageArchiveHandle->ftp.readAheadBuffer.data   = NULL;
     storageArchiveHandle->ftp.readAheadBuffer.offset = 0LL;
     storageArchiveHandle->ftp.readAheadBuffer.length = 0L;
     storageArchiveHandle->ftp.length                 = 0L;
     storageArchiveHandle->ftp.transferedBytes        = 0L;
 
-    // allocate read-ahead buffer
-#warning not needed for crate
-    storageArchiveHandle->ftp.readAheadBuffer.data = (byte*)malloc(BUFFER_SIZE);
-    if (storageArchiveHandle->ftp.readAheadBuffer.data == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-
     // open Curl handles
     storageArchiveHandle->ftp.curlMultiHandle = curl_multi_init();
     if (storageArchiveHandle->ftp.curlMultiHandle == NULL)
     {
-      free(storageArchiveHandle->ftp.readAheadBuffer.data);
       return ERROR_FTP_SESSION_FAIL;
     }
     storageArchiveHandle->ftp.curlHandle = curl_easy_init();
     if (storageArchiveHandle->ftp.curlHandle == NULL)
     {
-      free(storageArchiveHandle->ftp.readAheadBuffer.data);
       curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
       return ERROR_FTP_SESSION_FAIL;
     }
@@ -1707,7 +1694,6 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
         String_delete(pathName);
         (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
-        free(storageArchiveHandle->ftp.readAheadBuffer.data);
         return ERRORX_(CREATE_DIRECTORY,0,curl_easy_strerror(curlCode));
       }
 
@@ -1733,7 +1719,6 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
         String_delete(pathName);
         (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
-        free(storageArchiveHandle->ftp.readAheadBuffer.data);
         return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
       }
 
@@ -1754,7 +1739,6 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
         (void)curl_multi_remove_handle(storageArchiveHandle->ftp.curlMultiHandle,storageArchiveHandle->ftp.curlHandle);
         (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
-        free(storageArchiveHandle->ftp.readAheadBuffer.data);
         return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
       }
 
@@ -2257,7 +2241,6 @@ LOCAL void StorageFTP_close(StorageArchiveHandle *storageArchiveHandle)
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
 
-  free(storageArchiveHandle->ftp.readAheadBuffer.data);
   #if   defined(HAVE_CURL)
     assert(storageArchiveHandle->ftp.curlHandle != NULL);
     assert(storageArchiveHandle->ftp.curlMultiHandle != NULL);
@@ -2277,6 +2260,7 @@ LOCAL void StorageFTP_close(StorageArchiveHandle *storageArchiveHandle)
       case STORAGE_MODE_UNKNOWN:
         break;
       case STORAGE_MODE_WRITE:
+        free(storageArchiveHandle->ftp.readAheadBuffer.data);
         if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
         {
           assert(storageArchiveHandle->ftp.data != NULL);

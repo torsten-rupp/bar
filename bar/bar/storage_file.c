@@ -297,7 +297,7 @@ LOCAL Errors StorageFile_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
-bool StorageFile_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageFile_exists(StorageHandle *storageHandle, ConstString archiveName)
 {
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));
@@ -374,7 +374,7 @@ File_getSize(&storageArchiveHandle->fileSystem.fileHandle)
     DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->fileSystem,sizeof(storageArchiveHandle->fileSystem));
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 LOCAL Errors StorageFile_open(StorageArchiveHandle *storageArchiveHandle,
@@ -623,6 +623,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(archiveName));
 
+  UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 
