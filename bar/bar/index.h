@@ -633,7 +633,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 * Input  : indexHandle - index handle
 *          storageId   - database id of storage index
 *          storageName - storage name (can be NULL)
-*          size        - size [bytes]
+*          storageSize - storage size [bytes] (can be 0)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -642,7 +642,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 Errors Index_storageUpdate(IndexHandle *indexHandle,
                            DatabaseId  storageId,
                            ConstString storageName,
-                           uint64      size
+                           uint64      storageSize
                           );
 
 /***********************************************************************\

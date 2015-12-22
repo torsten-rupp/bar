@@ -1926,6 +1926,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   String_delete(name2);
   String_delete(name1);
 #else
+UNUSED_VARIABLE(indexHandle);
 return ERROR_NONE;
 #endif
 }
@@ -2655,10 +2656,9 @@ LOCAL Errors assignEntityToEntity(IndexHandle *indexHandle,
                                   DatabaseId  toEntityId
                                  )
 {
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  DatabaseId       storageId;
+  Errors error;
 
+  // assign to entity
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "UPDATE storage \
@@ -2738,6 +2738,8 @@ LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
+#if 0
+// still not used
 /***********************************************************************\
 * Name   : assignJobToJob
 * Purpose: assign all entities of job to other job
@@ -2755,9 +2757,7 @@ LOCAL Errors assignJobToJob(IndexHandle *indexHandle,
                             ConstString toJobUUID
                            )
 {
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  DatabaseId       entityId;
+  Errors error;
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -2775,6 +2775,7 @@ LOCAL Errors assignJobToJob(IndexHandle *indexHandle,
 
   return ERROR_NONE;
 }
+#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 
@@ -4206,6 +4207,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 {
   Errors error;
 
+  assert(!String_isEmpty(storageName));
   assert(indexHandle != NULL);
   assert(storageId != NULL);
 
@@ -4454,13 +4456,10 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 Errors Index_storageUpdate(IndexHandle *indexHandle,
                            DatabaseId  storageId,
                            ConstString storageName,
-                           uint64      size
+                           uint64      storageSize
                           )
 {
   Errors error;
-  uint64 entries;
-  uint   i;
-  int64  n;
 
   assert(indexHandle != NULL);
 
@@ -4488,7 +4487,6 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
     }
   }
 
-#if 0
   // update size
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -4496,46 +4494,13 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
                             SET size=%llu \
                             WHERE id=%lld; \
                            ",
-                           size,
+                           storageSize,
                            storageId
                           );
   if (error != ERROR_NONE)
   {
     return error;
   }
-#endif
-
-#if 0
-  // count and update entries
-  entries = 0LL;
-  for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
-  {
-    if (Database_getInteger64(&indexHandle->databaseHandle,
-                              &n,
-                              ENTRY_TABLE_NAMES[i],
-                              "COUNT(id)",
-                              "WHERE storageId=%lld",
-                              storageId
-                             ) == ERROR_NONE
-       )
-    {
-      entries += (uint64)n;
-    }
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "UPDATE storage \
-                            SET entries=%llu \
-                            WHERE id=%lld; \
-                           ",
-                           entries,
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-#endif
 
   return ERROR_NONE;
 }
