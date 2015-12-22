@@ -1958,6 +1958,7 @@ bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  existsFlag = FALSE;
   switch (storageHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -2029,6 +2030,7 @@ bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  error = ERROR_UNKNOWN;
   switch (storageArchiveHandle->storageHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -2063,6 +2065,7 @@ bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName)
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2107,6 +2110,7 @@ bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  error = ERROR_UNKNOWN;
   switch (storageArchiveHandle->storageHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
@@ -2143,6 +2147,7 @@ bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName)
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     return error;
