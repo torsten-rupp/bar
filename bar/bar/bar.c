@@ -267,7 +267,10 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+//TODO
+#ifndef WERROR
 LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+#endif
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
 (
@@ -2260,6 +2263,8 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 * Notes  : -
 \***********************************************************************/
 
+//TODO
+#ifndef WERROR
 LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
@@ -2267,6 +2272,7 @@ LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, c
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
@@ -2275,6 +2281,7 @@ LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, c
 
   return TRUE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : configValueParseConfigFile
@@ -3383,7 +3390,7 @@ void templateMacros(TemplateHandle   *templateHandle,
 
   // add macros
   newTextMacroCount = templateHandle->textMacroCount+textMacroCount;
-  newTextMacros = (TextMacro*)realloc(templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
+  newTextMacros = (TextMacro*)realloc((void*)templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
   if (newTextMacros == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3405,13 +3412,10 @@ String templateDone(TemplateHandle *templateHandle,
   struct tm *tm;
   char      buffer[256];
   uint      weekNumberU,weekNumberW;
-  ulong     i,j;
+  ulong     i;
   char      format[4];
   size_t    length;
-  ulong     divisor;
-  ulong     n;
   uint      z;
-  int       d;
 
   assert(templateHandle != NULL);
 
@@ -3432,7 +3436,7 @@ String templateDone(TemplateHandle *templateHandle,
 
   // add week macros
   newTextMacroCount = templateHandle->textMacroCount+4;
-  newTextMacros = (TextMacro*)realloc(templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
+  newTextMacros = (TextMacro*)realloc((void*)templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
   if (newTextMacros == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3582,7 +3586,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   // free resources
-  free(templateHandle->textMacros);
+  free((void*)templateHandle->textMacros);
 
   return string;
 }
@@ -3654,6 +3658,11 @@ void logPostProcess(LogHandle        *logHandle,
   String     string;
 
 //TODO jobOptions
+#ifndef WERROR
+#warning jobOptions
+#else
+UNUSED_VARIABLE(jobOptions);
+#endif
 
   assert(jobName != NULL);
   assert(jobOptions != NULL);
@@ -5424,6 +5433,8 @@ bool configValueReadKeyFile(void *userData, void *variable, const char *name, co
   return TRUE;
 }
 
+//TODO
+#ifndef WERROR
 bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   UNUSED_VARIABLE(userData);
@@ -5436,6 +5447,7 @@ bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const
 
   return TRUE;
 }
+#endif
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType)
 {
