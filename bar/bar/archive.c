@@ -1033,7 +1033,9 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo)
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+#ifndef WERROR
 #warning TODO: nicht offen wenn keine datei archiviert wurde
+#endif
 //  assert(archiveInfo->file.openFlag);
 if (!archiveInfo->file.openFlag) return ERROR_NONE;
 
@@ -3564,7 +3566,9 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
           {
             return error;
           }
+#ifndef WERROR
 #warning seek?
+#endif
           error = File_seek(&archiveInfo->file.fileHandle,archiveInfo->interrupt.offset);
           if (error != ERROR_NONE)
           {
@@ -3583,8 +3587,10 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       {
         return error;
       }
+#ifndef WERROR
 #warning seek?
-      error = Storage_seek(&archiveInfo->storage.storageArchiveHandle,&archiveInfo->interrupt.offset);
+#endif
+      error = Storage_seek(&archiveInfo->storage.storageArchiveHandle,archiveInfo->interrupt.offset);
       if (error != ERROR_NONE)
       {
         return error;
