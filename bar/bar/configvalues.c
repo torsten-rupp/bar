@@ -276,6 +276,8 @@ LOCAL const ConfigValueSet *findSet(const ConfigValueSet *sets, const char *setN
   }
 }
 
+#if 0
+// still not used
 /***********************************************************************\
 * Name   : findSetByValue
 * Purpose: find set by value
@@ -306,6 +308,7 @@ LOCAL const ConfigValueSet *findSetByValue(const ConfigValueSet *sets, uint valu
     return NULL;
   }
 }
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : getIntegerOption
