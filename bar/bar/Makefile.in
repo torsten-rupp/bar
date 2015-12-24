@@ -672,7 +672,7 @@ endif
 
 # compile SQLite, xdelta C source without warning and debug flags
 sqlite3.o: sqlite3.c
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_ICU $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
 ifeq (@HAVE_XDELTA@,1)
 xdelta3.o: ../xdelta3/xdelta3.c
@@ -1481,7 +1481,7 @@ test_parameters: \
 	@$(RMF) test/test-????-??-??-??-??-??-#.bar; \
         $(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test-%Y-%m-%d-%H-%M-%S-%#.bar $(TEST_FILES) --overwrite-archive-files $(if $(QUIET),1>/dev/null)); \
         test -f test/test-????-??-??-??-??-??-#.bar;
-        @$(RMF) test/test-????-??-??-??-??-??-#.bar
+	@$(RMF) test/test-????-??-??-??-??-??-#.bar
 	#
 	# scripts
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="echo pre" --file-write-post-command="echo post" $(if $(QUIET),1>/dev/null))
