@@ -30,6 +30,8 @@
 // config value data types
 typedef enum
 {
+  CONFIG_VALUE_TYPE_NONE,
+
   CONFIG_VALUE_TYPE_INTEGER,
   CONFIG_VALUE_TYPE_INTEGER64,
   CONFIG_VALUE_TYPE_DOUBLE,
@@ -283,6 +285,36 @@ typedef struct
   __VA_ARGS__ \
   {NULL,0} \
 }
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_ARRAY
+* Purpose: define config value array
+* Input  : ... - config values
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_ARRAY(...) \
+{ \
+  __VA_ARGS__ \
+  { \
+    NULL,\
+    CONFIG_VALUE_TYPE_NONE,\
+    {NULL},\
+    0,\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
+    {},\
+    {0},\
+    {NULL},\
+    {NULL}, \
+    {},\
+    {},\
+    {NULL,NULL,NULL,NULL,NULL},\
+  } \
+}; \
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_INTEGER, CONFIG_STRUCT_VALUE_INTEGER
@@ -754,9 +786,9 @@ typedef struct
 \***********************************************************************/
 
 #define CONFIG_VALUE_ITERATE(configValues,index) \
-  for ((index) = ConfigValue_firstValue(configValues,SIZE_OF_ARRAY(configValues)); \
-       (index) < ConfigValue_endValue(configValues,SIZE_OF_ARRAY(configValues),index); \
-       (index) = ConfigValue_nextValue(configValues,SIZE_OF_ARRAY(configValues),index) \
+  for ((index) = ConfigValue_firstValueIndex(configValues); \
+       (index) < ConfigValue_lastValueIndex(configValues); \
+       (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
 /***********************************************************************\
@@ -776,9 +808,9 @@ typedef struct
 \***********************************************************************/
 
 #define CONFIG_VALUE_ITERATEX(configValues,index,condition) \
-  for ((index) = ConfigValue_firstValue(configValues,SIZE_OF_ARRAY(configValues)); \
-       ((index) < ConfigValue_endValue(configValues,SIZE_OF_ARRAY(configValues),index)) && (condition); \
-       (index) = ConfigValue_nextValue(configValues,SIZE_OF_ARRAY(configValues),index) \
+  for ((index) = ConfigValue_firstValueIndex(configValues); \
+       ((index) < ConfigValue_lastValueIndex(configValues)) && (condition); \
+       (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
 /***********************************************************************\
@@ -798,9 +830,9 @@ typedef struct
 \***********************************************************************/
 
 #define CONFIG_VALUE_ITERATE_SECTION(configValues,sectionName,index) \
-  for ((index) = ConfigValue_firstSectionValue(configValues,SIZE_OF_ARRAY(configValues),sectionName); \
-       (index) < ConfigValue_endSectionValue(configValues,SIZE_OF_ARRAY(configValues),index); \
-       (index) = ConfigValue_nextSectionValue(configValues,SIZE_OF_ARRAY(configValues),index) \
+  for ((index) = ConfigValue_firstSectionValueIndex(configValues,sectionName); \
+       (index) <= ConfigValue_lastSectionValueIndex(configValues,index); \
+       (index) = ConfigValue_nextSectionValueIndex(configValues,index) \
       )
 
 /***********************************************************************\
@@ -821,9 +853,9 @@ typedef struct
 \***********************************************************************/
 
 #define CONFIG_VALUE_ITERATE_SECTIONX(configValues,sectionName,index,condition) \
-  for ((index) = ConfigValue_firstSectionValue(configValues,SIZE_OF_ARRAY(configValues),sectionName); \
-       ((index) < ConfigValue_endSectionValue(configValues,SIZE_OF_ARRAY(configValues),index)) && (condition); \
-       (index) = ConfigValue_nextSectionValue(configValues,SIZE_OF_ARRAY(configValues),index) \
+  for ((index) = ConfigValue_firstSectionValueIndex(configValues,sectionName); \
+       ((index) <= ConfigValue_lastSectionValueIndex(configValues,index)) && (condition); \
+       (index) = ConfigValue_nextSectionValueIndex(configValues,index) \
       )
 
 /***************************** Functions ******************************/
@@ -899,183 +931,74 @@ static inline bool ConfigValue_isSection(const ConfigValue configValue)
 }
 
 /***********************************************************************\
-* Name   : ConfigValue_firstValue
+* Name   : ConfigValue_firstValueIndex
 * Purpose: get first value index
-* Input  : configValues     - config values array
-*          configValueCount - number of config values
+* Input  : configValues - config values array
 * Output : -
 * Return : first index
 * Notes  : -
 \***********************************************************************/
 
-static inline uint ConfigValue_firstValue(const ConfigValue configValues[], uint configValueCount)
-{
-  uint index;
-
-  assert(configValues != NULL);
-  assert(configValueCount > 0);
-
-  index = 0;
-
-  while ((index < configValueCount) && ConfigValue_isSection(configValues[index]))
-  {
-    // skip section
-    do
-    {
-      index++;
-    }
-    while ((index < configValueCount) && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION));
-    if (index < configValueCount) index++;
-  }
-
-  return index;
-}
+uint ConfigValue_firstValueIndex(const ConfigValue configValues[]);
 
 /***********************************************************************\
-* Name   : ConfigValue_lastValue
+* Name   : ConfigValue_lastValueIndex
 * Purpose: get last value index
-* Input  : configValues     - config values array
-*          configValueCount - number of config values
-*          index            - index (not used)
+* Input  : configValues - config values array
 * Output : -
 * Return : always configValueCount
 * Notes  : -
 \***********************************************************************/
 
-static inline uint ConfigValue_endValue(const ConfigValue configValues[], uint configValueCount, uint index)
-{
-  assert(configValues != NULL);
-  assert(configValueCount > 0);
-
-  UNUSED_VARIABLE(configValues);
-  UNUSED_VARIABLE(index);
-
-  return configValueCount;
-}
+uint ConfigValue_lastValueIndex(const ConfigValue configValues[]);
 
 /***********************************************************************\
-* Name   : ConfigValue_nextValue
+* Name   : ConfigValue_nextValueIndex
 * Purpose: get next value index
-* Input  : configValues     - config values array
-*          configValueCount - number of config values
-*          index            - index
+* Input  : configValues - config values array
+*          index        - index
 * Output : -
 * Return : next index
 * Notes  : -
 \***********************************************************************/
 
-static inline uint ConfigValue_nextValue(const ConfigValue configValues[], uint configValueCount, uint index)
-{
-  index++;
-
-  assert(configValues != NULL);
-  assert(configValueCount > 0);
-
-  while ((index < configValueCount) && ConfigValue_isSection(configValues[index]))
-  {
-    // skip section
-    do
-    {
-      index++;
-    }
-    while ((index < configValueCount) && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION));
-    if (index < configValueCount) index++;
-  }
-
-  return index;
-}
+uint ConfigValue_nextValueIndex(const ConfigValue configValues[], uint index);
 
 /***********************************************************************\
 * Name   : ConfigValue_firstSectionValue
 * Purpose: get first section value index
-* Input  : configValues     - config values array
-*          configValueCount - number of config values
-*          name             - section name
+* Input  : configValues - config values array
+*          name         - section name
 * Output : -
 * Return : first index in section
 * Notes  : -
 \***********************************************************************/
 
-static inline uint ConfigValue_firstSectionValue(const ConfigValue configValues[], uint configValueCount, const char *name)
-{
-  uint index;
-
-  assert(configValues != NULL);
-  assert(configValueCount > 0);
-
-  index = 0;
-
-  while (   (index < configValueCount)
-         && (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
-         && !stringEquals(configValues[index].name,name)
-        )
-  {
-    index++;
-  }
-  if (index < configValueCount) index++;
-
-  return index;
-}
+uint ConfigValue_firstSectionValueIndex(const ConfigValue configValues[], const char *name);
 
 /***********************************************************************\
 * Name   : ConfigValue_lastSectionValue
 * Purpose: get last section value index
-* Input  : configValues     - config values array
-*          configValueCount - number of config values
-*          index            - index
+* Input  : configValues - config values array
+*          index        - index
 * Output : -
 * Return : last index
 * Notes  : -
 \***********************************************************************/
 
-static inline uint ConfigValue_endSectionValue(const ConfigValue configValues[], uint configValueCount, uint index)
-{
-  assert(configValues != NULL);
-  assert(configValueCount > 0);
-
-  while (   (index < configValueCount)
-         && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
-        )
-  {
-    index++;
-  }
-
-  return index;
-}
+uint ConfigValue_lastSectionValueIndex(const ConfigValue configValues[], uint index);
 
 /***********************************************************************\
-* Name   : ConfigValue_nextSectionValue
+* Name   : ConfigValue_nextSectionValueIndex
 * Purpose: get next section value index
-* Input  : configValues     - config values array
-*          configValueCount - number of config values
-*          index            - index
+* Input  : configValues - config values array
+*          index        - index
 * Output : -
 * Return : next index
 * Notes  : -
 \***********************************************************************/
 
-static inline uint ConfigValue_nextSectionValue(const ConfigValue configValues[], uint configValueCount, uint index)
-{
-  assert(configValues != NULL);
-  assert(configValueCount > 0);
-
-  index++;
-
-  if (index < configValueCount)
-  {
-    if (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION)
-    {
-      do
-      {
-        index++;
-      }
-      while ((index < configValueCount) && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION));
-      if (index < configValueCount) index++;
-    }
-  }
-
-  return index;
-}
+uint ConfigValue_nextSectionValueIndex(const ConfigValue configValues[], uint index);
 
 /***********************************************************************
 * Name   : ConfigValue_parse
@@ -1083,7 +1006,6 @@ static inline uint ConfigValue_nextSectionValue(const ConfigValue configValues[]
 * Input  : name              - config value name
 *          value             - config value
 *          configValues      - array with config value specification
-*          configValueCount  - size of config value specification array
 *          sectionName       - section name or NULL
 *          errorOutputHandle - error output handle or NULL
 *          errorPrefix       - error prefix or NULL
@@ -1095,7 +1017,6 @@ static inline uint ConfigValue_nextSectionValue(const ConfigValue configValues[]
 bool ConfigValue_parse(const char        *name,
                        const char        *value,
                        const ConfigValue configValues[],
-                       uint              configValueCount,
                        const char        *sectionName,
                        FILE              *errorOutputHandle,
                        const char        *errorPrefix,
