@@ -485,8 +485,8 @@ LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userDa
 LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
 LOCAL bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
-LOCAL const ConfigValue CONFIG_VALUES[] =
-{
+LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+(
   CONFIG_STRUCT_VALUE_STRING   ("UUID",                    JobNode,uuid                                    ),
   CONFIG_STRUCT_VALUE_STRING   ("remote-host-name",        JobNode,remoteHost.name                         ),
   CONFIG_STRUCT_VALUE_INTEGER  ("remote-host-port",        JobNode,remoteHost.port,                        0,65535,NULL),
@@ -564,7 +564,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",                JobNode,scheduleList,                           configValueParseSchedule,NULL,NULL,NULL,NULL),
 //  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files", JobNode,jobOptions.archiveFileModeOverwriteFlag ),
   CONFIG_STRUCT_VALUE_IGNORE   ("overwrite-archive-files"                                                  ),
-};
+);
 
 /***************************** Variables *******************************/
 LOCAL ClientList            clientList;
@@ -2564,14 +2564,14 @@ LOCAL Errors updateJob(JobNode *jobNode)
     }
 
     // update line list
-    CONFIG_VALUE_ITERATE(CONFIG_VALUES,z)
+    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,z)
     {
       // delete old entries, get position for insert new entries
-      nextStringNode = deleteJobEntries(&jobLinesList,NULL,CONFIG_VALUES[z].name);
+      nextStringNode = deleteJobEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[z].name);
 
       // insert new entries
       ConfigValue_formatInit(&configValueFormat,
-                             &CONFIG_VALUES[z],
+                             &JOB_CONFIG_VALUES[z],
                              CONFIG_VALUE_FORMAT_MODE_LINE,
                              jobNode
                             );
@@ -2593,10 +2593,10 @@ LOCAL Errors updateJob(JobNode *jobNode)
         String_format(String_clear(line),"[schedule]");
         StringList_insert(&jobLinesList,line,nextStringNode);
 
-        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"schedule",z)
+        CONFIG_VALUE_ITERATE_SECTION(JOB_CONFIG_VALUES,"schedule",z)
         {
           ConfigValue_formatInit(&configValueFormat,
-                                 &CONFIG_VALUES[z],
+                                 &JOB_CONFIG_VALUES[z],
                                  CONFIG_VALUE_FORMAT_MODE_LINE,
                                  scheduleNode
                                 );
@@ -2798,10 +2798,10 @@ LOCAL bool readJob(JobNode *jobNode)
                         );
           if (!ConfigValue_parse(String_cString(name),
                                  String_cString(value),
-                                 CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                                 JOB_CONFIG_VALUES,
                                  "schedule",
-                                 NULL, // errorOutputHandle,
-                                 NULL, // errorPrefix,
+                                 NULL, // errorOutputHandle
+                                 NULL, // errorPrefix
                                  scheduleNode
                                 )
              )
@@ -2854,10 +2854,10 @@ LOCAL bool readJob(JobNode *jobNode)
                     );
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
-                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                             NULL,
-                             NULL, // errorOutputHandle,
-                             NULL, // errorPrefix,
+                             JOB_CONFIG_VALUES,
+                             NULL, // sectionName
+                             NULL, // errorOutputHandle
+                             NULL, // errorPrefix
                              jobNode
                             )
          )
@@ -4904,8 +4904,9 @@ LOCAL void indexThreadCode(void)
     {
       // pause
       pauseIndexUpdate();
+fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
 
-      // parse storage name
+      // parse storage name, get printable name
       error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
       {
@@ -5085,14 +5086,13 @@ LOCAL void autoIndexUpdateThreadCode(void)
   StringList                 storageDirectoryList;
   StorageSpecifier           storageSpecifier;
   String                     baseName;
-  String                     fileName;
+  String                     pattern;
   String                     printableStorageName;
   String                     storageName;
   String                     storageDirectoryName;
   JobOptions                 jobOptions;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
-  FileInfo                   fileInfo;
   DatabaseId                 storageId;
   uint64                     createdDateTime;
   IndexStates                indexState;
@@ -5109,7 +5109,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   StringList_init(&storageDirectoryList);
   Storage_initSpecifier(&storageSpecifier);
   baseName             = String_new();
-  fileName             = String_new();
+  pattern              = String_new();
   printableStorageName = String_new();
   storageName          = String_new();
 
@@ -5169,10 +5169,17 @@ LOCAL void autoIndexUpdateThreadCode(void)
                        "Auto-index scan '%s'\n",
                        String_cString(Storage_getPrintableName(&storageSpecifier,baseName))
                       );
-            error = Storage_forAll(File_appendFileNameCString(File_setFileName(fileName,baseName),"*.bar"),
+            File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
+            error = Storage_forAll(pattern,
                                    CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
                                    {
-                                     Errors error;
+                                     StorageSpecifier storageSpecifier;
+                                     Errors           error;
+
+                                     UNUSED_VARIABLE(userData);
+
+                                     // init variables
+                                     Storage_initSpecifier(&storageSpecifier);
 
                                      error = Storage_parseName(&storageSpecifier,storageName);
                                      if (error == ERROR_NONE)
@@ -5214,7 +5221,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                              // add to index
                                              error = Index_newStorage(indexHandle,
                                                                       DATABASE_ID_NONE, // entityId
-                                                                      printableStorageName,
+                                                                      storageName,
                                                                       INDEX_STATE_UPDATE_REQUESTED,
                                                                       INDEX_MODE_AUTO,
                                                                       &storageId
@@ -5235,6 +5242,9 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                        }
                                      }
 
+                                     // free resources
+                                     Storage_doneSpecifier(&storageSpecifier);
+
                                      return error;
                                    },NULL)
                                   );
@@ -5246,7 +5256,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     }
     doneJobOptions(&jobOptions);
 
-    // delete not existing indizes
+    // delete not existing and expired indizes
     error = Index_initListStorage(&indexQueryHandle,
                                   indexHandle,
                                   NULL, // uuid
@@ -5329,9 +5339,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
   // free resources
   String_delete(storageName);
   String_delete(printableStorageName);
-  String_delete(fileName);
+  String_delete(pattern);
   String_delete(baseName);
-//  StringList_done(&directoryList);
   Storage_doneSpecifier(&storageSpecifier);
   StringList_done(&storageDirectoryList);
 }
@@ -6288,6 +6297,144 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const StringMap ar
 }
 
 /***********************************************************************\
+* Name   : serverCommand_optionGet
+* Purpose: get option
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            name=<name>
+*          Result:
+*            value=<value>
+\***********************************************************************/
+
+LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
+  String            name;
+  SemaphoreLock     semaphoreLock;
+  const JobNode     *jobNode;
+  uint              z;
+  String            s;
+  ConfigValueFormat configValueFormat;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get name
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find config value
+    z = 0;
+    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
+          )
+    {
+      z++;
+    }
+    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(name);
+      return;
+    }
+
+    // send value
+    s = String_new();
+    ConfigValue_formatInit(&configValueFormat,
+                           &CONFIG_VALUES[z],
+                           CONFIG_VALUE_FORMAT_MODE_VALUE,
+                           &globalOptions
+                          );
+    ConfigValue_format(&configValueFormat,s);
+    ConfigValue_formatDone(&configValueFormat);
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",s);
+    String_delete(s);
+  }
+
+  // free resources
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_optionSet
+* Purpose: set option
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            name=<name>
+*            value=<value>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  String        name,value;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get name, value
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    return;
+  }
+  value = String_new();
+  if (!StringMap_getString(argumentMap,"value",value,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    String_delete(name);
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // parse
+    if (ConfigValue_parse(String_cString(name),
+                          String_cString(value),
+                          CONFIG_VALUES,
+                          NULL, // sectionName
+                          NULL, // errorOutputHandle
+                          NULL, // errorPrefix
+                          &globalOptions
+                         )
+       )
+    {
+      jobNode->modifiedFlag = TRUE;
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+    }
+  }
+
+  // free resources
+  String_delete(value);
+  String_delete(name);
+}
+
+/***********************************************************************\
 * Name   : serverCommand_abort
 * Purpose: abort command execution
 * Input  : clientInfo    - client info
@@ -6695,6 +6842,8 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, uint id, const StringM
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
 
   // open root list
   error = File_openRootList(&rootListHandle);
@@ -7382,7 +7531,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 
 /***********************************************************************\
 * Name   : serverCommand_jobOptionGet
-* Purpose: get job options
+* Purpose: get job option
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -7436,13 +7585,13 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
 
     // find config value
     z = 0;
-    while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
-           && !String_equalsCString(name,CONFIG_VALUES[z].name)
+    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
           )
     {
       z++;
     }
-    if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
       Semaphore_unlock(&jobList.lock);
@@ -7453,7 +7602,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
     // send value
     s = String_new();
     ConfigValue_formatInit(&configValueFormat,
-                           &CONFIG_VALUES[z],
+                           &JOB_CONFIG_VALUES[z],
                            CONFIG_VALUE_FORMAT_MODE_VALUE,
                            jobNode
                           );
@@ -7529,10 +7678,10 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
     // parse
     if (ConfigValue_parse(String_cString(name),
                           String_cString(value),
-                          CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                          NULL, // section name
-                          NULL, // errorOutputHandle,
-                          NULL, // errorPrefix,
+                          JOB_CONFIG_VALUES,
+                          NULL, // sectionName
+                          NULL, // errorOutputHandle
+                          NULL, // errorPrefix
                           jobNode
                          )
        )
@@ -7604,13 +7753,13 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
 
     // find config value
     z = 0;
-    while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
-           && !String_equalsCString(name,CONFIG_VALUES[z].name)
+    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
           )
     {
       z++;
     }
-    if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
       Semaphore_unlock(&jobList.lock);
@@ -7622,7 +7771,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
 #ifndef WERROR
 #warning todo?
 #endif
-//    ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
+//    ConfigValue_reset(&JOB_CONFIG_VALUES[z],jobNode);
   }
 
   // free resources
@@ -9646,13 +9795,13 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
 
     // find config value
     z = 0;
-    while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
-           && !String_equalsCString(name,CONFIG_VALUES[z].name)
+    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
           )
     {
       z++;
     }
-    if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
       Semaphore_unlock(&jobList.lock);
@@ -9663,7 +9812,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
     // send value
     s = String_new();
     ConfigValue_formatInit(&configValueFormat,
-                           &CONFIG_VALUES[z],
+                           &JOB_CONFIG_VALUES[z],
                            CONFIG_VALUE_FORMAT_MODE_VALUE,
                            jobNode
                           );
@@ -9756,10 +9905,10 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, cons
     // parse
     if (ConfigValue_parse(String_cString(name),
                           String_cString(value),
-                          CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                          JOB_CONFIG_VALUES,
                           "schedule",
-                          NULL, // errorOutputHandle,
-                          NULL, // errorPrefix,
+                          NULL, // errorOutputHandle
+                          NULL, // errorPrefix
                           scheduleNode
                          )
        )
@@ -9852,13 +10001,13 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
 
     // find config value
     z = 0;
-    while (   (z < SIZE_OF_ARRAY(CONFIG_VALUES))
-           && !String_equalsCString(name,CONFIG_VALUES[z].name)
+    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
           )
     {
       z++;
     }
-    if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
+    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
       Semaphore_unlock(&jobList.lock);
@@ -9870,7 +10019,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
 #ifndef WERROR
 #warning todo?
 #endif
-//    ConfigValue_reset(&CONFIG_VALUES[z],jobNode);
+//    ConfigValue_reset(&JOB_CONFIG_VALUES[z],jobNode);
 
     // notify about changed schedule
     jobScheduleChanged(jobNode);
@@ -12390,6 +12539,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   }
 
   // create index for matching files
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Storage_forAll(patternString,
                          CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
                          {
@@ -12397,6 +12547,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 
                            UNUSED_VARIABLE(fileInfo);
                            UNUSED_VARIABLE(userData);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
                            // init variables
                            Storage_initSpecifier(&storageSpecifier);
@@ -13549,6 +13700,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   uint64           fragmentOffset,fragmentSize;
   FileSystemTypes  fileSystemType;
   uint64           blockOffset,blockCount;
+uint64 t[100];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13596,6 +13748,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   name         = String_new();
 
   // collect index data
+memset(t,0,sizeof(t));
+t[0] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnly)
@@ -13682,6 +13836,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     Index_doneList(&indexQueryHandle);
   }
 
+t[1] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnly)
@@ -13763,6 +13918,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     Index_doneList(&indexQueryHandle);
   }
 
+t[2] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnly)
@@ -13843,6 +13999,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     Index_doneList(&indexQueryHandle);
   }
 
+t[3] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnly)
@@ -13927,6 +14084,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     String_delete(destinationName);
   }
 
+t[4] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnly)
@@ -14015,6 +14173,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     String_delete(destinationName);
   }
 
+t[5] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
     if (checkedStorageOnly)
@@ -14094,6 +14253,17 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     }
     Index_doneList(&indexQueryHandle);
   }
+t[6] = Misc_getTimestamp();
+
+fprintf(stderr,"%s, %d: %d: dt1=%llu dt2=%llu dt3=%llu dt4=%llu dt5=%llu dt6=%llu\n",__FILE__,__LINE__,
+entryCount,
+t[1]-t[0],
+t[2]-t[1],
+t[3]-t[2],
+t[4]-t[3],
+t[5]-t[4],
+t[6]-t[5]
+);
 
   // send data
   indexNode = indexList.head;
@@ -14309,6 +14479,8 @@ SERVER_COMMANDS[] =
   { "AUTHORIZE",                  serverCommand_authorize,               AUTHORIZATION_STATE_WAITING },
   { "VERSION",                    serverCommand_version,                 AUTHORIZATION_STATE_OK      },
   { "QUIT",                       serverCommand_quit,                    AUTHORIZATION_STATE_OK      },
+  { "OPTION_GET",                 serverCommand_optionGet,               AUTHORIZATION_STATE_OK      },
+  { "OPTION_SET",                 serverCommand_optionSet,               AUTHORIZATION_STATE_OK      },
   { "GET",                        serverCommand_get,                     AUTHORIZATION_STATE_OK      },
   { "ABORT",                      serverCommand_abort,                   AUTHORIZATION_STATE_OK      },
   { "STATUS",                     serverCommand_status,                  AUTHORIZATION_STATE_OK      },
