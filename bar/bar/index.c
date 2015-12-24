@@ -4627,8 +4627,6 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     entryIdsString = String_newCString("1");
   }
 
-//String_setCString(regexpString,"1");
-Database_debugEnable(TRUE);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT files.id, \
@@ -4654,7 +4652,6 @@ Database_debugEnable(TRUE);
                            storageIdsString,
                            entryIdsString
                           );
-Database_debugEnable(FALSE);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
@@ -4786,7 +4783,6 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     entryIdsString = String_newCString("1");
   }
 
-Database_debugEnable(TRUE);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT images.id, \
@@ -4809,7 +4805,6 @@ Database_debugEnable(TRUE);
                            storageIdsString,
                            entryIdsString
                           );
-Database_debugEnable(FALSE);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
@@ -4935,7 +4930,6 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     entryIdsString = String_newCString("1");
   }
 
-Database_debugEnable(TRUE);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT directories.id, \
@@ -4958,7 +4952,6 @@ Database_debugEnable(TRUE);
                            storageIdsString,
                            entryIdsString
                           );
-Database_debugEnable(FALSE);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
@@ -5084,7 +5077,6 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
     entryIdsString = String_newCString("1");
   }
 
-Database_debugEnable(TRUE);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT links.id, \
@@ -5108,7 +5100,6 @@ Database_debugEnable(TRUE);
                            storageIdsString,
                            entryIdsString
                           );
-Database_debugEnable(FALSE);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
@@ -5236,7 +5227,6 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     entryIdsString = String_newCString("1");
   }
 
-Database_debugEnable(TRUE);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT hardlinks.id, \
@@ -5262,7 +5252,6 @@ Database_debugEnable(TRUE);
                            storageIdsString,
                            entryIdsString
                           );
-Database_debugEnable(FALSE);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
@@ -5395,7 +5384,6 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
     entryIdsString = String_newCString("1");
   }
 
-Database_debugEnable(TRUE);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT special.id, \
@@ -5418,7 +5406,6 @@ Database_debugEnable(TRUE);
                            storageIdsString,
                            entryIdsString
                           );
-Database_debugEnable(FALSE);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
