@@ -166,6 +166,9 @@
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
 
+/* Define to 1 if you have the <icu.h> header file. */
+#undef HAVE_ICU_H
+
 /* inotify_add_watch() available */
 #undef HAVE_INOTIFY_ADD_WATCH
 
@@ -475,6 +478,18 @@
 /* defined if ulong is available */
 #undef HAVE_ULONG
 
+/* Define to 1 if you have the <unicode/ucol.h> header file. */
+#undef HAVE_UNICODE_UCOL_H
+
+/* Define to 1 if you have the <unicode/uregex.h> header file. */
+#undef HAVE_UNICODE_UREGEX_H
+
+/* Define to 1 if you have the <unicode/ustring.h> header file. */
+#undef HAVE_UNICODE_USTRING_H
+
+/* Define to 1 if you have the <unicode/utypes.h> header file. */
+#undef HAVE_UNICODE_UTYPES_H
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
@@ -489,6 +504,9 @@
 
 /* Define to 1 if you have the <uuid/uuid.h> header file. */
 #undef HAVE_UUID_UUID_H
+
+/* u_init() available */
+#undef HAVE_U_INIT
 
 /* waitpid() available */
 #undef HAVE_WAITPID

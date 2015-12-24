@@ -591,6 +591,7 @@ AC_SUBST(ENABLE_CURL)                       dnl "yes" for curl support, "no" oth
 AC_SUBST(ENABLE_SSH)                        dnl "yes" for ssh support, "no" otherwise
 AC_SUBST(ENABLE_TLS)                        dnl "yes" for tls support, "no" otherwise
 AC_SUBST(ENABLE_ISO9660)                    dnl "yes" for iso9660 support, "no" otherwise
+AC_SUBST(ENABLE_ISO9660)                    dnl "yes" for iso9660 support, "no" otherwise
 AC_SUBST(ENABLE_GUI)                        dnl "yes" for GUI support, "no" otherwise
 AC_SUBST(ENABLE_GUI_I18N)                   dnl "yes" for GUI i18n support, "no" otherwise
 AC_SUBST(ENABLE_EPM)                        dnl "yes" for EPM support, "no" otherwise
@@ -2594,7 +2595,7 @@ if test $ENABLE_PCRE = "yes"; then
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
-          --enable-utf8
+          --enable-utf8 \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
@@ -2603,9 +2604,7 @@ if test $ENABLE_PCRE = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-#????
-        (echo $LIBTOOL; cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`)
-# 1>$tmpFile 2>&1
+        (echo $LIBTOOL; cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2658,6 +2657,115 @@ if test $ENABLE_PCRE = "yes"; then
   if test -z "$HAVE_PCRE"; then
     if test ! \( -d pcre -o -d "`readlink pcre`" \); then
       AC_MSG_WARN([pcre not compiled: pcre package missing])
+    fi
+  fi
+fi
+
+# compile/use icu
+if test -d icu -o -d "`readlink icu`"; then
+  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    dnl compile icu library
+
+    AC_MSG_COMPILE([icu])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          # patch created with:
+          #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
+#            if test -d packages/pcre-8.32; then
+#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
+#            fi
+          ;;
+        *)
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      (cd icu/source; ./configure \
+        --host=$host_cpu-$host_os \
+        --prefix=$cwd/packages \
+        --disable-shared \
+        --enable-static \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (echo $LIBTOOL; cd icu/source; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd icu/source; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+      case $host_os in
+        mingw*)
+          (cd packages/lib; ln -s libicuuc.lib libicuuc.a) 1>/dev/null 2>/dev/null
+          (cd packages/lib; ln -s libicui18n.lib libicui18n.a) 1>/dev/null 2>/dev/null
+          (cd packages/lib; ln -s libicudata.lib libicudata.a) 1>/dev/null 2>/dev/null
+          ;;
+        *)
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+  else
+    result=1
+  fi
+
+  if test $result -eq 1; then
+    STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
+    AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
+  fi
+else
+  dnl search for installed icuuc, icui18n, icudata library
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
+  else
+    if test -z "$HAVE_ICUUC"; then
+      AC_SEARCH_STATIC_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[static icuuc installed])])
+    fi
+    if test -z "$HAVE_ICUUC"; then
+      AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
+    fi
+  fi
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])])
+  else
+    if test -z "$HAVE_ICUI18N"; then
+      AC_SEARCH_STATIC_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[static icui18n installed])])
+    fi
+    if test -z "$HAVE_ICUI18N"; then
+      AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])])
+    fi
+  fi
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
+  else
+    if test -z "$HAVE_ICUDATA"; then
+      AC_SEARCH_STATIC_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[static icudata installed])])
+    fi
+    if test -z "$HAVE_ICUDATA"; then
+      AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
     fi
   fi
 fi
@@ -2760,7 +2868,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
         install breakpad/src/client/linux/dump_writer_common/*.h $cwd/packages/include/breakpad/client/linux/dump_writer_common
         install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/packages/lib
 # 1>$tmpFile 2>&1
-find $cwd/packages/include/breakpad -type f -name '*.h'
+#find $cwd/packages/include/breakpad -type f -name '*.h'
 #set +x
       fi
       if test $result -eq 1; then
@@ -2927,6 +3035,7 @@ AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  bfd.h \
                  grp.h \
+                 icu.h \
                  libintl.h \
                  linux/fs.h \
                  linux/tcp.h \
@@ -2945,6 +3054,10 @@ AC_CHECK_HEADERS(\
                  sys/wait.h \
                  sys/xattr.h \
                  termios.h \
+                 unicode/utypes.h \
+                 unicode/uregex.h \
+                 unicode/ustring.h \
+                 unicode/ucol.h \
                  uuid/uuid.h
                 )
 
@@ -3087,6 +3200,8 @@ AC_CHECK_FUNCTION(mkdtemp,      AC_DEFINE(HAVE_MKDTEMP,      1,[mkdtemp() availa
 AC_CHECK_FUNCTION(mkstemp,      AC_DEFINE(HAVE_MKSTEMP,      1,[mkstemp() available]),,io.h)
 AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() available]) ,,io.h)
 AC_CHECK_MKDIR_ARGUMENTS
+
+AC_CHECK_FUNCTION(u_init,       AC_DEFINE(HAVE_U_INIT,1,[u_init() available])  ,,icu.h)
 
 AC_CHECK_FUNCTION(inotify_init1,    AC_DEFINE(HAVE_INOTIFY_INIT1,    1,[inotify_init1() available]))
 AC_CHECK_FUNCTION(inotify_add_watch,AC_DEFINE(HAVE_INOTIFY_ADD_WATCH,1,[inotify_add_watch() available]))

@@ -32,6 +32,7 @@ LIBGCRYPT_VERSION=1.6.4
 GMP_VERSION=6.0.0a
 LIBSSH2_VERSION=1.6.0
 PCRE_VERSION=8.36
+ICU_VERSION=56.1
 MTX_VERSION=1.3.12
 BINUTILS_VERSION=2.25
 BREAKPAD_REVISION=1430
@@ -60,6 +61,7 @@ libssh2Flag=0
 gnutlsFlag=0
 libcdioFlag=0
 pcreFlag=0
+icuFlag=0
 mtxFlag=0
 binutilsFlag=0
 pthreadsW32Flag=0
@@ -161,13 +163,17 @@ while test $# != 0; do
           allFlag=0
           libcdioFlag=1
           ;;
+        mtx)
+          allFlag=0
+          mtxFlag=1
+          ;;
         pcre)
           allFlag=0
           pcreFlag=1
           ;;
-        mtx)
+        icu)
           allFlag=0
-          mtxFlag=1
+          icuFlag=1
           ;;
         binutils|bfd)
           allFlag=0
@@ -264,13 +270,17 @@ while test $# != 0; do
       allFlag=0
       libcdioFlag=1
       ;;
+    mtx)
+      allFlag=0
+      mtxFlag=1
+      ;;
     pcre)
       allFlag=0
       pcreFlag=1
       ;;
-    mtx)
+    icu)
       allFlag=0
-      mtxFlag=1
+      icuFlag=1
       ;;
     binutils|bfd)
       allFlag=0
@@ -324,6 +334,7 @@ if test $helpFlag -eq 1; then
   $ECHO " gnutls"
   $ECHO " libcdio"
   $ECHO " pcre"
+  $ECHO " icu"
   $ECHO " binutils"
   $ECHO ""
   $ECHO "Additional optional packages:"
@@ -820,7 +831,32 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
+  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
+    # mtx
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+
+     if test ! -f mtx-$MTX_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/mtx-$MTX_VERSION.tar.gz"
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf mtx-$MTX_VERSION.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      if test -n "$destination"; then
+        $LN -f -s $destination/mtx-$MTX_VERSION mtx
+      else
+        $LN -f -s $tmpDirectory/mtx-$MTX_VERSION mtx
+      fi
+    fi
+  fi
+
+ if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
     # pcre
     (
      if test -n "$destination"; then
@@ -845,8 +881,8 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
-    # mtx
+  if test $allFlag -eq 1 -o $icuFlag -eq 1; then
+    # icu
     (
      if test -n "$destination"; then
        cd $destination
@@ -854,18 +890,18 @@ if test $cleanFlag -eq 0; then
        cd $tmpDirectory
      fi
 
-     if test ! -f mtx-$MTX_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS "http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/mtx-$MTX_VERSION.tar.gz"
+     if test ! -f icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz; then
+       $WGET $WGET_OPTIONS "http://download.icu-project.org/files/icu4c/$ICU_VERSION/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf mtx-$MTX_VERSION.tar.gz
+       $TAR xzf icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz
      fi
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/mtx-$MTX_VERSION mtx
+        $LN -f -s $destination/icu icu
       else
-        $LN -f -s $tmpDirectory/mtx-$MTX_VERSION mtx
+        $LN -f -s $tmpDirectory/icu icu
       fi
     fi
   fi
@@ -1136,16 +1172,23 @@ else
     $RMF libcdio
   fi
 
+  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
+    # mtx
+    $RMRF $tmpDirectory/mtx-*
+    $RMF mtx
+  fi
+
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
     # pcre
     $RMRF $tmpDirectory/pcre-*
     $RMF pcre
   fi
 
-  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
-    # mtx
-    $RMRF $tmpDirectory/mtx-*
-    $RMF mtx
+  if test $allFlag -eq 1 -o $icuFlag -eq 1; then
+    # icu
+    $RMRF $tmpDirectory/icu4c-*
+    $RMRF $tmpDirectory/icu
+    $RMF icu
   fi
 
   if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then
@@ -1157,7 +1200,7 @@ else
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
     # pthreadW32
     $RMRF $tmpDirectory/pthreads-w32-*
-    $RMF pcre
+    $RMF pthreads
   fi
 
   if test $breakpadFlag -eq 1; then

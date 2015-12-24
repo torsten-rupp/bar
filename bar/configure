@@ -11377,7 +11377,7 @@ if test $ENABLE_PCRE = "yes"; then
           --prefix=$cwd/packages \
           --disable-shared \
           --enable-static \
-          --enable-utf8
+          --enable-utf8 \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
@@ -11391,9 +11391,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-#????
-        (echo $LIBTOOL; cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`)
-# 1>$tmpFile 2>&1
+        (echo $LIBTOOL; cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -11642,6 +11640,670 @@ $as_echo "$as_me: WARNING: pcre not compiled: pcre package missing" >&2;}
   fi
 fi
 
+# compile/use icu
+if test -d icu -o -d "`readlink icu`"; then
+  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "compile icu... " >&6
+
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          # patch created with:
+          #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
+#            if test -d packages/pcre-8.32; then
+#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
+#            fi
+          ;;
+        *)
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      (cd icu/source; ./configure \
+        --host=$host_cpu-$host_os \
+        --prefix=$cwd/packages \
+        --disable-shared \
+        --enable-static \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (echo $LIBTOOL; cd icu/source; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd icu/source; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+        result=0
+      fi
+      case $host_os in
+        mingw*)
+          (cd packages/lib; ln -s libicuuc.lib libicuuc.a) 1>/dev/null 2>/dev/null
+          (cd packages/lib; ln -s libicui18n.lib libicui18n.a) 1>/dev/null 2>/dev/null
+          (cd packages/lib; ln -s libicudata.lib libicudata.a) 1>/dev/null 2>/dev/null
+          ;;
+        *)
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+    fi
+  else
+    result=1
+  fi
+
+  if test $result -eq 1; then
+    STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
+
+$as_echo "#define HAVE_ICU 1" >>confdefs.h
+
+  fi
+else
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing u_strToUpper" >&5
+$as_echo_n "checking for library containing u_strToUpper... " >&6; }
+if ${ac_cv_search_libraries_u_strToUpper+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in icuuc ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void u_strToUpper();"; fi`
+                                         return (int)u_strToUpper;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_u_strToUpper=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_u_strToUpper+:} false; then :
+
+else
+  ac_cv_search_libraries_u_strToUpper=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_u_strToUpper" >&5
+$as_echo "$ac_cv_search_libraries_u_strToUpper" >&6; }
+  ac_result=$ac_cv_search_libraries_u_strToUpper
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";
+$as_echo "#define HAVE_ICUUC 1" >>confdefs.h
+
+fi
+
+  else
+    if test -z "$HAVE_ICUUC"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing u_strToUpper" >&5
+$as_echo_n "checking for static library containing u_strToUpper... " >&6; }
+if ${ac_cv_search_static_u_strToUpper+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in icuuc ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void u_strToUpper();"; fi`
+                                         return (int)u_strToUpper;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_u_strToUpper=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_u_strToUpper+:} false; then :
+
+else
+  ac_cv_search_static_u_strToUpper=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_u_strToUpper" >&5
+$as_echo "$ac_cv_search_static_u_strToUpper" >&6; }
+  ac_result=$ac_cv_search_static_u_strToUpper
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUUC=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc";
+$as_echo "#define HAVE_ICUUC 1" >>confdefs.h
+
+fi
+
+    fi
+    if test -z "$HAVE_ICUUC"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing u_strToUpper" >&5
+$as_echo_n "checking for library containing u_strToUpper... " >&6; }
+if ${ac_cv_search_libraries_u_strToUpper+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in icuuc ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void u_strToUpper();"; fi`
+                                         return (int)u_strToUpper;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_u_strToUpper=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_u_strToUpper+:} false; then :
+
+else
+  ac_cv_search_libraries_u_strToUpper=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_u_strToUpper" >&5
+$as_echo "$ac_cv_search_libraries_u_strToUpper" >&6; }
+  ac_result=$ac_cv_search_libraries_u_strToUpper
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";
+$as_echo "#define HAVE_ICUUC 1" >>confdefs.h
+
+fi
+
+    fi
+  fi
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing uregex_open" >&5
+$as_echo_n "checking for library containing uregex_open... " >&6; }
+if ${ac_cv_search_libraries_uregex_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in icui18n ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void uregex_open();"; fi`
+                                         return (int)uregex_open;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_uregex_open=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_uregex_open+:} false; then :
+
+else
+  ac_cv_search_libraries_uregex_open=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_uregex_open" >&5
+$as_echo "$ac_cv_search_libraries_uregex_open" >&6; }
+  ac_result=$ac_cv_search_libraries_uregex_open
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";
+$as_echo "#define HAVE_ICUI18N 1" >>confdefs.h
+
+fi
+
+  else
+    if test -z "$HAVE_ICUI18N"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing uregex_open" >&5
+$as_echo_n "checking for static library containing uregex_open... " >&6; }
+if ${ac_cv_search_static_uregex_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in icui18n ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void uregex_open();"; fi`
+                                         return (int)uregex_open;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_uregex_open=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_uregex_open+:} false; then :
+
+else
+  ac_cv_search_static_uregex_open=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_uregex_open" >&5
+$as_echo "$ac_cv_search_static_uregex_open" >&6; }
+  ac_result=$ac_cv_search_static_uregex_open
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUI18N=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icui18n";
+$as_echo "#define HAVE_ICUI18N 1" >>confdefs.h
+
+fi
+
+    fi
+    if test -z "$HAVE_ICUI18N"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing uregex_open" >&5
+$as_echo_n "checking for library containing uregex_open... " >&6; }
+if ${ac_cv_search_libraries_uregex_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in icui18n ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void uregex_open();"; fi`
+                                         return (int)uregex_open;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_uregex_open=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_uregex_open+:} false; then :
+
+else
+  ac_cv_search_libraries_uregex_open=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_uregex_open" >&5
+$as_echo "$ac_cv_search_libraries_uregex_open" >&6; }
+  ac_result=$ac_cv_search_libraries_uregex_open
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";
+$as_echo "#define HAVE_ICUI18N 1" >>confdefs.h
+
+fi
+
+    fi
+  fi
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing icudt" >&5
+$as_echo_n "checking for library containing icudt... " >&6; }
+if ${ac_cv_search_libraries_icudt+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in icudata ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void icudt();"; fi`
+                                         return (int)icudt;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_icudt=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_icudt+:} false; then :
+
+else
+  ac_cv_search_libraries_icudt=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_icudt" >&5
+$as_echo "$ac_cv_search_libraries_icudt" >&6; }
+  ac_result=$ac_cv_search_libraries_icudt
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";
+$as_echo "#define HAVE_ICUI18N 1" >>confdefs.h
+
+fi
+
+  else
+    if test -z "$HAVE_ICUDATA"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing icudt" >&5
+$as_echo_n "checking for static library containing icudt... " >&6; }
+if ${ac_cv_search_static_icudt+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in icudata ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void icudt();"; fi`
+                                         return (int)icudt;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_icudt=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_icudt+:} false; then :
+
+else
+  ac_cv_search_static_icudt=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_icudt" >&5
+$as_echo "$ac_cv_search_static_icudt" >&6; }
+  ac_result=$ac_cv_search_static_icudt
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUDATA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icudata";
+$as_echo "#define HAVE_ICUI18N 1" >>confdefs.h
+
+fi
+
+    fi
+    if test -z "$HAVE_ICUDATA"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing icudt" >&5
+$as_echo_n "checking for library containing icudt... " >&6; }
+if ${ac_cv_search_libraries_icudt+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in icudata ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void icudt();"; fi`
+                                         return (int)icudt;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_icudt=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_icudt+:} false; then :
+
+else
+  ac_cv_search_libraries_icudt=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_icudt" >&5
+$as_echo "$ac_cv_search_libraries_icudt" >&6; }
+  ac_result=$ac_cv_search_libraries_icudt
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";
+$as_echo "#define HAVE_ICUI18N 1" >>confdefs.h
+
+fi
+
+    fi
+  fi
+fi
+
 case "$host_os" in
   windows*|mingw*)
     if test $ENABLE_PTHREADS_W32 = "yes"; then
@@ -11765,7 +12427,7 @@ $as_echo "fail (install)" >&6; }
         install breakpad/src/client/linux/dump_writer_common/*.h $cwd/packages/include/breakpad/client/linux/dump_writer_common
         install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/packages/lib
 # 1>$tmpFile 2>&1
-find $cwd/packages/include/breakpad -type f -name '*.h'
+#find $cwd/packages/include/breakpad -type f -name '*.h'
 #set +x
       fi
       if test $result -eq 1; then
@@ -12934,6 +13596,7 @@ for ac_header in \
                  arpa/inet.h \
                  bfd.h \
                  grp.h \
+                 icu.h \
                  libintl.h \
                  linux/fs.h \
                  linux/tcp.h \
@@ -12952,6 +13615,10 @@ for ac_header in \
                  sys/wait.h \
                  sys/xattr.h \
                  termios.h \
+                 unicode/utypes.h \
+                 unicode/uregex.h \
+                 unicode/ustring.h \
+                 unicode/ucol.h \
                  uuid/uuid.h
 
 do :
@@ -16759,6 +17426,57 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for u_init" >&5
+$as_echo_n "checking for u_init... " >&6; }
+if ${ac_cv_func_u_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_u_init="no"
+      echo > conftest.log
+
+      for ac_headers in icu.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void u_init();"; fi`
+                                         #ifdef u_init
+                                         #else
+                                           return (int)u_init;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_u_init=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_u_init" >&5
+$as_echo "$ac_cv_func_u_init" >&6; }
+  if test "$ac_cv_func_u_init" != no; then :
+
+$as_echo "#define HAVE_U_INIT 1" >>confdefs.h
+
+elif :; then :
+
+fi
 
 
 
