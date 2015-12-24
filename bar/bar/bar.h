@@ -71,6 +71,7 @@ extern const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[];
 extern const ConfigValueUnit   CONFIG_VALUE_TIME_UNITS[];
 extern const ConfigValueSet    CONFIG_VALUE_LOG_TYPES[];
 extern const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[];
+extern const ConfigValue       CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
 

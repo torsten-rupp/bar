@@ -854,8 +854,8 @@ const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[] = CONFIG_VALUE_SET_ARR
   {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE },
 );
 
-LOCAL const ConfigValue CONFIG_VALUES[] =
-{
+const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+(
   // general settings
   CONFIG_VALUE_SPECIAL  ("config",                       NULL,-1,                                                       configValueParseConfigFile,NULL,NULL,NULL,NULL),
 
@@ -1066,7 +1066,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   // deprecated
   CONFIG_VALUE_IGNORE   ("schedule"),
   CONFIG_VALUE_IGNORE   ("overwrite-archive-files"),
-};
+);
 
 /*---------------------------------------------------------------------*/
 
@@ -1589,7 +1589,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
-                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                             CONFIG_VALUES,
                              NULL, // section name
                              NULL, // errorOutputHandle,
                              NULL, // errorPrefix,
@@ -1635,7 +1635,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   String_delete(line);
 
   // close file
-  File_close(&fileHandle);
+  (void)File_close(&fileHandle);
 
   return !failFlag;
 }
@@ -4010,7 +4010,7 @@ ulong getBandWidth(BandWidthList *bandWidthList)
           String_delete(line);
 
           // close file
-          File_close(&fileHandle);
+          (void)File_close(&fileHandle);
 
           // store timestamp of last read
           bandWidthList->lastReadTimestamp = timestamp;
@@ -5614,7 +5614,7 @@ LOCAL bool readFromJob(ConstString fileName)
       String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
-                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                             CONFIG_VALUES,
                              NULL, // sectionName,
                              NULL, // errorOutputHandle,
                              NULL, // errorPrefix,
@@ -5644,7 +5644,7 @@ LOCAL bool readFromJob(ConstString fileName)
   String_delete(line);
 
   // close file
-  File_close(&fileHandle);
+  (void)File_close(&fileHandle);
 
   return !failFlag;
 }
@@ -5675,7 +5675,7 @@ LOCAL Errors createPIDFile(void)
       return error;
     }
     File_printLine(&fileHandle,"%d",(int)getpid());
-    File_close(&fileHandle);
+    (void)File_close(&fileHandle);
     String_delete(fileName);
   }
 
