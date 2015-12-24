@@ -93,6 +93,7 @@ while ($line=<STDIN>)
     elsif ($line =~ /\);/)
     {
       $line =~ s/\$version/$version/g;
+      $line =~ s/"/\\"/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
       if ($databaseTableDefinitionName ne "")
@@ -110,6 +111,7 @@ while ($line=<STDIN>)
     else
     {
       $line =~ s/\$version/$version/g;
+      $line =~ s/"/\\"/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
       if ($databaseTableDefinitionName ne "")

@@ -62,7 +62,9 @@ CREATE VIRTUAL TABLE FTS_files USING FTS4(
   fileId,
   name,
 
-  FOREIGN KEY(fileId) REFERENCES files(id)
+  notindexed=fileId,
+//  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
+  tokenize=unicode61
 );
 
 CREATE TABLE IF NOT EXISTS images(
@@ -82,7 +84,8 @@ CREATE VIRTUAL TABLE FTS_images USING FTS4(
   imageId,
   name,
 
-  FOREIGN KEY(imageId) REFERENCES images(id)
+  notindexed=imageId,
+  tokenize=unicode61
 );
 
 CREATE TABLE IF NOT EXISTS directories(
@@ -103,7 +106,8 @@ CREATE VIRTUAL TABLE FTS_directories USING FTS4(
   directoryId,
   name,
 
-  FOREIGN KEY(directoryId) REFERENCES directories(id)
+  notindexed=directoryId,
+  tokenize=unicode61
 );
 
 CREATE TABLE IF NOT EXISTS links(
@@ -125,7 +129,8 @@ CREATE VIRTUAL TABLE FTS_links USING FTS4(
   linkId,
   name,
 
-  FOREIGN KEY(linkId) REFERENCES links(id)
+  notindexed=linkId,
+  tokenize=unicode61
 );
 
 CREATE TABLE IF NOT EXISTS hardlinks(
@@ -149,7 +154,8 @@ CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
   hardlinkId,
   name,
 
-  FOREIGN KEY(hardlinkId) REFERENCES hardlinks(id)
+  notindexed=hardlinkId,
+  tokenize=unicode61
 );
 
 CREATE TABLE IF NOT EXISTS special(
@@ -173,7 +179,8 @@ CREATE VIRTUAL TABLE FTS_special USING FTS4(
   specialId,
   name,
 
-  FOREIGN KEY(specialId) REFERENCES special(id)
+  notindexed=specialId,
+  tokenize=unicode61
 );
 
 /*
