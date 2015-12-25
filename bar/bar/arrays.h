@@ -231,6 +231,23 @@ INLINE ulong Array_length(const Array *array)
 #endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
 
 /***********************************************************************\
+* Name   : Array_isEmpty
+* Purpose: check if array is empty
+* Input  : array - array
+* Output : -
+* Return : TRUE iff array is empty
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Array_isEmpty(const Array *array);
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+INLINE bool Array_isEmpty(const Array *array)
+{
+  return (array != NULL) ? (array->length == 0) : TRUE;
+}
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+
+/***********************************************************************\
 * Name   : Array_put
 * Purpose: put element into array
 * Input  : array - array
