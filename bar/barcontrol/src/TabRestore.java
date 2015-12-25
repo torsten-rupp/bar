@@ -4719,7 +4719,7 @@ Dprintf.dprintf("");
         button = Widgets.newButton(composite,BARControl.tr("Restore"));
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
-        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,80,SWT.DEFAULT);
+        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
         {
           public void trigger(Control control)
@@ -5092,7 +5092,7 @@ Dprintf.dprintf("");
         button = Widgets.newButton(composite,BARControl.tr("Restore"));
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
-        Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,80,SWT.DEFAULT);
+        Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           public void trigger(Control control)
