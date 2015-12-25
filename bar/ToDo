@@ -88,7 +88,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - signal handler to show internal state on stdout
 - pre/post-commands in GUI
 - barcontrol: use bouncycastle to read .pem key, remove bar.jks
-- barcontrol: menu connect to another server
 - barcontrol: show connected server, ssl/none
 - option to select ctime or mtime
 - doc: ext4
@@ -118,11 +117,22 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - progress on console when storing archives
 - barcontrol: test and compare of archives
 - multi-core compression of large files in chunks
-- multi-threaded compare, test
+- multi-threaded compare, test, restore
 - check if crypt password is correct, output error message
-- barcontrol: remove file requester
 - test archives: CRC? fragments?
 - convert local encoding of names always into UTF8
+- /etc/logroate.d script
+- fix error message when connection is refused
+- BARControl: show warning when path does not exists
+- create and error message when /tmp is full
+- continuous: append archives
+- continuous: empty db entries
+- bash complete: /etc/bash_completion.d
+- index: full text search
+- barcontrol: tooltips: timer to hide
+- barcontrol: improve busy animation
+- barcontrol: add index with patterns
+- database entity: store host, run time
 
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
