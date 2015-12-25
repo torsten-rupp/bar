@@ -3319,7 +3319,6 @@ assert storagePattern != null;
 
   // widgets
   public  Composite           widgetTab;
-  private Button              widgetConnectButton;
   private TabFolder           widgetTabFolder;
 
   private TabFolder           widgetStorageTabFolder;
@@ -3973,15 +3972,6 @@ Dprintf.dprintf("");
     // create pane
     pane = Widgets.newPane(widgetTab,2,SWT.HORIZONTAL);
     Widgets.layout(pane,0,0,TableLayoutData.NSWE);
-    pane.addResizeListener(new Listener()
-    {
-      public void handleEvent(Event event)
-      {
-        Rectangle bounds = widgetConnectButton.getBounds();
-        bounds.y = event.detail-bounds.height/2+Pane.SIZE/2;
-        widgetConnectButton.setBounds(bounds);
-      }
-    });
 
     // storage tree/list
     composite = pane.getComposite(0);
