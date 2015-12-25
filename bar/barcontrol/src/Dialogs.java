@@ -447,6 +447,21 @@ abstract class DialogRunnable
   abstract public void done(Object result);
 }
 
+/** list values runnable
+ */
+abstract class ListRunnable
+{
+  /** get list values
+   * @param list value
+   */
+  abstract public String[] getValues();
+
+  /** get selected value
+   * @param list value
+   */
+  abstract public String getSelection();
+}
+
 /** boolean field updater
  */
 class BooleanFieldUpdater
@@ -3263,6 +3278,7 @@ class Dialogs
             widgetDone.setText(Dialogs.tr("Select"));
             break;
         }
+        widgetDone.setEnabled(false);
         widgetDone.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
 
         button = new Button(composite,SWT.CENTER);
@@ -3306,6 +3322,7 @@ class Dialogs
             widgetPath.setData(parentFile);
             widgetPath.setText(parentFile.getAbsolutePath());
             updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+            widgetDone.setEnabled((parentFile != null));
           }
         }
       });
@@ -3317,13 +3334,12 @@ class Dialogs
           if (index >= 0)
           {
             File file = shortcutFileList.get(index);
-
             if      (listDirectory.isDirectory(file))
             {
               widgetPath.setData(file);
               widgetPath.setText(file.getAbsolutePath());
-
               updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+              widgetDone.setEnabled((file != null));
             }
             else if (listDirectory.exists(file))
             {
@@ -3354,8 +3370,8 @@ class Dialogs
               File newPath = new File((File)widgetPath.getData(),file.getName());
               widgetPath.setData(newPath);
               widgetPath.setText(newPath.getAbsolutePath());
-
               updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+              widgetDone.setEnabled((newPath != null));
             }
           }
         }
@@ -3443,10 +3459,11 @@ class Dialogs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           fileGeometry = dialog.getSize();
+          File file = (File)widgetPath.getData();
           close(dialog,
                 (widgetName != null)
-                  ? new File((File)widgetPath.getData(),widgetName.getText()).getAbsolutePath()
-                  : ((File)widgetPath.getData()).getAbsolutePath()
+                  ? new File(file,widgetName.getText()).getAbsolutePath()
+                  : file.getAbsolutePath()
                );
         }
       });
@@ -3538,6 +3555,7 @@ class Dialogs
       {
         widgetName.setText(file.getName());
       }
+      widgetDone.setEnabled((parentFile != null));
 
       if ((fileExtensions != null) && (widgetFilter != null))
       {
@@ -4514,21 +4532,19 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param text text before input element
-   * @param values value to list
-   * @param value current value
+   * @param listRunnable list values getter
    * @param okText OK button text
    * @param cancelText cancel button text
    * @param toolTipText tooltip text (can be null)
    * @return string or null on cancel
    */
-  public static String list(Shell  parentShell,
-                            String title,
-                            String text,
-                            String values[],
-                            String value,
-                            String okText,
-                            String cancelText,
-                            String toolTipText
+  public static String list(Shell        parentShell,
+                            String       title,
+                            String       text,
+                            ListRunnable listRunnable,
+                            String       okText,
+                            String       cancelText,
+                            String       toolTipText
                            )
   {
     Composite composite;
@@ -4568,16 +4584,8 @@ class Dialogs
 
         widgetList = new List(composite,SWT.BORDER|SWT.V_SCROLL);
         if (toolTipText != null) widgetList.setToolTipText(toolTipText);
-        widgetList.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        widgetList.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,0,0,300,200,SWT.DEFAULT,SWT.DEFAULT));
         row++;
-
-        int index = -1;
-        for (int i = 0; i < values.length; i++)
-        {
-          widgetList.add(values[i]);
-          if (value.equals(values[i])) index = i;
-        }
-        if (index >= 0) widgetList.setSelection(index);
       }
 
       // buttons
@@ -4587,7 +4595,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4602,7 +4610,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4645,6 +4653,28 @@ class Dialogs
         }
       });
 
+      // show
+      show(dialog);
+
+      // fill-in value
+      String values[] = listRunnable.getValues();
+      if (values == null)
+      {
+        return null;
+      }
+      String value    = listRunnable.getSelection();
+      if (value == null)
+      {
+        return null;
+      }
+      int index = -1;
+      for (int i = 0; i < values.length; i++)
+      {
+        widgetList.add(values[i]);
+        if (value.equals(values[i])) index = i;
+      }
+      if (index >= 0) widgetList.setSelection(index);
+
       widgetList.setFocus();
       return (String)run(dialog,null);
     }
@@ -4652,6 +4682,102 @@ class Dialogs
     {
       return null;
     }
+  }
+
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param listRunnable list values getter
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return string or null on cancel
+   */
+  public static String list(Shell        parentShell,
+                            String       title,
+                            String       text,
+                            ListRunnable listRunnable,
+                            String       okText,
+                            String       cancelText
+                           )
+  {
+    return list(parentShell,title,text,listRunnable,okText,cancelText,(String)null);
+  }
+
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param listRunnable list values getter
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static String list(Shell        parentShell,
+                            String       title,
+                            String       text,
+                            ListRunnable listRunnable,
+                            String       okText
+                           )
+  {
+    return list(parentShell,title,text,listRunnable,okText,Dialogs.tr("Cancel"));
+  }
+
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param listRunnable list values getter
+   * @return string or null on cancel
+   */
+  public static String list(Shell        parentShell,
+                            String       title,
+                            String       text,
+                            ListRunnable listRunnable
+                           )
+  {
+    return list(parentShell,title,text,listRunnable,Dialogs.tr("Select"));
+  }
+
+  /** simple list select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param values value to list
+   * @param value current value
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return string or null on cancel
+   */
+  public static String list(Shell        parentShell,
+                            String       title,
+                            String       text,
+                            final String values[],
+                            final String value,
+                            String       okText,
+                            String       cancelText,
+                            String       toolTipText
+                           )
+  {
+    return list(parentShell,
+                title,
+                text,
+                new ListRunnable()
+                {
+                  public String[] getValues()
+                  {
+                    return values;
+                  }
+                  public String getSelection()
+                  {
+                    return value;
+                  }
+                },
+                okText,
+                cancelText,
+                toolTipText
+               );
   }
 
   /** simple list select dialog
