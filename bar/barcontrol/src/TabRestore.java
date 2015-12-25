@@ -828,7 +828,7 @@ public class TabRestore
     }
   }
 
-  /** job data map
+  /** entity index data map
    */
   class EntityIndexDataMap extends HashMap<Long,EntityIndexData>
   {
@@ -1021,7 +1021,7 @@ public class TabRestore
     }
   };
 
-  /** storage data map
+  /** storage index data map
    */
   class StorageIndexDataMap extends HashMap<Long,StorageIndexData>
   {
@@ -1379,7 +1379,7 @@ public class TabRestore
     private Object        trigger              = new Object();   // trigger update object
     private boolean       triggeredFlag        = false;
     private int           storageMaxCount      = 100;
-    private String        storagePattern       = null;
+    private String        storagePattern       = "";
     private IndexStateSet storageIndexStateSet = INDEX_STATE_SET_ALL;
     private EntityStates  storageEntityState   = EntityStates.ANY;
     private boolean       setUpdateIndicator   = false;          // true to set color/cursor at update
@@ -1508,9 +1508,11 @@ public class TabRestore
      */
     public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSet, EntityStates storageEntityState, int storageMaxCount)
     {
+      assert storagePattern != null;
+
       synchronized(trigger)
       {
-        if (   (this.storagePattern == null) || (storagePattern == null) || !this.storagePattern.equals(storagePattern)
+        if (   !this.storagePattern.equals(storagePattern)
             || (this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState)
             || (this.storageMaxCount != storageMaxCount)
            )
@@ -1532,9 +1534,11 @@ public class TabRestore
      */
     public void triggerUpdateStoragePattern(String storagePattern)
     {
+      assert storagePattern != null;
+
       synchronized(trigger)
       {
-        if ((this.storagePattern == null) || (storagePattern == null) || !this.storagePattern.equals(storagePattern))
+        if (!this.storagePattern.equals(storagePattern))
         {
           this.storagePattern     = storagePattern;
           this.setUpdateIndicator = true;
@@ -1622,9 +1626,11 @@ public class TabRestore
       if (triggeredFlag) return;
 
       // update UUID list
+// TODO
+assert storagePattern != null;
       command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST maxCount=%d pattern=%'S",
                                                          storageMaxCount,
-                                                         (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                         storagePattern
                                                         ),
                                      0
                                     );
@@ -1744,9 +1750,11 @@ public class TabRestore
       if (triggeredFlag) return;
 
       // update entity list
+// TODO
+assert storagePattern != null;
       command = BARServer.runCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=%'S",
                                                          uuidIndexData[0].jobUUID,
-                                                         (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                         storagePattern
                                                         ),
                                      0
                                     );
@@ -1879,12 +1887,14 @@ public class TabRestore
       if (triggeredFlag) return;
 
       // update storage list
+// TODO
+assert storagePattern != null;
       command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
                                                          entityIndexData[0].entityId,
                                                          storageMaxCount,
                                                          storageIndexStateSet.nameList("|"),
                                                          "*",
-                                                         (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                         storagePattern
                                                         ),
                                      0
                                     );
@@ -2025,12 +2035,14 @@ public class TabRestore
       if (triggeredFlag) return;
 
       // update storage table
+// TODO
+assert storagePattern != null;
       command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d indexState=%s indexMode=%s pattern=%'S",
                                                          (storageEntityState != EntityStates.NONE) ? "*" : "0",
                                                          storageMaxCount,
                                                          storageIndexStateSet.nameList("|"),
                                                          "*",
-                                                         (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                         storagePattern
                                                         ),
                                      0
                                     );
@@ -2721,9 +2733,8 @@ public class TabRestore
     private Object  trigger            = new Object();   // trigger update object
     private boolean triggeredFlag      = false;
 
-    private boolean checkedStorageOnly = false;
     private int     entryMaxCount      = 100;
-    private String  entryPattern       = null;
+    private String  entryPattern       = "";
     private boolean newestEntriesOnly  = false;
 
     /** create update entry list thread
@@ -2808,22 +2819,19 @@ public class TabRestore
     }
 
     /** trigger update of entry list
-     * @param checkedStorageOnly checked storage only or null
      * @param entryPattern new entry pattern or null
      * @param newestEntriesOnly flag for newest entries only or null
      * @param entryMaxCount max. entries in list or null
      */
-    public void triggerUpdate(boolean checkedStorageOnly, String entryPattern, boolean newestEntriesOnly, int entryMaxCount)
+    public void triggerUpdate(String entryPattern, boolean newestEntriesOnly, int entryMaxCount)
     {
       synchronized(trigger)
       {
-        if (   (this.checkedStorageOnly != checkedStorageOnly)
-            || (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
+        if (   (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
             || (this.newestEntriesOnly != newestEntriesOnly)
             || (this.entryMaxCount != entryMaxCount)
            )
         {
-          this.checkedStorageOnly = checkedStorageOnly;
           this.entryPattern       = entryPattern;
           this.newestEntriesOnly  = newestEntriesOnly;
           this.entryMaxCount      = entryMaxCount;
@@ -2839,29 +2847,13 @@ public class TabRestore
      */
     public void triggerUpdateEntryPattern(String entryPattern)
     {
+      assert entryPattern != null;
+
       synchronized(trigger)
       {
-        if ((this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern))
+        if (!this.entryPattern.equals(entryPattern))
         {
           this.entryPattern = entryPattern;
-
-          triggeredFlag = true;
-          trigger.notify();
-        }
-      }
-    }
-
-    /** trigger update of entry list
-     * @param checkedStorageOnly checked storage only or null
-     * @param newestEntriesOnly flag for newest entries only or null
-     */
-    public void triggerUpdateCheckedStorageOnly(boolean checkedStorageOnly)
-    {
-      synchronized(trigger)
-      {
-        if (this.checkedStorageOnly != checkedStorageOnly)
-        {
-          this.checkedStorageOnly = checkedStorageOnly;
 
           triggeredFlag = true;
           trigger.notify();
@@ -2939,9 +2931,9 @@ public class TabRestore
       if (triggeredFlag) return;
 
       // update table
-      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnly=%y entryMaxCount=%d newestEntriesOnly=%y",
-                                                                 (((entryPattern != null) && !entryPattern.equals("")) ? entryPattern : "*"),
-                                                                 checkedStorageOnly,
+      assert entryPattern != null;
+      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S entryMaxCount=%d newestEntriesOnly=%y",
+                                                                 entryPattern,
                                                                  entryMaxCount,
                                                                  newestEntriesOnly
                                                                 ),
@@ -3300,9 +3292,6 @@ public class TabRestore
   private final Image IMAGE_CLEAR;
   private final Image IMAGE_MARK_ALL;
   private final Image IMAGE_UNMARK_ALL;
-
-  private final Image IMAGE_CONNECT0;
-  private final Image IMAGE_CONNECT1;
 
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -3976,34 +3965,14 @@ Dprintf.dprintf("");
     IMAGE_MARK_ALL   = Widgets.loadImage(display,"mark.png");
     IMAGE_UNMARK_ALL = Widgets.loadImage(display,"unmark.png");
 
-    IMAGE_CONNECT0   = Widgets.loadImage(display,"connect0.png");
-    IMAGE_CONNECT1   = Widgets.loadImage(display,"connect1.png");
-
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
-    widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0},new double[]{0.0,1.0},2));
+    widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
-
-    // connector button
-    widgetConnectButton = Widgets.newCheckbox(widgetTab,IMAGE_CONNECT0,IMAGE_CONNECT1);
-    widgetConnectButton.setToolTipText(BARControl.tr("When this connector is in state 'closed', only tagged storage archives are used for list entries."));
-    Widgets.layout(widgetConnectButton,0,0,TableLayoutData.W);
-    widgetConnectButton.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Button widget = (Button)selectionEvent.widget;
-        boolean checkedStorageOnly = widget.getSelection();
-        updateEntryListThread.triggerUpdateCheckedStorageOnly(checkedStorageOnly);
-      }
-    });
 
     // create pane
     pane = Widgets.newPane(widgetTab,2,SWT.HORIZONTAL);
-    Widgets.layout(pane,0,1,TableLayoutData.NSWE);
+    Widgets.layout(pane,0,0,TableLayoutData.NSWE);
     pane.addResizeListener(new Listener()
     {
       public void handleEvent(Event event)
@@ -4546,9 +4515,12 @@ Dprintf.dprintf("");
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            restoreArchives(widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
-                            widgetOverwriteEntries.getSelection()
-                           );
+            HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+            getCheckedIndexData(indexDataHashSet);
+            getSelectedIndexData(indexDataHashSet);
+
+            restoreArchives(indexDataHashSet);
           }
         });
 
@@ -4647,12 +4619,12 @@ Dprintf.dprintf("");
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            setStoragePattern(widget.getText());
+            updateStorageThread.triggerUpdateStoragePattern(widget.getText());
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            setStoragePattern(widget.getText());
+            updateStorageThread.triggerUpdateStoragePattern(widget.getText());
           }
         });
         widgetStoragePattern.addKeyListener(new KeyListener()
@@ -4663,7 +4635,7 @@ Dprintf.dprintf("");
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
-            setStoragePattern(widget.getText());
+            updateStorageThread.triggerUpdateStoragePattern(widget.getText());
           }
         });
 //???
@@ -4675,7 +4647,7 @@ Dprintf.dprintf("");
           public void focusLost(FocusEvent focusEvent)
           {
 //            Text widget = (Text)focusEvent.widget;
-//            setStoragePattern(widget.getText());
+//            updateStorageThread.triggerUpdateStoragePattern(widget.getText());
           }
         });
 
@@ -4762,9 +4734,12 @@ Dprintf.dprintf("");
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            restoreArchives(widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
-                            widgetOverwriteEntries.getSelection()
-                           );
+            HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+            getCheckedIndexData(indexDataHashSet);
+            getSelectedIndexData(indexDataHashSet);
+
+            restoreArchives(indexDataHashSet);
           }
         });
       }
@@ -4953,10 +4928,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            restoreEntries(getCheckedEntries(),
-                           widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
-                           widgetOverwriteEntries.getSelection()
-                          );
+            restoreEntries(getCheckedEntries());
           }
         });
       }
@@ -5040,12 +5012,12 @@ Dprintf.dprintf("");
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Text  widget = (Text)selectionEvent.widget;
-            setEntryPattern(widget.getText());
+            updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            setEntryPattern(widget.getText());
+            updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
           }
         });
         text.addKeyListener(new KeyListener()
@@ -5056,7 +5028,7 @@ Dprintf.dprintf("");
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
-            setEntryPattern(widget.getText());
+            updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
           }
         });
 //???
@@ -5068,7 +5040,7 @@ Dprintf.dprintf("");
           public void focusLost(FocusEvent focusEvent)
           {
 //            Text widget = (Text)focusEvent.widget;
-//            setEntryPattern(widget.getText());
+//            updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
           }
         });
 
@@ -5136,10 +5108,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            restoreEntries(getCheckedEntries(),
-                           widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
-                           widgetOverwriteEntries.getSelection()
-                          );
+            restoreEntries(getCheckedEntries());
           }
         });
       }
@@ -5148,7 +5117,7 @@ Dprintf.dprintf("");
     // destination
     group = Widgets.newGroup(widgetTab,BARControl.tr("Destination"));
     group.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0},4));
-    Widgets.layout(group,1,0,TableLayoutData.WE,0,2);
+    Widgets.layout(group,1,0,TableLayoutData.WE);
     {
       // fix layout
       control = Widgets.newSpacer(group);
@@ -5687,12 +5656,14 @@ Dprintf.dprintf("");
 
           // update storage list
           EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
+// TODO
+assert storagePattern != null;
           Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
                                                                      entityIndexData.entityId,
                                                                      -1,
                                                                      "*",
                                                                      "*",
-                                                                     (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                                     storagePattern
                                                                     ),
                                                  0
                                                 );
@@ -5802,22 +5773,6 @@ Dprintf.dprintf("");
     finally
     {
       BARControl.resetCursor();
-    }
-  }
-
-  /** set storage filter pattern
-   * @param string pattern string
-   */
-  private void setStoragePattern(String string)
-  {
-    string = string.trim();
-    if (string.length() > 0)
-    {
-      updateStorageThread.triggerUpdateStoragePattern(string);
-    }
-    else
-    {
-      updateStorageThread.triggerUpdateStoragePattern(null);
     }
   }
 
@@ -6128,10 +6083,10 @@ Dprintf.dprintf("");
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
       widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6625,212 +6580,393 @@ Dprintf.dprintf("");
   }
 
   /** restore archives
-   * @param storageNamesHashSet storage name hash set
-   * @param directory destination directory or ""
-   * @param overwriteFiles true to overwrite existing files
    */
-  private void restoreArchives(String directory, boolean overwriteFiles)
+  private void restoreArchives(HashSet<IndexData> indexDataHashSet)
   {
-    BARControl.waitCursor();
+    Label      label;
+    Composite  composite,subComposite;
+    Button     button;
 
-    final BusyDialog busyDialog = new BusyDialog(shell,
-                                                 !directory.isEmpty() ? BARControl.tr("Restore archives to: {0}",directory) : BARControl.tr("Restore archives"),
-                                                 500,
-                                                 300,
-                                                 null,
-                                                 BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST
-                                                );
-    busyDialog.updateText(2,"%s",BARControl.tr("Failed entries:"));
-
-    new BackgroundTask(busyDialog,new Object[]{directory,overwriteFiles})
+    // get number entries, size
+    long entries = 0;
+    long size    = 0;
+    for (IndexData indexData : indexDataHashSet)
     {
-      public void run(final BusyDialog busyDialog, Object userData)
+      if      (indexData instanceof UUIDIndexData)
       {
-        final String  directory      = (String )((Object[])userData)[0];
-        final boolean overwriteFiles = (Boolean)((Object[])userData)[1];
+        entries += ((UUIDIndexData)indexData).totalEntries;
+      }
+      else if (indexData instanceof EntityIndexData)
+      {
+        entries += ((EntityIndexData)indexData).totalEntries;
+      }
+      else if (indexData instanceof StorageIndexData)
+      {
+        entries += ((StorageIndexData)indexData).entries;
+      }
+      size += indexData.size;
+    }
 
-        int errorCode;
+    // create dialog
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore archives"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
-        // restore entries
-        try
+    // create widgets
+    final Button widgetRestoreTo;
+    final Text   widgetRestoreToDirectory;
+    final Button widgetOverwriteEntries;
+    final Button widgetRestore;
+    composite = Widgets.newComposite(dialog);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Restore {0} {0,choice,0#entries|1#entry|1<entries} with {1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
+                                                       entries,
+                                                       Units.formatByteSize(size),
+                                                       size
+                                                      )
+                              );
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
+      Widgets.layout(subComposite,1,0,TableLayoutData.WE);
+      {
+        widgetRestoreTo = Widgets.newCheckbox(subComposite,BARControl.tr("to"));
+        widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
+        Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
+        widgetRestoreTo.addSelectionListener(new SelectionListener()
         {
-          boolean       retryFlag;
-          long          errorCount    = 0;
-          final boolean skipAllFlag[] = new boolean[]{false};
-          Command       command;
-          boolean       passwordFlag  = false;
-          do
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            retryFlag  = false;
-            errorCount = 0;
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Button  widget      = (Button)selectionEvent.widget;
+            boolean checkedFlag = widget.getSelection();
+            widgetRestoreTo.setSelection(checkedFlag);
+            selectRestoreToEvent.trigger();
+          }
+        });
 
-            // start restore
-            command = BARServer.runCommand(StringParser.format("RESTORE destination=%'S overwriteFiles=%y",
-                                                               directory,
-                                                               overwriteFiles
-                                                              ),
-                                           0
-                                          );
+        widgetRestoreToDirectory = Widgets.newText(subComposite);
+        widgetRestoreToDirectory.setEnabled(false);
+        Widgets.layout(widgetRestoreToDirectory,0,1,TableLayoutData.WE);
+        Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
+        {
+          public void trigger(Control control)
+          {
+            control.setEnabled(widgetRestoreTo.getSelection());
+          }
+        });
+        subComposite.addMouseListener(new MouseListener()
+        {
+          public void mouseDoubleClick(final MouseEvent mouseEvent)
+          {
+          }
 
-            // read results, update/add data
-            String[] errorMessage = new String[1];
-            ValueMap resultMap    = new ValueMap();
-            while (   !command.endOfData()
-                   && !busyDialog.isAborted()
-                   && command.getNextResult(errorMessage,
-                                            resultMap,
-                                            60*1000
-                                           ) == Errors.NONE
-                  )
+          public void mouseDown(final MouseEvent mouseEvent)
+          {
+            Rectangle bounds = widgetRestoreToDirectory.getBounds();
+
+            if (bounds.contains(mouseEvent.x,mouseEvent.y))
             {
-              // parse and update progresss
-              try
-              {
-                String storageName       = resultMap.getString("storageName"      );
-                long   storageDoneBytes  = resultMap.getLong  ("storageDoneBytes" );
-                long   storageTotalBytes = resultMap.getLong  ("storageTotalBytes");
-                String entryName         = resultMap.getString("entryName"        );
-                long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"   );
-                long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes"  );
-
-                busyDialog.updateText(0,"%s",storageName);
-                busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
-                busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-              }
-              catch (IllegalArgumentException exception)
-              {
-                if (Settings.debugLevel > 0)
-                {
-                  System.err.println("ERROR: "+exception.getMessage());
-                }
-              }
-
-              // discard waiting results to avoid heap overflow
-              command.purgeResults();
+              widgetRestoreTo.setSelection(true);
+              selectRestoreToEvent.trigger();
+              Widgets.setFocus(widgetRestoreToDirectory);
             }
+          }
 
-            if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
-                    || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
-                    || (command.getErrorCode() == Errors.CORRUPT_DATA)
-                   )
-                && !passwordFlag
-                && !busyDialog.isAborted()
-               )
+          public void mouseUp(final MouseEvent mouseEvent)
+          {
+          }
+        });
+
+        button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+        Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String pathName;
+            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
             {
-              // get crypt password
-              display.syncExec(new Runnable()
-              {
-                public void run()
-                {
-                  String password = Dialogs.password(shell,
-                                                     BARControl.tr("Decrypt password"),
-                                                     BARControl.tr("Password")+":"
-                                                    );
-                  if (password != null)
-                  {
-                    BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
-                                                                 BARServer.getPasswordEncryptType(),
-                                                                 BARServer.encryptPassword(password)
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.DIRECTORY,
+                                      BARControl.tr("Select path"),
+                                      widgetRestoreTo.getText(),
+                                      remoteListDirectory
+                                     );
+            }
+            else
+            {
+             pathName = Dialogs.directory(shell,
+                                          BARControl.tr("Select path"),
+                                          widgetRestoreTo.getText()
+                                         );
+            }
+            if (pathName != null)
+            {
+              widgetRestoreTo.setSelection(true);
+              selectRestoreToEvent.trigger();
+              widgetRestoreToDirectory.setText(pathName);
+            }
+          }
+        });
+      }
+
+      widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
+      widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
+      Widgets.layout(widgetOverwriteEntries,2,0,TableLayoutData.W);
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE);
+    {
+      widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
+      Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,null);
+        }
+      });
+    }
+
+    // add selection listeners
+/*
+    widgetRestore.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+        Dialogs.close(dialog,widgetStorageName.getText());
+      }
+    });
+*/
+
+String directory = "/tmp/x";
+boolean overwriteFiles = false;
+
+    // run dialog
+    if ((Boolean)Dialogs.run(dialog,false))
+    {
+      BARControl.waitCursor();
+
+      final BusyDialog busyDialog = new BusyDialog(shell,
+                                                   !directory.isEmpty() ? BARControl.tr("Restore archives to: {0}",directory) : BARControl.tr("Restore archives"),
+                                                   500,
+                                                   300,
+                                                   null,
+                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST
+                                                  );
+      busyDialog.updateText(2,"%s",BARControl.tr("Failed entries:"));
+
+      new BackgroundTask(busyDialog,new Object[]{directory,overwriteFiles})
+      {
+        public void run(final BusyDialog busyDialog, Object userData)
+        {
+          final String  directory      = (String )((Object[])userData)[0];
+          final boolean overwriteFiles = (Boolean)((Object[])userData)[1];
+
+          int errorCode;
+
+          // restore entries
+          try
+          {
+            boolean       retryFlag;
+            long          errorCount    = 0;
+            final boolean skipAllFlag[] = new boolean[]{false};
+            Command       command;
+            boolean       passwordFlag  = false;
+            do
+            {
+              retryFlag  = false;
+              errorCount = 0;
+
+              // start restore
+              command = BARServer.runCommand(StringParser.format("RESTORE destination=%'S overwriteFiles=%y",
+                                                                 directory,
+                                                                 overwriteFiles
                                                                 ),
                                              0
                                             );
+
+              // read results, update/add data
+              String[] errorMessage = new String[1];
+              ValueMap resultMap    = new ValueMap();
+              while (   !command.endOfData()
+                     && !busyDialog.isAborted()
+                     && command.getNextResult(errorMessage,
+                                              resultMap,
+                                              60*1000
+                                             ) == Errors.NONE
+                    )
+              {
+                // parse and update progresss
+                try
+                {
+                  String storageName       = resultMap.getString("storageName"      );
+                  long   storageDoneBytes  = resultMap.getLong  ("storageDoneBytes" );
+                  long   storageTotalBytes = resultMap.getLong  ("storageTotalBytes");
+                  String entryName         = resultMap.getString("entryName"        );
+                  long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"   );
+                  long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes"  );
+
+                  busyDialog.updateText(0,"%s",storageName);
+                  busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                  busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
+                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                }
+                catch (IllegalArgumentException exception)
+                {
+                  if (Settings.debugLevel > 0)
+                  {
+                    System.err.println("ERROR: "+exception.getMessage());
                   }
                 }
-              });
-              passwordFlag = true;
 
-              // retry
-              retryFlag = true;
-            }
-          }
-          while (retryFlag && !busyDialog.isAborted());
+                // discard waiting results to avoid heap overflow
+                command.purgeResults();
+              }
 
-          // abort command if requested
-          if (!busyDialog.isAborted())
-          {
-            if (command.getErrorCode() != Errors.NONE)
-            {
-              final String errorText = command.getErrorText();
-
-              busyDialog.updateList(errorText);
-              errorCount++;
-
-              if (!skipAllFlag[0])
+              if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
+                      || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
+                      || (command.getErrorCode() == Errors.CORRUPT_DATA)
+                     )
+                  && !passwordFlag
+                  && !busyDialog.isAborted()
+                 )
               {
+                // get crypt password
                 display.syncExec(new Runnable()
                 {
                   public void run()
                   {
-                    switch (Dialogs.select(shell,
-                                           BARControl.tr("Confirmation"),
-                                           BARControl.tr("Cannot restore archive:\n\n {0}",
-                                                         errorText
-                                                        ),
-                                           new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                           0
-                                          )
-                           )
+                    String password = Dialogs.password(shell,
+                                                       BARControl.tr("Decrypt password"),
+                                                       BARControl.tr("Password")+":"
+                                                      );
+                    if (password != null)
                     {
-                      case 0:
-                        break;
-                      case 1:
-                        skipAllFlag[0] = true;
-                        break;
-                      case 2:
-                        busyDialog.abort();
-                        break;
+                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
+                                                                   BARServer.getPasswordEncryptType(),
+                                                                   BARServer.encryptPassword(password)
+                                                                  ),
+                                               0
+                                              );
                     }
                   }
                 });
-              };
-            }
-          }
-          else
-          {
-            busyDialog.updateText(0,"%s",BARControl.tr("Aborting\u2026"));
-            command.abort();
-          }
+                passwordFlag = true;
 
-          // close/done busy dialog, restore cursor
-          if (errorCount == 0)
-          {
-            busyDialog.close();
-          }
-          else
-          {
-            busyDialog.done();
-          }
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              BARControl.resetCursor();
+                // retry
+                retryFlag = true;
+              }
             }
-          });
-        }
-        catch (CommunicationError error)
-        {
-          final String errorMessage = error.getMessage();
-          display.syncExec(new Runnable()
-          {
-            public void run()
+            while (retryFlag && !busyDialog.isAborted());
+
+            // abort command if requested
+            if (!busyDialog.isAborted())
+            {
+              if (command.getErrorCode() != Errors.NONE)
+              {
+                final String errorText = command.getErrorText();
+
+                busyDialog.updateList(errorText);
+                errorCount++;
+
+                if (!skipAllFlag[0])
+                {
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      switch (Dialogs.select(shell,
+                                             BARControl.tr("Confirmation"),
+                                             BARControl.tr("Cannot restore archive:\n\n {0}",
+                                                           errorText
+                                                          ),
+                                             new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                             0
+                                            )
+                             )
+                      {
+                        case 0:
+                          break;
+                        case 1:
+                          skipAllFlag[0] = true;
+                          break;
+                        case 2:
+                          busyDialog.abort();
+                          break;
+                      }
+                    }
+                  });
+                };
+              }
+            }
+            else
+            {
+              busyDialog.updateText(0,"%s",BARControl.tr("Aborting\u2026"));
+              command.abort();
+            }
+
+            // close/done busy dialog, restore cursor
+            if (errorCount == 0)
             {
               busyDialog.close();
-              BARControl.resetCursor();
-              Dialogs.error(shell,BARControl.tr("Error while restoring archives:\n\n{0}",errorMessage));
-             }
-          });
+            }
+            else
+            {
+              busyDialog.done();
+            }
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                BARControl.resetCursor();
+              }
+            });
+          }
+          catch (CommunicationError error)
+          {
+            final String errorMessage = error.getMessage();
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                busyDialog.close();
+                BARControl.resetCursor();
+                Dialogs.error(shell,BARControl.tr("Error while restoring archives:\n\n{0}",errorMessage));
+               }
+            });
+          }
+          catch (Exception exception)
+          {
+            BARServer.disconnect();
+            System.err.println("ERROR: "+exception.getMessage());
+            BARControl.printStackTrace(exception);
+            System.exit(1);
+          }
         }
-        catch (Exception exception)
-        {
-          BARServer.disconnect();
-          System.err.println("ERROR: "+exception.getMessage());
-          BARControl.printStackTrace(exception);
-          System.exit(1);
-        }
-      }
-    };
+      };
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -7030,353 +7166,507 @@ Dprintf.dprintf("");
     checkedEntryEvent.trigger();
   }
 
-  /** set entry pattern
-   * @param string pattern string
-   */
-  private void setEntryPattern(String string)
-  {
-    string = string.trim();
-    if (string.length() > 0)
-    {
-      updateEntryListThread.triggerUpdateEntryPattern(string);
-    }
-    else
-    {
-      updateEntryListThread.triggerUpdateEntryPattern(null);
-    }
-  }
-
   /** restore entries
    * @param entryData entries to restore
-   * @param directory destination directory or ""
-   * @param overwriteFiles true to overwrite existing files
    */
-  private void restoreEntries(EntryData entryData[], String directory, boolean overwriteFiles)
+  private void restoreEntries(EntryData entryData[])
   {
-    BARControl.waitCursor();
+    Label      label;
+    Composite  composite,subComposite;
+    Button     button;
 
-    final BusyDialog busyDialog = new BusyDialog(shell,
-                                                 !directory.isEmpty() ? BARControl.tr("Restore entries to: {0}",directory) : BARControl.tr("Restore entries"),
-                                                 500,
-                                                 300,
-                                                 null,
-                                                 BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST
-                                                );
-    busyDialog.updateText(2,"%s",BARControl.tr("Failed entries:"));
-
-    new BackgroundTask(busyDialog,new Object[]{entryData,directory,overwriteFiles})
+    // get number entries, size
+    long entries = entryData.length;
+    long size    = 0;
+    for (EntryData _entryData : entryData)
     {
-      public void run(final BusyDialog busyDialog, Object userData)
+      size += _entryData.size;
+    }
+
+    // create dialog
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore entries"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Button widgetRestoreTo;
+    final Text   widgetRestoreToDirectory;
+    final Button widgetOverwriteEntries;
+    final Button widgetRestore;
+    composite = Widgets.newComposite(dialog);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Restore {0} {0,choice,0#entries|1#entry|1<entries} with {1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
+                                                       entries,
+                                                       Units.formatByteSize(size),
+                                                       size
+                                                      )
+                              );
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
+      Widgets.layout(subComposite,1,0,TableLayoutData.WE);
       {
-        final String[] MAP_FROM = new String[]{"\n","\r","\\"};
-        final String[] MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
-        final EntryData[] entryData_     = (EntryData[])((Object[])userData)[0];
-        final String      directory      = (String     )((Object[])userData)[1];
-        final boolean     overwriteFiles = (Boolean    )((Object[])userData)[2];
-
-        int errorCode;
-
-        // restore entries
-        try
+        widgetRestoreTo = Widgets.newCheckbox(subComposite,BARControl.tr("to"));
+        widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
+        Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
+        widgetRestoreTo.addSelectionListener(new SelectionListener()
         {
-          long  errorCount            = 0;
-          final boolean skipAllFlag[] = new boolean[]{false};
-          int n = 0;
-          for (final EntryData entryData : entryData_)
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            busyDialog.updateText(0,"%s",entryData.storageName);
-            busyDialog.updateProgressBar(0,((double)n*100.0)/(double)entryData_.length);
-            busyDialog.updateText(1,"%s",new File(directory,entryData.name).getPath());
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Button  widget      = (Button)selectionEvent.widget;
+            boolean checkedFlag = widget.getSelection();
+            widgetRestoreTo.setSelection(checkedFlag);
+            selectRestoreToEvent.trigger();
+          }
+        });
 
-            Command command;
-            boolean retryFlag;
-            boolean ftpPasswordFlag     = false;
-            boolean sshPasswordFlag     = false;
-            boolean webdavPasswordFlag  = false;
-            boolean decryptPasswordFlag = false;
-            do
+        widgetRestoreToDirectory = Widgets.newText(subComposite);
+        widgetRestoreToDirectory.setEnabled(false);
+        Widgets.layout(widgetRestoreToDirectory,0,1,TableLayoutData.WE);
+        Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
+        {
+          public void trigger(Control control)
+          {
+            control.setEnabled(widgetRestoreTo.getSelection());
+          }
+        });
+        subComposite.addMouseListener(new MouseListener()
+        {
+          public void mouseDoubleClick(final MouseEvent mouseEvent)
+          {
+          }
+
+          public void mouseDown(final MouseEvent mouseEvent)
+          {
+            Rectangle bounds = widgetRestoreToDirectory.getBounds();
+
+            if (bounds.contains(mouseEvent.x,mouseEvent.y))
             {
-              retryFlag = false;
-
-//TODO: restore with one command: send entry list before
-              // start restore
-              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFiles=%y name=%'S",
-                                                                 entryData.storageName,
-                                                                 directory,
-                                                                 overwriteFiles,
-                                                                 entryData.name
-                                                                ),
-                                             0
-                                            );
-
-              // read results, update/add data
-              String[] errorMessage = new String[1];
-              ValueMap valueMap     = new ValueMap();
-              while (   !command.endOfData()
-                     && !busyDialog.isAborted()
-                     && command.getNextResult(errorMessage,
-                                              valueMap,
-                                              60*1000
-                                             ) == Errors.NONE
-                    )
-              {
-                // parse and update progresss
-                try
-                {
-                  String storageName       = valueMap.getString("storageName"      );
-//                  long   storageDoneBytes  = valueMap.getLong  ("storageDoneBytes" );
-//                  long   storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
-                  String entryName         = valueMap.getString("entryName"        );
-                  long   entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"   );
-                  long   entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"  );
-
-                  busyDialog.updateText(0,"%s",storageName);
-//                  busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                  busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
-                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-                }
-                catch (IllegalArgumentException exception)
-                {
-                  if (Settings.debugLevel > 0)
-                  {
-                    System.err.println("ERROR: "+exception.getMessage());
-                  }
-                }
-
-                // discard waiting results to avoid heap overflow
-                command.purgeResults();
-              }
-
-              if      (   (   (command.getErrorCode() == Errors.FTP_SESSION_FAIL)
-                           || (command.getErrorCode() == Errors.NO_FTP_PASSWORD)
-                           || (command.getErrorCode() == Errors.INVALID_FTP_PASSWORD)
-                          )
-                       && !ftpPasswordFlag
-                       && !busyDialog.isAborted()
-                      )
-              {
-                // get ftp password
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    String password = Dialogs.password(shell,
-                                                       BARControl.tr("FTP login password"),
-                                                       BARControl.tr("Please enter FTP login password for: {0}.",entryData.storageName),
-                                                       BARControl.tr("Password")+":"
-                                                      );
-                    if (password != null)
-                    {
-                      BARServer.executeCommand(StringParser.format("FTP_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                   BARServer.getPasswordEncryptType(),
-                                                                   BARServer.encryptPassword(password)
-                                                                  ),
-                                               0
-                                              );
-                    }
-                  }
-                });
-                ftpPasswordFlag = true;
-
-                // retry
-                retryFlag = true;
-              }
-              else if (   (   (command.getErrorCode() == Errors.SSH_SESSION_FAIL)
-                           || (command.getErrorCode() == Errors.NO_SSH_PASSWORD)
-                           || (command.getErrorCode() == Errors.INVALID_SSH_PASSWORD)
-                          )
-                       && !sshPasswordFlag
-                       && !busyDialog.isAborted()
-                      )
-              {
-                // get ssh password
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    String password = Dialogs.password(shell,
-                                                       BARControl.tr("SSH (TLS) login password"),
-                                                       BARControl.tr("Please enter SSH (TLS) login password for: {0}.",entryData.storageName),
-                                                       BARControl.tr("Password")+":"
-                                                      );
-                    if (password != null)
-                    {
-                      BARServer.executeCommand(StringParser.format("SSH_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                   BARServer.getPasswordEncryptType(),
-                                                                   BARServer.encryptPassword(password)
-                                                                  ),
-                                               0
-                                              );
-                    }
-                  }
-                });
-                sshPasswordFlag = true;
-
-                // retry
-                retryFlag = true;
-              }
-              else if (   (   (command.getErrorCode() == Errors.WEBDAV_SESSION_FAIL)
-                           || (command.getErrorCode() == Errors.NO_WEBDAV_PASSWORD)
-                           || (command.getErrorCode() == Errors.INVALID_WEBDAV_PASSWORD)
-                          )
-                       && !webdavPasswordFlag
-                       && !busyDialog.isAborted()
-                      )
-              {
-                // get webdav password
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    String password = Dialogs.password(shell,
-                                                       BARControl.tr("Webdav login password"),
-                                                       BARControl.tr("Please enter Webdav login password for: {0}.",entryData.storageName),
-                                                       BARControl.tr("Password")+":"
-                                                      );
-                    if (password != null)
-                    {
-                      BARServer.executeCommand(StringParser.format("WEBDAV_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                   BARServer.getPasswordEncryptType(),
-                                                                   BARServer.encryptPassword(password)
-                                                                  ),
-                                               0
-                                              );
-                    }
-                  }
-                });
-                webdavPasswordFlag = true;
-
-                // retry
-                retryFlag = true;
-              }
-              else if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
-                           || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
-                           || (command.getErrorCode() == Errors.CORRUPT_DATA)
-                          )
-                       && !decryptPasswordFlag
-                       && !busyDialog.isAborted()
-                      )
-              {
-                // get crypt password
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    String password = Dialogs.password(shell,
-                                                       BARControl.tr("Decrypt password"),
-                                                       BARControl.tr("Please enter decrypt password for: {0}.",entryData.storageName),
-                                                       BARControl.tr("Password")+":"
-                                                      );
-                    if (password != null)
-                    {
-                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
-                                                                   BARServer.getPasswordEncryptType(),
-                                                                   BARServer.encryptPassword(password)
-                                                                  ),
-                                               0
-                                              );
-                    }
-                  }
-                });
-                decryptPasswordFlag = true;
-
-                // retry
-                retryFlag = true;
-              }
+              widgetRestoreTo.setSelection(true);
+              selectRestoreToEvent.trigger();
+              Widgets.setFocus(widgetRestoreToDirectory);
             }
-            while (retryFlag && !busyDialog.isAborted());
+          }
 
-            // abort command if requested
-            if (!busyDialog.isAborted())
+          public void mouseUp(final MouseEvent mouseEvent)
+          {
+          }
+        });
+
+        button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+        Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String pathName;
+            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
             {
-              if (command.getErrorCode() != Errors.NONE)
-              {
-                busyDialog.updateList(entryData.name);
-                errorCount++;
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.DIRECTORY,
+                                      BARControl.tr("Select path"),
+                                      widgetRestoreTo.getText(),
+                                      remoteListDirectory
+                                     );
+            }
+            else
+            {
+             pathName = Dialogs.directory(shell,
+                                          BARControl.tr("Select path"),
+                                          widgetRestoreTo.getText()
+                                         );
+            }
+            if (pathName != null)
+            {
+              widgetRestoreTo.setSelection(true);
+              selectRestoreToEvent.trigger();
+              widgetRestoreToDirectory.setText(pathName);
+            }
+          }
+        });
+      }
 
-                if (!skipAllFlag[0])
+      widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
+      widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
+      Widgets.layout(widgetOverwriteEntries,2,0,TableLayoutData.W);
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE);
+    {
+      widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
+      Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,null);
+        }
+      });
+    }
+
+    // add selection listeners
+/*
+    widgetRestore.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+        Dialogs.close(dialog,widgetStorageName.getText());
+      }
+    });
+*/
+
+String directory = "/tmp/x";
+boolean overwriteFiles = false;
+
+    // run dialog
+    if ((Boolean)Dialogs.run(dialog,false))
+    {
+      BARControl.waitCursor();
+
+      final BusyDialog busyDialog = new BusyDialog(shell,
+                                                   !directory.isEmpty() ? BARControl.tr("Restore entries to: {0}",directory) : BARControl.tr("Restore entries"),
+                                                   500,
+                                                   300,
+                                                   null,
+                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST
+                                                  );
+      busyDialog.updateText(2,"%s",BARControl.tr("Failed entries:"));
+
+      new BackgroundTask(busyDialog,new Object[]{entryData,directory,overwriteFiles})
+      {
+        public void run(final BusyDialog busyDialog, Object userData)
+        {
+          final String[] MAP_FROM = new String[]{"\n","\r","\\"};
+          final String[] MAP_TO   = new String[]{"\\n","\\r","\\\\"};
+
+          final EntryData[] entryData_     = (EntryData[])((Object[])userData)[0];
+          final String      directory      = (String     )((Object[])userData)[1];
+          final boolean     overwriteFiles = (Boolean    )((Object[])userData)[2];
+
+          int errorCode;
+
+          // restore entries
+          try
+          {
+            long  errorCount            = 0;
+            final boolean skipAllFlag[] = new boolean[]{false};
+            int n = 0;
+            for (final EntryData entryData : entryData_)
+            {
+              busyDialog.updateText(0,"%s",entryData.storageName);
+              busyDialog.updateProgressBar(0,((double)n*100.0)/(double)entryData_.length);
+              busyDialog.updateText(1,"%s",new File(directory,entryData.name).getPath());
+
+              Command command;
+              boolean retryFlag;
+              boolean ftpPasswordFlag     = false;
+              boolean sshPasswordFlag     = false;
+              boolean webdavPasswordFlag  = false;
+              boolean decryptPasswordFlag = false;
+              do
+              {
+                retryFlag = false;
+
+  //TODO: restore with one command: send entry list before
+                // start restore
+                command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFiles=%y name=%'S",
+                                                                   entryData.storageName,
+                                                                   directory,
+                                                                   overwriteFiles,
+                                                                   entryData.name
+                                                                  ),
+                                               0
+                                              );
+
+                // read results, update/add data
+                String[] errorMessage = new String[1];
+                ValueMap valueMap     = new ValueMap();
+                while (   !command.endOfData()
+                       && !busyDialog.isAborted()
+                       && command.getNextResult(errorMessage,
+                                                valueMap,
+                                                60*1000
+                                               ) == Errors.NONE
+                      )
                 {
-                  final String errorText = command.getErrorText();
+                  // parse and update progresss
+                  try
+                  {
+                    String storageName       = valueMap.getString("storageName"      );
+  //                  long   storageDoneBytes  = valueMap.getLong  ("storageDoneBytes" );
+  //                  long   storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
+                    String entryName         = valueMap.getString("entryName"        );
+                    long   entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"   );
+                    long   entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"  );
+
+                    busyDialog.updateText(0,"%s",storageName);
+  //                  busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                    busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
+                    busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                  }
+                  catch (IllegalArgumentException exception)
+                  {
+                    if (Settings.debugLevel > 0)
+                    {
+                      System.err.println("ERROR: "+exception.getMessage());
+                    }
+                  }
+
+                  // discard waiting results to avoid heap overflow
+                  command.purgeResults();
+                }
+
+                if      (   (   (command.getErrorCode() == Errors.FTP_SESSION_FAIL)
+                             || (command.getErrorCode() == Errors.NO_FTP_PASSWORD)
+                             || (command.getErrorCode() == Errors.INVALID_FTP_PASSWORD)
+                            )
+                         && !ftpPasswordFlag
+                         && !busyDialog.isAborted()
+                        )
+                {
+                  // get ftp password
                   display.syncExec(new Runnable()
                   {
                     public void run()
                     {
-                      switch (Dialogs.select(shell,
-                                             BARControl.tr("Confirmation"),
-                                             BARControl.tr("Cannot restore entry\n\n''{0}''\n\nfrom archive\n\n''{1}''\n\n(error: {2})",
-                                                           entryData.name,
-                                                           entryData.storageName,
-                                                           errorText
-                                                          ),
-                                             new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                             0
-                                            )
-                             )
+                      String password = Dialogs.password(shell,
+                                                         BARControl.tr("FTP login password"),
+                                                         BARControl.tr("Please enter FTP login password for: {0}.",entryData.storageName),
+                                                         BARControl.tr("Password")+":"
+                                                        );
+                      if (password != null)
                       {
-                        case 0:
-                          break;
-                        case 1:
-                          skipAllFlag[0] = true;
-                          break;
-                        case 2:
-                          busyDialog.abort();
-                          break;
+                        BARServer.executeCommand(StringParser.format("FTP_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                     BARServer.getPasswordEncryptType(),
+                                                                     BARServer.encryptPassword(password)
+                                                                    ),
+                                                 0
+                                                );
                       }
                     }
                   });
+                  ftpPasswordFlag = true;
+
+                  // retry
+                  retryFlag = true;
+                }
+                else if (   (   (command.getErrorCode() == Errors.SSH_SESSION_FAIL)
+                             || (command.getErrorCode() == Errors.NO_SSH_PASSWORD)
+                             || (command.getErrorCode() == Errors.INVALID_SSH_PASSWORD)
+                            )
+                         && !sshPasswordFlag
+                         && !busyDialog.isAborted()
+                        )
+                {
+                  // get ssh password
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      String password = Dialogs.password(shell,
+                                                         BARControl.tr("SSH (TLS) login password"),
+                                                         BARControl.tr("Please enter SSH (TLS) login password for: {0}.",entryData.storageName),
+                                                         BARControl.tr("Password")+":"
+                                                        );
+                      if (password != null)
+                      {
+                        BARServer.executeCommand(StringParser.format("SSH_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                     BARServer.getPasswordEncryptType(),
+                                                                     BARServer.encryptPassword(password)
+                                                                    ),
+                                                 0
+                                                );
+                      }
+                    }
+                  });
+                  sshPasswordFlag = true;
+
+                  // retry
+                  retryFlag = true;
+                }
+                else if (   (   (command.getErrorCode() == Errors.WEBDAV_SESSION_FAIL)
+                             || (command.getErrorCode() == Errors.NO_WEBDAV_PASSWORD)
+                             || (command.getErrorCode() == Errors.INVALID_WEBDAV_PASSWORD)
+                            )
+                         && !webdavPasswordFlag
+                         && !busyDialog.isAborted()
+                        )
+                {
+                  // get webdav password
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      String password = Dialogs.password(shell,
+                                                         BARControl.tr("Webdav login password"),
+                                                         BARControl.tr("Please enter Webdav login password for: {0}.",entryData.storageName),
+                                                         BARControl.tr("Password")+":"
+                                                        );
+                      if (password != null)
+                      {
+                        BARServer.executeCommand(StringParser.format("WEBDAV_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                     BARServer.getPasswordEncryptType(),
+                                                                     BARServer.encryptPassword(password)
+                                                                    ),
+                                                 0
+                                                );
+                      }
+                    }
+                  });
+                  webdavPasswordFlag = true;
+
+                  // retry
+                  retryFlag = true;
+                }
+                else if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
+                             || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
+                             || (command.getErrorCode() == Errors.CORRUPT_DATA)
+                            )
+                         && !decryptPasswordFlag
+                         && !busyDialog.isAborted()
+                        )
+                {
+                  // get crypt password
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      String password = Dialogs.password(shell,
+                                                         BARControl.tr("Decrypt password"),
+                                                         BARControl.tr("Please enter decrypt password for: {0}.",entryData.storageName),
+                                                         BARControl.tr("Password")+":"
+                                                        );
+                      if (password != null)
+                      {
+                        BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
+                                                                     BARServer.getPasswordEncryptType(),
+                                                                     BARServer.encryptPassword(password)
+                                                                    ),
+                                                 0
+                                                );
+                      }
+                    }
+                  });
+                  decryptPasswordFlag = true;
+
+                  // retry
+                  retryFlag = true;
                 }
               }
+              while (retryFlag && !busyDialog.isAborted());
+
+              // abort command if requested
+              if (!busyDialog.isAborted())
+              {
+                if (command.getErrorCode() != Errors.NONE)
+                {
+                  busyDialog.updateList(entryData.name);
+                  errorCount++;
+
+                  if (!skipAllFlag[0])
+                  {
+                    final String errorText = command.getErrorText();
+                    display.syncExec(new Runnable()
+                    {
+                      public void run()
+                      {
+                        switch (Dialogs.select(shell,
+                                               BARControl.tr("Confirmation"),
+                                               BARControl.tr("Cannot restore entry\n\n''{0}''\n\nfrom archive\n\n''{1}''\n\n(error: {2})",
+                                                             entryData.name,
+                                                             entryData.storageName,
+                                                             errorText
+                                                            ),
+                                               new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                               0
+                                              )
+                               )
+                        {
+                          case 0:
+                            break;
+                          case 1:
+                            skipAllFlag[0] = true;
+                            break;
+                          case 2:
+                            busyDialog.abort();
+                            break;
+                        }
+                      }
+                    });
+                  }
+                }
+              }
+              else
+              {
+                busyDialog.updateText(0,"%s",BARControl.tr("Aborting\u2026"));
+                command.abort();
+                break;
+              }
+
+              n++;
+            }
+
+            // close/done busy dialog, restore cursor
+            if (errorCount == 0)
+            {
+              busyDialog.close();
             }
             else
             {
-              busyDialog.updateText(0,"%s",BARControl.tr("Aborting\u2026"));
-              command.abort();
-              break;
+              busyDialog.done();
             }
-
-            n++;
-          }
-
-          // close/done busy dialog, restore cursor
-          if (errorCount == 0)
-          {
-            busyDialog.close();
-          }
-          else
-          {
-            busyDialog.done();
-          }
-          display.syncExec(new Runnable()
-          {
-            public void run()
+            display.syncExec(new Runnable()
             {
-              BARControl.resetCursor();
-            }
-          });
-        }
-        catch (CommunicationError error)
-        {
-          final String errorMessage = error.getMessage();
-          display.syncExec(new Runnable()
+              public void run()
+              {
+                BARControl.resetCursor();
+              }
+            });
+          }
+          catch (CommunicationError error)
           {
-            public void run()
+            final String errorMessage = error.getMessage();
+            display.syncExec(new Runnable()
             {
-              busyDialog.close();
-              BARControl.resetCursor();
-              Dialogs.error(shell,BARControl.tr("Error while restoring entries:\n\n{0}",errorMessage));
-             }
-          });
+              public void run()
+              {
+                busyDialog.close();
+                BARControl.resetCursor();
+                Dialogs.error(shell,BARControl.tr("Error while restoring entries:\n\n{0}",errorMessage));
+               }
+            });
+          }
+          catch (Exception exception)
+          {
+            BARServer.disconnect();
+            System.err.println("ERROR: "+exception.getMessage());
+            BARControl.printStackTrace(exception);
+            System.exit(1);
+          }
         }
-        catch (Exception exception)
-        {
-          BARServer.disconnect();
-          System.err.println("ERROR: "+exception.getMessage());
-          BARControl.printStackTrace(exception);
-          System.exit(1);
-        }
-      }
-    };
+      };
+    }
   }
 }
 
