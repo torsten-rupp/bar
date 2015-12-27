@@ -101,7 +101,7 @@ LOCAL const ConfigValueUnit *findIntegerUnitByValue(const ConfigValueUnit *units
   {
     unit = units;
     while (   (unit->name != NULL)
-           && ((value % (int)unit->factor) != 0)
+           && (((int64)value % (int64)unit->factor) != 0)
           )
     {
       unit++;
