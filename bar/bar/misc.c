@@ -1135,12 +1135,13 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
     if (!String_getNextToken(&stringTokenizer,&token,NULL))
     {
+      error = ERRORX_(PARSE_COMMAND,0,String_cString(commandLine));
       String_doneTokenizer(&stringTokenizer);
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(name);
       String_delete(commandLine);
-      return ERRORX_(PARSE_COMMAND,0,String_cString(commandLine));
+      return error;
     }
     File_setFileName(name,token);
 
