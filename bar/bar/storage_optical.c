@@ -618,13 +618,13 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
     switch (storageHandle->storageSpecifier.type)
     {
       case STORAGE_TYPE_CD:
-        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.cd.defaultDeviceName);
+        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.cd.deviceName);
         break;
       case STORAGE_TYPE_DVD:
-        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.dvd.defaultDeviceName);
+        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.dvd.deviceName);
         break;
       case STORAGE_TYPE_BD:
-        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.bd.defaultDeviceName);
+        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.bd.deviceName);
         break;
       default:
         #ifndef NDEBUG
@@ -1632,13 +1632,13 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
       switch (storageDirectoryListHandle->storageSpecifier.type)
       {
         case STORAGE_TYPE_CD:
-          String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.cd.defaultDeviceName);
+          String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.cd.deviceName);
           break;
         case STORAGE_TYPE_DVD:
-          String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.dvd.defaultDeviceName);
+          String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.dvd.deviceName);
           break;
         case STORAGE_TYPE_BD:
-          String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.bd.defaultDeviceName);
+          String_set(storageDirectoryListHandle->storageSpecifier.deviceName,globalOptions.bd.deviceName);
           break;
         default:
           #ifndef NDEBUG
