@@ -288,7 +288,7 @@ typedef struct
 // optical disk settings
 typedef struct
 {
-  String defaultDeviceName;                                   // default device name
+  String deviceName;                                          // device name
   String requestVolumeCommand;                                // command to request new medium
   String unloadVolumeCommand;                                 // command to unload medium
   String loadVolumeCommand;                                   // command to load medium
@@ -309,7 +309,7 @@ typedef struct
 // device settings
 typedef struct
 {
-  String defaultDeviceName;                                   // default device name
+  String name;                                                // device name
   String requestVolumeCommand;                                // command to request new volume
   String unloadVolumeCommand;                                 // command to unload volume
   String loadVolumeCommand;                                   // command to load volume

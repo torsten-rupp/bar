@@ -142,6 +142,17 @@ extern locale_t      POSIXLocale;            // POSIX locale
 #endif
 
 /***********************************************************************\
+* Name   : getConfigFileName
+* Purpose: get writable config file name
+* Input  : fileName - file name variable
+* Output : fileName - file anme
+* Return : file name
+* Notes  : -
+\***********************************************************************/
+
+String getConfigFileName(String fileName);
+
+/***********************************************************************\
 * Name   : getArchiveTypeName
 * Purpose: get archive type name
 * Input  : archiveType - archive type
