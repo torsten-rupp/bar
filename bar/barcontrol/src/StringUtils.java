@@ -1099,7 +1099,7 @@ public class StringUtils
     }
   }
 
-  /** create n-concationation of string
+  /** create n-concatenation of string
    * @param string string to repeat
    * @param number of concatations
    * @return string+...+string (count times)
@@ -1116,7 +1116,7 @@ public class StringUtils
     return buffer.toString();
   }
 
-  /** create n-concationation of string
+  /** create n-concatenation of string
    * @param ch charater to repeat
    * @param number of concatations
    * @return string+...+string (count times)
