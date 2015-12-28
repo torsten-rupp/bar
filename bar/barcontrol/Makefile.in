@@ -148,9 +148,11 @@ endif
 #--------------------------------- objects -----------------------------------
 
 SOURCES        = src/BARControl.java \
+                 src/BARWidgets.java \
                  src/TabStatus.java \
                  src/TabJobs.java \
                  src/TabRestore.java \
+                 src/ServerSettings.java \
                  src/BARServer.java \
                  src/Settings.java \
                  \
