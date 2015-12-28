@@ -8982,9 +8982,6 @@ throw new Error("NYI");
    */
   private void includeListAdd(EntryData entryData)
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
     assert selectedJobData != null;
 
     // update include list
@@ -9025,9 +9022,6 @@ throw new Error("NYI");
    */
   private void includeListRemove(String[] patterns)
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
     assert selectedJobData != null;
 
     // remove patterns from hash map
@@ -9287,9 +9281,6 @@ throw new Error("NYI");
    */
   private void excludeListAdd(String pattern)
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
     assert selectedJobData != null;
 
     // update exclude list
@@ -9328,9 +9319,6 @@ throw new Error("NYI");
    */
   private void excludeListRemove(String[] patterns)
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
     assert selectedJobData != null;
 
     // remove patterns from hash set
@@ -9851,9 +9839,6 @@ throw new Error("NYI");
    */
   private void compressExcludeListRemove(String[] patterns)
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
     assert selectedJobData != null;
 
     for (String pattern : patterns)
