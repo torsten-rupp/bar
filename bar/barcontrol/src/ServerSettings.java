@@ -25,6 +25,9 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Widget;
 
@@ -44,6 +47,7 @@ public class ServerSettings
     Text      text;
     Combo     combo;
     Spinner   spinner;
+    Table     table;
     Button    button;
 
     WidgetVariable  tmpDirectory              = new WidgetVariable("",   "tmp-directory"                  );
@@ -120,6 +124,14 @@ public class ServerSettings
     WidgetVariable  deviceWritePreCommand      = new WidgetVariable("",  "device-write-pre-command"       );
     WidgetVariable  deviceWritePostCommand     = new WidgetVariable("",  "device-write-post-command"      );
     WidgetVariable  deviceWriteCommand         = new WidgetVariable("",  "device-write-command"           );
+
+    WidgetVariable  serverPort                 = new WidgetVariable(0,   "server-port"                    );
+    WidgetVariable  serverTLSPort              = new WidgetVariable(0,   "server-tls-port"                );
+    WidgetVariable  serverCAFile               = new WidgetVariable("",  "server-ca-file"                 );
+    WidgetVariable  serverCertFile             = new WidgetVariable("",  "server-cert-file"               );
+    WidgetVariable  serverKeyFile              = new WidgetVariable("",  "server-key-file"                );
+    WidgetVariable  serverPassword             = new WidgetVariable("",  "server-password"                );
+    WidgetVariable  serverJobsDirectory        = new WidgetVariable("",  "server-jobs-directory"          );
 
     WidgetVariable  log                        = new WidgetVariable("",  "log"                            );
     WidgetVariable  logFile                    = new WidgetVariable("",  "log-file"                       );
@@ -200,6 +212,14 @@ public class ServerSettings
     BARServer.getServerOption(deviceWritePreCommand      );
     BARServer.getServerOption(deviceWritePostCommand     );
     BARServer.getServerOption(deviceWriteCommand         );
+
+    BARServer.getServerOption(serverPort                 );
+    BARServer.getServerOption(serverTLSPort              );
+    BARServer.getServerOption(serverCAFile               );
+    BARServer.getServerOption(serverCertFile             );
+    BARServer.getServerOption(serverKeyFile              );
+    BARServer.getServerOption(serverPassword             );
+    BARServer.getServerOption(serverJobsDirectory        );
 
     BARServer.getServerOption(log                        );
     BARServer.getServerOption(logFile                    );
@@ -282,10 +302,76 @@ public class ServerSettings
 
     // servers
     composite = Widgets.addTab(tabFolder,BARControl.tr("Servers"));
-    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
+    composite.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0},new double[]{0.0,1.0},2));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
+      label = Widgets.newLabel(composite,BARControl.tr("Port")+":");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+      spinner = BARWidgets.newNumber(composite,
+                                     BARControl.tr("Server port number."),
+                                     serverPort,
+                                     0,
+                                     65535
+                                    );
+      Widgets.layout(spinner,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      label = Widgets.newLabel(composite,BARControl.tr("CA file")+":");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+      subSubComposite = BARWidgets.newFile(composite,
+                                           BARControl.tr("CA file."),
+                                           serverCAFile,
+                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                       },
+                                           "*"
+                                          );
+      Widgets.layout(subSubComposite,1,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Cert file")+":");
+      Widgets.layout(label,2,0,TableLayoutData.W);
+      subSubComposite = BARWidgets.newFile(composite,
+                                           BARControl.tr("Cert file."),
+                                           serverCertFile,
+                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                       },
+                                           "*"
+                                          );
+      Widgets.layout(subSubComposite,2,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Key file")+":");
+      Widgets.layout(label,3,0,TableLayoutData.W);
+      subSubComposite = BARWidgets.newFile(composite,
+                                           BARControl.tr("Key file."),
+                                           serverKeyFile,
+                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                       },
+                                           "*"
+                                          );
+      Widgets.layout(subSubComposite,3,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Password")+":");
+      Widgets.layout(label,4,0,TableLayoutData.W);
+      text = BARWidgets.newPassword(composite,
+                                    BARControl.tr("CA file."),
+                                    serverPassword
+                                   );
+      Widgets.layout(text,4,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Jobs directory")+":");
+      Widgets.layout(label,5,0,TableLayoutData.W);
+      subSubComposite = BARWidgets.newDirectory(composite,
+                                                BARControl.tr("Jobs directory."),
+                                                serverJobsDirectory
+                                               );
+      Widgets.layout(subSubComposite,5,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Servers")+":");
+      Widgets.layout(label,6,0,TableLayoutData.W);
+      table = Widgets.newTable(composite);
+      table.setHeaderVisible(false);
+      Widgets.layout(table,7,0,TableLayoutData.NSWE,0,2);
+      Widgets.addTableColumn(table,0,SWT.LEFT,20);
+      Widgets.addTableColumn(table,1,SWT.LEFT,1024,true);
     }
 
     // commands
@@ -1490,6 +1576,14 @@ public class ServerSettings
       BARServer.setServerOption(deviceWritePreCommand      );
       BARServer.setServerOption(deviceWritePostCommand     );
       BARServer.setServerOption(deviceWriteCommand         );
+
+      BARServer.setServerOption(serverPort                 );
+      BARServer.setServerOption(serverTLSPort              );
+      BARServer.setServerOption(serverCAFile               );
+      BARServer.setServerOption(serverCertFile             );
+      BARServer.setServerOption(serverKeyFile              );
+      BARServer.setServerOption(serverPassword             );
+      BARServer.setServerOption(serverJobsDirectory        );
 
       BARServer.setServerOption(log,errorMessage           );
       BARServer.setServerOption(logFile,errorMessage       );

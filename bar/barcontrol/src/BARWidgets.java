@@ -99,7 +99,6 @@ public class BARWidgets
   // images
   private final static Image IMAGE_DIRECTORY = Widgets.loadImage(Display.getDefault(),"directory.png");
 
-
   /** create new text widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
@@ -115,7 +114,7 @@ public class BARWidgets
   {
     final Text text;
 
-    text = Widgets.newText(parentComposite);
+    text = Widgets.newText(parentComposite,SWT.LEFT|SWT.BORDER);
     text.setToolTipText(toolTipText);
     text.setText(widgetVariable.getString());
     text.addModifyListener(new ModifyListener()
@@ -703,7 +702,7 @@ public class BARWidgets
     composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      text = Widgets.newText(composite);
+      text = Widgets.newText(composite,SWT.LEFT|SWT.BORDER);
       text.setToolTipText(toolTipText);
       text.setText(widgetVariable.getString());
       Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -823,7 +822,7 @@ public class BARWidgets
     composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      text = Widgets.newText(composite);
+      text = Widgets.newText(composite,SWT.LEFT|SWT.BORDER);
       text.setToolTipText(toolTipText);
       text.setText(widgetVariable.getString());
       Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -921,6 +920,128 @@ public class BARWidgets
     }
 
     return composite;
+  }
+
+  /** create new password widget
+   * @param parentComposite parent composite
+   * @param toolTipText tooltip text
+   * @param widgetVariable widget variable
+   * @param listener listener or null
+   * @return text widget
+   */
+  public static Text newPassword(Composite            parentComposite,
+                                 String               toolTipText,
+                                 final WidgetVariable widgetVariable,
+                                 final Listener       listener
+                                )
+  {
+    final Text text;
+
+    text = Widgets.newText(parentComposite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+    text.setToolTipText(toolTipText);
+    text.setText(widgetVariable.getString());
+    text.addModifyListener(new ModifyListener()
+    {
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text  widget = (Text)modifyEvent.widget;
+        Color color  = COLOR_MODIFIED;
+
+        String s = widget.getText();
+        if (widgetVariable.getString().equals(s)) color = null;
+
+        widget.setBackground(color);
+      }
+    });
+    text.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        Text widget = (Text)selectionEvent.widget;
+
+        String string = widget.getText();
+
+        if (listener != null)
+        {
+          listener.setString(widgetVariable,string);
+        }
+        else
+        {
+          widgetVariable.set(string);
+        }
+
+        widget.setBackground(null);
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    text.addFocusListener(new FocusListener()
+    {
+      public void focusGained(FocusEvent focusEvent)
+      {
+      }
+      public void focusLost(FocusEvent focusEvent)
+      {
+        Text widget = (Text)focusEvent.widget;
+
+        String string = widget.getText();
+
+        if (listener != null)
+        {
+          listener.setString(widgetVariable,string);
+        }
+        else
+        {
+          widgetVariable.set(string);
+        }
+
+        widget.setBackground(null);
+      }
+    });
+
+    final WidgetModifyListener widgetModifiedListener = (listener != null)
+      ? new WidgetModifyListener(text,widgetVariable)
+        {
+          void modified(Widget widget, WidgetVariable variable)
+          {
+            text.setText(listener.getString(widgetVariable));
+          }
+        }
+      : new WidgetModifyListener(text,widgetVariable);
+    Widgets.addModifyListener(widgetModifiedListener);
+    text.addDisposeListener(new DisposeListener()
+    {
+      public void widgetDisposed(DisposeEvent disposedEvent)
+      {
+        Widgets.removeModifyListener(widgetModifiedListener);
+      }
+    });
+
+    if (listener != null)
+    {
+      text.setText(listener.getString(widgetVariable));
+    }
+    else
+    {
+      text.setText(widgetVariable.getString());
+    }
+
+    return text;
+  }
+
+  /** create new password widget
+   * @param parentComposite parent composite
+   * @param toolTipText tooltip text
+   * @param widgetVariable widget variable
+   * @return text widget
+   */
+  public static Text newPassword(Composite            parentComposite,
+                                 String               toolTipText,
+                                 final WidgetVariable widgetVariable
+                                )
+  {
+    return newPassword(parentComposite,toolTipText,widgetVariable,(Listener)null);
   }
 }
 
