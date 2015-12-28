@@ -1157,6 +1157,25 @@ void ConfigValue_done(const ConfigValue configValues[],
   UNUSED_VARIABLE(configValueCount);
 }
 
+int ConfigValue_valueIndex(const ConfigValue configValues[], const char *name)
+{
+  uint index;
+
+  assert(configValues != NULL);
+  assert(configValues[0].name != NULL);
+
+  index = 0;
+
+  while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+         && !stringEquals(configValues[index].name,name)
+        )
+  {
+    index = ConfigValue_nextValueIndex(configValues,index);
+  }
+
+  return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? (int)index : -1;
+}
+
 uint ConfigValue_firstValueIndex(const ConfigValue configValues[])
 {
   uint index;
@@ -1167,14 +1186,17 @@ uint ConfigValue_firstValueIndex(const ConfigValue configValues[])
   index = 0;
 
   // skip sections
-  while ((configValues[index].name != NULL) && (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION))
+  while ((configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION))
   {
     do
     {
       index++;
     }
-    while (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION);
-    if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION) index++;
+    while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+           && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+          );
+    assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
+    index++;
   }
 
   return index;
@@ -1189,19 +1211,22 @@ uint ConfigValue_lastValueIndex(const ConfigValue configValues[])
 
   index = 0;
 
-  while (configValues[index].name != NULL)
+  while (configValues[index].type != CONFIG_VALUE_TYPE_END)
   {
     // skip sections
-    while ((configValues[index].name != NULL) && (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION))
+    while (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION)
     {
       do
       {
         index++;
       }
-      while (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION);
-      if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION) index++;
+      while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+             && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+            );
+      assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
+      index++;
     }
-    if (configValues[index].name != NULL) index++;
+    if (configValues[index].type != CONFIG_VALUE_TYPE_END) index++;
   }
   if (index > 0)
   {
@@ -1214,7 +1239,10 @@ uint ConfigValue_lastValueIndex(const ConfigValue configValues[])
       {
         index--;
       }
-      while (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION);
+      while (   (index > 0)
+             && (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
+            );
+      assert(configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION);
       if (index > 0) index--;
     }
   }
@@ -1227,19 +1255,22 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[], uint index)
   assert(configValues != NULL);
   assert(configValues[0].name != NULL);
 
-  if (configValues[index].name != NULL)
+  if (configValues[index].type != CONFIG_VALUE_TYPE_END)
   {
     index++;
 
     // skip sections
-    while ((configValues[index].name != NULL) && (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION))
+    while (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION)
     {
       do
       {
         index++;
       }
-      while (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION);
-      if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION) index++;
+      while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+             && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+            );
+      assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
+      index++;
     }
   }
 
@@ -1255,7 +1286,7 @@ uint ConfigValue_firstSectionValueIndex(const ConfigValue configValues[], const 
 
   index = 0;
 
-  while (   (configValues[index].name != NULL)
+  while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
          && (   (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
              || !stringEquals(configValues[index].name,name)
             )
@@ -1268,8 +1299,11 @@ uint ConfigValue_firstSectionValueIndex(const ConfigValue configValues[], const 
       {
         index++;
       }
-      while (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION);
-      if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION) index++;
+      while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+             && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+            );
+      assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
+      index++;
     }
     else
     {
@@ -1285,7 +1319,7 @@ uint ConfigValue_lastSectionValueIndex(const ConfigValue configValues[], uint in
 {
   assert(configValues != NULL);
 
-  while (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+  while ((configValues[index].type != CONFIG_VALUE_TYPE_END) && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION))
   {
     index++;
   }
@@ -1299,7 +1333,7 @@ uint ConfigValue_nextSectionValueIndex(const ConfigValue configValues[], uint in
   assert(configValues != NULL);
   assert(configValues[0].name != NULL);
 
-  if (configValues[index].name != NULL)
+  if (configValues[index].type != CONFIG_VALUE_TYPE_END)
   {
     // next section value index
     index++;
@@ -1311,8 +1345,11 @@ uint ConfigValue_nextSectionValueIndex(const ConfigValue configValues[], uint in
       {
         index++;
       }
-      while (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION);
-      if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION) index++;
+      while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+             && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+            );
+      assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
+      index++;
     }
   }
 
@@ -1825,9 +1862,16 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
             String_appendCString(s,set->name);
           }
         }
+        ITERATE_SET(set,configValueFormat->configValue->setValue.sets)
+        {
+          if ((*configVariable.set) == set->value)
+          {
+            String_setCString(s,set->name);
+          }
+        }
 
         // format value
-        String_format(line,"%s",s);
+        String_format(line,"%S",s);
 
         // free resources
         String_delete(s);
