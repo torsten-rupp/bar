@@ -46,26 +46,41 @@ public class ServerSettings
     Spinner   spinner;
     Button    button;
 
-    WidgetVariable  tmpDirectory   = new WidgetVariable("","tmp-directory"   );
-    WidgetVariable  maxTmpSize     = new WidgetVariable("","max-tmp-size"    );
-    WidgetVariable  niceLevel      = new WidgetVariable(0, "nice-level"      );
-    WidgetVariable  maxThreads     = new WidgetVariable(0, "max-threads"     );
+    WidgetVariable  tmpDirectory              = new WidgetVariable("",    "tmp-directory"                  );
+    WidgetVariable  maxTmpSize                = new WidgetVariable("",    "max-tmp-size"                   );
+    WidgetVariable  niceLevel                 = new WidgetVariable(0,     "nice-level"                     );
+    WidgetVariable  maxThreads                = new WidgetVariable(0,     "max-threads"                    );
+    WidgetVariable  maxBandWidth              = new WidgetVariable("",    "max-band-width"                 );
+    WidgetVariable  compressMinSize           = new WidgetVariable("",    "compress-min-size"              );
 
-    WidgetVariable  log            = new WidgetVariable("","log"             );
-    WidgetVariable  logFile        = new WidgetVariable("","log-file"        );
-    WidgetVariable  logFormat      = new WidgetVariable("","log-format"      );
-    WidgetVariable  logPostCommand = new WidgetVariable("","log-post-command");
+    WidgetVariable  indexDatabase             = new WidgetVariable("",    "index-database"                 );
+    WidgetVariable  indexDatabaseAutoUpdate   = new WidgetVariable(false, "index-database-auto-update"     );
+    WidgetVariable  indexDatabaseMaxBandWidth = new WidgetVariable(false, "index-database-max-band-width"  );
+    WidgetVariable  indexDatabaseKeepTime     = new WidgetVariable(false, "index-database-keep-time"       );
 
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Server settings"),700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    WidgetVariable  log                       = new WidgetVariable("",    "log"                            );
+    WidgetVariable  logFile                   = new WidgetVariable("",    "log-file"                       );
+    WidgetVariable  logFormat                 = new WidgetVariable("",    "log-format"                     );
+    WidgetVariable  logPostCommand            = new WidgetVariable("",    "log-post-command"               );
 
     BARServer.getServerOption(tmpDirectory);
     BARServer.getServerOption(maxTmpSize);
     BARServer.getServerOption(niceLevel);
     BARServer.getServerOption(maxThreads);
+    BARServer.getServerOption(maxBandWidth);
+    BARServer.getServerOption(compressMinSize);
+
+    BARServer.getServerOption(indexDatabase);
+    BARServer.getServerOption(indexDatabaseAutoUpdate);
+    BARServer.getServerOption(indexDatabaseMaxBandWidth);
+    BARServer.getServerOption(indexDatabaseKeepTime);
+
     BARServer.getServerOption(log);
     BARServer.getServerOption(logFile);
     BARServer.getServerOption(logFormat);
     BARServer.getServerOption(logPostCommand);
+
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Server settings"),700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     tabFolder = Widgets.newTabFolder(dialog);
@@ -79,7 +94,6 @@ public class ServerSettings
     {
       label = Widgets.newLabel(composite,BARControl.tr("Temporary directory")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
-
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
@@ -103,7 +117,6 @@ public class ServerSettings
 
       label = Widgets.newLabel(composite,BARControl.tr("Nice level")+":");
       Widgets.layout(label,1,0,TableLayoutData.W);
-
       spinner = BARWidgets.newNumber(composite,
                                      BARControl.tr("Process nice level."),
                                      niceLevel,
@@ -114,7 +127,6 @@ public class ServerSettings
 
       label = Widgets.newLabel(composite,BARControl.tr("Max. number of threads")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
-
       spinner = BARWidgets.newNumber(composite,
                                      BARControl.tr("Max. number of compression and encryption threads."),
                                      maxThreads,
@@ -122,10 +134,36 @@ public class ServerSettings
                                      65535
                                     );
       Widgets.layout(spinner,2,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
+      Widgets.layout(label,3,0,TableLayoutData.W);
+      combo = BARWidgets.newNumber(composite,
+                                   BARControl.tr("Max. band width to use [bits/s]."),
+                                   maxBandWidth,
+                                   new String[]{"0","64K","128K","256K","512K","1M","2M","4M","8M","16M","32M","64M","128M","256M","512M","1G","10G"}
+                                  );
+      Widgets.layout(combo,3,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Min. compress size")+":");
+      Widgets.layout(label,4,0,TableLayoutData.W);
+      combo = BARWidgets.newNumber(composite,
+                                   BARControl.tr("Min. size of files for compression [bytes]."),
+                                   compressMinSize,
+                                   new String[]{"0","32","64","128","256","512","1K","4K","8K"}
+                                  );
+      Widgets.layout(combo,4,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
     }
 
     // servers
     composite = Widgets.addTab(tabFolder,BARControl.tr("Servers"));
+    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
+    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    {
+    }
+
+    // commands
+    composite = Widgets.addTab(tabFolder,BARControl.tr("Commands"));
     composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
@@ -140,7 +178,6 @@ public class ServerSettings
     {
       label = Widgets.newLabel(composite,BARControl.tr("Log")+":");
       Widgets.layout(label,0,0,TableLayoutData.NW);
-
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
@@ -557,7 +594,6 @@ public class ServerSettings
 
       label = Widgets.newLabel(composite,BARControl.tr("Log file")+":");
       Widgets.layout(label,1,0,TableLayoutData.W);
-
       subComposite = BARWidgets.newFile(composite,
                                         BARControl.tr("Log file name."),
                                         logFile,
@@ -570,7 +606,6 @@ public class ServerSettings
 
       label = Widgets.newLabel(composite,BARControl.tr("Log format")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
-
       text = BARWidgets.newText(composite,
                                 BARControl.tr("Log format string."),
                                 logFormat
@@ -579,7 +614,6 @@ public class ServerSettings
 
       label = Widgets.newLabel(composite,BARControl.tr("Log post command")+":");
       Widgets.layout(label,3,0,TableLayoutData.W);
-
       subComposite = BARWidgets.newFile(composite,
                                         BARControl.tr("Log post command."),
                                         logPostCommand,
@@ -634,6 +668,14 @@ public class ServerSettings
       BARServer.setServerOption(maxTmpSize,errorMessage);
       BARServer.setServerOption(niceLevel,errorMessage);
       BARServer.setServerOption(maxThreads,errorMessage);
+      BARServer.setServerOption(maxBandWidth,errorMessage);
+      BARServer.setServerOption(compressMinSize,errorMessage);
+
+      BARServer.setServerOption(indexDatabase,errorMessage);
+      BARServer.setServerOption(indexDatabaseAutoUpdate,errorMessage);
+      BARServer.setServerOption(indexDatabaseMaxBandWidth,errorMessage);
+      BARServer.setServerOption(indexDatabaseKeepTime,errorMessage);
+
       BARServer.setServerOption(log,errorMessage);
       BARServer.setServerOption(logFile,errorMessage);
       BARServer.setServerOption(logFormat,errorMessage);
