@@ -562,7 +562,6 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   // deprecated
   CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",                JobNode,scheduleList,                           configValueParseSchedule,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files", JobNode,jobOptions.archiveFileModeOverwriteFlag ),
   CONFIG_STRUCT_VALUE_IGNORE   ("overwrite-archive-files"                                                  ),
 );
 
@@ -1521,6 +1520,334 @@ LOCAL ScheduleNode *parseScheduleDateTime(const String date,
 }
 
 /***********************************************************************\
+* Name   : deleteEntries
+* Purpose: delete all entries with given name
+* Input  : stringList - file string list to modify
+*          section    - name of section or NULL
+*          name       - name of value
+* Output : -
+* Return : next entry in string list or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL StringNode *deleteEntries(StringList *stringList,
+                                const char *section,
+                                const char *name
+                               )
+{
+  StringNode *nextStringNode;
+
+  StringNode *stringNode;
+  String     line;
+  String     string;
+
+  nextStringNode = NULL;
+
+  line       = String_new();
+  string     = String_new();
+  stringNode = stringList->head;
+  while (stringNode != NULL)
+  {
+    // skip comments, empty lines
+    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+    {
+      stringNode = stringNode->next;
+      continue;
+    }
+
+    // parse and match
+    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL))
+    {
+      // keep line: begin section
+      stringNode = stringNode->next;
+
+      if (String_equalsCString(string,section))
+      {
+        // section found: remove matching entries
+        while (stringNode != NULL)
+        {
+          // skip comments, empty lines
+          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+          {
+            stringNode = stringNode->next;
+            continue;
+          }
+
+          // parse and match
+          if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+          {
+            // keep line: end section
+            stringNode = stringNode->next;
+            break;
+          }
+          else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
+                   && String_equalsCString(string,name)
+                  )
+          {
+            // delete line
+            stringNode = StringList_remove(stringList,stringNode);
+
+            // store next line
+            nextStringNode = stringNode;
+          }
+          else
+          {
+            // keep line
+            stringNode = stringNode->next;
+          }
+        }
+      }
+      else
+      {
+        // section not found: skip
+        while (stringNode != NULL)
+        {
+          // skip comments, empty lines
+          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+          {
+            stringNode = stringNode->next;
+            continue;
+          }
+
+          // keep line
+          stringNode = stringNode->next;
+
+          // parse and match
+          if (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+          {
+            // end section
+            break;
+          }
+        }
+      }
+    }
+    else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
+             && String_equalsCString(string,name)
+            )
+    {
+      // delete line
+      stringNode = StringList_remove(stringList,stringNode);
+
+      // store next line
+      nextStringNode = stringNode;
+    }
+    else
+    {
+      // keep line
+      stringNode = stringNode->next;
+    }
+  }
+  String_delete(string);
+  String_delete(line);
+
+  return nextStringNode;
+}
+
+/***********************************************************************\
+* Name   : deleteSections
+* Purpose: delete all sections with given name
+* Input  : stringList - file string list to modify
+*          section    - name of section
+* Output : -
+* Return : next entry in string list or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL StringNode *deleteSections(StringList *stringList,
+                                 const char *section
+                                )
+{
+  StringNode *nextStringNode;
+
+  StringNode *stringNode;
+  String     line;
+  String     string;
+
+  nextStringNode = NULL;
+
+  line       = String_new();
+  string     = String_new();
+  stringNode = stringList->head;
+  while (stringNode != NULL)
+  {
+    // skip comments, empty lines
+    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+    {
+      stringNode = stringNode->next;
+      continue;
+    }
+
+    // parse and match
+    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL)
+        && String_equalsCString(string,section)
+       )
+    {
+      // delete section
+      stringNode = StringList_remove(stringList,stringNode);
+      while (   (stringNode != NULL)
+             && !String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+            )
+      {
+        stringNode = StringList_remove(stringList,stringNode);
+      }
+      if (stringNode != NULL)
+      {
+        if (String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+        {
+          stringNode = StringList_remove(stringList,stringNode);
+        }
+      }
+
+      // delete following empty lines
+      while (   (stringNode != NULL)
+             && String_isEmpty(String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES))
+            )
+      {
+        stringNode = StringList_remove(stringList,stringNode);
+      }
+
+      // store next line
+      nextStringNode = stringNode;
+    }
+    else
+    {
+      // keep line
+      stringNode = stringNode->next;
+    }
+  }
+  if (nextStringNode != NULL)
+  {
+    // delete previous empty lines
+    while (   (nextStringNode->prev != NULL)
+           && String_isEmpty(String_trim(String_set(line,nextStringNode->prev->string),STRING_WHITE_SPACES))
+          )
+    {
+      StringList_remove(stringList,nextStringNode->prev);
+    }
+  }
+  else
+  {
+    // delete empty lines at end
+    while (!StringList_isEmpty(stringList) && String_isEmpty(StringList_last(stringList,NULL)))
+    {
+      StringList_remove(stringList,stringList->tail);
+    }
+  }
+  String_delete(string);
+  String_delete(line);
+
+  return nextStringNode;
+}
+
+LOCAL Errors updateConfig(ConstString configFileName)
+{
+  StringList        configLinesList;
+  String            line;
+  Errors            error;
+  FileHandle        fileHandle;
+  uint              i;
+  StringNode        *nextStringNode;
+  ConfigValueFormat configValueFormat;
+
+fprintf(stderr,"%s, %d: configFileName=%s\n",__FILE__,__LINE__,String_cString(configFileName));
+  // init variables
+  StringList_init(&configLinesList);
+  line = String_new();
+
+  // get config file name
+  if (String_isEmpty(configFileName))
+  {
+    return ERROR_NO_FILE_NAME;
+  }
+
+  // read file
+  error = File_open(&fileHandle,configFileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&configLinesList);
+    String_delete(line);
+    return error;
+  }
+  while (!File_eof(&fileHandle))
+  {
+    // read line
+    error = File_readLine(&fileHandle,line);
+    if (error != ERROR_NONE) break;
+
+    StringList_append(&configLinesList,line);
+  }
+  File_close(&fileHandle);
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&configLinesList);
+    String_delete(line);
+    return error;
+  }
+
+  // trim empty lines at begin/end
+  while (!StringList_isEmpty(&configLinesList) && String_isEmpty(StringList_first(&configLinesList,NULL)))
+  {
+    StringList_remove(&configLinesList,configLinesList.head);
+  }
+  while (!StringList_isEmpty(&configLinesList) && String_isEmpty(StringList_last(&configLinesList,NULL)))
+  {
+    StringList_remove(&configLinesList,configLinesList.tail);
+  }
+
+  // update line list
+  CONFIG_VALUE_ITERATE(CONFIG_VALUES,i)
+  {
+    // delete old entries, get position for insert new entries
+fprintf(stderr,"%s, %d: write %d: %s\n",__FILE__,__LINE__,i,CONFIG_VALUES[i].name);
+    nextStringNode = deleteEntries(&configLinesList,NULL,CONFIG_VALUES[i].name);
+
+    // insert new entries
+    ConfigValue_formatInit(&configValueFormat,
+                           &CONFIG_VALUES[i],
+                           CONFIG_VALUE_FORMAT_MODE_LINE,
+                           NULL  // variable
+                          );
+    while (ConfigValue_format(&configValueFormat,line))
+    {
+      StringList_insert(&configLinesList,line,nextStringNode);
+    }
+    ConfigValue_formatDone(&configValueFormat);
+  }
+
+  // write file
+  error = File_open(&fileHandle,configFileName,FILE_OPEN_CREATE);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    StringList_done(&configLinesList);
+    return error;
+  }
+  while (!StringList_isEmpty(&configLinesList))
+  {
+    StringList_getFirst(&configLinesList,line);
+    error = File_writeLine(&fileHandle,line);
+    if (error != ERROR_NONE) break;
+  }
+  File_close(&fileHandle);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    StringList_done(&configLinesList);
+    return error;
+  }
+
+  // free resources
+  String_delete(line);
+  StringList_done(&configLinesList);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : storageRequestVolume
 * Purpose: request volume call-back
 * Input  : jobNode      - job node
@@ -2278,230 +2605,6 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : deleteJobEntries
-* Purpose: delete all entries from job with given name
-* Input  : stringList - job file string list to modify
-*          section    - name of section or NULL
-*          name       - name of value
-* Output : -
-* Return : next entry in string list or NULL
-* Notes  : -
-\***********************************************************************/
-
-LOCAL StringNode *deleteJobEntries(StringList *stringList,
-                                   const char *section,
-                                   const char *name
-                                  )
-{
-  StringNode *nextStringNode;
-
-  StringNode *stringNode;
-  String     line;
-  String     string;
-
-  nextStringNode = NULL;
-
-  line       = String_new();
-  string     = String_new();
-  stringNode = stringList->head;
-  while (stringNode != NULL)
-  {
-    // skip comments, empty lines
-    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-    {
-      stringNode = stringNode->next;
-      continue;
-    }
-
-    // parse and match
-    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL))
-    {
-      // keep line: begin section
-      stringNode = stringNode->next;
-
-      if (String_equalsCString(string,section))
-      {
-        // section found: remove matching entries
-        while (stringNode != NULL)
-        {
-          // skip comments, empty lines
-          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-          {
-            stringNode = stringNode->next;
-            continue;
-          }
-
-          // parse and match
-          if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
-          {
-            // keep line: end section
-            stringNode = stringNode->next;
-            break;
-          }
-          else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
-                   && String_equalsCString(string,name)
-                  )
-          {
-            // delete line
-            stringNode = StringList_remove(stringList,stringNode);
-
-            // store next line
-            nextStringNode = stringNode;
-          }
-          else
-          {
-            // keep line
-            stringNode = stringNode->next;
-          }
-        }
-      }
-      else
-      {
-        // section not found: skip
-        while (stringNode != NULL)
-        {
-          // skip comments, empty lines
-          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-          {
-            stringNode = stringNode->next;
-            continue;
-          }
-
-          // keep line
-          stringNode = stringNode->next;
-
-          // parse and match
-          if (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
-          {
-            // end section
-            break;
-          }
-        }
-      }
-    }
-    else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
-             && String_equalsCString(string,name)
-            )
-    {
-      // delete line
-      stringNode = StringList_remove(stringList,stringNode);
-
-      // store next line
-      nextStringNode = stringNode;
-    }
-    else
-    {
-      // keep line
-      stringNode = stringNode->next;
-    }
-  }
-  String_delete(string);
-  String_delete(line);
-
-  return nextStringNode;
-}
-
-/***********************************************************************\
-* Name   : deleteJobSections
-* Purpose: delete all sections from job with given name
-* Input  : stringList - job file string list to modify
-*          section    - name of section
-* Output : -
-* Return : next entry in string list or NULL
-* Notes  : -
-\***********************************************************************/
-
-LOCAL StringNode *deleteJobSections(StringList *stringList,
-                                    const char *section
-                                   )
-{
-  StringNode *nextStringNode;
-
-  StringNode *stringNode;
-  String     line;
-  String     string;
-
-  nextStringNode = NULL;
-
-  line       = String_new();
-  string     = String_new();
-  stringNode = stringList->head;
-  while (stringNode != NULL)
-  {
-    // skip comments, empty lines
-    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-    {
-      stringNode = stringNode->next;
-      continue;
-    }
-
-    // parse and match
-    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL)
-        && String_equalsCString(string,section)
-       )
-    {
-      // delete section
-      stringNode = StringList_remove(stringList,stringNode);
-      while (   (stringNode != NULL)
-             && !String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        stringNode = StringList_remove(stringList,stringNode);
-      }
-      if (stringNode != NULL)
-      {
-        if (String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
-        {
-          stringNode = StringList_remove(stringList,stringNode);
-        }
-      }
-
-      // delete following empty lines
-      while (   (stringNode != NULL)
-             && String_isEmpty(String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES))
-            )
-      {
-        stringNode = StringList_remove(stringList,stringNode);
-      }
-
-      // store next line
-      nextStringNode = stringNode;
-    }
-    else
-    {
-      // keep line
-      stringNode = stringNode->next;
-    }
-  }
-  if (nextStringNode != NULL)
-  {
-    // delete previous empty lines
-    while (   (nextStringNode->prev != NULL)
-           && String_isEmpty(String_trim(String_set(line,nextStringNode->prev->string),STRING_WHITE_SPACES))
-          )
-    {
-      StringList_remove(stringList,nextStringNode->prev);
-    }
-  }
-  else
-  {
-    // delete empty lines at end
-    while (!StringList_isEmpty(stringList) && String_isEmpty(StringList_last(stringList,NULL)))
-    {
-      StringList_remove(stringList,stringList->tail);
-    }
-  }
-  String_delete(string);
-  String_delete(line);
-
-  return nextStringNode;
-}
-
-/***********************************************************************\
 * Name   : updateJob
 * Purpose: update job file
 * Input  : jobNode - job node
@@ -2516,7 +2619,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
   String            line;
   Errors            error;
   FileHandle        fileHandle;
-  uint              z;
+  uint              i;
   StringNode        *nextStringNode;
   ScheduleNode      *scheduleNode;
   ConfigValueFormat configValueFormat;
@@ -2564,14 +2667,14 @@ LOCAL Errors updateJob(JobNode *jobNode)
     }
 
     // update line list
-    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,z)
+    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,i)
     {
       // delete old entries, get position for insert new entries
-      nextStringNode = deleteJobEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[z].name);
+      nextStringNode = deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
 
       // insert new entries
       ConfigValue_formatInit(&configValueFormat,
-                             &JOB_CONFIG_VALUES[z],
+                             &JOB_CONFIG_VALUES[i],
                              CONFIG_VALUE_FORMAT_MODE_LINE,
                              jobNode
                             );
@@ -2583,7 +2686,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
     }
 
     // delete old schedule sections, get position for insert new schedule sections
-    nextStringNode = deleteJobSections(&jobLinesList,"schedule");
+    nextStringNode = deleteSections(&jobLinesList,"schedule");
     if (!List_isEmpty(&jobNode->scheduleList))
     {
       StringList_insertCString(&jobLinesList,"",nextStringNode);
@@ -2593,10 +2696,10 @@ LOCAL Errors updateJob(JobNode *jobNode)
         String_format(String_clear(line),"[schedule]");
         StringList_insert(&jobLinesList,line,nextStringNode);
 
-        CONFIG_VALUE_ITERATE_SECTION(JOB_CONFIG_VALUES,"schedule",z)
+        CONFIG_VALUE_ITERATE_SECTION(JOB_CONFIG_VALUES,"schedule",i)
         {
           ConfigValue_formatInit(&configValueFormat,
-                                 &JOB_CONFIG_VALUES[z],
+                                 &JOB_CONFIG_VALUES[i],
                                  CONFIG_VALUE_FORMAT_MODE_LINE,
                                  scheduleNode
                                 );
@@ -6297,8 +6400,8 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const StringMap ar
 }
 
 /***********************************************************************\
-* Name   : serverCommand_optionGet
-* Purpose: get option
+* Name   : serverCommand_serverOptionGet
+* Purpose: get server option
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -6311,13 +6414,11 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const StringMap ar
 *            value=<value>
 \***********************************************************************/
 
-LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
   String            name;
-  SemaphoreLock     semaphoreLock;
-  const JobNode     *jobNode;
-  uint              z;
+  int               i;
   String            s;
   ConfigValueFormat configValueFormat;
 
@@ -6332,44 +6433,34 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  // find config value
+  i = ConfigValue_valueIndex(CONFIG_VALUES,String_cString(name));
+  if (i < 0)
   {
-    // find config value
-    z = 0;
-    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
-          )
-    {
-      z++;
-    }
-    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
-      Semaphore_unlock(&jobList.lock);
-      String_delete(name);
-      return;
-    }
-
-    // send value
-    s = String_new();
-    ConfigValue_formatInit(&configValueFormat,
-                           &CONFIG_VALUES[z],
-                           CONFIG_VALUE_FORMAT_MODE_VALUE,
-                           &globalOptions
-                          );
-    ConfigValue_format(&configValueFormat,s);
-    ConfigValue_formatDone(&configValueFormat);
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",s);
-    String_delete(s);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+    String_delete(name);
+    return;
   }
+
+  // send value
+  s = String_new();
+  ConfigValue_formatInit(&configValueFormat,
+                         &CONFIG_VALUES[i],
+                         CONFIG_VALUE_FORMAT_MODE_VALUE,
+                         &globalOptions
+                        );
+  ConfigValue_format(&configValueFormat,s);
+  ConfigValue_formatDone(&configValueFormat);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",s);
+  String_delete(s);
 
   // free resources
   String_delete(name);
 }
 
 /***********************************************************************\
-* Name   : serverCommand_optionSet
-* Purpose: set option
+* Name   : serverCommand_serverOptionSet
+* Purpose: set server option
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -6382,12 +6473,11 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name,value;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  String name,value;
+  String configFileName;
+  Errors error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6397,41 +6487,78 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    String_delete(value);
     String_delete(name);
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  // parse
+  if (!ConfigValue_parse(String_cString(name),
+                         String_cString(value),
+                         CONFIG_VALUES,
+                         NULL, // sectionName
+                         NULL, // errorOutputHandle
+                         NULL, // errorPrefix
+                         &globalOptions
+                        )
+     )
   {
-    // parse
-    if (ConfigValue_parse(String_cString(name),
-                          String_cString(value),
-                          CONFIG_VALUES,
-                          NULL, // sectionName
-                          NULL, // errorOutputHandle
-                          NULL, // errorPrefix
-                          &globalOptions
-                         )
-       )
-    {
-      jobNode->modifiedFlag = TRUE;
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-    }
-    else
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
-    }
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+    String_delete(value);
+    String_delete(name);
+    return;
   }
 
   // free resources
   String_delete(value);
   String_delete(name);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_serverOptionFlush
+* Purpose: flush server options to config file
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  String configFileName;
+  Errors error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  configFileName = getConfigFileName(String_new());
+  error = updateConfig(configFileName);
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"write config file");
+    String_delete(configFileName);
+    return;
+  }
+  String_delete(configFileName);
+
+  // free resources
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -7551,7 +7678,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
   String            name;
   SemaphoreLock     semaphoreLock;
   const JobNode     *jobNode;
-  uint              z;
+  uint              i;
   String            s;
   ConfigValueFormat configValueFormat;
 
@@ -7584,16 +7711,16 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
     }
 
     // find config value
-    z = 0;
-    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
+    i = 0;
+    while (   (JOB_CONFIG_VALUES[i].name != NULL)
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
           )
     {
-      z++;
+      i++;
     }
-    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+    if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -7602,7 +7729,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
     // send value
     s = String_new();
     ConfigValue_formatInit(&configValueFormat,
-                           &JOB_CONFIG_VALUES[z],
+                           &JOB_CONFIG_VALUES[i],
                            CONFIG_VALUE_FORMAT_MODE_VALUE,
                            jobNode
                           );
@@ -7691,7 +7818,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
     }
   }
 
@@ -7721,7 +7848,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
   String        name;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
-  uint          z;
+  uint          i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7752,16 +7879,16 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
     }
 
     // find config value
-    z = 0;
-    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
+    i = 0;
+    while (   (JOB_CONFIG_VALUES[i].name != NULL)
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
           )
     {
-      z++;
+      i++;
     }
-    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+    if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9747,7 +9874,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
   SemaphoreLock      semaphoreLock;
   const JobNode      *jobNode;
   const ScheduleNode *scheduleNode;
-  uint               z;
+  uint               i;
   String             s;
   ConfigValueFormat  configValueFormat;
 
@@ -9794,16 +9921,16 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
     }
 
     // find config value
-    z = 0;
-    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
+    i = 0;
+    while (   (JOB_CONFIG_VALUES[i].name != NULL)
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
           )
     {
-      z++;
+      i++;
     }
-    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+    if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9812,7 +9939,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
     // send value
     s = String_new();
     ConfigValue_formatInit(&configValueFormat,
-                           &JOB_CONFIG_VALUES[z],
+                           &JOB_CONFIG_VALUES[i],
                            CONFIG_VALUE_FORMAT_MODE_VALUE,
                            jobNode
                           );
@@ -9919,7 +10046,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, cons
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
     }
 
     // notify about changed schedule
@@ -9955,7 +10082,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   ScheduleNode  *scheduleNode;
-  uint          z;
+  uint          i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10000,16 +10127,16 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
     }
 
     // find config value
-    z = 0;
-    while (   (z < SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[z].name)
+    i = 0;
+    while (   (JOB_CONFIG_VALUES[i].name != NULL)
+           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
           )
     {
-      z++;
+      i++;
     }
-    if (z >= SIZE_OF_ARRAY(JOB_CONFIG_VALUES))
+    if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -13340,7 +13467,6 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            isCheckedStorageOnly=0|1
 *            entryMaxCount=<n>|0
 *            isNewestEntriesOnly=0|1
 *            entryPattern=<text>
@@ -13679,7 +13805,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   }
 
   String           entryPatternString;
-  bool             checkedStorageOnly;
   uint             entryMaxCount;
   bool             newestEntriesOnly;
   uint             entryCount;
@@ -13700,6 +13825,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   uint64           fragmentOffset,fragmentSize;
   FileSystemTypes  fileSystemType;
   uint64           blockOffset,blockCount;
+#warning remove
 uint64 t[100];
 
   assert(clientInfo != NULL);
@@ -13710,12 +13836,6 @@ uint64 t[100];
   if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryPattern=<text>");
-    String_delete(entryPatternString);
-    return;
-  }
-  if (!StringMap_getBool(argumentMap,"checkedStorageOnly",&checkedStorageOnly,FALSE))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected checkedStorageOnly=yes|no");
     String_delete(entryPatternString);
     return;
   }
@@ -13752,7 +13872,7 @@ memset(t,0,sizeof(t));
 t[0] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnly)
+    if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
       error = Index_initListFiles(&indexQueryHandle,
                                   indexHandle,
@@ -13839,7 +13959,7 @@ t[0] = Misc_getTimestamp();
 t[1] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnly)
+    if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
       error = Index_initListImages(&indexQueryHandle,
                                    indexHandle,
@@ -13921,7 +14041,7 @@ t[1] = Misc_getTimestamp();
 t[2] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnly)
+    if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
       error = Index_initListDirectories(&indexQueryHandle,
                                         indexHandle,
@@ -14002,7 +14122,7 @@ t[2] = Misc_getTimestamp();
 t[3] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnly)
+    if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
       error = Index_initListLinks(&indexQueryHandle,
                                   indexHandle,
@@ -14087,7 +14207,7 @@ t[3] = Misc_getTimestamp();
 t[4] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnly)
+    if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
       error = Index_initListHardLinks(&indexQueryHandle,
                                       indexHandle,
@@ -14176,7 +14296,7 @@ t[4] = Misc_getTimestamp();
 t[5] = Misc_getTimestamp();
   if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
   {
-    if (checkedStorageOnly)
+    if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
       error = Index_initListSpecial(&indexQueryHandle,
                                     indexHandle,
@@ -14479,8 +14599,9 @@ SERVER_COMMANDS[] =
   { "AUTHORIZE",                  serverCommand_authorize,               AUTHORIZATION_STATE_WAITING },
   { "VERSION",                    serverCommand_version,                 AUTHORIZATION_STATE_OK      },
   { "QUIT",                       serverCommand_quit,                    AUTHORIZATION_STATE_OK      },
-  { "OPTION_GET",                 serverCommand_optionGet,               AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",                 serverCommand_optionSet,               AUTHORIZATION_STATE_OK      },
+  { "SERVER_OPTION_GET",          serverCommand_serverOptionGet,         AUTHORIZATION_STATE_OK      },
+  { "SERVER_OPTION_SET",          serverCommand_serverOptionSet,         AUTHORIZATION_STATE_OK      },
+  { "SERVER_OPTION_FLUSH",        serverCommand_serverOptionFlush,       AUTHORIZATION_STATE_OK      },
   { "GET",                        serverCommand_get,                     AUTHORIZATION_STATE_OK      },
   { "ABORT",                      serverCommand_abort,                   AUTHORIZATION_STATE_OK      },
   { "STATUS",                     serverCommand_status,                  AUTHORIZATION_STATE_OK      },
@@ -14559,8 +14680,8 @@ SERVER_COMMANDS[] =
   { "INDEX_ENTRIES_LIST",         serverCommand_indexEntriesList,        AUTHORIZATION_STATE_OK      },
 
   // obsolete
-  { "OPTION_GET",                 serverCommand_jobOptionGet,            AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",                 serverCommand_jobOptionSet,            AUTHORIZATION_STATE_OK      },
+//  { "OPTION_GET",                 serverCommand_jobOptionGet,            AUTHORIZATION_STATE_OK      },
+//  { "OPTION_SET",                 serverCommand_jobOptionSet,            AUTHORIZATION_STATE_OK      },
   { "OPTION_DELETE",              serverCommand_jobOptionDelete,         AUTHORIZATION_STATE_OK      },
 
   #ifndef NDEBUG
