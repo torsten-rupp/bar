@@ -1655,7 +1655,6 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
           Widgets.notify(tabStatus.widgetButtonStart);
         }
       });
@@ -1668,7 +1667,6 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
           Widgets.notify(tabStatus.widgetButtonAbort);
         }
       });
@@ -1683,7 +1681,6 @@ public class BARControl
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             tabStatus.jobPause(10*60);
           }
         });
@@ -1771,7 +1768,7 @@ public class BARControl
         });
       }
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Toggle suspend/continue"),SWT.CTRL+'S');
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Toggle suspend/continue"),SWT.CTRL+'T');
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1779,7 +1776,6 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
           Widgets.notify(tabStatus.widgetButtonSuspendContinue);
         }
       });
@@ -1803,8 +1799,7 @@ public class BARControl
 
       Widgets.addMenuSeparator(menu);
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Quit"),SWT.CTRL+'Q');
-
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Server settings")+"\u2026",SWT.CTRL+'W');
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1812,7 +1807,20 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
+          ServerSettings.serverSettings(shell);
+        }
+      });
+
+      Widgets.addMenuSeparator(menu);
+
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Quit"),SWT.CTRL+'Q');
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
           Widgets.notify(tabStatus.widgetButtonQuit);
         }
       });
@@ -1828,8 +1836,10 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
-          Dialogs.info(shell,BARControl.tr("About"),"BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\n"+BARControl.tr("Written by Torsten Rupp")+"\n");
+          Dialogs.info(shell,
+                       BARControl.tr("About"),
+                       "BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\n"+BARControl.tr("Written by Torsten Rupp")+"\n"
+                      );
         }
       });
     }
