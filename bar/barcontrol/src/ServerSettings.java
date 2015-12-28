@@ -47,7 +47,6 @@ public class ServerSettings
     Text      text;
     Combo     combo;
     Spinner   spinner;
-    Table     table;
     Button    button;
 
     WidgetVariable  tmpDirectory              = new WidgetVariable("",   "tmp-directory"                  );
@@ -231,6 +230,7 @@ public class ServerSettings
     // create widgets
     tabFolder = Widgets.newTabFolder(dialog);
     Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
+    final Table  widgetServers;
     final Button widgetSave;
 
     // general
@@ -367,11 +367,10 @@ public class ServerSettings
 
       label = Widgets.newLabel(composite,BARControl.tr("Servers")+":");
       Widgets.layout(label,6,0,TableLayoutData.W);
-      table = Widgets.newTable(composite);
-      table.setHeaderVisible(false);
-      Widgets.layout(table,7,0,TableLayoutData.NSWE,0,2);
-      Widgets.addTableColumn(table,0,SWT.LEFT,20);
-      Widgets.addTableColumn(table,1,SWT.LEFT,1024,true);
+      widgetServers = Widgets.newTable(composite);
+      Widgets.layout(widgetServers,7,0,TableLayoutData.NSWE,0,2);
+      Widgets.addTableColumn(widgetServers,0,BARControl.tr("Type"),SWT.LEFT,60);
+      Widgets.addTableColumn(widgetServers,1,BARControl.tr("Name"),SWT.LEFT,512,true);
     }
 
     // commands
