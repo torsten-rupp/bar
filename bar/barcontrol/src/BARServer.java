@@ -36,6 +36,7 @@ import java.security.spec.RSAPublicKeySpec;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -184,7 +185,7 @@ class Command
    */
   Command(long id, int timeout, int debugLevel)
   {
-    this(id,timeout,debugLevel,null);
+    this(id,timeout,debugLevel,(ProcessResult)null);
   }
 
   /** create new command
@@ -441,9 +442,6 @@ class Command
           {
             throw new RuntimeException("parse '"+line+"' fail");
           }
-//Dprintf.dprintf("line=%s",line);
-//Dprintf.dprintf("typeMap=%s",typeMap);
-//Dprintf.dprintf("valueMap=%s",valueMap);
         }
       }
     }
@@ -521,9 +519,6 @@ class Command
         {
           ValueMap valueMap = new ValueMap();
           StringParser.parse(line,valueMap,unknownValueMap);
-//Dprintf.dprintf("line=%s",line);
-//Dprintf.dprintf("typeMap=%s",typeMap);
-//Dprintf.dprintf("valueMap=%s",valueMap);
           valueMapList.add(valueMap);
         }
       }
@@ -814,7 +809,7 @@ class ReadThread extends Thread
    */
   public Command commandAdd(long commandId, int timeout, int debugLevel)
   {
-    return commandAdd(commandId,timeout,debugLevel,null);
+    return commandAdd(commandId,timeout,debugLevel,(ProcessResult)null);
   }
 
   /** add command
@@ -857,6 +852,18 @@ class BARServer
   private final static int   SOCKET_READ_TIMEOUT    = 20*1000;    // timeout reading socket [ms]
 
   private static byte[]      RANDOM_DATA = new byte[64];
+
+  /** file types
+   */
+  enum FileTypes
+  {
+    FILE,
+    DIRECTORY,
+    LINK,
+    HARDLINK,
+    SPECIAL,
+    UNKNOWN
+  };
 
   // --------------------------- variables --------------------------------
   private static String         name;
@@ -932,7 +939,6 @@ class BARServer
         if (file.exists() && file.isFile() && file.canRead())
         {
           System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
-//Dprintf.dprintf("javaSSLKeyFileName=%s\n",javaSSLKeyFileName);
           try
           {
             SSLSocketFactory sslSocketFactory;
@@ -1365,7 +1371,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static Command runCommand(String commandString, int debugLevel)
   {
-    return runCommand(commandString,debugLevel,null);
+    return runCommand(commandString,debugLevel,(ProcessResult)null);
   }
 
   /** abort command execution
@@ -1564,30 +1570,29 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** set boolean value on BAR server
    * @param name name of value
-   * @param b value
+   * @param value value
    */
-  public static void set(String name, boolean b)
+  public static void set(String name, boolean value)
   {
-    executeCommand(StringParser.format("SET name=%s value=%s",name,b ? "yes" : "no"),0);
+    executeCommand(StringParser.format("SET name=%s value=%s",name,value ? "yes" : "no"),0);
   }
 
   /** set long value on BAR server
    * @param name name of value
-   * @param n value
+   * @param value value
    */
-  static void set(String name, long n)
+  static void set(String name, long value)
   {
-    executeCommand(StringParser.format("SET name=%s value=%d",name,n),0);
+    executeCommand(StringParser.format("SET name=%s value=%d",name,value),0);
   }
 
   /** set string value on BAR server
-   * @param jobUUID job UUID
    * @param name name of value
-   * @param s value
+   * @param value value
    */
-  public static void set(String name, String s)
+  public static void set(String name, String value)
   {
-    executeCommand(StringParser.format("SET name=% value=%S",name,s),0);
+    executeCommand(StringParser.format("SET name=% value=%S",name,value),0);
   }
 
   /** get job option value from BAR server
@@ -1632,22 +1637,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static boolean getBooleanJobOption(String jobUUID, String name)
   {
-    String[] errorMessage = new String[1];
-    ValueMap resultMap    = new ValueMap();
-
-    if (executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
-                       0,
-                       errorMessage,
-                       resultMap
-                      ) == Errors.NONE
-       )
-    {
-      return resultMap.getBoolean("value");
-    }
-    else
-    {
-      return false;
-    }
+    return ((Boolean)getJobOption(jobUUID,name,Boolean.class)).booleanValue();
   }
 
   /** get long value from BAR server
@@ -1657,22 +1647,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static long getLongJobOption(String jobUUID, String name)
   {
-    String[] errorMessage = new String[1];
-    ValueMap resultMap    = new ValueMap();
-
-    if (executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
-                       0,
-                       errorMessage,
-                       resultMap
-                      ) == Errors.NONE
-       )
-    {
-      return resultMap.getLong("value");
-    }
-    else
-    {
-      return 0L;
-    }
+    return ((Long)getJobOption(jobUUID,name,Long.class)).longValue();
   }
 
   /** get string value from BAR server
@@ -1682,85 +1657,97 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static String getStringJobOption(String jobUUID, String name)
   {
-    String[] errorMessage = new String[1];
-    ValueMap resultMap    = new ValueMap();
-
-    if (executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,name),
-                       0,
-                       errorMessage,
-                       resultMap
-                      ) == Errors.NONE
-       )
-    {
-      return resultMap.getString("value");
-    }
-    else
-    {
-      return "";
-    }
+    return (String)getJobOption(jobUUID,name,String.class);
   }
 
   /** set boolean job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
-   * @param b value
+   * @param value value
    * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, boolean b, String errorMessage[])
+  public static int setJobOption(String jobUUID, String name, boolean value, String errorMessage[])
   {
-    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",jobUUID,name,b ? "yes" : "no"),0,errorMessage);
+    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                              jobUUID,
+                                              name,
+                                              value ? "yes" : "no"
+                                             ),
+                          0,
+                          errorMessage
+                         );
   }
 
   /** set boolean job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
-   * @param b value
+   * @param value value
+   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, boolean b)
+  public static int setJobOption(String jobUUID, String name, boolean value)
   {
-    return setJobOption(jobUUID,name,b,null);
+    return setJobOption(jobUUID,name,value,(String[])null);
   }
 
   /** set long job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
-   * @param n value
+   * @param value value
    * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, long n, String errorMessage[])
+  public static int setJobOption(String jobUUID, String name, long value, String errorMessage[])
   {
-    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",jobUUID,name,n),0,errorMessage);
+    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
+                                              jobUUID,
+                                              name,
+                                              value
+                                             ),
+                          0,
+                          errorMessage
+                         );
   }
 
   /** set long job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
-   * @param n value
+   * @param value value
+   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, long n)
+  public static int setJobOption(String jobUUID, String name, long value)
   {
-    return setJobOption(jobUUID,name,n,null);
+    return setJobOption(jobUUID,name,value,(String[])null);
   }
 
   /** set string job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
-   * @param s value
+   * @param value value
    * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, String s, String errorMessage[])
+  public static int setJobOption(String jobUUID, String name, String value, String errorMessage[])
   {
-    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",jobUUID,name,s),0,errorMessage);
+    return executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%S",
+                                              jobUUID,
+                                              name,
+                                              value
+                                             ),
+                          0,
+                          errorMessage
+                         );
   }
 
   /** set string job option value on BAR server
    * @param jobUUID job UUID
    * @param name option name of value
-   * @param s value
+   * @param value value
+   * @return Errors.NONE or error code
    */
-  public static int setJobOption(String jobUUID, String name, String s)
+  public static int setJobOption(String jobUUID, String name, String value)
   {
-    return setJobOption(jobUUID,name,s,null);
+    return setJobOption(jobUUID,name,value,(String[])null);
   }
 
   /** get schedule option value from BAR server
@@ -1803,69 +1790,386 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param jobUUID job UUID
    * @param scheduleUUID schedule UUID
    * @param name option name of value
-   * @param b value
+   * @param value value
    * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean b, String errorMessage[])
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean value, String errorMessage[])
   {
-    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%s",jobUUID,scheduleUUID,name,b ? "yes" : "no"),0);
+    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%s",
+                                              jobUUID,
+                                              scheduleUUID,
+                                              name,
+                                              value ? "yes" : "no"
+                                             ),
+                          0
+                         );
   }
 
   /** set boolean schedule option value on BAR server
    * @param jobUUID job UUID
    * @param scheduleUUID schedule UUID
    * @param name option name of value
-   * @param b value
+   * @param value value
+   * @return Errors.NONE or error code
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean b)
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, boolean value)
   {
-    return setScheduleOption(jobUUID,scheduleUUID,name,b,null);
+    return setScheduleOption(jobUUID,scheduleUUID,name,value,(String[])null);
   }
 
   /** set long schedule option value on BAR server
    * @param jobUUID job UUID
    * @param scheduleUUID schedule UUID
    * @param name option name of value
-   * @param n value
+   * @param value value
    * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, long n, String errorMessage[])
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, long value, String errorMessage[])
   {
-    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%d",jobUUID,scheduleUUID,name,n),0);
+    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%d",
+                                              jobUUID,
+                                              scheduleUUID,
+                                              name,
+                                              value
+                                             ),
+                          0
+                         );
   }
 
   /** set long schedule option value on BAR server
    * @param jobUUID job UUID
    * @param scheduleUUID schedule UUID
    * @param name option name of value
-   * @param n value
+   * @param value value
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, long n)
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, long value)
   {
-    return setScheduleOption(jobUUID,scheduleUUID,name,n,null);
+    return setScheduleOption(jobUUID,scheduleUUID,name,value,(String[])null);
   }
 
   /** set string schedule option value on BAR server
    * @param jobUUID job UUID
    * @param scheduleUUID schedule UUID
    * @param name option name of value
-   * @param s value
+   * @param value value
    * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, String s, String errorMessage[])
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, String value, String errorMessage[])
   {
-    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%S",jobUUID,scheduleUUID,name,s),0,errorMessage);
+    return executeCommand(StringParser.format("SCHEDULE_OPTION_SET jobUUID=%s scheduleUUID=%s name=%S value=%S",
+                                              jobUUID,
+                                              scheduleUUID,
+                                              name,
+                                              value
+                                             ),
+                          0,
+                          errorMessage
+                         );
   }
 
   /** set string schedule option value on BAR server
    * @param jobUUID job UUID
    * @param scheduleUUID schedule UUID
    * @param name option name of value
-   * @param s value
+   * @param value value
+   * @return Errors.NONE or error code
    */
-  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, String s)
+  public static int setScheduleOption(String jobUUID, String scheduleUUID, String name, String value)
   {
-    return setScheduleOption(jobUUID,scheduleUUID,name,s,null);
+    return setScheduleOption(jobUUID,scheduleUUID,name,value,(String[])null);
+  }
+
+  /** get server option value from BAR server
+   * @param name name of value
+   * @return value
+   */
+  public static <T> T getServerOption(String name, Class clazz)
+  {
+    T data = null;
+
+    String[] errorMessage = new String[1];
+    ValueMap resultMap    = new ValueMap();
+    if (executeCommand(StringParser.format("SERVER_OPTION_GET name=%S",name),
+                       0,
+                       errorMessage,
+                       resultMap
+                      ) == Errors.NONE
+       )
+    {
+      if      (clazz == Boolean.class)
+      {
+        data = (T)new Boolean(resultMap.getBoolean("value"));
+      }
+      else if (clazz == Long.class)
+      {
+        data = (T)new Long(resultMap.getLong("value"));
+      }
+      else if (clazz == String.class)
+      {
+        data = (T)resultMap.get("value");
+      }
+    }
+
+    return data;
+  }
+
+  /** get server option value from BAR server
+   * @param widgetVariable widget variable
+   * @return value
+   */
+  public static <T> T getServerOption(WidgetVariable widgetVariable, Class clazz)
+  {
+    return getServerOption(widgetVariable.getName(),clazz);
+  }
+
+  /** get boolean value from BAR server
+   * @param name name of value
+   * @return value
+   */
+  public static boolean getBooleanServerOption(String name)
+  {
+    return ((Boolean)getServerOption(name,Boolean.class)).booleanValue();
+  }
+
+  /** get long value from BAR server
+   * @param name name of value
+   * @return value
+   */
+  public static long getLongServerOption(String name)
+  {
+    return ((Long)getServerOption(name,Long.class)).longValue();
+  }
+
+  /** get string value from BAR server
+   * @param name name of value
+   * @return value
+   */
+  public static String getStringServerOption(String name)
+  {
+    return (String)getServerOption(name,String.class);
+  }
+
+  /** set boolean option value on BAR server
+   * @param name option name of value
+   * @param value value
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int setServerOption(String name, boolean value, String errorMessage[])
+  {
+    return executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
+                                              name,
+                                              value ? "yes" : "no"
+                                             ),
+                          0,
+                          errorMessage
+                         );
+  }
+
+  /** set boolean option value on BAR server
+   * @param name option name of value
+   * @param value value
+   * @return Errors.NONE or error code
+   */
+  public static int setServerOption(String name, boolean value)
+  {
+    return setServerOption(name,value,(String[])null);
+  }
+
+  /** set long option value on BAR server
+   * @param name option name of value
+   * @param value value
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int setServerOption(String name, long value, String errorMessage[])
+  {
+    return executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
+                                              name,
+                                              value
+                                             ),
+                          0,
+                          errorMessage
+                         );
+  }
+
+  /** set long job option value on BAR server
+   * @param name option name of value
+   * @param value value
+   * @return Errors.NONE or error code
+   */
+  public static int setServerOption(String name, long value)
+  {
+    return setServerOption(name,value,(String[])null);
+  }
+
+  /** set string option value on BAR server
+   * @param name option name of value
+   * @param value value
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int setServerOption(String name, String value, String errorMessage[])
+  {
+    return executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%S",
+                                              name,
+                                              value
+                                             ),
+                          0,
+                          errorMessage
+                         );
+  }
+
+  /** set string option value on BAR server
+   * @param name option name of value
+   * @param value value
+   * @return Errors.NONE or error code
+   */
+  public static int setServerOption(String name, String value)
+  {
+    return setServerOption(name,value,(String[])null);
+  }
+
+  /** get server option value on BAR server
+   * @param widgetVariable widget variable
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int getServerOption(WidgetVariable widgetVariable, String errorMessage[])
+  {
+    ValueMap resultMap = new ValueMap();
+    int error = executeCommand(StringParser.format("SERVER_OPTION_GET name=%S",widgetVariable.getName()),
+                               0,
+                               errorMessage,
+                               resultMap
+                              );
+    if (error !=- Errors.NONE)
+    {
+      return error;
+    }
+
+    switch (widgetVariable.getType())
+    {
+      case BOOLEAN:
+        widgetVariable.set(resultMap.getBoolean("value"));
+        break;
+      case LONG:
+        widgetVariable.set(resultMap.getLong("value"));
+        break;
+      case DOUBLE:
+        widgetVariable.set(resultMap.getDouble("value"));
+        break;
+      case STRING:
+        widgetVariable.set(resultMap.getString("value"));
+        break;
+      case ENUMERATION:
+/*
+        widgetVariable.set(resultMap.getLong("value"));
+        break;*/
+        throw new Error("NYI");
+      case OBJECT:
+        throw new Error("NYI");
+    }
+
+    return error;
+  }
+
+  /** get server option value on BAR server
+   * @param widgetVariable widget variable
+   * @return Errors.NONE or error code
+   */
+  public static int getServerOption(WidgetVariable widgetVariable)
+  {
+    return getServerOption(widgetVariable,(String[])null);
+  }
+
+  /** set server option value on BAR server
+   * @param widgetVariable widget variable
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int setServerOption(WidgetVariable widgetVariable, String errorMessage[])
+  {
+    int error = Errors.UNKNOWN;
+
+    switch (widgetVariable.getType())
+    {
+      case BOOLEAN:
+        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
+                                                   widgetVariable.getName(),
+                                                   widgetVariable.getBoolean() ? "yes" : "no"
+                                                  ),
+                               0,
+                               errorMessage
+                              );
+        break;
+      case LONG:
+        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
+                                                   widgetVariable.getName(),
+                                                   widgetVariable.getLong()
+                                                  ),
+                               0,
+                               errorMessage
+                              );
+        break;
+      case DOUBLE:
+        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%f",
+                                                   widgetVariable.getName(),
+                                                   widgetVariable.getDouble()
+                                                  ),
+                               0,
+                               errorMessage
+                              );
+        break;
+      case STRING:
+        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%'S",
+                                                   widgetVariable.getName(),
+                                                   widgetVariable.getString()
+                                                  ),
+                               0,
+                               errorMessage
+                              );
+        break;
+      case ENUMERATION:
+/*
+        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
+                                                   widgetVariable.getName(),
+                                                   widgetVariable.getLong()
+                                                  ),
+                               0,
+                               errorMessage
+                              );
+        break;*/
+        throw new Error("NYI");
+      case OBJECT:
+        throw new Error("NYI");
+    }
+
+    return error;
+  }
+
+  /** set boolean option value on BAR server
+   * @param widgetVariable widget variable
+   * @return Errors.NONE or error code
+   */
+  public static int setServerOption(WidgetVariable widgetVariable)
+  {
+    return setServerOption(widgetVariable,(String[])null);
+  }
+
+  /** flush option value on BAR server
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int flushServerOption(String errorMessage[])
+  {
+    return executeCommand(StringParser.format("SERVER_OPTION_FLUSH"),
+                          0,
+                          errorMessage
+                         );
   }
 
   /** get password encrypt type
@@ -1946,6 +2250,249 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     // encode as hex-string
     return encodeHex(encryptedPasswordBytes);
   }
+
+  public static ListDirectory remoteListDirectory = new ListDirectory()
+  {
+    /** remote file
+     */
+    class RemoteFile extends File
+    {
+      private FileTypes fileType;
+      private long      size;
+      private long      dateTime;
+
+      /** create remote file
+       * @param name name
+       * @param fileType file type
+       * @param size size [bytes]
+       * @param dateTime last modified date/time
+       */
+      public RemoteFile(String name, FileTypes fileType, long size, long dateTime)
+      {
+        super(name);
+
+        this.fileType = fileType;
+        this.size     = size;
+        this.dateTime = dateTime;
+      }
+
+      /** create remote file
+       * @param name name
+       * @param fileType file type
+       * @param dateTime last modified date/time
+       */
+      public RemoteFile(String name, FileTypes fileType, long dateTime)
+      {
+        this(name,fileType,0,dateTime);
+      }
+
+      /** create remote file
+       * @param name name
+       * @param size size [bytes]
+       */
+      public RemoteFile(String name, long size)
+      {
+        this(name,FileTypes.DIRECTORY,size,0);
+      }
+
+      /** get file size
+       * @return size [bytes]
+       */
+      public long length()
+      {
+        return size;
+      }
+
+      /** get last modified
+       * @return last modified date/time
+       */
+      public long lastModified()
+      {
+        return dateTime*1000;
+      }
+
+      /** check if file is file
+       * @return true iff file
+       */
+      public boolean isFile()
+      {
+        return fileType == FileTypes.FILE;
+      }
+
+      /** check if file is directory
+       * @return true iff directory
+       */
+      public boolean isDirectory()
+      {
+        return fileType == FileTypes.DIRECTORY;
+      }
+
+      /** check if file is hidden
+       * @return always false
+       */
+      public boolean isHidden()
+      {
+        return getName().startsWith(".");
+      }
+
+      /** check if file exists
+       * @return always true
+       */
+      public boolean exists()
+      {
+        return true;
+      }
+    };
+
+    private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+    private Iterator<ValueMap>  iterator;
+
+    /** get shortcut files
+     * @return shortcut files
+     */
+    public File[] getShortcuts()
+    {
+      ArrayList<File> shortcutFileList = new ArrayList<File>();
+
+      String[] errorMessage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("ROOT_LIST"),
+                                           0,
+                                           errorMessage,
+                                           valueMapList
+                                          );
+      if (error == Errors.NONE)
+      {
+        for (ValueMap valueMap : valueMapList)
+        {
+          shortcutFileList.add(new RemoteFile(valueMap.getString("name"),
+                                              Long.parseLong(valueMap.getString("size"))
+                                             )
+                              );
+        }
+      }
+
+      return shortcutFileList.toArray(new File[shortcutFileList.size()]);
+    }
+
+    /** set shortcut files
+     * @param shortchuts shortcut files
+     */
+    public void setShortcuts(File shortcuts[])
+    {
+Dprintf.dprintf("");
+    }
+
+    /** open list files in directory
+     * @param pathName path name
+     * @return true iff open
+     */
+    public boolean open(String pathName)
+    {
+      String[] errorMessage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
+                                                               pathName
+                                                              ),
+                                           0,
+                                           errorMessage,
+                                           valueMapList
+                                          );
+      if (error == Errors.NONE)
+      {
+        iterator = valueMapList.listIterator();
+        return true;
+      }
+      else
+      {
+        return false;
+      }
+    }
+
+    /** close list files in directory
+     */
+    public void close()
+    {
+      iterator = null;
+    }
+
+    /** get next entry in directory
+     * @return entry
+     */
+    public File getNext()
+    {
+      File file = null;
+
+      if (iterator.hasNext())
+      {
+        ValueMap valueMap = iterator.next();
+        try
+        {
+          FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
+          switch (fileType)
+          {
+            case FILE:
+              {
+                String  name         = valueMap.getString ("name"         );
+                long    size         = valueMap.getLong   ("size"         );
+                long    dateTime     = valueMap.getLong   ("dateTime"     );
+                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                file = new RemoteFile(name,FileTypes.FILE,size,dateTime);
+              }
+              break;
+            case DIRECTORY:
+              {
+                String  name         = valueMap.getString ("name"          );
+                long    dateTime     = valueMap.getLong   ("dateTime"      );
+                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
+                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
+
+                file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime);
+              }
+              break;
+            case LINK:
+              {
+                String  name         = valueMap.getString ("name"    );
+                long    dateTime     = valueMap.getLong   ("dateTime");
+                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                file = new RemoteFile(name,FileTypes.LINK,dateTime);
+              }
+              break;
+            case HARDLINK:
+              {
+                String  name         = valueMap.getString ("name"    );
+                long    size         = valueMap.getLong   ("size"    );
+                long    dateTime     = valueMap.getLong   ("dateTime");
+                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime);
+              }
+              break;
+            case SPECIAL:
+              {
+                String  name         = valueMap.getString ("name"          );
+                long    size         = valueMap.getLong   ("size",    0L   );
+                long    dateTime     = valueMap.getLong   ("dateTime"      );
+                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
+                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
+
+                file = new RemoteFile(name,FileTypes.SPECIAL,dateTime);
+              }
+              break;
+          }
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
+        }
+      }
+
+      return file;
+    }
+  };
 
   //-----------------------------------------------------------------------
 

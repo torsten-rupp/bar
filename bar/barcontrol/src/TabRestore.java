@@ -3296,18 +3296,6 @@ assert storagePattern != null;
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-  /** file types
-   */
-  enum FileTypes
-  {
-    FILE,
-    DIRECTORY,
-    LINK,
-    HARDLINK,
-    SPECIAL,
-    UNKNOWN
-  };
-
   private final int STORAGE_TREE_MENU_START_INDEX = 0;
   private final int STORAGE_LIST_MENU_START_INDEX = 5;  // entry 0..3: new "..."; entry 4: separator
 
@@ -3348,249 +3336,6 @@ assert storagePattern != null;
 
   UpdateEntryListThread       updateEntryListThread = new UpdateEntryListThread();
   private EntryDataMap        entryDataMap          = new EntryDataMap();
-
-  public ListDirectory remoteListDirectory = new ListDirectory()
-  {
-    /** remote file
-     */
-    class RemoteFile extends File
-    {
-      private FileTypes fileType;
-      private long      size;
-      private long      dateTime;
-
-      /** create remote file
-       * @param name name
-       * @param fileType file type
-       * @param size size [bytes]
-       * @param dateTime last modified date/time
-       */
-      public RemoteFile(String name, FileTypes fileType, long size, long dateTime)
-      {
-        super(name);
-
-        this.fileType = fileType;
-        this.size     = size;
-        this.dateTime = dateTime;
-      }
-
-      /** create remote file
-       * @param name name
-       * @param fileType file type
-       * @param dateTime last modified date/time
-       */
-      public RemoteFile(String name, FileTypes fileType, long dateTime)
-      {
-        this(name,fileType,0,dateTime);
-      }
-
-      /** create remote file
-       * @param name name
-       * @param size size [bytes]
-       */
-      public RemoteFile(String name, long size)
-      {
-        this(name,FileTypes.DIRECTORY,size,0);
-      }
-
-      /** get file size
-       * @return size [bytes]
-       */
-      public long length()
-      {
-        return size;
-      }
-
-      /** get last modified
-       * @return last modified date/time
-       */
-      public long lastModified()
-      {
-        return dateTime*1000;
-      }
-
-      /** check if file is file
-       * @return true iff file
-       */
-      public boolean isFile()
-      {
-        return fileType == FileTypes.FILE;
-      }
-
-      /** check if file is directory
-       * @return true iff directory
-       */
-      public boolean isDirectory()
-      {
-        return fileType == FileTypes.DIRECTORY;
-      }
-
-      /** check if file is hidden
-       * @return always false
-       */
-      public boolean isHidden()
-      {
-        return getName().startsWith(".");
-      }
-
-      /** check if file exists
-       * @return always true
-       */
-      public boolean exists()
-      {
-        return true;
-      }
-    };
-
-    private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
-    private Iterator<ValueMap>  iterator;
-
-    /** get shortcut files
-     * @return shortcut files
-     */
-    public File[] getShortcuts()
-    {
-      ArrayList<File> shortcutFileList = new ArrayList<File>();
-
-      String[] errorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("ROOT_LIST"),
-                                           0,
-                                           errorMessage,
-                                           valueMapList
-                                          );
-      if (error == Errors.NONE)
-      {
-        for (ValueMap valueMap : valueMapList)
-        {
-          shortcutFileList.add(new RemoteFile(valueMap.getString("name"),
-                                              Long.parseLong(valueMap.getString("size"))
-                                             )
-                              );
-        }
-      }
-
-      return shortcutFileList.toArray(new File[shortcutFileList.size()]);
-    }
-
-    /** set shortcut files
-     * @param shortchuts shortcut files
-     */
-    public void setShortcuts(File shortcuts[])
-    {
-Dprintf.dprintf("");
-    }
-
-    /** open list files in directory
-     * @param pathName path name
-     * @return true iff open
-     */
-    public boolean open(String pathName)
-    {
-      String[] errorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
-                                                               pathName
-                                                              ),
-                                           0,
-                                           errorMessage,
-                                           valueMapList
-                                          );
-      if (error == Errors.NONE)
-      {
-        iterator = valueMapList.listIterator();
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
-
-    /** close list files in directory
-     */
-    public void close()
-    {
-      iterator = null;
-    }
-
-  /** get next entry in directory
-   * @return entry
-   */
-    public File getNext()
-    {
-      File file = null;
-
-      if (iterator.hasNext())
-      {
-        ValueMap valueMap = iterator.next();
-        try
-        {
-          FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
-          switch (fileType)
-          {
-            case FILE:
-              {
-                String  name         = valueMap.getString ("name"         );
-                long    size         = valueMap.getLong   ("size"         );
-                long    dateTime     = valueMap.getLong   ("dateTime"     );
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.FILE,size,dateTime);
-              }
-              break;
-            case DIRECTORY:
-              {
-                String  name         = valueMap.getString ("name"          );
-                long    dateTime     = valueMap.getLong   ("dateTime"      );
-                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime);
-              }
-              break;
-            case LINK:
-              {
-                String  name         = valueMap.getString ("name"    );
-                long    dateTime     = valueMap.getLong   ("dateTime");
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.LINK,dateTime);
-              }
-              break;
-            case HARDLINK:
-              {
-                String  name         = valueMap.getString ("name"    );
-                long    size         = valueMap.getLong   ("size"    );
-                long    dateTime     = valueMap.getLong   ("dateTime");
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime);
-              }
-              break;
-            case SPECIAL:
-              {
-                String  name         = valueMap.getString ("name"          );
-                long    size         = valueMap.getLong   ("size",    0L   );
-                long    dateTime     = valueMap.getLong   ("dateTime"      );
-                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                file = new RemoteFile(name,FileTypes.SPECIAL,dateTime);
-              }
-              break;
-          }
-        }
-        catch (IllegalArgumentException exception)
-        {
-          if (Settings.debugLevel > 0)
-          {
-            System.err.println("ERROR: "+exception.getMessage());
-          }
-        }
-      }
-
-      return file;
-    }
-  };
 
   // ------------------------ native functions ----------------------------
 
@@ -5179,7 +4924,7 @@ Dprintf.dprintf("");
                                     Dialogs.FileDialogTypes.DIRECTORY,
                                     BARControl.tr("Select path"),
                                     widgetRestoreTo.getText(),
-                                    remoteListDirectory
+                                    BARServer.remoteListDirectory
                                    );
           }
           else
@@ -6687,7 +6432,7 @@ assert storagePattern != null;
                                       Dialogs.FileDialogTypes.DIRECTORY,
                                       BARControl.tr("Select path"),
                                       widgetRestoreTo.getText(),
-                                      remoteListDirectory
+                                      BARServer.remoteListDirectory
                                      );
             }
             else
@@ -7263,7 +7008,7 @@ boolean overwriteFiles = false;
                                       Dialogs.FileDialogTypes.DIRECTORY,
                                       BARControl.tr("Select path"),
                                       widgetRestoreTo.getText(),
-                                      remoteListDirectory
+                                      BARServer.remoteListDirectory
                                      );
             }
             else
@@ -7347,9 +7092,6 @@ boolean overwriteFiles = false;
       {
         public void run(final BusyDialog busyDialog, Object userData)
         {
-          final String[] MAP_FROM = new String[]{"\n","\r","\\"};
-          final String[] MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
           final EntryData[] entryData_     = (EntryData[])((Object[])userData)[0];
           final String      directory      = (String     )((Object[])userData)[1];
           final boolean     overwriteFiles = (Boolean    )((Object[])userData)[2];
