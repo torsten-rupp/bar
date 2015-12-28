@@ -113,6 +113,7 @@ enum WidgetVariableTypes
  */
 class WidgetVariable
 {
+  private final String        name;
   private WidgetVariableTypes type;
   private boolean             b;
   private long                l;
@@ -124,35 +125,73 @@ class WidgetVariable
   /** create widget variable
    * @param b/l/d/string/enumeration value
    */
-  WidgetVariable(boolean b)
+  WidgetVariable(boolean b, String name)
   {
+    this.name = name;
     this.type = WidgetVariableTypes.BOOLEAN;
     this.b    = b;
   }
-  WidgetVariable(long l)
+  WidgetVariable(boolean b)
   {
+    this(b,(String)null);
+  }
+  WidgetVariable(long l, String name)
+  {
+    this.name = name;
     this.type = WidgetVariableTypes.LONG;
     this.l    = l;
   }
-  WidgetVariable(double d)
+  WidgetVariable(long l)
   {
+    this(l,(String)null);
+  }
+  WidgetVariable(double d, String name)
+  {
+    this.name = name;
     this.type = WidgetVariableTypes.DOUBLE;
     this.d    = d;
   }
-  WidgetVariable(String string)
+  WidgetVariable(double d)
   {
+    this(d,(String)null);
+  }
+  WidgetVariable(String string, String name)
+  {
+    this.name = name;
     this.type   = WidgetVariableTypes.STRING;
     this.string = string;
   }
-  WidgetVariable(String enumeration[])
+  WidgetVariable(String string)
   {
+    this(string,(String)null);
+  }
+  WidgetVariable(String enumeration[], String name)
+  {
+    this.name = name;
     this.type        = WidgetVariableTypes.ENUMERATION;
     this.enumeration = enumeration;
   }
-  WidgetVariable(Object object)
+  WidgetVariable(String enumeration[])
   {
+    this(enumeration,(String)null);
+  }
+  WidgetVariable(Object object, String name)
+  {
+    this.name = name;
     this.type   = WidgetVariableTypes.OBJECT;
     this.object = object;
+  }
+  WidgetVariable(Object object)
+  {
+    this(object,(String)null);
+  }
+
+  /** get variable name
+   * @return name
+   */
+  String getName()
+  {
+    return name;
   }
 
   /** get variable type
@@ -439,7 +478,7 @@ class WidgetModifyListener
     return false;
   }
 
-  /** set text or selection fo widget according to value of variable
+  /** set text or selection for widget according to value of variable
    * @param widget widget widget to set
    * @param variable variable
    */
@@ -607,6 +646,7 @@ class WidgetModifyListener
         case LONG:   n = (int)variable.getLong(); break;
         case DOUBLE: n = (int)variable.getDouble(); break;
       }
+Dprintf.dprintf("widgetSpinner %s",widgetSpinner);
       widgetSpinner.setSelection(n);
     }
     else if (widget instanceof Slider)
@@ -1025,8 +1065,8 @@ class Widgets
 {
   //-----------------------------------------------------------------------
 
-  // list of widgets listeners
-  private static ArrayList<WidgetModifyListener> listenersList = new ArrayList<WidgetModifyListener>();
+  // hash of widgets listeners
+  private static HashSet<WidgetModifyListener> widgetModifyListenerHashSet = new HashSet<WidgetModifyListener>();
 
   // images
   private static ImageData IMAGE_CLOSE_DATA;
@@ -8473,8 +8513,16 @@ private static void printTree(Tree tree)
    */
   public static void addModifyListener(WidgetModifyListener widgetModifyListener)
   {
-    listenersList.add(widgetModifyListener);
+    widgetModifyListenerHashSet.add(widgetModifyListener);
     widgetModifyListener.modified();
+  }
+
+  /** remove modify listener
+   * @param widgetModifyListener listener to remove
+   */
+  public static void removeModifyListener(WidgetModifyListener widgetModifyListener)
+  {
+    widgetModifyListenerHashSet.remove(widgetModifyListener);
   }
 
   /** execute modify listeners
@@ -8482,7 +8530,7 @@ private static void printTree(Tree tree)
    */
   public static void modified(WidgetVariable widgetVariable)
   {
-    for (WidgetModifyListener widgetModifyListener : listenersList)
+    for (WidgetModifyListener widgetModifyListener : widgetModifyListenerHashSet)
     {
       if (widgetModifyListener.equals(widgetVariable))
       {
