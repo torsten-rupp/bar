@@ -396,6 +396,14 @@ Dprintf.dprintf("%s %s",serverData1,serverData2);
                                           );
       Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
       row++;
+
+      button = BARWidgets.newCheckbox(composite,
+                                      BARControl.tr("Auto index udate database."),
+                                      indexDatabaseAutoUpdate,
+                                      "Auto index update"
+                                     );
+      Widgets.layout(button,row,1,TableLayoutData.W);
+      row++;
     }
 
     // servers
