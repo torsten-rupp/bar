@@ -107,11 +107,12 @@ enum WidgetVariableTypes
   STRING,
   ENUMERATION,
   OBJECT,
+UNKNOWN,
 };
 
 /** widget variable
  */
-class WidgetVariable
+class WidgetVariable<T>
 {
   private final String        name;
   private WidgetVariableTypes type;
@@ -121,6 +122,19 @@ class WidgetVariable
   private String              string;
   private String              enumeration[];
   private Object              object;
+  private T                   value;
+
+  /** create widget variable
+   * @param value value
+   * @param name name
+   */
+/*
+  WidgetVariable(String name)
+  {
+Dprintf.dprintf("name=%s",name);
+    this.name = name;
+this.type = WidgetVariableTypes.UNKNOWN;
+  }*/
 
   /** create widget variable
    * @param b/l/d/string/enumeration value
@@ -161,10 +175,11 @@ class WidgetVariable
     this.type   = WidgetVariableTypes.STRING;
     this.string = string;
   }
+/*
   WidgetVariable(String string)
   {
     this(string,(String)null);
-  }
+  }*/
   WidgetVariable(String enumeration[], String name)
   {
     this.name = name;
@@ -177,13 +192,43 @@ class WidgetVariable
   }
   WidgetVariable(Object object, String name)
   {
-    this.name = name;
-    this.type   = WidgetVariableTypes.OBJECT;
-    this.object = object;
+Dprintf.dprintf("");
+    this.name   = name;
+    if      (object instanceof Boolean)
+    {
+      this.type   = WidgetVariableTypes.BOOLEAN;
+      this.b      = (Boolean)object;
+    }
+    else if (object instanceof Long)
+    {
+      this.type   = WidgetVariableTypes.LONG;
+      this.l      = (Long)object;
+    }
+    else if (object instanceof Double)
+    {
+      this.type   = WidgetVariableTypes.DOUBLE;
+      this.d      = (Double)object;
+    }
+    else if (object instanceof String)
+    {
+      this.type   = WidgetVariableTypes.STRING;
+      this.string = (String)object;
+    }
+    else if (object instanceof Enum)
+    {
+      this.type   = WidgetVariableTypes.ENUMERATION;
+//      this.enumeration = (Enum)object;
+    }
+    else
+    {
+      this.type   = WidgetVariableTypes.OBJECT;
+      this.object = object;
+    }
   }
   WidgetVariable(Object object)
   {
     this(object,(String)null);
+Dprintf.dprintf("");
   }
 
   /** get variable name
@@ -200,6 +245,14 @@ class WidgetVariable
   WidgetVariableTypes getType()
   {
     return type;
+  }
+
+  /** get class
+   * @return class
+   */
+  Class getClassType()
+  {
+    return value.getClass();
   }
 
   /** get boolean value
@@ -367,6 +420,15 @@ class WidgetVariable
     }
     return "";
   }
+
+  /** convert to string
+   * @return string
+   */
+//TODO
+  public String toString2()
+  {
+    return "WidgetVariable {"+name+", "+type.toString()+"}";
+  }
 }
 
 /** widget modify listener
@@ -402,6 +464,9 @@ class WidgetModifyListener
    */
   WidgetModifyListener(Widget widget, WidgetVariable[] variables)
   {
+    assert variables != null;
+    assert variables[0] != null;
+
     this.widget    = widget;
     this.variables = variables;
   }
@@ -484,6 +549,7 @@ class WidgetModifyListener
    */
   void modified(Widget widget, WidgetVariable variable)
   {
+assert variable != null;
     if      (widget instanceof Label)
     {
       Label widgetLabel = (Label)widget;
