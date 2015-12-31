@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-12-31 11:24+0100\n"
+"POT-Creation-Date: 2015-12-31 14:06+0100\n"
 "PO-Revision-Date: 2015-12-25 11:45+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -55,13 +55,14 @@ msgstr "Anmeldung BAR-Server"
 msgid "Server"
 msgstr "Server"
 
-#: src/BARControl.java:1388 src/Dialogs.java:2560 src/ServerSettings.java:467
+#: src/BARControl.java:1388 src/Dialogs.java:2560 src/ServerSettings.java:482
 #: src/TabJobs.java:5404 src/TabRestore.java:6598 src/TabRestore.java:7188
 #: src/TabRestore.java:7222 src/TabRestore.java:7256 src/TabRestore.java:7290
 msgid "Password"
 msgstr "Passwort"
 
-#: src/BARControl.java:1401 src/TabJobs.java:5528 src/TabJobs.java:5993
+#: src/BARControl.java:1401 src/ServerSettings.java:2075 src/TabJobs.java:5528
+#: src/TabJobs.java:5993
 msgid "Login"
 msgstr "Login"
 
@@ -69,11 +70,12 @@ msgstr "Login"
 #: src/Dialogs.java:1999 src/Dialogs.java:2500 src/Dialogs.java:2683
 #: src/Dialogs.java:3285 src/Dialogs.java:4033 src/Dialogs.java:4199
 #: src/Dialogs.java:4385 src/Dialogs.java:4723 src/Dialogs.java:4823
-#: src/ServerSettings.java:1712 src/TabJobs.java:7493 src/TabJobs.java:7606
-#: src/TabJobs.java:7731 src/TabJobs.java:8958 src/TabJobs.java:9256
-#: src/TabJobs.java:9687 src/TabJobs.java:10888 src/TabJobs.java:11427
-#: src/TabRestore.java:5823 src/TabRestore.java:6468 src/TabRestore.java:7044
-#: src/TabStatus.java:1787 src/TabStatus.java:1987
+#: src/ServerSettings.java:1727 src/ServerSettings.java:2179
+#: src/TabJobs.java:7493 src/TabJobs.java:7606 src/TabJobs.java:7731
+#: src/TabJobs.java:8958 src/TabJobs.java:9256 src/TabJobs.java:9687
+#: src/TabJobs.java:10888 src/TabJobs.java:11427 src/TabRestore.java:5823
+#: src/TabRestore.java:6468 src/TabRestore.java:7044 src/TabStatus.java:1787
+#: src/TabStatus.java:1987
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -148,7 +150,7 @@ msgstr ""
 "Gespeicherte Passworte auf Server löschen:\n"
 "\n"
 
-#: src/BARControl.java:1802 src/ServerSettings.java:300
+#: src/BARControl.java:1802 src/ServerSettings.java:315
 msgid "Server settings"
 msgstr "Server Einstellungen"
 
@@ -266,11 +268,11 @@ msgstr "Bestätigung"
 msgid "OK"
 msgstr "OK"
 
-#: src/Dialogs.java:2548 src/Dialogs.java:3250 src/ServerSettings.java:485
-#: src/TabJobs.java:2002 src/TabJobs.java:7478 src/TabJobs.java:7589
-#: src/TabRestore.java:3417 src/TabRestore.java:3488 src/TabRestore.java:3589
-#: src/TabRestore.java:3759 src/TabRestore.java:4527 src/TabStatus.java:498
-#: src/TabStatus.java:536
+#: src/Dialogs.java:2548 src/Dialogs.java:3250 src/ServerSettings.java:500
+#: src/ServerSettings.java:2047 src/TabJobs.java:2002 src/TabJobs.java:7478
+#: src/TabJobs.java:7589 src/TabRestore.java:3417 src/TabRestore.java:3488
+#: src/TabRestore.java:3589 src/TabRestore.java:3759 src/TabRestore.java:4527
+#: src/TabStatus.java:498 src/TabStatus.java:536
 msgid "Name"
 msgstr "Name"
 
@@ -290,7 +292,7 @@ msgstr "versteckte anzeigen"
 msgid "Open"
 msgstr "Öffnen"
 
-#: src/Dialogs.java:3275 src/Dialogs.java:4216 src/ServerSettings.java:1709
+#: src/Dialogs.java:3275 src/Dialogs.java:4216 src/ServerSettings.java:1724
 #: src/TabJobs.java:9108 src/TabJobs.java:9402 src/TabJobs.java:9832
 #: src/TabJobs.java:10885 src/TabJobs.java:11558
 msgid "Save"
@@ -318,113 +320,113 @@ msgstr "Vorgang"
 msgid "Progress"
 msgstr "Fortschritt"
 
-#: src/ServerSettings.java:309
+#: src/ServerSettings.java:324
 msgid "General"
 msgstr ""
 
-#: src/ServerSettings.java:315
+#: src/ServerSettings.java:330
 msgid "Temporary directory"
 msgstr ""
 
-#: src/ServerSettings.java:323
+#: src/ServerSettings.java:338
 #, fuzzy
 msgid "Path to temporary directory."
 msgstr "Max. Speicherplatzgrößer"
 
-#: src/ServerSettings.java:328
+#: src/ServerSettings.java:343
 #, fuzzy
 msgid "Max. size"
 msgstr "Max. Speicherplatzgrößer"
 
-#: src/ServerSettings.java:332
+#: src/ServerSettings.java:347
 #, fuzzy
 msgid "Size limit for temporary files."
 msgstr "Größenlimit für eine Archivdatei."
 
-#: src/ServerSettings.java:340
+#: src/ServerSettings.java:355
 msgid "Nice level"
 msgstr ""
 
-#: src/ServerSettings.java:343
+#: src/ServerSettings.java:358
 msgid "Process nice level."
 msgstr ""
 
-#: src/ServerSettings.java:351
+#: src/ServerSettings.java:366
 #, fuzzy
 msgid "Max. number of threads"
 msgstr "Max. Anzahl Einträge in Liste."
 
-#: src/ServerSettings.java:354
+#: src/ServerSettings.java:369
 msgid "Max. number of compression and encryption threads."
 msgstr ""
 
-#: src/ServerSettings.java:362
+#: src/ServerSettings.java:377
 msgid "Max. band width"
 msgstr ""
 
-#: src/ServerSettings.java:365
+#: src/ServerSettings.java:380
 msgid "Max. band width to use [bits/s]."
 msgstr ""
 
-#: src/ServerSettings.java:372
+#: src/ServerSettings.java:387
 #, fuzzy
 msgid "Min. compress size"
 msgstr "Max. Speicherplatzgrößer"
 
-#: src/ServerSettings.java:375
+#: src/ServerSettings.java:390
 msgid "Min. size of files for compression [bytes]."
 msgstr ""
 
-#: src/ServerSettings.java:382
+#: src/ServerSettings.java:397
 #, fuzzy
 msgid "Jobs directory"
 msgstr "Verzeichnisgröße"
 
-#: src/ServerSettings.java:385
+#: src/ServerSettings.java:400
 #, fuzzy
 msgid "Jobs directory."
 msgstr "Verzeichnisgröße"
 
-#: src/ServerSettings.java:391
+#: src/ServerSettings.java:406
 #, fuzzy
 msgid "Index database"
 msgstr "Archive zu Index hinzufügen"
 
-#: src/ServerSettings.java:394
+#: src/ServerSettings.java:409
 msgid "Index database."
 msgstr ""
 
-#: src/ServerSettings.java:396 src/ServerSettings.java:436
-#: src/ServerSettings.java:448 src/ServerSettings.java:460
-#: src/ServerSettings.java:558 src/ServerSettings.java:570
-#: src/ServerSettings.java:582 src/ServerSettings.java:594
-#: src/ServerSettings.java:606 src/ServerSettings.java:618
-#: src/ServerSettings.java:630 src/ServerSettings.java:642
-#: src/ServerSettings.java:654 src/ServerSettings.java:666
-#: src/ServerSettings.java:678 src/ServerSettings.java:690
-#: src/ServerSettings.java:702 src/ServerSettings.java:714
-#: src/ServerSettings.java:732 src/ServerSettings.java:744
-#: src/ServerSettings.java:756 src/ServerSettings.java:768
-#: src/ServerSettings.java:780 src/ServerSettings.java:792
-#: src/ServerSettings.java:804 src/ServerSettings.java:816
-#: src/ServerSettings.java:828 src/ServerSettings.java:840
-#: src/ServerSettings.java:852 src/ServerSettings.java:864
-#: src/ServerSettings.java:876 src/ServerSettings.java:888
-#: src/ServerSettings.java:907 src/ServerSettings.java:919
-#: src/ServerSettings.java:931 src/ServerSettings.java:943
-#: src/ServerSettings.java:955 src/ServerSettings.java:967
-#: src/ServerSettings.java:979 src/ServerSettings.java:991
-#: src/ServerSettings.java:1003 src/ServerSettings.java:1015
-#: src/ServerSettings.java:1027 src/ServerSettings.java:1039
-#: src/ServerSettings.java:1051 src/ServerSettings.java:1063
-#: src/ServerSettings.java:1082 src/ServerSettings.java:1094
-#: src/ServerSettings.java:1106 src/ServerSettings.java:1118
-#: src/ServerSettings.java:1130 src/ServerSettings.java:1142
-#: src/ServerSettings.java:1154 src/ServerSettings.java:1166
-#: src/ServerSettings.java:1178 src/ServerSettings.java:1190
-#: src/ServerSettings.java:1202 src/ServerSettings.java:1214
-#: src/ServerSettings.java:1226 src/ServerSettings.java:1678
-#: src/ServerSettings.java:1697 src/TabJobs.java:3718 src/TabJobs.java:3730
+#: src/ServerSettings.java:411 src/ServerSettings.java:451
+#: src/ServerSettings.java:463 src/ServerSettings.java:475
+#: src/ServerSettings.java:573 src/ServerSettings.java:585
+#: src/ServerSettings.java:597 src/ServerSettings.java:609
+#: src/ServerSettings.java:621 src/ServerSettings.java:633
+#: src/ServerSettings.java:645 src/ServerSettings.java:657
+#: src/ServerSettings.java:669 src/ServerSettings.java:681
+#: src/ServerSettings.java:693 src/ServerSettings.java:705
+#: src/ServerSettings.java:717 src/ServerSettings.java:729
+#: src/ServerSettings.java:747 src/ServerSettings.java:759
+#: src/ServerSettings.java:771 src/ServerSettings.java:783
+#: src/ServerSettings.java:795 src/ServerSettings.java:807
+#: src/ServerSettings.java:819 src/ServerSettings.java:831
+#: src/ServerSettings.java:843 src/ServerSettings.java:855
+#: src/ServerSettings.java:867 src/ServerSettings.java:879
+#: src/ServerSettings.java:891 src/ServerSettings.java:903
+#: src/ServerSettings.java:922 src/ServerSettings.java:934
+#: src/ServerSettings.java:946 src/ServerSettings.java:958
+#: src/ServerSettings.java:970 src/ServerSettings.java:982
+#: src/ServerSettings.java:994 src/ServerSettings.java:1006
+#: src/ServerSettings.java:1018 src/ServerSettings.java:1030
+#: src/ServerSettings.java:1042 src/ServerSettings.java:1054
+#: src/ServerSettings.java:1066 src/ServerSettings.java:1078
+#: src/ServerSettings.java:1097 src/ServerSettings.java:1109
+#: src/ServerSettings.java:1121 src/ServerSettings.java:1133
+#: src/ServerSettings.java:1145 src/ServerSettings.java:1157
+#: src/ServerSettings.java:1169 src/ServerSettings.java:1181
+#: src/ServerSettings.java:1193 src/ServerSettings.java:1205
+#: src/ServerSettings.java:1217 src/ServerSettings.java:1229
+#: src/ServerSettings.java:1241 src/ServerSettings.java:1693
+#: src/ServerSettings.java:1712 src/TabJobs.java:3718 src/TabJobs.java:3730
 #: src/TabJobs.java:4174 src/TabJobs.java:4186 src/TabJobs.java:4627
 #: src/TabJobs.java:4639 src/TabJobs.java:4723 src/TabJobs.java:4735
 #: src/TabJobs.java:5796 src/TabJobs.java:5808 src/TabJobs.java:5889
@@ -435,465 +437,510 @@ msgstr ""
 msgid "All files"
 msgstr "Alle Dateien"
 
-#: src/ServerSettings.java:404
+#: src/ServerSettings.java:419
 #, fuzzy
 msgid "Auto index udate database."
 msgstr "Archive zu Index hinzufügen"
 
-#: src/ServerSettings.java:413 src/ServerSettings.java:476
+#: src/ServerSettings.java:428 src/ServerSettings.java:491
 #, fuzzy
 msgid "Servers"
 msgstr "Server"
 
-#: src/ServerSettings.java:420 src/TabJobs.java:2177 src/TabJobs.java:5618
-#: src/TabJobs.java:6083
+#: src/ServerSettings.java:435 src/ServerSettings.java:2089
+#: src/TabJobs.java:2177 src/TabJobs.java:5618 src/TabJobs.java:6083
 msgid "Port"
 msgstr "Portnummer"
 
-#: src/ServerSettings.java:423
+#: src/ServerSettings.java:438
 msgid "Server port number."
 msgstr ""
 
-#: src/ServerSettings.java:431
+#: src/ServerSettings.java:446
 #, fuzzy
 msgid "CA file"
 msgstr "Alle Dateien"
 
-#: src/ServerSettings.java:434 src/ServerSettings.java:470
+#: src/ServerSettings.java:449 src/ServerSettings.java:485
 #, fuzzy
 msgid "CA file."
 msgstr "Alle Dateien"
 
-#: src/ServerSettings.java:443
+#: src/ServerSettings.java:458
 #, fuzzy
 msgid "Cert file"
 msgstr "Wähle lokale Archivedatei aus"
 
-#: src/ServerSettings.java:446
+#: src/ServerSettings.java:461
 #, fuzzy
 msgid "Cert file."
 msgstr "Wähle lokale Archivedatei aus"
 
-#: src/ServerSettings.java:455
+#: src/ServerSettings.java:470
 #, fuzzy
 msgid "Key file"
 msgstr "Datei"
 
-#: src/ServerSettings.java:458
+#: src/ServerSettings.java:473
 #, fuzzy
 msgid "Key file."
 msgstr "Datei"
 
-#: src/ServerSettings.java:482 src/TabJobs.java:8901 src/TabJobs.java:11261
+#: src/ServerSettings.java:497 src/TabJobs.java:8901 src/TabJobs.java:11261
 #: src/TabRestore.java:3407 src/TabRestore.java:3609 src/TabRestore.java:4530
 #: src/TabStatus.java:507 src/TabStatus.java:579
 msgid "Type"
 msgstr "Typ"
 
-#: src/ServerSettings.java:483 src/ServerSettings.java:486
+#: src/ServerSettings.java:498 src/ServerSettings.java:501
 #: src/TabJobs.java:2301
 msgid "Click to sort by name."
 msgstr "Klicken um nach Namen zu sortieren."
 
-#: src/ServerSettings.java:494 src/TabJobs.java:7490 src/TabJobs.java:11502
-#: src/TabJobs.java:11639 src/TabRestore.java:5820
-msgid "Add"
-msgstr "Hinzufügen"
+#: src/ServerSettings.java:509 src/TabJobs.java:3016 src/TabJobs.java:3085
+#: src/TabJobs.java:3200 src/TabJobs.java:3270 src/TabJobs.java:3797
+#: src/TabJobs.java:3911 src/TabJobs.java:7242 src/TabJobs.java:7311
+msgid "Add…"
+msgstr "Hinzufügen…"
 
-#: src/ServerSettings.java:508 src/TabJobs.java:7602
-msgid "Clone"
-msgstr "Duplizieren"
+#: src/ServerSettings.java:523 src/TabJobs.java:2042 src/TabJobs.java:3048
+#: src/TabJobs.java:3121 src/TabJobs.java:3232 src/TabJobs.java:3306
+#: src/TabJobs.java:7266 src/TabJobs.java:7339 src/TabStatus.java:759
+msgid "Clone…"
+msgstr "Duplizieren…"
 
-#: src/ServerSettings.java:522
+#: src/ServerSettings.java:537
 #, fuzzy
 msgid "Remove"
 msgstr "Löschen…"
 
-#: src/ServerSettings.java:540
+#: src/ServerSettings.java:555
 msgid "Commands"
 msgstr ""
 
-#: src/ServerSettings.java:547 src/TabJobs.java:4869
+#: src/ServerSettings.java:562 src/TabJobs.java:4869
 msgid "CD"
 msgstr "CD"
 
-#: src/ServerSettings.java:553 src/ServerSettings.java:727
-#: src/ServerSettings.java:902 src/ServerSettings.java:1071
-#: src/ServerSettings.java:1077 src/TabJobs.java:6452 src/TabJobs.java:6752
+#: src/ServerSettings.java:568 src/ServerSettings.java:742
+#: src/ServerSettings.java:917 src/ServerSettings.java:1086
+#: src/ServerSettings.java:1092 src/TabJobs.java:6452 src/TabJobs.java:6752
 msgid "Device"
 msgstr "Gerätename"
 
-#: src/ServerSettings.java:556
+#: src/ServerSettings.java:571
 #, fuzzy
 msgid "CD device name."
 msgstr "Gerätename."
 
-#: src/ServerSettings.java:565 src/ServerSettings.java:739
-#: src/ServerSettings.java:914 src/ServerSettings.java:1089
+#: src/ServerSettings.java:580 src/ServerSettings.java:754
+#: src/ServerSettings.java:929 src/ServerSettings.java:1104
 msgid "Request volumn command"
 msgstr ""
 
-#: src/ServerSettings.java:568 src/ServerSettings.java:742
-#: src/ServerSettings.java:917 src/ServerSettings.java:1092
+#: src/ServerSettings.java:583 src/ServerSettings.java:757
+#: src/ServerSettings.java:932 src/ServerSettings.java:1107
 msgid "Request volumn command."
 msgstr ""
 
-#: src/ServerSettings.java:577 src/ServerSettings.java:751
-#: src/ServerSettings.java:926 src/ServerSettings.java:1101
+#: src/ServerSettings.java:592 src/ServerSettings.java:766
+#: src/ServerSettings.java:941 src/ServerSettings.java:1116
 #, fuzzy
 msgid "Unload command"
 msgstr "Schublade öffnen"
 
-#: src/ServerSettings.java:580
+#: src/ServerSettings.java:595
 msgid "Command to unload CD."
 msgstr ""
 
-#: src/ServerSettings.java:589 src/ServerSettings.java:763
-#: src/ServerSettings.java:938 src/ServerSettings.java:1113
+#: src/ServerSettings.java:604 src/ServerSettings.java:778
+#: src/ServerSettings.java:953 src/ServerSettings.java:1128
 msgid "Load command"
 msgstr ""
 
-#: src/ServerSettings.java:592
+#: src/ServerSettings.java:607
 msgid "Command to load CD."
 msgstr ""
 
-#: src/ServerSettings.java:601 src/ServerSettings.java:775
-#: src/ServerSettings.java:950 src/ServerSettings.java:1125
+#: src/ServerSettings.java:616 src/ServerSettings.java:790
+#: src/ServerSettings.java:965 src/ServerSettings.java:1140
 msgid "Image pre-command"
 msgstr ""
 
-#: src/ServerSettings.java:604
+#: src/ServerSettings.java:619
 #, fuzzy
 msgid "Command to execute before creating CD image."
 msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:613 src/ServerSettings.java:787
-#: src/ServerSettings.java:962 src/ServerSettings.java:1137
+#: src/ServerSettings.java:628 src/ServerSettings.java:802
+#: src/ServerSettings.java:977 src/ServerSettings.java:1152
 msgid "Image post-command"
 msgstr ""
 
-#: src/ServerSettings.java:616
+#: src/ServerSettings.java:631
 #, fuzzy
 msgid "Command to execute after creating CD image."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:625 src/ServerSettings.java:799
-#: src/ServerSettings.java:974 src/ServerSettings.java:1149
+#: src/ServerSettings.java:640 src/ServerSettings.java:814
+#: src/ServerSettings.java:989 src/ServerSettings.java:1164
 msgid "Image command"
 msgstr ""
 
-#: src/ServerSettings.java:628 src/ServerSettings.java:802
-#: src/ServerSettings.java:977 src/ServerSettings.java:1152
+#: src/ServerSettings.java:643 src/ServerSettings.java:817
+#: src/ServerSettings.java:992 src/ServerSettings.java:1167
 msgid "Image create command."
-msgstr ""
-
-#: src/ServerSettings.java:637 src/ServerSettings.java:811
-#: src/ServerSettings.java:986 src/ServerSettings.java:1161
-msgid "ECC pre-command"
-msgstr ""
-
-#: src/ServerSettings.java:640 src/ServerSettings.java:814
-#: src/ServerSettings.java:989 src/ServerSettings.java:1164
-#, fuzzy
-msgid "Command to execute before creating error correction codes."
-msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
-
-#: src/ServerSettings.java:649 src/ServerSettings.java:823
-#: src/ServerSettings.java:998 src/ServerSettings.java:1173
-msgid "ECC post-command"
 msgstr ""
 
 #: src/ServerSettings.java:652 src/ServerSettings.java:826
 #: src/ServerSettings.java:1001 src/ServerSettings.java:1176
+msgid "ECC pre-command"
+msgstr ""
+
+#: src/ServerSettings.java:655 src/ServerSettings.java:829
+#: src/ServerSettings.java:1004 src/ServerSettings.java:1179
+#, fuzzy
+msgid "Command to execute before creating error correction codes."
+msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
+
+#: src/ServerSettings.java:664 src/ServerSettings.java:838
+#: src/ServerSettings.java:1013 src/ServerSettings.java:1188
+msgid "ECC post-command"
+msgstr ""
+
+#: src/ServerSettings.java:667 src/ServerSettings.java:841
+#: src/ServerSettings.java:1016 src/ServerSettings.java:1191
 #, fuzzy
 msgid "Command to execute after creating error correction codes."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:661 src/ServerSettings.java:835
-#: src/ServerSettings.java:1010 src/ServerSettings.java:1185
+#: src/ServerSettings.java:676 src/ServerSettings.java:850
+#: src/ServerSettings.java:1025 src/ServerSettings.java:1200
 msgid "ECC command"
 msgstr ""
 
-#: src/ServerSettings.java:664 src/ServerSettings.java:838
-#: src/ServerSettings.java:1013 src/ServerSettings.java:1188
+#: src/ServerSettings.java:679 src/ServerSettings.java:853
+#: src/ServerSettings.java:1028 src/ServerSettings.java:1203
 #, fuzzy
 msgid "Command to create error correction codes."
 msgstr "Fehlerkorrekturcodes hinzufügen"
 
-#: src/ServerSettings.java:673 src/ServerSettings.java:847
-#: src/ServerSettings.java:1022 src/ServerSettings.java:1197
+#: src/ServerSettings.java:688 src/ServerSettings.java:862
+#: src/ServerSettings.java:1037 src/ServerSettings.java:1212
 msgid "Write pre-command"
 msgstr ""
 
-#: src/ServerSettings.java:676
+#: src/ServerSettings.java:691
 #, fuzzy
 msgid "Command to execute before writing CD."
 msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:685 src/ServerSettings.java:859
-#: src/ServerSettings.java:1034 src/ServerSettings.java:1209
+#: src/ServerSettings.java:700 src/ServerSettings.java:874
+#: src/ServerSettings.java:1049 src/ServerSettings.java:1224
 msgid "Write post-command"
 msgstr ""
 
-#: src/ServerSettings.java:688
+#: src/ServerSettings.java:703
 #, fuzzy
 msgid "Command to execute after writing CD."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:697 src/ServerSettings.java:871
-#: src/ServerSettings.java:1046 src/ServerSettings.java:1221
+#: src/ServerSettings.java:712 src/ServerSettings.java:886
+#: src/ServerSettings.java:1061 src/ServerSettings.java:1236
 msgid "Write command"
 msgstr ""
 
-#: src/ServerSettings.java:700
+#: src/ServerSettings.java:715
 msgid "CD write command."
 msgstr ""
 
-#: src/ServerSettings.java:709 src/ServerSettings.java:883
-#: src/ServerSettings.java:1058
+#: src/ServerSettings.java:724 src/ServerSettings.java:898
+#: src/ServerSettings.java:1073
 msgid "Image write command"
 msgstr ""
 
-#: src/ServerSettings.java:712
+#: src/ServerSettings.java:727
 msgid "CD image write command."
 msgstr ""
 
-#: src/ServerSettings.java:722 src/TabJobs.java:4916
+#: src/ServerSettings.java:737 src/TabJobs.java:4916
 msgid "DVD"
 msgstr "DVD"
 
-#: src/ServerSettings.java:730
+#: src/ServerSettings.java:745
 #, fuzzy
 msgid "DVD device name."
 msgstr "Gerätename."
 
-#: src/ServerSettings.java:754
+#: src/ServerSettings.java:769
 msgid "Command to unload DVD."
 msgstr ""
 
-#: src/ServerSettings.java:766
+#: src/ServerSettings.java:781
 msgid "Command to load DVD."
 msgstr ""
 
-#: src/ServerSettings.java:778
+#: src/ServerSettings.java:793
 #, fuzzy
 msgid "Command to execute before creating DVD image."
 msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:790
+#: src/ServerSettings.java:805
 #, fuzzy
 msgid "Command to execute after creating DVD image."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:850
+#: src/ServerSettings.java:865
 #, fuzzy
 msgid "Command to execute before writing DVD."
 msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:862
+#: src/ServerSettings.java:877
 #, fuzzy
 msgid "Command to execute after writing DVD."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:874
+#: src/ServerSettings.java:889
 msgid "DVD write command."
 msgstr ""
 
-#: src/ServerSettings.java:886
+#: src/ServerSettings.java:901
 msgid "DVD image write command."
 msgstr ""
 
-#: src/ServerSettings.java:896 src/TabJobs.java:4963
+#: src/ServerSettings.java:911 src/TabJobs.java:4963
 msgid "BD"
 msgstr "BD"
 
-#: src/ServerSettings.java:905
+#: src/ServerSettings.java:920
 #, fuzzy
 msgid "BD device name."
 msgstr "Gerätename."
 
-#: src/ServerSettings.java:929
+#: src/ServerSettings.java:944
 msgid "Command to unload BD."
 msgstr ""
 
-#: src/ServerSettings.java:941
+#: src/ServerSettings.java:956
 msgid "Command to load BD."
 msgstr ""
 
-#: src/ServerSettings.java:953
+#: src/ServerSettings.java:968
 #, fuzzy
 msgid "Command to execute before creating BD image."
 msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:965
+#: src/ServerSettings.java:980
 #, fuzzy
 msgid "Command to execute after creating BD image."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:1025
+#: src/ServerSettings.java:1040
 #, fuzzy
 msgid "Command to execute before writing BD."
 msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:1037
+#: src/ServerSettings.java:1052
 #, fuzzy
 msgid "Command to execute after writing BD."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:1049
+#: src/ServerSettings.java:1064
 msgid "BD write command."
 msgstr ""
 
-#: src/ServerSettings.java:1061
+#: src/ServerSettings.java:1076
 msgid "BD image write command."
 msgstr ""
 
-#: src/ServerSettings.java:1080 src/TabJobs.java:6759
+#: src/ServerSettings.java:1095 src/TabJobs.java:6759
 msgid "Device name."
 msgstr "Gerätename."
 
-#: src/ServerSettings.java:1104
+#: src/ServerSettings.java:1119
 msgid "Command to unload device."
 msgstr ""
 
-#: src/ServerSettings.java:1116
+#: src/ServerSettings.java:1131
 msgid "Command to load device."
 msgstr ""
 
-#: src/ServerSettings.java:1128
+#: src/ServerSettings.java:1143
 #, fuzzy
 msgid "Command to execute before creating device image."
 msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:1140
+#: src/ServerSettings.java:1155
 #, fuzzy
 msgid "Command to execute after creating device image."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:1200
+#: src/ServerSettings.java:1215
 #, fuzzy
 msgid "Command to execute before writing device."
 msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:1212
+#: src/ServerSettings.java:1227
 #, fuzzy
 msgid "Command to execute after writing device."
 msgstr ""
 "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
-#: src/ServerSettings.java:1224
+#: src/ServerSettings.java:1239
 msgid "device write command."
 msgstr ""
 
-#: src/ServerSettings.java:1236 src/ServerSettings.java:1241
+#: src/ServerSettings.java:1251 src/ServerSettings.java:1256
 #, fuzzy
 msgid "Log"
 msgstr "Login"
 
-#: src/ServerSettings.java:1250
+#: src/ServerSettings.java:1265
 msgid "Log nothing."
 msgstr ""
 
-#: src/ServerSettings.java:1274
+#: src/ServerSettings.java:1289
 #, fuzzy
 msgid "Log errors."
 msgstr "Letzter Fehler"
 
-#: src/ServerSettings.java:1308
+#: src/ServerSettings.java:1323
 #, fuzzy
 msgid "Log warnings."
 msgstr "Warnung"
 
-#: src/ServerSettings.java:1342
+#: src/ServerSettings.java:1357
 #, fuzzy
 msgid "Log stored/restored files."
 msgstr "Speichert die erstellten Archivdateien auf CD."
 
-#: src/ServerSettings.java:1376
+#: src/ServerSettings.java:1391
 #, fuzzy
 msgid "Log unknown files."
 msgstr "Datei"
 
-#: src/ServerSettings.java:1410
+#: src/ServerSettings.java:1425
 #, fuzzy
 msgid "Log skipped files."
 msgstr "Datei"
 
-#: src/ServerSettings.java:1444
+#: src/ServerSettings.java:1459
 #, fuzzy
 msgid "Log missing files."
 msgstr "Datei"
 
-#: src/ServerSettings.java:1478
+#: src/ServerSettings.java:1493
 #, fuzzy
 msgid "Log incomplete files."
 msgstr "Datei"
 
-#: src/ServerSettings.java:1512
+#: src/ServerSettings.java:1527
 #, fuzzy
 msgid "Log excluded files."
 msgstr "Datei"
 
-#: src/ServerSettings.java:1546
+#: src/ServerSettings.java:1561
 #, fuzzy
 msgid "Log storage operations."
 msgstr "Speichern"
 
-#: src/ServerSettings.java:1580
+#: src/ServerSettings.java:1595
 #, fuzzy
 msgid "Log index operations."
 msgstr "Speichern"
 
-#: src/ServerSettings.java:1614
+#: src/ServerSettings.java:1629
 msgid "Log continous operations."
 msgstr ""
 
-#: src/ServerSettings.java:1648
+#: src/ServerSettings.java:1663
 msgid "all"
 msgstr ""
 
-#: src/ServerSettings.java:1672
+#: src/ServerSettings.java:1687
 #, fuzzy
 msgid "Log file"
 msgstr "Datei"
 
-#: src/ServerSettings.java:1675
+#: src/ServerSettings.java:1690
 #, fuzzy
 msgid "Log file name."
 msgstr "Dateiname"
 
-#: src/ServerSettings.java:1677
+#: src/ServerSettings.java:1692
 #, fuzzy
 msgid "Log files"
 msgstr "Datei"
 
-#: src/ServerSettings.java:1684
+#: src/ServerSettings.java:1699
 msgid "Log format"
 msgstr ""
 
-#: src/ServerSettings.java:1687
+#: src/ServerSettings.java:1702
 msgid "Log format string."
 msgstr ""
 
-#: src/ServerSettings.java:1692
+#: src/ServerSettings.java:1707
 msgid "Log post command"
 msgstr ""
 
-#: src/ServerSettings.java:1695
+#: src/ServerSettings.java:1710
 msgid "Log post command."
 msgstr ""
 
-#: src/ServerSettings.java:1986
+#: src/ServerSettings.java:2001
 #, java-format
 msgid "Flush server options fail (error: {0})"
+msgstr ""
+
+#: src/ServerSettings.java:2015
+#, fuzzy
+msgid "Add storage server"
+msgstr "Server"
+
+#: src/ServerSettings.java:2015 src/TabJobs.java:7490 src/TabJobs.java:11502
+#: src/TabJobs.java:11639 src/TabRestore.java:5820
+msgid "Add"
+msgstr "Hinzufügen"
+
+#: src/ServerSettings.java:2069
+#, fuzzy
+msgid "Path/URL"
+msgstr "Pfad"
+
+#: src/ServerSettings.java:2109
+#, fuzzy
+msgid "New password"
+msgstr "Entschlüsselungspasswort"
+
+#: src/ServerSettings.java:2112
+msgid "New password. Note: existing password is not shown."
+msgstr ""
+
+#: src/ServerSettings.java:2126
+#, fuzzy
+msgid "New public key"
+msgstr "Öffentlicher SSH-Schlüssel"
+
+#: src/ServerSettings.java:2133
+msgid "New public key. Note: existing public key is not shown."
+msgstr ""
+
+#: src/ServerSettings.java:2148
+#, fuzzy
+msgid "New private key"
+msgstr "Privater SSH-Schlüssel"
+
+#: src/ServerSettings.java:2155
+msgid "New private key. Note: existing private key is not shown."
 msgstr ""
 
 #: src/TabJobs.java:1993 src/TabRestore.java:3737
@@ -911,12 +958,6 @@ msgstr "Neu…"
 #: src/TabJobs.java:2029
 msgid "Create new job entry."
 msgstr "Neuen Auftrag erstellen."
-
-#: src/TabJobs.java:2042 src/TabJobs.java:3048 src/TabJobs.java:3121
-#: src/TabJobs.java:3232 src/TabJobs.java:3306 src/TabJobs.java:7266
-#: src/TabJobs.java:7339 src/TabStatus.java:759
-msgid "Clone…"
-msgstr "Duplizieren…"
 
 #: src/TabJobs.java:2043
 msgid "Clone an existing job entry."
@@ -1083,12 +1124,6 @@ msgstr "Eingeschlossen"
 #: src/TabJobs.java:2971
 msgid "List of include patterns, right-click for context menu."
 msgstr "Liste mit Einschlussmustern. Rechts-Klick für Kontextmenü."
-
-#: src/TabJobs.java:3016 src/TabJobs.java:3085 src/TabJobs.java:3200
-#: src/TabJobs.java:3270 src/TabJobs.java:3797 src/TabJobs.java:3911
-#: src/TabJobs.java:7242 src/TabJobs.java:7311
-msgid "Add…"
-msgstr "Hinzufügen…"
 
 #: src/TabJobs.java:3032 src/TabJobs.java:3103 src/TabJobs.java:3216
 #: src/TabJobs.java:3288 src/TabJobs.java:3936 src/TabJobs.java:7254
@@ -1941,6 +1976,10 @@ msgstr ""
 #: src/TabJobs.java:7580
 msgid "Clone job"
 msgstr "Auftrag duplizieren"
+
+#: src/TabJobs.java:7602
+msgid "Clone"
+msgstr "Duplizieren"
 
 #: src/TabJobs.java:7666 src/TabJobs.java:7676
 #, java-format
@@ -3244,6 +3283,18 @@ msgstr "Schublade öffnen"
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: {0})"
+
+#, fuzzy
+#~ msgid "Public key."
+#~ msgstr "Öffentlicher Schlüssel"
+
+#, fuzzy
+#~ msgid "Private key"
+#~ msgstr "Privater SSH-Schlüssel"
+
+#, fuzzy
+#~ msgid "Private key."
+#~ msgstr "Privater SSH-Schlüssel"
 
 #, fuzzy
 #~ msgid "CD device"

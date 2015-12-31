@@ -137,7 +137,7 @@ class WidgetVariable<T>
     }
     else
     {
-      throw new Error("Unsupported type "+object.getClass());
+      widgetVariable = new WidgetVariable<Object>(object,name);
     }
 
     return widgetVariable;
@@ -276,7 +276,7 @@ class WidgetVariable<T>
    * @param value value
    * @return true iff changed
    */
-  boolean set(T value)
+  boolean setValue(T value)
   {
     boolean changedFlag;
 
@@ -517,7 +517,7 @@ class WidgetModifyListener
     }
     else
     {
-      throw new Error("Unsupported type "+object.getClass());
+      widgetVariable = new WidgetVariable<Object>(object);
     }
 
     this.widget       = widget;
@@ -566,22 +566,24 @@ class WidgetModifyListener
     {
       if (variable != null)
       {
-/*
-        switch (variable.getType())
-        {
-          case BOOLEAN:
-          case LONG:
-          case DOUBLE:
-          case STRING:
-          case ENUMERATION:
-            if (variable.equals(otherVariable.toString())) return true;
-            break;
-          case OBJECT:
-            if (variable.equals(otherVariable)) return true;
-            break;
-        }
-/**/
         if (variable == otherVariable) return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** compare variables
+   * @param otherWidgetVariable variable object
+   * @return true iff equal variable object is equal to some variable
+   */
+  public boolean equals(Object object)
+  {
+    for (WidgetVariable variable : variables)
+    {
+      if (variable != null)
+      {
+        if (variable.getValue() == object) return true;
       }
     }
 
@@ -3864,9 +3866,9 @@ e composite widget
     return array;
   }
 
-  /** set selected combo item
-   * @param combo combo
-   * @return selected combo item data
+  /** set selected list item
+   * @param list list
+   * @return selected list item data
    */
   public static <T> T getSelectedListItem(final List list)
   {
@@ -3890,10 +3892,10 @@ e composite widget
     return (T)data[0];
   }
 
-  /** set selected combo items
-   * @param combo combo
+  /** set selected list items
+   * @param list list
    * @param clazz data type class
-   * @return selected combo items data
+   * @return selected list items data
    */
   public static <T> T[] getSelectedListItems(final List list, Class clazz)
   {
@@ -3926,8 +3928,8 @@ e composite widget
     return array;
   }
 
-  /** set selected combo item
-   * @param combo combo
+  /** set selected list item
+   * @param list list
    * @param data item data
    */
   public static <T> void setSelectedListItem(final List list, final T data)
@@ -3956,8 +3958,8 @@ e composite widget
     }
   }
 
-  /** set selected combo items
-   * @param combo combo
+  /** set selected list items
+   * @param list list
    * @param data items data
    */
   public static <T> void setSelectedListItems(final List list, final T data[])
@@ -8605,11 +8607,11 @@ private static void printTree(Tree tree)
   /** execute modify listeners
    * @param variable modified variable
    */
-  public static void modified(WidgetVariable widgetVariable)
+  public static void modified(Object object)
   {
     for (WidgetModifyListener widgetModifyListener : widgetModifyListenerHashSet)
     {
-      if (widgetModifyListener.equals(widgetVariable))
+      if (widgetModifyListener.equals(object))
       {
         widgetModifyListener.modified();
       }

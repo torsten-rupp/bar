@@ -16,6 +16,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionEvent;
@@ -24,6 +25,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
@@ -108,6 +110,12 @@ public class ServerSettings
     int         id;
     String      name;
     ServerTypes type;
+    String      pathURL;
+    String      loginName;
+    int         port;
+    String      password;
+    String      publicKey;
+    String      privateKey;
 
     /** create server data
      * @param name name
@@ -115,9 +123,21 @@ public class ServerSettings
      */
     ServerData(int id, String name, ServerTypes type)
     {
-      this.id   = id;
-      this.name = name;
-      this.type = type;
+      this.id         = id;
+      this.name       = name;
+      this.type       = type;
+      this.pathURL    = "";
+      this.port       = 0;
+      this.loginName  = "";
+      this.publicKey  = null;
+      this.privateKey = null;
+    }
+
+    /** create server data
+     */
+    ServerData()
+    {
+      this(0,"",ServerTypes.NONE);
     }
 
     /** convert data to string
@@ -169,8 +189,6 @@ public class ServerSettings
       switch (sortMode)
       {
         case SORTMODE_TYPE:
-Dprintf.dprintf("-----------------------------------------------------------");
-Dprintf.dprintf("%s %s",serverData1,serverData2);
           return serverData1.type.toString().compareTo(serverData2.type.toString());
         case SORTMODE_NAME:
           return serverData1.name.compareTo(serverData2.name);
@@ -204,98 +222,95 @@ Dprintf.dprintf("%s %s",serverData1,serverData2);
     Button      button;
     int         row;
 
-    WidgetVariable          tmpDirectory               = new WidgetVariable<String>(    "tmp-directory"                  );
-Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
-assert tmpDirectory != null;
-    WidgetVariable          maxTmpSize                 = new WidgetVariable<String>("",    "max-tmp-size"                   );
-    WidgetVariable          niceLevel                  = new WidgetVariable<Long>(0,      "nice-level"                     );
-    WidgetVariable          maxThreads                 = new WidgetVariable<Long>(0,      "max-threads"                    );
-    WidgetVariable          maxBandWidth               = new WidgetVariable<String>("",    "max-band-width"                 );
-    WidgetVariable          compressMinSize            = new WidgetVariable<String>("",    "compress-min-size"              );
-    WidgetVariable          serverJobsDirectory        = new WidgetVariable<String>("",    "server-jobs-directory"          );
+    WidgetVariable          tmpDirectory               = new WidgetVariable<String >("",   "tmp-directory"                  );
+    WidgetVariable          maxTmpSize                 = new WidgetVariable<String >("",   "max-tmp-size"                   );
+    WidgetVariable          niceLevel                  = new WidgetVariable<Long   >(0,    "nice-level"                     );
+    WidgetVariable          maxThreads                 = new WidgetVariable<Long   >(0,    "max-threads"                    );
+    WidgetVariable          maxBandWidth               = new WidgetVariable<String >("",   "max-band-width"                 );
+    WidgetVariable          compressMinSize            = new WidgetVariable<String >("",   "compress-min-size"              );
+    WidgetVariable          serverJobsDirectory        = new WidgetVariable<String >("",   "server-jobs-directory"          );
 
-    WidgetVariable          indexDatabase              = new WidgetVariable<String >("",    "index-database"                 );
+    WidgetVariable          indexDatabase              = new WidgetVariable<String >("",   "index-database"                 );
     WidgetVariable          indexDatabaseAutoUpdate    = new WidgetVariable<Boolean>(false,"index-database-auto-update"     );
-//    WidgetVariable          indexDatabaseMaxBandWidth  = new WidgetVariable(0,"index-database-max-band-width"  );
-    WidgetVariable          indexDatabaseKeepTime      = new WidgetVariable<String>("",    "index-database-keep-time"       );
+//    WidgetVariable          indexDatabaseMaxBandWidth  = new WidgetVariable<String>("",    "index-database-max-band-width"  );
+    WidgetVariable          indexDatabaseKeepTime      = new WidgetVariable<String >("",   "index-database-keep-time"       );
 
-    WidgetVariable          cdDevice                   = new WidgetVariable<String>("",    "cd-device"                      );
-    WidgetVariable          cdRequestVolumeCommand     = new WidgetVariable<String>("",    "cd-request-volume-command"      );
-    WidgetVariable          cdUnloadCommand            = new WidgetVariable<String>("",    "cd-unload-volume-command"       );
-    WidgetVariable          cdLoadCommand              = new WidgetVariable<String>("",    "cd-load-volume-command"         );
-    WidgetVariable          cdVolumeSize               = new WidgetVariable<String>("",    "cd-volume-size"                 );
-    WidgetVariable          cdImagePreCommand          = new WidgetVariable<String>("",    "cd-image-pre-command"           );
-    WidgetVariable          cdImagePostCommand         = new WidgetVariable<String>("",    "cd-image-post-command"          );
-    WidgetVariable          cdImageCommandCommand      = new WidgetVariable<String>("",    "cd-image-command"               );
-    WidgetVariable          cdECCPreCommand            = new WidgetVariable<String>("",    "cd-ecc-pre-command"             );
-    WidgetVariable          cdECCPostCommand           = new WidgetVariable<String>("",    "cd-ecc-post-command"            );
-    WidgetVariable          cdECCCommand               = new WidgetVariable<String>("",    "cd-ecc-command"                 );
-    WidgetVariable          cdWritePreCommand          = new WidgetVariable<String>("",    "cd-write-pre-command"           );
-    WidgetVariable          cdWritePostCommand         = new WidgetVariable<String>("",    "cd-write-post-command"          );
-    WidgetVariable          cdWriteCommand             = new WidgetVariable<String>("",    "cd-write-command"               );
-    WidgetVariable          cdWriteImageCommand        = new WidgetVariable<String>("",    "cd-write-image-command"         );
+    WidgetVariable          cdDevice                   = new WidgetVariable<String >("",   "cd-device"                      );
+    WidgetVariable          cdRequestVolumeCommand     = new WidgetVariable<String >("",   "cd-request-volume-command"      );
+    WidgetVariable          cdUnloadCommand            = new WidgetVariable<String >("",   "cd-unload-volume-command"       );
+    WidgetVariable          cdLoadCommand              = new WidgetVariable<String >("",   "cd-load-volume-command"         );
+    WidgetVariable          cdVolumeSize               = new WidgetVariable<String >("",   "cd-volume-size"                 );
+    WidgetVariable          cdImagePreCommand          = new WidgetVariable<String >("",   "cd-image-pre-command"           );
+    WidgetVariable          cdImagePostCommand         = new WidgetVariable<String >("",   "cd-image-post-command"          );
+    WidgetVariable          cdImageCommandCommand      = new WidgetVariable<String >("",   "cd-image-command"               );
+    WidgetVariable          cdECCPreCommand            = new WidgetVariable<String >("",   "cd-ecc-pre-command"             );
+    WidgetVariable          cdECCPostCommand           = new WidgetVariable<String >("",   "cd-ecc-post-command"            );
+    WidgetVariable          cdECCCommand               = new WidgetVariable<String >("",   "cd-ecc-command"                 );
+    WidgetVariable          cdWritePreCommand          = new WidgetVariable<String >("",   "cd-write-pre-command"           );
+    WidgetVariable          cdWritePostCommand         = new WidgetVariable<String >("",   "cd-write-post-command"          );
+    WidgetVariable          cdWriteCommand             = new WidgetVariable<String >("",   "cd-write-command"               );
+    WidgetVariable          cdWriteImageCommand        = new WidgetVariable<String >("",   "cd-write-image-command"         );
 
-    WidgetVariable          dvdDevice                  = new WidgetVariable<String>("",    "dvd-device"                     );
-    WidgetVariable          dvdRequestVolumeCommand    = new WidgetVariable<String>("",    "dvd-request-volume-command"     );
-    WidgetVariable          dvdUnloadCommand           = new WidgetVariable<String>("",    "dvd-unload-volume-command"      );
-    WidgetVariable          dvdLoadCommand             = new WidgetVariable<String>("",    "dvd-load-volume-command"        );
-    WidgetVariable          dvdVolumeSize              = new WidgetVariable<String>("",    "dvd-volume-size"                );
-    WidgetVariable          dvdImagePreCommand         = new WidgetVariable<String>("",    "dvd-image-pre-command"          );
-    WidgetVariable          dvdImagePostCommand        = new WidgetVariable<String>("",    "dvd-image-post-command"         );
-    WidgetVariable          dvdImageCommandCommand     = new WidgetVariable<String>("",    "dvd-image-command"              );
-    WidgetVariable          dvdECCPreCommand           = new WidgetVariable<String>("",    "dvd-ecc-pre-command"            );
-    WidgetVariable          dvdECCPostCommand          = new WidgetVariable<String>("",    "dvd-ecc-post-command"           );
-    WidgetVariable          dvdECCCommand              = new WidgetVariable<String>("",    "dvd-ecc-command"                );
-    WidgetVariable          dvdWritePreCommand         = new WidgetVariable<String>("",    "dvd-write-pre-command"          );
-    WidgetVariable          dvdWritePostCommand        = new WidgetVariable<String>("",    "dvd-write-post-command"         );
-    WidgetVariable          dvdWriteCommand            = new WidgetVariable<String>("",    "dvd-write-command"              );
-    WidgetVariable          dvdWriteImageCommand       = new WidgetVariable<String>("",    "dvd-write-image-command"        );
+    WidgetVariable          dvdDevice                  = new WidgetVariable<String >("",   "dvd-device"                     );
+    WidgetVariable          dvdRequestVolumeCommand    = new WidgetVariable<String >("",   "dvd-request-volume-command"     );
+    WidgetVariable          dvdUnloadCommand           = new WidgetVariable<String >("",   "dvd-unload-volume-command"      );
+    WidgetVariable          dvdLoadCommand             = new WidgetVariable<String >("",   "dvd-load-volume-command"        );
+    WidgetVariable          dvdVolumeSize              = new WidgetVariable<String >("",   "dvd-volume-size"                );
+    WidgetVariable          dvdImagePreCommand         = new WidgetVariable<String >("",   "dvd-image-pre-command"          );
+    WidgetVariable          dvdImagePostCommand        = new WidgetVariable<String >("",   "dvd-image-post-command"         );
+    WidgetVariable          dvdImageCommandCommand     = new WidgetVariable<String >("",   "dvd-image-command"              );
+    WidgetVariable          dvdECCPreCommand           = new WidgetVariable<String >("",   "dvd-ecc-pre-command"            );
+    WidgetVariable          dvdECCPostCommand          = new WidgetVariable<String >("",   "dvd-ecc-post-command"           );
+    WidgetVariable          dvdECCCommand              = new WidgetVariable<String >("",   "dvd-ecc-command"                );
+    WidgetVariable          dvdWritePreCommand         = new WidgetVariable<String >("",   "dvd-write-pre-command"          );
+    WidgetVariable          dvdWritePostCommand        = new WidgetVariable<String >("",   "dvd-write-post-command"         );
+    WidgetVariable          dvdWriteCommand            = new WidgetVariable<String >("",   "dvd-write-command"              );
+    WidgetVariable          dvdWriteImageCommand       = new WidgetVariable<String >("",   "dvd-write-image-command"        );
 
-    WidgetVariable          bdDevice                   = new WidgetVariable<String>("",    "bd-device"                      );
-    WidgetVariable          bdRequestVolumeCommand     = new WidgetVariable<String>("",    "bd-request-volume-command"      );
-    WidgetVariable          bdUnloadCommand            = new WidgetVariable<String>("",    "bd-unload-volume-command"       );
-    WidgetVariable          bdLoadCommand              = new WidgetVariable<String>("",    "bd-load-volume-command"         );
-    WidgetVariable          bdVolumeSize               = new WidgetVariable<String>("",    "bd-volume-size"                 );
-    WidgetVariable          bdImagePreCommand          = new WidgetVariable<String>("",    "bd-image-pre-command"           );
-    WidgetVariable          bdImagePostCommand         = new WidgetVariable<String>("",    "bd-image-post-command"          );
-    WidgetVariable          bdImageCommandCommand      = new WidgetVariable<String>("",    "bd-image-command"               );
-    WidgetVariable          bdECCPreCommand            = new WidgetVariable<String>("",    "bd-ecc-pre-command"             );
-    WidgetVariable          bdECCPostCommand           = new WidgetVariable<String>("",    "bd-ecc-post-command"            );
-    WidgetVariable          bdECCCommand               = new WidgetVariable<String>("",    "bd-ecc-command"                 );
-    WidgetVariable          bdWritePreCommand          = new WidgetVariable<String>("",    "bd-write-pre-command"           );
-    WidgetVariable          bdWritePostCommand         = new WidgetVariable<String>("",    "bd-write-post-command"          );
-    WidgetVariable          bdWriteCommand             = new WidgetVariable<String>("",    "bd-write-command"               );
-    WidgetVariable          bdWriteImageCommand        = new WidgetVariable<String>("",    "bd-write-image-command"         );
+    WidgetVariable          bdDevice                   = new WidgetVariable<String >("",   "bd-device"                      );
+    WidgetVariable          bdRequestVolumeCommand     = new WidgetVariable<String >("",   "bd-request-volume-command"      );
+    WidgetVariable          bdUnloadCommand            = new WidgetVariable<String >("",   "bd-unload-volume-command"       );
+    WidgetVariable          bdLoadCommand              = new WidgetVariable<String >("",   "bd-load-volume-command"         );
+    WidgetVariable          bdVolumeSize               = new WidgetVariable<String >("",   "bd-volume-size"                 );
+    WidgetVariable          bdImagePreCommand          = new WidgetVariable<String >("",   "bd-image-pre-command"           );
+    WidgetVariable          bdImagePostCommand         = new WidgetVariable<String >("",   "bd-image-post-command"          );
+    WidgetVariable          bdImageCommandCommand      = new WidgetVariable<String >("",   "bd-image-command"               );
+    WidgetVariable          bdECCPreCommand            = new WidgetVariable<String >("",   "bd-ecc-pre-command"             );
+    WidgetVariable          bdECCPostCommand           = new WidgetVariable<String >("",   "bd-ecc-post-command"            );
+    WidgetVariable          bdECCCommand               = new WidgetVariable<String >("",   "bd-ecc-command"                 );
+    WidgetVariable          bdWritePreCommand          = new WidgetVariable<String >("",   "bd-write-pre-command"           );
+    WidgetVariable          bdWritePostCommand         = new WidgetVariable<String >("",   "bd-write-post-command"          );
+    WidgetVariable          bdWriteCommand             = new WidgetVariable<String >("",   "bd-write-command"               );
+    WidgetVariable          bdWriteImageCommand        = new WidgetVariable<String >("",   "bd-write-image-command"         );
 
-    WidgetVariable          deviceName                 = new WidgetVariable<String>("",    "device-name"                    );
-    WidgetVariable          deviceRequestVolumeCommand = new WidgetVariable<String>("",    "device-request-volume-command"  );
-    WidgetVariable          deviceUnloadCommand        = new WidgetVariable<String>("",    "device-unload-volume-command"   );
-    WidgetVariable          deviceLoadCommand          = new WidgetVariable<String>("",    "device-load-volume-command"     );
-    WidgetVariable          deviceVolumeSize           = new WidgetVariable<String>("",    "device-volume-size"             );
-    WidgetVariable          deviceImagePreCommand      = new WidgetVariable<String>("",    "device-image-pre-command"       );
-    WidgetVariable          deviceImagePostCommand     = new WidgetVariable<String>("",    "device-image-post-command"      );
-    WidgetVariable          deviceImageCommandCommand  = new WidgetVariable<String>("",    "device-image-command"           );
-    WidgetVariable          deviceECCPreCommand        = new WidgetVariable<String>("",    "device-ecc-pre-command"         );
-    WidgetVariable          deviceECCPostCommand       = new WidgetVariable<String>("",    "device-ecc-post-command"        );
-    WidgetVariable          deviceECCCommand           = new WidgetVariable<String>("",    "device-ecc-command"             );
-    WidgetVariable          deviceWritePreCommand      = new WidgetVariable<String>("",    "device-write-pre-command"       );
-    WidgetVariable          deviceWritePostCommand     = new WidgetVariable<String>("",    "device-write-post-command"      );
-    WidgetVariable          deviceWriteCommand         = new WidgetVariable<String>("",    "device-write-command"           );
+    WidgetVariable          deviceName                 = new WidgetVariable<String >("",   "device-name"                    );
+    WidgetVariable          deviceRequestVolumeCommand = new WidgetVariable<String >("",   "device-request-volume-command"  );
+    WidgetVariable          deviceUnloadCommand        = new WidgetVariable<String >("",   "device-unload-volume-command"   );
+    WidgetVariable          deviceLoadCommand          = new WidgetVariable<String >("",   "device-load-volume-command"     );
+    WidgetVariable          deviceVolumeSize           = new WidgetVariable<String >("",   "device-volume-size"             );
+    WidgetVariable          deviceImagePreCommand      = new WidgetVariable<String >("",   "device-image-pre-command"       );
+    WidgetVariable          deviceImagePostCommand     = new WidgetVariable<String >("",   "device-image-post-command"      );
+    WidgetVariable          deviceImageCommandCommand  = new WidgetVariable<String >("",   "device-image-command"           );
+    WidgetVariable          deviceECCPreCommand        = new WidgetVariable<String >("",   "device-ecc-pre-command"         );
+    WidgetVariable          deviceECCPostCommand       = new WidgetVariable<String >("",   "device-ecc-post-command"        );
+    WidgetVariable          deviceECCCommand           = new WidgetVariable<String >("",   "device-ecc-command"             );
+    WidgetVariable          deviceWritePreCommand      = new WidgetVariable<String >("",   "device-write-pre-command"       );
+    WidgetVariable          deviceWritePostCommand     = new WidgetVariable<String >("",   "device-write-post-command"      );
+    WidgetVariable          deviceWriteCommand         = new WidgetVariable<String >("",   "device-write-command"           );
 
-    WidgetVariable          serverPort                 = new WidgetVariable<Long>(0,      "server-port"                    );
-    WidgetVariable          serverTLSPort              = new WidgetVariable<Long>(0,      "server-tls-port"                );
-    WidgetVariable          serverCAFile               = new WidgetVariable<String>("",    "server-ca-file"                 );
-    WidgetVariable          serverCertFile             = new WidgetVariable<String>("",    "server-cert-file"               );
-    WidgetVariable          serverKeyFile              = new WidgetVariable<String>("",    "server-key-file"                );
-    WidgetVariable          serverPassword             = new WidgetVariable<String>("",    "server-password"                );
-    WidgetVariable          servers                    = new WidgetVariable(new HashMap<Integer,String>());
+    WidgetVariable          serverPort                 = new WidgetVariable<Long   >(0,    "server-port"                    );
+    WidgetVariable          serverTLSPort              = new WidgetVariable<Long   >(0,    "server-tls-port"                );
+    WidgetVariable          serverCAFile               = new WidgetVariable<String >("",   "server-ca-file"                 );
+    WidgetVariable          serverCertFile             = new WidgetVariable<String >("",   "server-cert-file"               );
+    WidgetVariable          serverKeyFile              = new WidgetVariable<String >("",   "server-key-file"                );
+    WidgetVariable          serverPassword             = new WidgetVariable<String >("",   "server-password"                );
 
-    WidgetVariable          log                        = new WidgetVariable<String>("",    "log"                            );
-    WidgetVariable          logFile                    = new WidgetVariable<String>("",    "log-file"                       );
-    WidgetVariable          logFormat                  = new WidgetVariable<String>("",    "log-format"                     );
-    WidgetVariable          logPostCommand             = new WidgetVariable<String>("",    "log-post-command"               );
+    WidgetVariable          log                        = new WidgetVariable<String >("",   "log"                            );
+    WidgetVariable          logFile                    = new WidgetVariable<String >("",   "log-file"                       );
+    WidgetVariable          logFormat                  = new WidgetVariable<String >("",   "log-format"                     );
+    WidgetVariable          logPostCommand             = new WidgetVariable<String >("",   "log-post-command"               );
 
-    HashMap<Integer,ServerData> serverDataMap          = new HashMap<Integer,ServerData>();
+//    WidgetVariable          servers                    = new WidgetVariable<HashMap<Integer,ServerSettings.ServerData> >(new HashMap<Integer,ServerSettings.ServerData>());
 
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Server settings"),700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
@@ -425,7 +440,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                      0,
                                      65535
                                     );
-      Widgets.layout(spinner,row,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      Widgets.layout(spinner,row,1,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
       row++;
 
       label = Widgets.newLabel(composite,BARControl.tr("CA file")+":");
@@ -473,7 +488,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       Widgets.layout(text,row,1,TableLayoutData.WE);
       row++;
 
-      label = Widgets.newLabel(composite,BARControl.tr("Servers")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Storage servers")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       row++;
 
@@ -491,7 +506,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       subComposite.setLayout(new TableLayout(1.0,0.0,2));
       Widgets.layout(subComposite,row,0,TableLayoutData.E,0,2);
       {
-        button = Widgets.newButton(subComposite,BARControl.tr("Add"));
+        button = Widgets.newButton(subComposite,BARControl.tr("Add\u2026"));
         Widgets.layout(button,0,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
@@ -500,12 +515,12 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            Button widget = (Button)selectionEvent.widget;
 Dprintf.dprintf("");
+            serverAdd(dialog);
           }
         });
 
-        button = Widgets.newButton(subComposite,BARControl.tr("Clone"));
+        button = Widgets.newButton(subComposite,BARControl.tr("Clone\u2026"));
         Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
@@ -1837,7 +1852,7 @@ Dprintf.dprintf("");
                             ServerTypes.FTP.toString(),
                             "default"
                            );
-    serverDataMap.put(0,serverData);
+//    servers.getValue().put(0,serverData);
     serverData = new ServerData(0,"default",ServerTypes.SSH);
     Widgets.insertTableItem(widgetServerTable,
                             serverDataComparator,
@@ -1845,7 +1860,7 @@ Dprintf.dprintf("");
                             ServerTypes.SSH.toString(),
                             "default"
                            );
-    serverDataMap.put(0,serverData);
+//    servers.getValue().put(0,serverData);
     serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
     Widgets.insertTableItem(widgetServerTable,
                             serverDataComparator,
@@ -1853,7 +1868,7 @@ Dprintf.dprintf("");
                             ServerTypes.WEBDAV.toString(),
                             "default"
                            );
-    serverDataMap.put(0,serverData);
+//    servers.getValue().put(0,serverData);
 
     String[]             resultErrorMessage   = new String[1];
     ArrayList<ValueMap>  resultMapList        = new ArrayList<ValueMap>();
@@ -1878,7 +1893,7 @@ Dprintf.dprintf("");
 
       // create server data
       serverData = new ServerData(id,name,serverType);
-      serverDataMap.put(id,serverData);
+//      servers.value.put(id,serverData);
 
       // add table entry
       Widgets.insertTableItem(widgetServerTable,
@@ -1987,6 +2002,246 @@ Dprintf.dprintf("");
       }
 
     }
+  }
+
+  /**
+   * @param
+   * @return
+   */
+  private static void serverAdd(Shell shell)
+  {
+    ServerData serverData = new ServerData();
+    serverData.type = ServerTypes.FILESYSTEM;
+    if (serverEdit(shell,serverData,BARControl.tr("Add storage server"),BARControl.tr("Add")))
+    {
+Dprintf.dprintf("serverData=%s",serverData);
+    }
+  }
+
+  /**
+   * @param
+   * @return
+   */
+  private static boolean serverEdit(final Shell shell, final ServerData serverData, String title, String okText)
+  {
+    Composite composite,subComposite;
+    Label     label;
+    Button    button;
+
+    final Shell dialog = Dialogs.openModal(shell,title,400,300,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Text       widgetName;
+    final Combo      widgetType;
+    final Text       widgetPathURL;
+    final Text       widgetLoginName;
+    final Spinner    widgetPort;
+    final Text       widgetPassword;
+    final StyledText widgetPublicKey;
+    final StyledText widgetPrivateKey;
+    final Button     widgetOK;
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,0.0,1.0,1.0},new double[]{0.0,1.0},4));
+    Widgets.layout(composite,0,0,TableLayoutData.NSWE,0,0,4);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+      {
+        widgetName = Widgets.newText(subComposite);
+        widgetName.setText(serverData.name);
+        Widgets.layout(widgetName,0,0,TableLayoutData.WE);
+
+        widgetType = Widgets.newCombo(subComposite,SWT.READ_ONLY);
+        Widgets.setComboItems(widgetType,
+                              new Object[]{"filesystem",ServerTypes.FILESYSTEM,
+                                           "ftp",       ServerTypes.FTP,
+                                           "ssh",       ServerTypes.SSH,
+                                           "webdav",    ServerTypes.WEBDAV
+                                          }
+                           );
+        Widgets.setSelectedComboItem(widgetType,serverData.type);
+        Widgets.layout(widgetType,0,1,TableLayoutData.E);
+      }
+
+      label = Widgets.newLabel(composite,BARControl.tr("Path/URL")+":");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+      widgetPathURL = Widgets.newText(composite);
+      widgetPathURL.setText(serverData.name);
+      Widgets.layout(widgetPathURL,1,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Login")+":");
+      Widgets.layout(label,2,0,TableLayoutData.W);
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+      {
+        widgetLoginName = Widgets.newText(subComposite);
+        widgetLoginName.setText(serverData.loginName);
+        widgetLoginName.setEnabled(   (serverData.type == ServerTypes.FTP)
+                                   || (serverData.type == ServerTypes.SSH)
+                                   || (serverData.type == ServerTypes.WEBDAV)
+                                  );
+        Widgets.layout(widgetLoginName,0,0,TableLayoutData.WE);
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Port")+":");
+        Widgets.layout(label,0,1,TableLayoutData.E);
+        widgetPort = Widgets.newSpinner(subComposite);
+        widgetPort.setMinimum(0);
+        widgetPort.setMaximum(65535);
+        widgetPort.setSelection(serverData.port);
+        Widgets.layout(widgetPort,0,2,TableLayoutData.E,0,0,0,0,70,SWT.DEFAULT);
+        Widgets.addModifyListener(new WidgetModifyListener(widgetPort,serverData)
+        {
+          public void modified(Control control)
+          {
+            Widgets.setEnabled(control,
+                                  (serverData.type == ServerTypes.FTP)
+                               || (serverData.type == ServerTypes.SSH)
+                               || (serverData.type == ServerTypes.WEBDAV)
+                              );
+          }
+        });
+      }
+
+      label = Widgets.newLabel(composite,BARControl.tr("New password")+":");
+      Widgets.layout(label,3,0,TableLayoutData.W);
+      widgetPassword = Widgets.newPassword(composite);
+      widgetPassword.setToolTipText(BARControl.tr("New password. Note: existing password is not shown."));
+      Widgets.layout(widgetPassword,3,1,TableLayoutData.WE);
+      Widgets.addModifyListener(new WidgetModifyListener(widgetPassword,serverData)
+      {
+        public void modified(Control control)
+        {
+          Widgets.setEnabled(control,
+                                (serverData.type == ServerTypes.FTP)
+                             || (serverData.type == ServerTypes.SSH)
+                             || (serverData.type == ServerTypes.WEBDAV)
+                            );
+        }
+      });
+
+      label = Widgets.newLabel(composite,BARControl.tr("New public key")+":");
+      Widgets.layout(label,4,0,TableLayoutData.NW);
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,4,1,TableLayoutData.NSWE);
+      {
+        widgetPublicKey = Widgets.newStyledText(subComposite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+        widgetPublicKey.setToolTipText(BARControl.tr("New public key. Note: existing public key is not shown."));
+        Widgets.layout(widgetPublicKey,0,0,TableLayoutData.NSWE);
+        Widgets.addModifyListener(new WidgetModifyListener(widgetPublicKey,serverData)
+        {
+          public void modified(Control control)
+          {
+            Widgets.setEnabled(control,
+                                  (serverData.type == ServerTypes.FTP)
+                               || (serverData.type == ServerTypes.SSH)
+                               || (serverData.type == ServerTypes.WEBDAV)
+                              );
+          }
+        });
+      }
+
+      label = Widgets.newLabel(composite,BARControl.tr("New private key")+":");
+      Widgets.layout(label,5,0,TableLayoutData.NW);
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,5,1,TableLayoutData.NSWE);
+      {
+        widgetPrivateKey = Widgets.newStyledText(subComposite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+        widgetPrivateKey.setToolTipText(BARControl.tr("New private key. Note: existing private key is not shown."));
+        Widgets.layout(widgetPrivateKey,0,0,TableLayoutData.NSWE);
+        Widgets.addModifyListener(new WidgetModifyListener(widgetPrivateKey,serverData)
+        {
+          public void modified(Control control)
+          {
+            Widgets.setEnabled(control,
+                                  (serverData.type == ServerTypes.FTP)
+                               || (serverData.type == ServerTypes.SSH)
+                               || (serverData.type == ServerTypes.WEBDAV)
+                              );
+          }
+        });
+      }
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    {
+      widgetOK = Widgets.newButton(composite,okText);
+      Widgets.layout(widgetOK,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetName.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetOK.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+    widgetType.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Combo widget = (Combo)selectionEvent.widget;
+
+        serverData.type = Widgets.getSelectedComboItem(widget,ServerTypes.FILESYSTEM);
+Dprintf.dprintf("serverData.type=%s",serverData.type);
+        Widgets.modified(serverData);
+      }
+    });
+    widgetOK.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget  = (Button)selectionEvent.widget;
+
+        serverData.name       = widgetName.getText().trim();
+        serverData.pathURL    = widgetPathURL.getText().trim();
+        serverData.loginName  = widgetLoginName.getText();
+        serverData.port       = widgetPort.getSelection();
+        serverData.password   = !widgetPassword.getText().isEmpty() ? widgetPassword.getText() : null;
+        serverData.publicKey  = !widgetPublicKey.getText().trim().isEmpty() ? widgetPublicKey.getText().trim() : null;
+        serverData.privateKey = !widgetPrivateKey.getText().trim().isEmpty() ? widgetPrivateKey.getText().trim() : null;
+
+        Dialogs.close(dialog,true);
+      }
+    });
+
+    widgetName.forceFocus();
+
+    return (Boolean)Dialogs.run(dialog,false);
   }
 }
 
