@@ -805,7 +805,7 @@ public class TabRestore
       }
       else
       {
-        result = archiveType.toString().compareTo(entityIndexData.archiveType.toString());
+        result = archiveType.toString().compareTo(entityIndexData.toString());
       }
 
       return result;

@@ -482,18 +482,24 @@ public class TabJobs
       this.size = 0;
     }
 
+    /** insert in include list, remove from exclude list
+     */
     public void include()
     {
       includeListAdd(new EntryData(EntryTypes.IMAGE,name));
       excludeListRemove(name);
     }
 
+    /** insert in exclude list, remove from include list
+     */
     public void exclude()
     {
       includeListRemove(name);
       excludeListAdd(name);
     }
 
+    /** remove from include list, remove from exclude list
+     */
     public void none()
     {
       includeListRemove(name);
@@ -521,7 +527,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "File {"+name+", "+size+" bytes}";
+      return "Device {"+name+", "+size+" bytes}";
     }
   };
 
@@ -1617,60 +1623,62 @@ public class TabJobs
   private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
 
   // BAR variables
-  private WidgetVariable  hostName                = new WidgetVariable("");
-  private WidgetVariable  hostPort                = new WidgetVariable(0);
-  private WidgetVariable  hostForceSSL            = new WidgetVariable(false);
-  private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
-  private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
-  private WidgetVariable  archivePartSize         = new WidgetVariable(0);
-  private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable(new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
-  private WidgetVariable  deltaSource             = new WidgetVariable("");
-  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable(new String[]{"none",
-                                                                                    "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
-                                                                                    "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
-                                                                                    "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
-                                                                                    "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                                                                    "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
-                                                                                   }
-                                                                      );
-  private WidgetVariable  compressMinSize         = new WidgetVariable(0);
-  private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
-  private WidgetVariable  cryptType               = new WidgetVariable(new String[]{"none","symmetric","asymmetric"});
-  private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable("");
-  private WidgetVariable  cryptPasswordMode       = new WidgetVariable(new String[]{"default","ask","config"});
-  private WidgetVariable  cryptPassword           = new WidgetVariable("");
-  private WidgetVariable  incrementalListFileName = new WidgetVariable("");
-  private WidgetVariable  storageType             = new WidgetVariable(new String[]{"filesystem",
-                                                                                    "ftp",
-                                                                                    "scp",
-                                                                                    "sftp",
-                                                                                    "webdav",
-                                                                                    "cd",
-                                                                                    "dvd",
-                                                                                    "bd",
-                                                                                    "device"}
-                                                                                   );
-  private WidgetVariable  storageHostName         = new WidgetVariable("");
-  private WidgetVariable  storageHostPort         = new WidgetVariable(0);
-  private WidgetVariable  storageLoginName        = new WidgetVariable("");
-  private WidgetVariable  storageLoginPassword    = new WidgetVariable("");
-  private WidgetVariable  storageDeviceName       = new WidgetVariable("");
-  private WidgetVariable  storageFileName         = new WidgetVariable("");
-  private WidgetVariable  mountDeviceName         = new WidgetVariable("");
-  private WidgetVariable  maxStorageSize          = new WidgetVariable(0);
-  private WidgetVariable  archiveFileMode         = new WidgetVariable("stop");
-  private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable("");
-  private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable("");
-  private WidgetVariable  maxBandWidthFlag        = new WidgetVariable(false);
-  private WidgetVariable  maxBandWidth            = new WidgetVariable(0);
-  private WidgetVariable  volumeSize              = new WidgetVariable(0);
-  private WidgetVariable  ecc                     = new WidgetVariable(false);
-  private WidgetVariable  waitFirstVolume         = new WidgetVariable(false);
-  private WidgetVariable  skipUnreadable          = new WidgetVariable(false);
-  private WidgetVariable  rawImages               = new WidgetVariable(false);
-  private WidgetVariable  overwriteFiles          = new WidgetVariable(false);
-  private WidgetVariable  preCommand              = new WidgetVariable("");
-  private WidgetVariable  postCommand             = new WidgetVariable("");
+  private WidgetVariable  hostName                = new WidgetVariable<String>("");
+  private WidgetVariable  hostPort                = new WidgetVariable<Long>(0);
+  private WidgetVariable  hostForceSSL            = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  archiveType             = new WidgetVariable<String>("normal",new String[]{"normal","full","incremental","differential"});
+  private WidgetVariable  archivePartSizeFlag     = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  archivePartSize         = new WidgetVariable<Long>(0);
+  private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String>("none",new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
+  private WidgetVariable  deltaSource             = new WidgetVariable<String>("");
+  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable<String>("none",
+                                                                             new String[]{"none",
+                                                                                          "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
+                                                                                          "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
+                                                                                          "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
+                                                                                          "lzo1","lzo2","lzo3","lzo4","lzo5",
+                                                                                          "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
+                                                                                         }
+                                                                            );
+  private WidgetVariable  compressMinSize         = new WidgetVariable<Long>(0);
+  private WidgetVariable  cryptAlgorithm          = new WidgetVariable<Enum>(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
+  private WidgetVariable  cryptType               = new WidgetVariable<Enum>(new String[]{"none","symmetric","asymmetric"});
+  private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable<String>("");
+  private WidgetVariable  cryptPasswordMode       = new WidgetVariable<String>("default",new String[]{"default","ask","config"});
+  private WidgetVariable  cryptPassword           = new WidgetVariable<String>("");
+  private WidgetVariable  incrementalListFileName = new WidgetVariable<String>("");
+  private WidgetVariable  storageType             = new WidgetVariable<String>("filesystem",
+                                                                             new String[]{"filesystem",
+                                                                                          "ftp",
+                                                                                          "scp",
+                                                                                          "sftp",
+                                                                                          "webdav",
+                                                                                          "cd",
+                                                                                          "dvd",
+                                                                                          "bd",
+                                                                                          "device"}
+                                                                                         );
+  private WidgetVariable  storageHostName         = new WidgetVariable<String>("");
+  private WidgetVariable  storageHostPort         = new WidgetVariable<Long>(0);
+  private WidgetVariable  storageLoginName        = new WidgetVariable<String>("");
+  private WidgetVariable  storageLoginPassword    = new WidgetVariable<String>("");
+  private WidgetVariable  storageDeviceName       = new WidgetVariable<String>("");
+  private WidgetVariable  storageFileName         = new WidgetVariable<String>("");
+  private WidgetVariable  mountDeviceName         = new WidgetVariable<String>("");
+  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>(0);
+  private WidgetVariable  archiveFileMode         = new WidgetVariable<String>("stop",new String[]{"stop","overwrite","append"});
+  private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String>("");
+  private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable<String>("");
+  private WidgetVariable  maxBandWidthFlag        = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>(0);
+  private WidgetVariable  volumeSize              = new WidgetVariable<Long>(0);
+  private WidgetVariable  ecc                     = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  skipUnreadable          = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  rawImages               = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  overwriteFiles          = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  preCommand              = new WidgetVariable<String>("");
+  private WidgetVariable  postCommand             = new WidgetVariable<String>("");
 
   // variables
   private DirectoryInfoThread          directoryInfoThread;
@@ -3586,7 +3594,7 @@ Dprintf.dprintf("");
               Combo  widget = (Combo)selectionEvent.widget;
               String string = widget.getText();
               deltaCompressAlgorithm.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
+              BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,deltaCompressAlgorithm));
@@ -3615,7 +3623,7 @@ Dprintf.dprintf("");
               Combo  widget = (Combo)selectionEvent.widget;
               String string = widget.getText();
               byteCompressAlgorithm.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
+              BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
@@ -3777,7 +3785,7 @@ Dprintf.dprintf("");
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeList,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeList,deltaCompressAlgorithm,byteCompressAlgorithm)
           {
             public void modified(Control control, WidgetVariable[] compressAlgorithms)
             {
@@ -3903,7 +3911,7 @@ Dprintf.dprintf("");
             widgetCompressExcludeListInsert = Widgets.newButton(subComposite,BARControl.tr("Add\u2026"));
             widgetCompressExcludeListInsert.setToolTipText(BARControl.tr("Add entry to compress exclude list."));
             Widgets.layout(widgetCompressExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListInsert,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
+            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListInsert,deltaCompressAlgorithm,byteCompressAlgorithm)
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
               {
@@ -3928,7 +3936,7 @@ Dprintf.dprintf("");
             widgetCompressExcludeListEdit = Widgets.newButton(subComposite,BARControl.tr("Edit\u2026"));
             widgetCompressExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in compress exclude list."));
             Widgets.layout(widgetCompressExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListEdit,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
+            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListEdit,deltaCompressAlgorithm,byteCompressAlgorithm)
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
               {
@@ -3953,7 +3961,7 @@ Dprintf.dprintf("");
             widgetCompressExcludeListRemove = Widgets.newButton(subComposite,BARControl.tr("Remove\u2026"));
             widgetCompressExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from compress exclude list."));
             Widgets.layout(widgetCompressExcludeListRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListRemove,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
+            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListRemove,deltaCompressAlgorithm,byteCompressAlgorithm)
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
               {
@@ -4077,7 +4085,7 @@ Dprintf.dprintf("");
           text = Widgets.newText(composite);
           text.setToolTipText(BARControl.tr("Public key file used for asymmetric encryption."));
           Widgets.layout(text,0,4,TableLayoutData.WE);
-          Widgets.addModifyListener(new WidgetModifyListener(text,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(text,cryptAlgorithm,cryptType)
           {
             public void modified(Control control, WidgetVariable cryptAlgorithm)
             {
@@ -4134,7 +4142,7 @@ Dprintf.dprintf("");
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
           button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
           Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
-          Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm,cryptType)
           {
             public void modified(Control control, WidgetVariable cryptAlgorithm)
             {
@@ -4198,7 +4206,7 @@ Dprintf.dprintf("");
           button = Widgets.newRadio(composite,BARControl.tr("default"));
           button.setToolTipText(BARControl.tr("Use default password from configuration file for encryption."));
           Widgets.layout(button,0,0,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm,cryptType)
           {
             public void modified(Control control, WidgetVariable variables[])
             {
@@ -4231,7 +4239,7 @@ Dprintf.dprintf("");
           button = Widgets.newRadio(composite,BARControl.tr("ask"));
           button.setToolTipText(BARControl.tr("Input password for encryption."));
           Widgets.layout(button,0,1,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm,cryptType)
           {
             public void modified(Control control, WidgetVariable variables[])
             {
@@ -4264,7 +4272,7 @@ Dprintf.dprintf("");
           button = Widgets.newRadio(composite,BARControl.tr("this"));
           button.setToolTipText(BARControl.tr("Use specified password for encryption."));
           Widgets.layout(button,0,2,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm,cryptType)
           {
             public void modified(Control control, WidgetVariable variables[])
             {
@@ -4297,7 +4305,7 @@ Dprintf.dprintf("");
           widgetCryptPassword1 = Widgets.newPassword(composite);
           widgetCryptPassword1.setToolTipText(BARControl.tr("Password used for encryption."));
           Widgets.layout(widgetCryptPassword1,0,3,TableLayoutData.WE);
-          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,cryptAlgorithm,cryptType,cryptPasswordMode)
           {
             public void modified(Control control, WidgetVariable variables[])
             {
@@ -4363,7 +4371,7 @@ Dprintf.dprintf("");
           widgetCryptPassword2 = Widgets.newPassword(composite);
           widgetCryptPassword1.setToolTipText(BARControl.tr("Password used for encryption."));
           Widgets.layout(widgetCryptPassword2,0,5,TableLayoutData.WE);
-          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,cryptAlgorithm,cryptType,cryptPasswordMode)
           {
             public void modified(Control control, WidgetVariable[] variables)
             {
@@ -5272,7 +5280,7 @@ Dprintf.dprintf("");
                   Combo  widget = (Combo)selectionEvent.widget;
                   String string = Widgets.getSelectedComboItem(widget,"stop");
                   archiveFileMode.set(string);
-                  BARServer.setJobOption(selectedJobData.uuid,"archive-file-mode",archiveFileMode.toString());
+                  BARServer.setJobOption(selectedJobData.uuid,"archive-file-mode",archiveFileMode.getString());
                 }
               });
               Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)

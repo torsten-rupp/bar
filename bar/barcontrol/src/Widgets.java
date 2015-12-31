@@ -97,53 +97,120 @@ import org.eclipse.swt.events.PaintEvent;
 
 /****************************** Classes ********************************/
 
-/** widget variable types
- */
-enum WidgetVariableTypes
-{
-  BOOLEAN,
-  LONG,
-  DOUBLE,
-  STRING,
-  ENUMERATION,
-  OBJECT,
-UNKNOWN,
-};
-
 /** widget variable
  */
 class WidgetVariable<T>
 {
-  private final String        name;
-  private WidgetVariableTypes type;
-  private boolean             b;
-  private long                l;
-  private double              d;
-  private String              string;
-  private String              enumeration[];
-  private Object              object;
-  private T                   value;
+  private final String name;
+  private final Class  type;
+  private T            value;      // value
+  private String[]     values;     // possible values or null
+
+  /** get widget variable instance
+   * @param object value
+   * @param name name
+   * @return instance of widget variable
+   */
+  public static WidgetVariable getInstance(Object object, String name)
+  {
+    WidgetVariable widgetVariable;
+
+    if      (object instanceof Boolean)
+    {
+      widgetVariable = new WidgetVariable<Boolean>((Boolean)object,name);
+    }
+    else if (object instanceof Long)
+    {
+      widgetVariable = new WidgetVariable<Long>((Long)object,name);
+    }
+    else if (object instanceof Double)
+    {
+      widgetVariable = new WidgetVariable<Double>((Double)object,name);
+    }
+    else if (object instanceof String)
+    {
+      widgetVariable = new WidgetVariable<String>((String)object,name);
+    }
+    else if (object instanceof Enum)
+    {
+      widgetVariable = new WidgetVariable<Enum>((Enum)object,name);
+    }
+    else
+    {
+      throw new Error("Unsupported type "+object.getClass());
+    }
+
+    return widgetVariable;
+  }
+
+  /** get widget variable instance
+   * @param object value
+   * @return instance of widget variable
+   */
+  public static WidgetVariable getInstance(Object object)
+  {
+    return getInstance(object,(String)null);
+  }
+
+  /** create widget variable
+   * @param value value
+   * @param name name
+   * @param values values
+   */
+  WidgetVariable(T value, String name, Object values)
+  {
+    this.name = name;
+    this.type = value.getClass();
+    this.value = value;
+  }
 
   /** create widget variable
    * @param value value
    * @param name name
    */
-/*
-  WidgetVariable(String name)
+  WidgetVariable(T value, String name)
   {
-Dprintf.dprintf("name=%s",name);
-    this.name = name;
-this.type = WidgetVariableTypes.UNKNOWN;
-  }*/
+    this(value,name,(Object)null);
+  }
+
+  /** create widget variable
+   * @param value value
+   * @param values values
+   */
+  WidgetVariable(T value, Object values)
+  {
+    this(value,(String)null,values);
+  }
+
+  /** create widget variable
+   * @param value value
+   */
+  WidgetVariable(T value)
+  {
+    this(value,(String)null,(Object)null);
+  }
+
+  /** create widget variable
+   * @param value value
+   * @param name name
+   * @param values values
+   */
+  WidgetVariable(String value, String name, String[] values)
+  {
+    this.name   = name;
+    this.type   = String.class;
+    this.value  = (T)new String(value);
+    this.values = values;
+  }
 
   /** create widget variable
    * @param b/l/d/string/enumeration value
    */
   WidgetVariable(boolean b, String name)
   {
-    this.name = name;
-    this.type = WidgetVariableTypes.BOOLEAN;
-    this.b    = b;
+    this.name  = name;
+    this.type  = Boolean.class;
+    this.value = (T)new Boolean(b);
   }
   WidgetVariable(boolean b)
   {
@@ -151,9 +218,9 @@ this.type = WidgetVariableTypes.UNKNOWN;
   }
   WidgetVariable(long l, String name)
   {
-    this.name = name;
-    this.type = WidgetVariableTypes.LONG;
-    this.l    = l;
+    this.name  = name;
+    this.type  = Long.class;
+    this.value = (T)new Long(l);
   }
   WidgetVariable(long l)
   {
@@ -161,74 +228,24 @@ this.type = WidgetVariableTypes.UNKNOWN;
   }
   WidgetVariable(double d, String name)
   {
-    this.name = name;
-    this.type = WidgetVariableTypes.DOUBLE;
-    this.d    = d;
+    this.name  = name;
+    this.type  = Double.class;
+    this.value = (T)new Double(d);
   }
   WidgetVariable(double d)
   {
     this(d,(String)null);
   }
-  WidgetVariable(String string, String name)
-  {
-    this.name = name;
-    this.type   = WidgetVariableTypes.STRING;
-    this.string = string;
-  }
-/*
-  WidgetVariable(String string)
-  {
-    this(string,(String)null);
-  }*/
   WidgetVariable(String enumeration[], String name)
   {
-    this.name = name;
-    this.type        = WidgetVariableTypes.ENUMERATION;
-    this.enumeration = enumeration;
+    this.name   = name;
+    this.type   = Enum.class;
+    this.value  = (T)new String();//new String(value);
+    this.values = enumeration;
   }
   WidgetVariable(String enumeration[])
   {
     this(enumeration,(String)null);
-  }
-  WidgetVariable(Object object, String name)
-  {
-Dprintf.dprintf("");
-    this.name   = name;
-    if      (object instanceof Boolean)
-    {
-      this.type   = WidgetVariableTypes.BOOLEAN;
-      this.b      = (Boolean)object;
-    }
-    else if (object instanceof Long)
-    {
-      this.type   = WidgetVariableTypes.LONG;
-      this.l      = (Long)object;
-    }
-    else if (object instanceof Double)
-    {
-      this.type   = WidgetVariableTypes.DOUBLE;
-      this.d      = (Double)object;
-    }
-    else if (object instanceof String)
-    {
-      this.type   = WidgetVariableTypes.STRING;
-      this.string = (String)object;
-    }
-    else if (object instanceof Enum)
-    {
-      this.type   = WidgetVariableTypes.ENUMERATION;
-//      this.enumeration = (Enum)object;
-    }
-    else
-    {
-      this.type   = WidgetVariableTypes.OBJECT;
-      this.object = object;
-    }
-  }
-  WidgetVariable(Object object)
-  {
-    this(object,(String)null);
-Dprintf.dprintf("");
   }
 
   /** get variable name
@@ -242,17 +259,33 @@ Dprintf.dprintf("");
   /** get variable type
    * @return type
    */
-  WidgetVariableTypes getType()
+  Class getType()
   {
     return type;
   }
 
-  /** get class
-   * @return class
+  /** get value
+   * @return value
    */
-  Class getClassType()
+  T getValue()
   {
-    return value.getClass();
+    return value;
+  }
+
+  /** set value
+   * @param value value
+   * @return true iff changed
+   */
+  boolean set(T value)
+  {
+    boolean changedFlag;
+
+    changedFlag = (!this.value.equals(value));
+
+    this.value = value;
+    Widgets.modified(this);
+
+    return changedFlag;
   }
 
   /** get boolean value
@@ -260,9 +293,9 @@ Dprintf.dprintf("");
    */
   boolean getBoolean()
   {
-    assert type == WidgetVariableTypes.BOOLEAN;
+    assert type == Boolean.class;
 
-    return b;
+    return (Boolean)value;
   }
 
   /** get long value
@@ -270,9 +303,9 @@ Dprintf.dprintf("");
    */
   long getLong()
   {
-    assert type == WidgetVariableTypes.LONG;
+    assert type == Long.class;
 
-    return l;
+    return (Long)value;
   }
 
   /** get double value
@@ -280,9 +313,9 @@ Dprintf.dprintf("");
    */
   double getDouble()
   {
-    assert type == WidgetVariableTypes.DOUBLE;
+    assert type == Double.class;
 
-    return d;
+    return (Double)value;
   }
 
   /** get string value
@@ -290,24 +323,24 @@ Dprintf.dprintf("");
    */
   String getString()
   {
-    assert (type == WidgetVariableTypes.STRING) || (type == WidgetVariableTypes.ENUMERATION);
+    assert (type == String.class) || (type == Enum.class);
 
-    return string;
+    return (String)value;
   }
 
   /** set boolean value
-   * @param b value
+   * @param value value
    * @return true iff changed
    */
-  boolean set(boolean b)
+  boolean set(boolean value)
   {
     boolean changedFlag;
 
-    assert type == WidgetVariableTypes.BOOLEAN;
+    assert type == Boolean.class;
 
-    changedFlag = (this.b != b);
+    changedFlag = ((Boolean)this.value != value);
 
-    this.b = b;
+    this.value = (T)new Boolean(value);
     Widgets.modified(this);
 
     return changedFlag;
@@ -317,69 +350,67 @@ Dprintf.dprintf("");
    * @param l value
    * @return true iff changed
    */
-  boolean set(long l)
+  boolean set(long value)
   {
     boolean changedFlag;
 
-    assert type == WidgetVariableTypes.LONG;
+    assert type == Long.class;
 
-    changedFlag = (this.l != l);
+    changedFlag = ((Long)this.value != value);
 
-    this.l = l;
+    this.value = (T)new Long(value);
     Widgets.modified(this);
 
     return changedFlag;
   }
 
   /** set double value
-   * @param d value
+   * @param value value
    * @return true iff changed
    */
-  boolean set(double d)
+  boolean set(double value)
   {
     boolean changedFlag;
 
-    assert type == WidgetVariableTypes.DOUBLE;
+    assert type == Double.class;
 
-    changedFlag = (this.d != d);
+    changedFlag = ((Double)this.value != value);
 
-    this.d = d;
+    this.value = (T)new Double(value);
     Widgets.modified(this);
 
     return changedFlag;
   }
 
   /** set string value
-   * @param string value
+   * @param value value
    * @return true iff changed
    */
-  boolean set(String string)
+  boolean set(String value)
   {
     boolean changedFlag = false;
 
-    assert (type == WidgetVariableTypes.STRING) || (type == WidgetVariableTypes.ENUMERATION);
+    assert (type == String.class) || (type == Enum.class);
 
-    switch (type)
+    if      (type == String.class)
     {
-      case STRING:
-        changedFlag = (this.string != string);
+      changedFlag = ((String)this.value != value);
 
-        this.string = string;
-        Widgets.modified(this);
-        break;
-      case ENUMERATION:
-        for (String s : enumeration)
+      this.value = (T)new String(value);
+      Widgets.modified(this);
+    }
+    else if (type == Enum.class)
+    {
+      for (Object v : values)
+      {
+        if (((String)v).equals(value))
         {
-          if (s.equals(string))
-          {
-            changedFlag = (this.string != string);
+          changedFlag = ((String)this.value != value);
 
-            this.string = string;
-            Widgets.modified(this);
-            break;
-          }
+          this.value = (T)new String(value);
+          Widgets.modified(this);
         }
-        break;
+      }
     }
 
     return changedFlag;
@@ -391,17 +422,24 @@ Dprintf.dprintf("");
    */
   public boolean equals(String value)
   {
-    String s = toString();
+    String s;
+    if      (type == Boolean.class) s = ((Boolean)this.value).toString();
+    else if (type == Long.class   ) s = ((Long   )this.value).toString();
+    else if (type == Double.class ) s = ((Double )this.value).toString();
+    else if (type == String.class ) s = (String)this.value;
+    else if (type == Enum.class   ) s = (String)this.value;
+    else                            s = (this.value != null) ? this.value.toString() : "";
+
     return (s != null) ? s.equals(value) : (value == null);
   }
 
   /** compare object reference
-   * @param object object  to compare with
+   * @param value object to compare with
    * @return true iff equal
    */
-  public boolean equals(Object object)
+  public boolean equals(Object value)
   {
-    return this.object == object;
+    return this.value == value;
   }
 
   /** convert to string
@@ -409,25 +447,7 @@ Dprintf.dprintf("");
    */
   public String toString()
   {
-    switch (type)
-    {
-      case BOOLEAN:     return Boolean.toString(b);
-      case LONG:        return Long.toString(l);
-      case DOUBLE:      return Double.toString(d);
-      case STRING:      return string;
-      case ENUMERATION: return string;
-      case OBJECT:      return object.toString();
-    }
-    return "";
-  }
-
-  /** convert to string
-   * @return string
-   */
-//TODO
-  public String toString2()
-  {
-    return "WidgetVariable {"+name+", "+type.toString()+"}";
+    return "WidgetVariable {"+name+", "+type.toString()+", "+value+"}";
   }
 }
 
@@ -462,11 +482,8 @@ class WidgetModifyListener
    * @param widget widget
    * @param variable widget variable
    */
-  WidgetModifyListener(Widget widget, WidgetVariable[] variables)
+  WidgetModifyListener(Widget widget, WidgetVariable... variables)
   {
-    assert variables != null;
-    assert variables[0] != null;
-
     this.widget    = widget;
     this.variables = variables;
   }
@@ -477,20 +494,48 @@ class WidgetModifyListener
    */
   WidgetModifyListener(Widget widget, Object object)
   {
-    this(widget,new WidgetVariable(object));
+    WidgetVariable widgetVariable;
+    if      (object instanceof Boolean)
+    {
+      widgetVariable = new WidgetVariable<Boolean>((Boolean)object);
+    }
+    else if (object instanceof Long)
+    {
+      widgetVariable = new WidgetVariable<Long>((Long)object);
+    }
+    else if (object instanceof Double)
+    {
+      widgetVariable = new WidgetVariable<Double>((Double)object);
+    }
+    else if (object instanceof String)
+    {
+      widgetVariable = new WidgetVariable<String>((String)object);
+    }
+    else if (object instanceof Enum)
+    {
+      widgetVariable = new WidgetVariable<Enum>((Enum)object);
+    }
+    else
+    {
+      throw new Error("Unsupported type "+object.getClass());
+    }
+
+    this.widget       = widget;
+    this.variables    = new WidgetVariable[1];
+    this.variables[0] = WidgetVariable.getInstance(object);
   }
 
   /** create widget listener
    * @param widget widget
    * @param objects objects
    */
-  WidgetModifyListener(Widget widget, Object[] objects)
+  WidgetModifyListener(Widget widget, Object... objects)
   {
     this.widget    = widget;
     this.variables = new WidgetVariable[objects.length];
     for (int i = 0; i < objects.length; i++)
     {
-      this.variables[i] = new WidgetVariable(objects[i]);
+      this.variables[i] = WidgetVariable.getInstance(objects[i]);
     }
   }
 
@@ -557,12 +602,9 @@ assert variable != null;
       String text = getString(variable);
       if (text == null)
       {
-        switch (variable.getType())
-        {
-          case LONG:   text = Long.toString(variable.getLong()); break;
-          case DOUBLE: text = Double.toString(variable.getDouble()); break;
-          case STRING: text = variable.getString(); break;
-        }
+        if      (variable.getType() == Long.class  ) text = Long.toString(variable.getLong());
+        else if (variable.getType() == Double.class) text = Double.toString(variable.getDouble());
+        else if (variable.getType() == String.class) text = variable.getString();
       }
       if ((text != null) && !text.equals(cachedText))
       {
@@ -584,12 +626,9 @@ assert variable != null;
         String text = getString(variable);
         if (text == null)
         {
-          switch (variable.getType())
-          {
-            case LONG:   text = Long.toString(variable.getLong()); break;
-            case DOUBLE: text = Double.toString(variable.getDouble()); break;
-            case STRING: text = variable.getString(); break;
-          }
+          if      (variable.getType() == Long.class  ) text = Long.toString(variable.getLong());
+          else if (variable.getType() == Double.class) text = Double.toString(variable.getDouble());
+          else if (variable.getType() == String.class) text = variable.getString();
         }
         if ((text != null) && !text.equals(cachedText))
         {
@@ -605,23 +644,17 @@ assert variable != null;
       else if ((widgetButton.getStyle() & SWT.CHECK) == SWT.CHECK)
       {
         boolean selection = false;
-        switch (variable.getType())
-        {
-          case BOOLEAN: selection = variable.getBoolean(); break;
-          case LONG:    selection = (variable.getLong() != 0); break;
-          case DOUBLE:  selection = (variable.getDouble() != 0); break;
-        }
+        if      (variable.getType() == Boolean.class) selection = variable.getBoolean();
+        else if (variable.getType() == Long.class   ) selection = (variable.getLong() != 0);
+        else if (variable.getType() == Double.class ) selection = (variable.getDouble() != 0);
         widgetButton.setSelection(selection);
       }
       else if ((widgetButton.getStyle() & SWT.RADIO) == SWT.RADIO)
       {
         boolean selection = false;
-        switch (variable.getType())
-        {
-          case BOOLEAN: selection = variable.getBoolean(); break;
-          case LONG:    selection = (variable.getLong() != 0); break;
-          case DOUBLE:  selection = (variable.getDouble() != 0); break;
-        }
+        if      (variable.getType() == Boolean.class) selection = variable.getBoolean();
+        else if (variable.getType() == Long.class   ) selection = (variable.getLong() != 0);
+        else if (variable.getType() == Double.class ) selection = (variable.getDouble() != 0);
         widgetButton.setSelection(selection);
       }
     }
@@ -632,14 +665,11 @@ assert variable != null;
       String text = getString(variable);
       if (text == null)
       {
-        switch (variable.getType())
-        {
-          case BOOLEAN:     text = Boolean.toString(variable.getBoolean()); break;
-          case LONG:        text = Long.toString(variable.getLong()); break;
-          case DOUBLE:      text = Double.toString(variable.getDouble()); break;
-          case STRING:      text = variable.getString(); break;
-          case ENUMERATION: text = variable.getString(); break;
-        }
+        if      (variable.getType() == Boolean.class) text = Boolean.toString(variable.getBoolean());
+        else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+        else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+        else if (variable.getType() == String.class ) text = variable.getString();
+        else if (variable.getType() == Enum.class   ) text = variable.getString();
       }
       if ((text != null) && !text.equals(cachedText))
       {
@@ -659,12 +689,9 @@ assert variable != null;
       String text = getString(variable);
       if (text == null)
       {
-        switch (variable.getType())
-        {
-          case LONG:   text = Long.toString(variable.getLong()); break;
-          case DOUBLE: text = Double.toString(variable.getDouble()); break;
-          case STRING: text = variable.getString(); break;
-        }
+        if      (variable.getType() == Long.class  ) text = Long.toString(variable.getLong());
+        else if (variable.getType() == Double.class) text = Double.toString(variable.getDouble());
+        else if (variable.getType() == String.class) text = variable.getString();
       }
       if ((text != null) && !text.equals(cachedText))
       {
@@ -684,12 +711,9 @@ assert variable != null;
       String text = getString(variable);
       if (text == null)
       {
-        switch (variable.getType())
-        {
-          case LONG:   text = Long.toString(variable.getLong()); break;
-          case DOUBLE: text = Double.toString(variable.getDouble()); break;
-          case STRING: text = variable.getString(); break;
-        }
+        if      (variable.getType() == Long.class  ) text = Long.toString(variable.getLong());
+        else if (variable.getType() == Double.class) text = Double.toString(variable.getDouble());
+        else if (variable.getType() == String.class) text = variable.getString();
       }
       if ((text != null) && !text.equals(cachedText))
       {
@@ -706,49 +730,36 @@ assert variable != null;
     {
       Spinner widgetSpinner = (Spinner)widget;
 
-      int n = 0;
-      switch (variable.getType())
-      {
-        case LONG:   n = (int)variable.getLong(); break;
-        case DOUBLE: n = (int)variable.getDouble(); break;
-      }
-Dprintf.dprintf("widgetSpinner %s",widgetSpinner);
-      widgetSpinner.setSelection(n);
+      int value = 0;
+      if      (variable.getType() == Long.class  ) value = (int)variable.getLong();
+      else if (variable.getType() == Double.class) value = (int)variable.getDouble();
+      widgetSpinner.setSelection(value);
     }
     else if (widget instanceof Slider)
     {
       Slider widgetSlider = (Slider)widget;
 
-      int n = 0;
-      switch (variable.getType())
-      {
-        case LONG:   n = (int)variable.getLong(); break;
-        case DOUBLE: n = (int)variable.getDouble(); break;
-      }
-      widgetSlider.setSelection(n);
+      int value = 0;
+      if      (variable.getType() == Long.class  ) value = (int)variable.getLong();
+      else if (variable.getType() == Double.class) value = (int)variable.getDouble();
+      widgetSlider.setSelection(value);
     }
     else if (widget instanceof Scale)
     {
       Scale widgetScale = (Scale)widget;
 
-      int n = 0;
-      switch (variable.getType())
-      {
-        case LONG:   n = (int)variable.getLong(); break;
-        case DOUBLE: n = (int)variable.getDouble(); break;
-      }
-      widgetScale.setSelection(n);
+      int value = 0;
+      if      (variable.getType() == Long.class  ) value = (int)variable.getLong();
+      else if (variable.getType() == Double.class) value = (int)variable.getDouble();
+      widgetScale.setSelection(value);
     }
     else if (widget instanceof ProgressBar)
     {
       ProgressBar widgetProgressBar = (ProgressBar)widget;
 
-      double value = 0;
-      switch (variable.getType())
-      {
-        case LONG:   value = (double)variable.getLong(); break;
-        case DOUBLE: value = variable.getDouble(); break;
-      }
+      double value = 0.0;
+      if      (variable.getType() == Long.class  ) value = (double)variable.getLong();
+      else if (variable.getType() == Double.class) value = variable.getDouble();
       widgetProgressBar.setSelection(value);
     }
     else if (widget instanceof MenuItem)

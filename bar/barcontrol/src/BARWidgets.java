@@ -493,6 +493,7 @@ public class BARWidgets
     combo = Widgets.newCombo(parentComposite);
     combo.setToolTipText(toolTipText);
     combo.setItems(values);
+Dprintf.dprintf("widgetVariable=%s",widgetVariable);
     combo.setText(widgetVariable.getString());
     combo.setData("showedErrorDialog",false);
 

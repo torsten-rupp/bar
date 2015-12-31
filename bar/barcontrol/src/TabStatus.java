@@ -381,32 +381,32 @@ public class TabStatus
   public  Button      widgetButtonQuit;
 
   // BAR variables
-  private WidgetVariable doneEntries           = new WidgetVariable(0);
-  private WidgetVariable doneBytes             = new WidgetVariable(0);
-  private WidgetVariable storageTotalBytes     = new WidgetVariable(0);
-  private WidgetVariable skippedEntries        = new WidgetVariable(0);
-  private WidgetVariable skippedBytes          = new WidgetVariable(0);
-  private WidgetVariable errorEntries          = new WidgetVariable(0);
-  private WidgetVariable errorBytes            = new WidgetVariable(0);
-  private WidgetVariable totalEntries          = new WidgetVariable(0);
-  private WidgetVariable totalBytes            = new WidgetVariable(0);
+  private WidgetVariable doneEntries           = new WidgetVariable<Long>(0);
+  private WidgetVariable doneBytes             = new WidgetVariable<Long>(0);
+  private WidgetVariable storageTotalBytes     = new WidgetVariable<Long>(0);
+  private WidgetVariable skippedEntries        = new WidgetVariable<Long>(0);
+  private WidgetVariable skippedBytes          = new WidgetVariable<Long>(0);
+  private WidgetVariable errorEntries          = new WidgetVariable<Long>(0);
+  private WidgetVariable errorBytes            = new WidgetVariable<Long>(0);
+  private WidgetVariable totalEntries          = new WidgetVariable<Long>(0);
+  private WidgetVariable totalBytes            = new WidgetVariable<Long>(0);
 
-  private WidgetVariable filesPerSecond        = new WidgetVariable(0.0);
-  private WidgetVariable bytesPerSecond        = new WidgetVariable(0.0);
-  private WidgetVariable storageBytesPerSecond = new WidgetVariable(0.0);
-  private WidgetVariable compressionRatio      = new WidgetVariable(0.0);
+  private WidgetVariable filesPerSecond        = new WidgetVariable<Double>(0.0);
+  private WidgetVariable bytesPerSecond        = new WidgetVariable<Double>(0.0);
+  private WidgetVariable storageBytesPerSecond = new WidgetVariable<Double>(0.0);
+  private WidgetVariable compressionRatio      = new WidgetVariable<Double>(0.0);
 
-  private WidgetVariable fileName              = new WidgetVariable("");
-  private WidgetVariable fileProgress          = new WidgetVariable(0.0);
-  private WidgetVariable storageName           = new WidgetVariable("");
-  private WidgetVariable storageProgress       = new WidgetVariable(0.0);
-  private WidgetVariable volumeNumber          = new WidgetVariable(0);
-  private WidgetVariable volumeProgress        = new WidgetVariable(0.0);
-  private WidgetVariable totalEntriesProgress  = new WidgetVariable(0.0);
-  private WidgetVariable totalBytesProgress    = new WidgetVariable(0.0);
-  private WidgetVariable collectTotalSumDone   = new WidgetVariable(false);
-  private WidgetVariable requestedVolumeNumber = new WidgetVariable(0);
-  private WidgetVariable message               = new WidgetVariable("");
+  private WidgetVariable fileName              = new WidgetVariable<String>("");
+  private WidgetVariable fileProgress          = new WidgetVariable<Double>(0.0);
+  private WidgetVariable storageName           = new WidgetVariable<String>("");
+  private WidgetVariable storageProgress       = new WidgetVariable<Double>(0.0);
+  private WidgetVariable volumeNumber          = new WidgetVariable<Long>(0);
+  private WidgetVariable volumeProgress        = new WidgetVariable<Double>(0.0);
+  private WidgetVariable totalEntriesProgress  = new WidgetVariable<Double>(0.0);
+  private WidgetVariable totalBytesProgress    = new WidgetVariable<Double>(0.0);
+  private WidgetVariable collectTotalSumDone   = new WidgetVariable<Boolean>(false);
+  private WidgetVariable requestedVolumeNumber = new WidgetVariable<Long>(0);
+  private WidgetVariable message               = new WidgetVariable<String>("");
 
   // variables
   private HashMap<String,JobData> jobDataMap      = new HashMap<String,JobData>();

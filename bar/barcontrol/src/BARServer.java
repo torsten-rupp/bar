@@ -2051,27 +2051,30 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       return error;
     }
 
-    switch (widgetVariable.getType())
+    if      (widgetVariable.getType() == Boolean.class)
     {
-      case BOOLEAN:
-        widgetVariable.set(resultMap.getBoolean("value"));
-        break;
-      case LONG:
-        widgetVariable.set(resultMap.getLong("value"));
-        break;
-      case DOUBLE:
-        widgetVariable.set(resultMap.getDouble("value"));
-        break;
-      case STRING:
-        widgetVariable.set(resultMap.getString("value"));
-        break;
-      case ENUMERATION:
-/*
-        widgetVariable.set(resultMap.getLong("value"));
-        break;*/
-        throw new Error("NYI");
-      case OBJECT:
-        throw new Error("NYI");
+      widgetVariable.set(resultMap.getBoolean("value"));
+    }
+    else if (widgetVariable.getType() == Long.class)
+    {
+      widgetVariable.set(resultMap.getLong("value"));
+    }
+    else if (widgetVariable.getType() == Double.class)
+    {
+      widgetVariable.set(resultMap.getDouble("value"));
+    }
+    else if (widgetVariable.getType() == String.class)
+    {
+      widgetVariable.set(resultMap.getString("value"));
+    }
+    else if (widgetVariable.getType() == Enum.class)
+    {
+//        widgetVariable.set(resultMap.getString("value"));
+throw new Error("NYI");
+    }
+    else
+    {
+      throw new Error("Type not supported");
     }
 
     return error;
@@ -2095,45 +2098,48 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     int error = Errors.UNKNOWN;
 
-    switch (widgetVariable.getType())
+    if      (widgetVariable.getType() == Boolean.class)
     {
-      case BOOLEAN:
-        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
-                                                   widgetVariable.getName(),
-                                                   widgetVariable.getBoolean() ? "yes" : "no"
-                                                  ),
-                               0,
-                               errorMessage
-                              );
-        break;
-      case LONG:
-        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
-                                                   widgetVariable.getName(),
-                                                   widgetVariable.getLong()
-                                                  ),
-                               0,
-                               errorMessage
-                              );
-        break;
-      case DOUBLE:
-        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%f",
-                                                   widgetVariable.getName(),
-                                                   widgetVariable.getDouble()
-                                                  ),
-                               0,
-                               errorMessage
-                              );
-        break;
-      case STRING:
-        error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%'S",
-                                                   widgetVariable.getName(),
-                                                   widgetVariable.getString()
-                                                  ),
-                               0,
-                               errorMessage
-                              );
-        break;
-      case ENUMERATION:
+      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getBoolean() ? "yes" : "no"
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == Long.class)
+    {
+      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getLong()
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == Double.class)
+    {
+      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%f",
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getDouble()
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == String.class)
+    {
+      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%'S",
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getString()
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == Enum.class)
+    {
 /*
         error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%s",
                                                    widgetVariable.getName(),
@@ -2144,8 +2150,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                               );
         break;*/
         throw new Error("NYI");
-      case OBJECT:
-        throw new Error("NYI");
+    }
+    else
+    {
+      throw new Error("Type not supported");
     }
 
     return error;

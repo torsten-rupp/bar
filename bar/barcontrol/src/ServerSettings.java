@@ -204,17 +204,19 @@ Dprintf.dprintf("%s %s",serverData1,serverData2);
     Button      button;
     int         row;
 
-    WidgetVariable          tmpDirectory               = new WidgetVariable<String>("",    "tmp-directory"                  );
+    WidgetVariable          tmpDirectory               = new WidgetVariable<String>(    "tmp-directory"                  );
+Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
+assert tmpDirectory != null;
     WidgetVariable          maxTmpSize                 = new WidgetVariable<String>("",    "max-tmp-size"                   );
-    WidgetVariable          niceLevel                  = new WidgetVariable<Integer>(0,    "nice-level"                     );
-    WidgetVariable          maxThreads                 = new WidgetVariable<Integer>(0,    "max-threads"                    );
+    WidgetVariable          niceLevel                  = new WidgetVariable<Long>(0,      "nice-level"                     );
+    WidgetVariable          maxThreads                 = new WidgetVariable<Long>(0,      "max-threads"                    );
     WidgetVariable          maxBandWidth               = new WidgetVariable<String>("",    "max-band-width"                 );
     WidgetVariable          compressMinSize            = new WidgetVariable<String>("",    "compress-min-size"              );
     WidgetVariable          serverJobsDirectory        = new WidgetVariable<String>("",    "server-jobs-directory"          );
 
-    WidgetVariable          indexDatabase              = new WidgetVariable<String>("",    "index-database"                 );
+    WidgetVariable          indexDatabase              = new WidgetVariable<String >("",    "index-database"                 );
     WidgetVariable          indexDatabaseAutoUpdate    = new WidgetVariable<Boolean>(false,"index-database-auto-update"     );
-//    WidgetVariable          indexDatabaseMaxBandWidth  = new WidgetVariable<Integer>(0,"index-database-max-band-width"  );
+//    WidgetVariable          indexDatabaseMaxBandWidth  = new WidgetVariable(0,"index-database-max-band-width"  );
     WidgetVariable          indexDatabaseKeepTime      = new WidgetVariable<String>("",    "index-database-keep-time"       );
 
     WidgetVariable          cdDevice                   = new WidgetVariable<String>("",    "cd-device"                      );
@@ -280,13 +282,13 @@ Dprintf.dprintf("%s %s",serverData1,serverData2);
     WidgetVariable          deviceWritePostCommand     = new WidgetVariable<String>("",    "device-write-post-command"      );
     WidgetVariable          deviceWriteCommand         = new WidgetVariable<String>("",    "device-write-command"           );
 
-    WidgetVariable          serverPort                 = new WidgetVariable<Integer>(0,    "server-port"                    );
-    WidgetVariable          serverTLSPort              = new WidgetVariable<Integer>(0,    "server-tls-port"                );
+    WidgetVariable          serverPort                 = new WidgetVariable<Long>(0,      "server-port"                    );
+    WidgetVariable          serverTLSPort              = new WidgetVariable<Long>(0,      "server-tls-port"                );
     WidgetVariable          serverCAFile               = new WidgetVariable<String>("",    "server-ca-file"                 );
     WidgetVariable          serverCertFile             = new WidgetVariable<String>("",    "server-cert-file"               );
     WidgetVariable          serverKeyFile              = new WidgetVariable<String>("",    "server-key-file"                );
     WidgetVariable          serverPassword             = new WidgetVariable<String>("",    "server-password"                );
-    WidgetVariable          servers                    = new WidgetVariable((Object)null);
+    WidgetVariable          servers                    = new WidgetVariable(new HashMap<Integer,String>());
 
     WidgetVariable          log                        = new WidgetVariable<String>("",    "log"                            );
     WidgetVariable          logFile                    = new WidgetVariable<String>("",    "log-file"                       );
@@ -316,6 +318,7 @@ Dprintf.dprintf("%s %s",serverData1,serverData2);
       subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
+Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         subSubComposite = BARWidgets.newDirectory(subComposite,
                                                   BARControl.tr("Path to temporary directory."),
                                                   tmpDirectory
