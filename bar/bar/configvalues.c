@@ -16,6 +16,8 @@
 
 #include "global.h"
 #include "strings.h"
+#include "stringlists.h"
+#include "files.h"
 
 #include "configvalues.h"
 
@@ -2056,6 +2058,302 @@ const char *ConfigValue_selectToString(const ConfigValueSelect selects[],
   }
 
   return defaultString;
+}
+
+Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *configLinesList)
+{
+  String     line;
+  Errors     error;
+  FileHandle fileHandle;
+
+  assert(configFileName != NULL);
+  assert(configLinesList != NULL);
+
+  StringList_clear(configLinesList);
+
+  // init variables
+  line = String_new();
+
+  // open file
+  error = File_open(&fileHandle,configFileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // read file
+  while (!File_eof(&fileHandle))
+  {
+    // read line
+    error = File_readLine(&fileHandle,line);
+    if (error != ERROR_NONE) break;
+
+    StringList_append(configLinesList,line);
+  }
+
+  // close file
+  File_close(&fileHandle);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // trim empty lines at begin/end
+  while (!StringList_isEmpty(&configLinesList) && String_isEmpty(StringList_first(configLinesList,NULL)))
+  {
+    StringList_remove(configLinesList,configLinesList->head);
+  }
+  while (!StringList_isEmpty(&configLinesList) && String_isEmpty(StringList_last(configLinesList,NULL)))
+  {
+    StringList_remove(configLinesList,configLinesList->tail);
+  }
+
+  // free resources
+  String_delete(line);
+
+  return ERROR_NONE;
+}
+
+Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const StringList *configLinesList)
+{
+  String     line;
+  Errors     error;
+  FileHandle fileHandle;
+  StringNode *stringNode;
+
+  assert(configFileName != NULL);
+  assert(configLinesList != NULL);
+
+  // init variables
+  line = String_new();
+
+  // open file
+  error = File_open(&fileHandle,configFileName,FILE_OPEN_CREATE);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // write lines
+  STRINGLIST_ITERATE(configLinesList,stringNode,line)
+  {
+    error = File_writeLine(&fileHandle,line);
+    if (error != ERROR_NONE) break;
+  }
+
+  // close file
+  File_close(&fileHandle);
+
+  // free resources
+  String_delete(line);
+
+  return error;
+}
+
+StringNode *ConfigValue_deleteEntries(StringList *stringList,
+                                      const char *section,
+                                      const char *name
+                                     )
+{
+  StringNode *nextStringNode;
+
+  StringNode *stringNode;
+  String     line;
+  String     string;
+
+  nextStringNode = NULL;
+
+  line       = String_new();
+  string     = String_new();
+  stringNode = stringList->head;
+  while (stringNode != NULL)
+  {
+    // skip comments, empty lines
+    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+    {
+      stringNode = stringNode->next;
+      continue;
+    }
+
+    // parse and match
+    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL))
+    {
+      // keep line: begin section
+      stringNode = stringNode->next;
+
+      if (String_equalsCString(string,section))
+      {
+        // section found: remove matching entries
+        while (stringNode != NULL)
+        {
+          // skip comments, empty lines
+          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+          {
+            stringNode = stringNode->next;
+            continue;
+          }
+
+          // parse and match
+          if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+          {
+            // keep line: end section
+            stringNode = stringNode->next;
+            break;
+          }
+          else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
+                   && String_equalsCString(string,name)
+                  )
+          {
+            // delete line
+            stringNode = StringList_remove(stringList,stringNode);
+
+            // store next line
+            nextStringNode = stringNode;
+          }
+          else
+          {
+            // keep line
+            stringNode = stringNode->next;
+          }
+        }
+      }
+      else
+      {
+        // section not found: skip
+        while (stringNode != NULL)
+        {
+          // skip comments, empty lines
+          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+          {
+            stringNode = stringNode->next;
+            continue;
+          }
+
+          // keep line
+          stringNode = stringNode->next;
+
+          // parse and match
+          if (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+          {
+            // end section
+            break;
+          }
+        }
+      }
+    }
+    else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
+             && String_equalsCString(string,name)
+            )
+    {
+      // delete line
+      stringNode = StringList_remove(stringList,stringNode);
+
+      // store next line
+      nextStringNode = stringNode;
+    }
+    else
+    {
+      // keep line
+      stringNode = stringNode->next;
+    }
+  }
+  String_delete(string);
+  String_delete(line);
+
+  return nextStringNode;
+}
+
+StringNode *ConfigValue_deleteSections(StringList *stringList,
+                                       const char *section
+                                      )
+{
+  StringNode *nextStringNode;
+
+  StringNode *stringNode;
+  String     line;
+  String     string;
+
+  nextStringNode = NULL;
+
+  line       = String_new();
+  string     = String_new();
+  stringNode = stringList->head;
+  while (stringNode != NULL)
+  {
+    // skip comments, empty lines
+    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+    {
+      stringNode = stringNode->next;
+      continue;
+    }
+
+    // parse and match
+    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL)
+        && String_equalsCString(string,section)
+       )
+    {
+      // delete section
+      stringNode = StringList_remove(stringList,stringNode);
+      while (   (stringNode != NULL)
+             && !String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+            )
+      {
+        stringNode = StringList_remove(stringList,stringNode);
+      }
+      if (stringNode != NULL)
+      {
+        if (String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+        {
+          stringNode = StringList_remove(stringList,stringNode);
+        }
+      }
+
+      // delete following empty lines
+      while (   (stringNode != NULL)
+             && String_isEmpty(String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES))
+            )
+      {
+        stringNode = StringList_remove(stringList,stringNode);
+      }
+
+      // store next line
+      nextStringNode = stringNode;
+    }
+    else
+    {
+      // keep line
+      stringNode = stringNode->next;
+    }
+  }
+  if (nextStringNode != NULL)
+  {
+    // delete previous empty lines
+    while (   (nextStringNode->prev != NULL)
+           && String_isEmpty(String_trim(String_set(line,nextStringNode->prev->string),STRING_WHITE_SPACES))
+          )
+    {
+      StringList_remove(stringList,nextStringNode->prev);
+    }
+  }
+  else
+  {
+    // delete empty lines at end
+    while (!StringList_isEmpty(stringList) && String_isEmpty(StringList_last(stringList,NULL)))
+    {
+      StringList_remove(stringList,stringList->tail);
+    }
+  }
+  String_delete(string);
+  String_delete(line);
+
+  return nextStringNode;
 }
 
 #ifdef __GNUC__

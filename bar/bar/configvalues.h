@@ -20,6 +20,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "stringlists.h"
 
 /********************** Conditional compilation ***********************/
 
@@ -1201,6 +1202,60 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 const char *ConfigValue_selectToString(const ConfigValueSelect selects[],
                                        uint                    value,
                                        const char              *defaultString
+                                      );
+
+/***********************************************************************\
+* Name   : ConfigValue_readConfigFileLines
+* Purpose: read config file lines
+* Input  : configFileName  - config file name
+*          configLinesList - line list variable
+* Output : configLinesList - line list
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *configLinesList);
+
+/***********************************************************************\
+* Name   : ConfigValue_writeConfigFileLines
+* Purpose: write config file lines
+* Input  : configFileName  - config file name
+*          configLinesList - line list
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const StringList *configLinesList);
+
+/***********************************************************************\
+* Name   : ConfigValue_deleteEntries
+* Purpose: delete all entries with given name in config line list
+* Input  : stringList - file string list to modify
+*          section    - name of section or NULL
+*          name       - name of value
+* Output : -
+* Return : next entry in string list or NULL
+* Notes  : -
+\***********************************************************************/
+
+StringNode *ConfigValue_deleteEntries(StringList *stringList,
+                                      const char *section,
+                                      const char *name
+                                     );
+
+/***********************************************************************\
+* Name   : ConfigValue_deleteSections
+* Purpose: delete all sections with given name in config line list
+* Input  : stringList - file string list to modify
+*          section    - name of section
+* Output : -
+* Return : next entry in string list or NULL
+* Notes  : -
+\***********************************************************************/
+
+StringNode *ConfigValue_deleteSections(StringList *stringList,
+                                       const char *section
                                       );
 
 #ifdef __GNUG__
