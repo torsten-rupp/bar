@@ -506,8 +506,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
                         void              *variable
                        )
 {
-  ConfigVariable configVariable;
-  char           errorMessage[256];
+  union
+  {
+    void       *pointer;
+    void       **reference;
+    int        *i;
+    int64      *l;
+    double     *d;
+    bool       *b;
+    uint       *enumeration;
+    uint       *select;
+    ulong      *set;
+    char       **cString;
+    String     *string;
+    void       *special;
+    const char *newName;
+  }    configVariable;
+  char errorMessage[256];
 
   assert(configValue != NULL);
   assert(name != NULL);
@@ -1135,28 +1150,170 @@ LOCAL bool processValue(const ConfigValue *configValue,
 
 // ----------------------------------------------------------------------
 
-bool ConfigValue_init(const ConfigValue configValues[],
-                      uint              configValueCount
-                     )
+bool ConfigValue_init(ConfigValue configValues[])
 {
-  assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
+  uint index;
 
-  UNUSED_VARIABLE(configValues);
-  UNUSED_VARIABLE(configValueCount);
+  assert(configValues != NULL);
+
+  /* get default values from initial settings of variables
+     Note: strings are always new allocated and reallocated in CmdOption_parse() resp. freed in CmdOption_init()
+  */
+  index = 0;
+  while (configValues[index].type != CONFIG_VALUE_TYPE_END)
+  {
+    switch (configValues[index].type)
+    {
+      case CONFIG_VALUE_TYPE_INTEGER:
+        assert(configValues[index].variable.i != NULL);
+        assert((*configValues[index].variable.i) >= configValues[index].integerValue.min);
+        assert((*configValues[index].variable.i) <= configValues[index].integerValue.max);
+        configValues[index].defaultValue.i = (*configValues[index].variable.i);
+        break;
+      case CONFIG_VALUE_TYPE_INTEGER64:
+        assert(configValues[index].variable.l != NULL);
+        assert((*configValues[index].variable.l) >= configValues[index].integer64Value.min);
+        assert((*configValues[index].variable.l) <= configValues[index].integer64Value.max);
+        configValues[index].defaultValue.l = (*configValues[index].variable.l);
+        break;
+      case CONFIG_VALUE_TYPE_DOUBLE:
+        assert(configValues[index].variable.d != NULL);
+        assert((*configValues[index].variable.d) >= configValues[index].doubleValue.min);
+        assert((*configValues[index].variable.d) <= configValues[index].doubleValue.max);
+        configValues[index].defaultValue.d = (*configValues[index].variable.d);
+        break;
+      case CONFIG_VALUE_TYPE_BOOLEAN:
+        assert(configValues[index].variable.b != NULL);
+        assert(   ((*configValues[index].variable.b) == TRUE )
+               || ((*configValues[index].variable.b) == FALSE)
+              );
+        configValues[index].defaultValue.b = (*configValues[index].variable.b);
+        break;
+      case CONFIG_VALUE_TYPE_ENUM:
+        assert(configValues[index].variable.enumeration != NULL);
+        configValues[index].defaultValue.enumeration = (*configValues[index].variable.enumeration);
+        break;
+      case CONFIG_VALUE_TYPE_SELECT:
+        assert(configValues[index].variable.select != NULL);
+        configValues[index].defaultValue.select = (*configValues[index].variable.select);
+        break;
+      case CONFIG_VALUE_TYPE_SET:
+        assert(configValues[index].variable.set != NULL);
+        configValues[index].defaultValue.set = (*configValues[index].variable.set);
+        break;
+      case CONFIG_VALUE_TYPE_CSTRING:
+        assert(configValues[index].variable.cString != NULL);
+        if ((*configValues[index].variable.cString) != NULL)
+        {
+          configValues[index].defaultValue.cString = (*configValues[index].variable.cString);
+          (*configValues[index].variable.cString) = strdup(configValues[index].defaultValue.cString);
+        }
+        else
+        {
+          configValues[index].defaultValue.cString = NULL;
+        }
+        break;
+      case CONFIG_VALUE_TYPE_STRING:
+        assert(configValues[index].variable.string != NULL);
+        if ((*configValues[index].variable.string) != NULL)
+        {
+          configValues[index].defaultValue.string = String_new();//(*configValues[index].variable.string);
+          (*configValues[index].variable.string) = String_duplicate(configValues[index].defaultValue.string);
+        }
+        else
+        {
+          configValues[index].defaultValue.string = NULL;
+        }
+        break;
+      case CONFIG_VALUE_TYPE_SPECIAL:
+        configValues[index].defaultValue.special = configValues[index].variable.special;
+        break;
+      case CONFIG_VALUE_TYPE_IGNORE:
+        break;
+      case CONFIG_VALUE_TYPE_DEPRECATED:
+        break;
+      case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+        break;
+      case CONFIG_VALUE_TYPE_END_SECTION:
+        break;
+      case CONFIG_VALUE_TYPE_END:
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    index = ConfigValue_nextValueIndex(configValues,index);
+  }
 
   return TRUE;
 }
 
-void ConfigValue_done(const ConfigValue configValues[],
-                      uint              configValueCount
-                     )
+void ConfigValue_done(ConfigValue configValues[])
 {
-  assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
+  uint index;
 
-  UNUSED_VARIABLE(configValues);
-  UNUSED_VARIABLE(configValueCount);
+  assert(configValues != NULL);
+
+  // free values and restore from default values
+  index = 0;
+  while (configValues[index].type != CONFIG_VALUE_TYPE_END)
+  {
+    switch (configValues[index].type)
+    {
+      case CONFIG_VALUE_TYPE_INTEGER:
+        break;
+      case CONFIG_VALUE_TYPE_INTEGER64:
+        break;
+      case CONFIG_VALUE_TYPE_DOUBLE:
+        break;
+      case CONFIG_VALUE_TYPE_BOOLEAN:
+        break;
+      case CONFIG_VALUE_TYPE_ENUM:
+        break;
+      case CONFIG_VALUE_TYPE_SELECT:
+        break;
+      case CONFIG_VALUE_TYPE_SET:
+        break;
+      case CONFIG_VALUE_TYPE_CSTRING:
+        assert(configValues[index].variable.cString != NULL);
+        if ((*configValues[index].variable.cString) != NULL)
+        {
+          free(*configValues[index].variable.cString);
+          (*configValues[index].variable.cString) = configValues[index].defaultValue.cString;
+        }
+        break;
+      case CONFIG_VALUE_TYPE_STRING:
+        assert(configValues[index].variable.string != NULL);
+        if ((*configValues[index].variable.string) != NULL)
+        {
+          String_delete(*configValues[index].variable.string);
+          (*configValues[index].variable.string) = configValues[index].defaultValue.string;
+        }
+        break;
+      case CONFIG_VALUE_TYPE_SPECIAL:
+        break;
+      case CONFIG_VALUE_TYPE_IGNORE:
+        break;
+      case CONFIG_VALUE_TYPE_DEPRECATED:
+        break;
+      case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+        break;
+      case CONFIG_VALUE_TYPE_END_SECTION:
+        break;
+      case CONFIG_VALUE_TYPE_END:
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    index = ConfigValue_nextValueIndex(configValues,index);
+  }
 }
 
 int ConfigValue_valueIndex(const ConfigValue configValues[], const char *name)
@@ -1164,7 +1321,6 @@ int ConfigValue_valueIndex(const ConfigValue configValues[], const char *name)
   uint index;
 
   assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
 
   index = 0;
 
@@ -1183,7 +1339,6 @@ uint ConfigValue_firstValueIndex(const ConfigValue configValues[])
   uint index;
 
   assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
 
   index = 0;
 
@@ -1209,7 +1364,6 @@ uint ConfigValue_lastValueIndex(const ConfigValue configValues[])
   uint index;
 
   assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
 
   index = 0;
 
@@ -1255,7 +1409,6 @@ uint ConfigValue_lastValueIndex(const ConfigValue configValues[])
 uint ConfigValue_nextValueIndex(const ConfigValue configValues[], uint index)
 {
   assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
 
   if (configValues[index].type != CONFIG_VALUE_TYPE_END)
   {
@@ -1284,7 +1437,6 @@ uint ConfigValue_firstSectionValueIndex(const ConfigValue configValues[], const 
   uint index;
 
   assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
 
   index = 0;
 
@@ -1333,7 +1485,6 @@ uint ConfigValue_lastSectionValueIndex(const ConfigValue configValues[], uint in
 uint ConfigValue_nextSectionValueIndex(const ConfigValue configValues[], uint index)
 {
   assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
 
   if (configValues[index].type != CONFIG_VALUE_TYPE_END)
   {
@@ -1371,7 +1522,6 @@ bool ConfigValue_parse(const char        *name,
 
   assert(name != NULL);
   assert(configValues != NULL);
-  assert(configValues[0].name != NULL);
 
   // find config value
   if (sectionName != NULL)
@@ -1574,7 +1724,22 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
                         String            line
                        )
 {
-  ConfigVariable          configVariable;
+  union
+  {
+    void       *pointer;
+    void       **reference;
+    int        *i;
+    int64      *l;
+    double     *d;
+    bool       *b;
+    uint       *enumeration;
+    uint       *select;
+    ulong      *set;
+    char       **cString;
+    String     *string;
+    void       *special;
+    const char *newName;
+  }                       configVariable;
   const char              *unitName;
   const ConfigValueUnit   *unit;
   ulong                   factor;
@@ -2101,11 +2266,11 @@ Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *c
   }
 
   // trim empty lines at begin/end
-  while (!StringList_isEmpty(&configLinesList) && String_isEmpty(StringList_first(configLinesList,NULL)))
+  while (!StringList_isEmpty(configLinesList) && String_isEmpty(StringList_first(configLinesList,NULL)))
   {
     StringList_remove(configLinesList,configLinesList->head);
   }
-  while (!StringList_isEmpty(&configLinesList) && String_isEmpty(StringList_last(configLinesList,NULL)))
+  while (!StringList_isEmpty(configLinesList) && String_isEmpty(StringList_last(configLinesList,NULL)))
   {
     StringList_remove(configLinesList,configLinesList->tail);
   }

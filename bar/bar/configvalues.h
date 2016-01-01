@@ -74,30 +74,40 @@ typedef struct
   uint       value;
 } ConfigValueSet;
 
-// config value variable
-typedef union
-{
-  void       *pointer;
-  void       **reference;
-  int        *i;
-  int64      *l;
-  double     *d;
-  bool       *b;
-  uint       *enumeration;
-  uint       *select;
-  ulong      *set;
-  char       **cString;
-  String     *string;
-  void       *special;
-  const char *newName;
-} ConfigVariable;
-
 // config value definition
 typedef struct
 {
   ConfigValueTypes type;                          // type of config value
   const char       *name;                         // name of config value
-  ConfigVariable   variable;                      // variable, new name or NULL
+  union
+  {
+    void       *pointer;
+    void       **reference;
+    int        *i;
+    int64      *l;
+    double     *d;
+    bool       *b;
+    uint       *enumeration;
+    uint       *select;
+    ulong      *set;
+    char       **cString;
+    String     *string;
+    void       *special;
+    const char *newName;
+  }                variable;                      // variable, new name or NULL
+  union
+  {
+    int        i;
+    int64      l;
+    double     d;
+    bool       b;
+    uint       enumeration;
+    uint       select;
+    ulong      set;
+    char       *cString;
+    String     string;
+    void       *special;
+  }                defaultValue;                  // default value
   int              offset;                        // offset in struct or -1
   struct
   {
@@ -307,6 +317,7 @@ typedef struct
     CONFIG_VALUE_TYPE_END,\
     NULL,\
     {NULL},\
+    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -337,6 +348,7 @@ typedef struct
     CONFIG_VALUE_TYPE_BEGIN_SECTION,\
     name,\
     {NULL},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -354,6 +366,7 @@ typedef struct
     CONFIG_VALUE_TYPE_END_SECTION,\
     NULL,\
     {NULL},\
+    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -387,6 +400,7 @@ typedef struct
     CONFIG_VALUE_TYPE_INTEGER,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {min,max,units},\
     {0LL,0LL,NULL},\
@@ -422,6 +436,7 @@ typedef struct
     CONFIG_VALUE_TYPE_INTEGER64,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {min,max,units},\
@@ -457,6 +472,7 @@ typedef struct
     CONFIG_VALUE_TYPE_DOUBLE,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -490,6 +506,7 @@ typedef struct
     CONFIG_VALUE_TYPE_BOOLEAN,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -523,6 +540,7 @@ typedef struct
     CONFIG_VALUE_TYPE_BOOLEAN,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -557,6 +575,7 @@ typedef struct
     CONFIG_VALUE_TYPE_ENUM,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -591,6 +610,7 @@ typedef struct
     CONFIG_VALUE_TYPE_SELECT,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -625,6 +645,7 @@ typedef struct
     CONFIG_VALUE_TYPE_SET,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -658,6 +679,7 @@ typedef struct
     CONFIG_VALUE_TYPE_CSTRING,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -691,6 +713,7 @@ typedef struct
     CONFIG_VALUE_TYPE_STRING,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -730,6 +753,7 @@ typedef struct
     CONFIG_VALUE_TYPE_SPECIAL,\
     name,\
     {variablePointer},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -758,7 +782,8 @@ typedef struct
   { \
     CONFIG_VALUE_TYPE_IGNORE,\
     name,\
-    {},\
+    {NULL},\
+    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -787,7 +812,8 @@ typedef struct
   { \
     CONFIG_VALUE_TYPE_DEPRECATED,\
     name,\
-    {},\
+    {NULL},\
+    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -818,6 +844,7 @@ typedef struct
     CONFIG_VALUE_TYPE_BEGIN_SECTION,\
     name,\
     {NULL},\
+    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -836,6 +863,7 @@ typedef struct
     CONFIG_VALUE_TYPE_END_SECTION,\
     NULL,\
     {NULL},\
+    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -946,30 +974,24 @@ extern "C" {
 /***********************************************************************
 * Name   : ConfigValue_init
 * Purpose: init config values
-* Input  : configValues     - array with config value specification
-*          configValueCount - size of config value specification array
+* Input  : configValues - array with config value specification
 * Output : -
 * Return : TRUE if command line parsed, FALSE on error
 * Notes  :
 ***********************************************************************/
 
-bool ConfigValue_init(const ConfigValue configValues[],
-                      uint              configValueCount
-                     );
+bool ConfigValue_init(ConfigValue configValues[]);
 
 /***********************************************************************
 * Name   : ConfigValue_done
 * Purpose: deinit config values
-* Input  : configValues     - array with config value specification
-*          configValueCount - size of config value specification array
+* Input  : configValues - array with config value specification
 * Output : -
 * Return : -
 * Notes  :
 ***********************************************************************/
-void ConfigValue_done(const ConfigValue configValues[],
-                      uint              configValueCount
-                     );
 
+void ConfigValue_done(ConfigValue configValues[]);
 
 /***********************************************************************\
 * Name   : ConfigValue_isValue
