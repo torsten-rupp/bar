@@ -17,8 +17,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.SWT;
@@ -44,13 +48,13 @@ import org.eclipse.swt.widgets.Widget;
 public class ServerSettings
 {
   /**
-   * Server types
+   * Storage server types
    */
   enum ServerTypes
   {
     NONE,
 
-    FILESYSTEM,
+    FILE,
     FTP,
     SSH,
     WEBDAV;
@@ -63,19 +67,19 @@ public class ServerSettings
     {
       ServerTypes type;
 
-      if      (string.equalsIgnoreCase("filesystem"))
+      if      (string.equalsIgnoreCase("FILE"))
       {
-        type = ServerTypes.FILESYSTEM;
+        type = ServerTypes.FILE;
       }
-      else if (string.equalsIgnoreCase("ftp"))
+      else if (string.equalsIgnoreCase("FTP"))
       {
         type = ServerTypes.FTP;
       }
-      else if (string.equalsIgnoreCase("ssh"))
+      else if (string.equalsIgnoreCase("SSH"))
       {
         type = ServerTypes.SSH;
       }
-      else if (string.equalsIgnoreCase("webdav"))
+      else if (string.equalsIgnoreCase("WEBDAV"))
       {
         type = ServerTypes.WEBDAV;
       }
@@ -94,50 +98,74 @@ public class ServerSettings
     {
       switch (this)
       {
-        case FILESYSTEM: return "filesystem";
-        case FTP:        return "ftp";
-        case SSH:        return "ssh";
-        case WEBDAV:     return "webdav";
-        default:         return "";
+        case FILE:   return "filesystem";
+        case FTP:    return "ftp";
+        case SSH:    return "ssh";
+        case WEBDAV: return "webdav";
+        default:     return "";
       }
     }
   };
 
-  /** server data
+  /** storage server data
    */
-  static class ServerData
+  static class ServerData implements Cloneable
   {
     int         id;
     String      name;
     ServerTypes type;
-    String      pathURL;
-    String      loginName;
-    int         port;
-    String      password;
-    String      publicKey;
-    String      privateKey;
+    String     pathURL;
+    String     loginName;
+    int        port;
+    String     password;
+    String     publicKey;
+    String     privateKey;
+    int        maxConnectionCount;
+    long       maxStorageSize;
 
-    /** create server data
+    /** create storage server data
+     * @param id id
+     * @param name name
+     * @param type server type
+     * @param pathURL path/URL
+     * @param loginName login name
+     * @param port port number
+     */
+    ServerData(int id, String name, ServerTypes type, String pathURL, String loginName, int port)
+    {
+      this.id         = id;
+      this.name       = name;
+      this.type       = type;
+      this.pathURL    = pathURL;
+      this.port       = port;
+      this.loginName  = loginName;
+      this.publicKey  = null;
+      this.privateKey = null;
+    }
+
+    /** create storage server data
+     * @param id id
      * @param name name
      * @param type server type
      */
     ServerData(int id, String name, ServerTypes type)
     {
-      this.id         = id;
-      this.name       = name;
-      this.type       = type;
-      this.pathURL    = "";
-      this.port       = 0;
-      this.loginName  = "";
-      this.publicKey  = null;
-      this.privateKey = null;
+      this(id,name,type,"","",0);
     }
 
-    /** create server data
+    /** create storage server data
      */
     ServerData()
     {
       this(0,"",ServerTypes.NONE);
+    }
+
+    /** clone storage server data object
+     * @return clone of object
+     */
+    public ServerData clone()
+    {
+      return new ServerData(id,name,type,pathURL,loginName,port);
     }
 
     /** convert data to string
@@ -189,7 +217,18 @@ public class ServerSettings
       switch (sortMode)
       {
         case SORTMODE_TYPE:
-          return serverData1.type.toString().compareTo(serverData2.type.toString());
+          if      (serverData1.type.toString().compareTo(serverData2.type.toString()) < 0)
+          {
+            return -1;
+          }
+          else if (serverData1.type.toString().compareTo(serverData2.type.toString()) > 0)
+          {
+            return 1;
+          }
+          else
+          {
+            return serverData1.name.compareTo(serverData2.name);
+          }
         case SORTMODE_NAME:
           return serverData1.name.compareTo(serverData2.name);
         default:
@@ -310,7 +349,9 @@ public class ServerSettings
     WidgetVariable          logFormat                  = new WidgetVariable<String >("",   "log-format"                     );
     WidgetVariable          logPostCommand             = new WidgetVariable<String >("",   "log-post-command"               );
 
-//    WidgetVariable          servers                    = new WidgetVariable<HashMap<Integer,ServerSettings.ServerData> >(new HashMap<Integer,ServerSettings.ServerData>());
+//    WidgetVariable          servers                    = new WidgetVariable<HashMap<Integer,ServerData> >(new HashMap<Integer,ServerData>());
+
+    final ServerDataComparator serverDataComparator;
 
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Server settings"),700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
@@ -318,6 +359,9 @@ public class ServerSettings
     tabFolder = Widgets.newTabFolder(dialog);
     Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
     final Table  widgetServerTable;
+    final Button widgetAddServer;
+    final Button widgetEditServer;
+    final Button widgetRemoveServer;
     final Button widgetSave;
 
     // general
@@ -501,40 +545,84 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       tableColumn.setToolTipText(BARControl.tr("Click to sort by name."));
       tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
       row++;
+      serverDataComparator = new ServerDataComparator(widgetServerTable);
+
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(1.0,0.0,2));
       Widgets.layout(subComposite,row,0,TableLayoutData.E,0,2);
       {
-        button = Widgets.newButton(subComposite,BARControl.tr("Add\u2026"));
-        Widgets.layout(button,0,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
-        button.addSelectionListener(new SelectionListener()
+        widgetAddServer = Widgets.newButton(subComposite,BARControl.tr("Add\u2026"));
+        Widgets.layout(widgetAddServer,0,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+        widgetAddServer.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-Dprintf.dprintf("");
-            serverAdd(dialog);
+            ServerData serverData = new ServerData();
+            serverData.type = ServerTypes.FILE;
+            if (serverEdit(dialog,serverData,BARControl.tr("Add storage server"),BARControl.tr("Add")))
+            {
+            }
+          }
+        });
+
+        widgetEditServer = Widgets.newButton(subComposite,BARControl.tr("Edit\u2026"));
+        Widgets.layout(widgetEditServer,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+        widgetEditServer.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            int index = widgetServerTable.getSelectionIndex();
+            if (index >= 0)
+            {
+              TableItem  tableItem  = widgetServerTable.getItem(index);
+              ServerData serverData = (ServerData)tableItem.getData();
+
+              if (serverEdit(dialog,serverData,BARControl.tr("Edit storage server"),BARControl.tr("Save")))
+              {
+                String[]             resultErrorMessage   = new String[1];
+                ArrayList<ValueMap>  resultMapList        = new ArrayList<ValueMap>();
+
+                int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_UPDATE id=%d name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
+                                                                         serverData.id,
+                                                                         serverData.name,
+                                                                         serverData.type,
+                                                                         serverData.loginName,
+                                                                         serverData.port,
+                                                                         serverData.password,
+                                                                         serverData.publicKey,
+                                                                         serverData.privateKey,
+                                                                         serverData.maxConnectionCount,
+                                                                         serverData.maxStorageSize
+                                                                        ),
+                                                     0,
+                                                     resultErrorMessage,
+                                                     resultMapList
+                                                    );
+                if (error == Errors.NONE)
+                {
+                  Widgets.updateTableItem(tableItem,
+                                          serverData,
+                                          serverData.type.toString(),
+                                          serverData.name
+                                         );
+                }
+                else
+                {
+                  Dialogs.error(dialog,BARControl.tr("Save storage server settings fail:\n\n{0}",resultErrorMessage[0]));
+                }
+              }
+            }
           }
         });
 
         button = Widgets.newButton(subComposite,BARControl.tr("Clone\u2026"));
-        Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
-Dprintf.dprintf("");
-          }
-        });
-
-        button = Widgets.newButton(subComposite,BARControl.tr("Remove"));
         Widgets.layout(button,0,2,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
@@ -543,8 +631,92 @@ Dprintf.dprintf("");
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            Button widget = (Button)selectionEvent.widget;
-Dprintf.dprintf("");
+            int index = widgetServerTable.getSelectionIndex();
+            if (index >= 0)
+            {
+              TableItem  tableItem  = widgetServerTable.getItem(index);
+              ServerData serverData = (ServerData)tableItem.getData();
+
+              ServerData cloneServerData = (ServerData)serverData.clone();
+              if (serverEdit(dialog,cloneServerData,BARControl.tr("Add storage server"),BARControl.tr("Add")))
+              {
+                String[] resultErrorMessage = new String[1];
+                ValueMap resultMap          = new ValueMap();
+
+                int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_ADD name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
+                                                                         cloneServerData.name,
+                                                                         cloneServerData.type,
+                                                                         cloneServerData.loginName,
+                                                                         cloneServerData.port,
+                                                                         cloneServerData.password,
+                                                                         cloneServerData.publicKey,
+                                                                         cloneServerData.privateKey,
+                                                                         cloneServerData.maxConnectionCount,
+                                                                         cloneServerData.maxStorageSize
+                                                                        ),
+                                                     0,
+                                                     resultErrorMessage,
+                                                     resultMap
+                                                    );
+                if (error == Errors.NONE)
+                {
+                  cloneServerData.id = resultMap.getInt("id");
+
+                  Widgets.insertTableItem(widgetServerTable,
+                                          serverDataComparator,
+                                          (Object)cloneServerData,
+                                          cloneServerData.type.toString(),
+                                          cloneServerData.name
+                                         );
+                }
+                else
+                {
+                  Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",resultErrorMessage[0]));
+                }
+              }
+            }
+          }
+        });
+
+        widgetRemoveServer = Widgets.newButton(subComposite,BARControl.tr("Remove\u2026"));
+        Widgets.layout(widgetRemoveServer,0,3,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+        widgetRemoveServer.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            int index = widgetServerTable.getSelectionIndex();
+            if (index >= 0)
+            {
+              TableItem  tableItem  = widgetServerTable.getItem(index);
+              ServerData serverData = (ServerData)tableItem.getData();
+
+              if (Dialogs.confirm(dialog,BARControl.tr("Delete settings of storage server ''{0}''?",serverData.name)))
+              {
+                String[] resultErrorMessage = new String[1];
+                ValueMap resultMap          = new ValueMap();
+
+                int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_DELETE id=%d",
+                                                                         serverData.id
+                                                                        ),
+                                                     0,
+                                                     resultErrorMessage,
+                                                     resultMap
+                                                    );
+                if (error == Errors.NONE)
+                {
+                  Widgets.removeTableItem(widgetServerTable,
+                                          tableItem
+                                         );
+                }
+                else
+                {
+                  Dialogs.error(dialog,BARControl.tr("Delete storage server settings fail:\n\n{0}",resultErrorMessage[0]));
+                }
+              }
+            }
           }
         });
       }
@@ -1740,6 +1912,40 @@ Dprintf.dprintf("");
     }
 
     // add selection listeners
+    widgetServerTable.addMouseListener(new MouseListener()
+    {
+      public void mouseDoubleClick(final MouseEvent mouseEvent)
+      {
+        Widgets.invoke(widgetEditServer);
+      }
+      public void mouseDown(final MouseEvent mouseEvent)
+      {
+      }
+      public void mouseUp(final MouseEvent mouseEvent)
+      {
+      }
+    });
+    widgetServerTable.addKeyListener(new KeyListener()
+    {
+      public void keyPressed(KeyEvent keyEvent)
+      {
+      }
+      public void keyReleased(KeyEvent keyEvent)
+      {
+        if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+        {
+          Widgets.invoke(widgetAddServer);
+        }
+        else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+        {
+          Widgets.invoke(widgetRemoveServer);
+        }
+        else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+        {
+          Widgets.invoke(widgetEditServer);
+        }
+      }
+    });
     widgetSave.addSelectionListener(new SelectionListener()
     {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1840,10 +2046,9 @@ Dprintf.dprintf("");
     BARServer.getServerOption(logFormat                  );
     BARServer.getServerOption(logPostCommand             );
 
-    ServerDataComparator serverDataComparator = new ServerDataComparator(widgetServerTable);
-    ServerData           serverData;
-
     Widgets.removeAllTableItems(widgetServerTable);
+
+    ServerData serverData;
 
     serverData = new ServerData(0,"default",ServerTypes.FTP);
     Widgets.insertTableItem(widgetServerTable,
@@ -1884,12 +2089,12 @@ Dprintf.dprintf("");
     for (ValueMap resultMap : resultMapList)
     {
       // get data
-      int          id                 = resultMap.getInt   ("id"                          );
-      String       name               = resultMap.getString("name"                        );
-      ServerTypes  serverType         = resultMap.getEnum  ("serverType",ServerTypes.class);
-      String       loginName          = resultMap.getString("loginName"                   );
-      int          maxConnectionCount = resultMap.getInt   ("maxConnectionCount"          );
-      long         maxStorageSize     = resultMap.getLong  ("maxStorageSize"              );
+      int         id                 = resultMap.getInt   ("id"                          );
+      String      name               = resultMap.getString("name"                        );
+      ServerTypes serverType         = resultMap.getEnum  ("serverType",ServerTypes.class);
+      String      loginName          = resultMap.getString("loginName"                   );
+      int         maxConnectionCount = resultMap.getInt   ("maxConnectionCount"          );
+      long        maxStorageSize     = resultMap.getLong  ("maxStorageSize"              );
 
       // create server data
       serverData = new ServerData(id,name,serverType);
@@ -2004,23 +2209,12 @@ Dprintf.dprintf("");
     }
   }
 
-  /**
-   * @param
-   * @return
-   */
-  private static void serverAdd(Shell shell)
-  {
-    ServerData serverData = new ServerData();
-    serverData.type = ServerTypes.FILESYSTEM;
-    if (serverEdit(shell,serverData,BARControl.tr("Add storage server"),BARControl.tr("Add")))
-    {
-Dprintf.dprintf("serverData=%s",serverData);
-    }
-  }
-
-  /**
-   * @param
-   * @return
+  /** edit storage server
+   * @param shell shell
+   * @param serverData storage server data
+   * @param title window title
+   * @param okText OK button text
+   * @return true iff edited
    */
   private static boolean serverEdit(final Shell shell, final ServerData serverData, String title, String okText)
   {
@@ -2039,6 +2233,8 @@ Dprintf.dprintf("serverData=%s",serverData);
     final Text       widgetPassword;
     final StyledText widgetPublicKey;
     final StyledText widgetPrivateKey;
+    final Spinner    widgetMaxConnectionCount;
+    final Combo      widgetMaxStorageSize;
     final Button     widgetOK;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,0.0,1.0,1.0},new double[]{0.0,1.0},4));
@@ -2052,17 +2248,19 @@ Dprintf.dprintf("serverData=%s",serverData);
       {
         widgetName = Widgets.newText(subComposite);
         widgetName.setText(serverData.name);
+        widgetName.setEnabled(serverData.id > 0);
         Widgets.layout(widgetName,0,0,TableLayoutData.WE);
 
         widgetType = Widgets.newCombo(subComposite,SWT.READ_ONLY);
         Widgets.setComboItems(widgetType,
-                              new Object[]{"filesystem",ServerTypes.FILESYSTEM,
-                                           "ftp",       ServerTypes.FTP,
-                                           "ssh",       ServerTypes.SSH,
-                                           "webdav",    ServerTypes.WEBDAV
+                              new Object[]{"file",  ServerTypes.FILE,
+                                           "ftp",   ServerTypes.FTP,
+                                           "ssh",   ServerTypes.SSH,
+                                           "webdav",ServerTypes.WEBDAV
                                           }
                            );
         Widgets.setSelectedComboItem(widgetType,serverData.type);
+        widgetType.setEnabled(serverData.id > 0);
         Widgets.layout(widgetType,0,1,TableLayoutData.E);
       }
 
@@ -2070,6 +2268,7 @@ Dprintf.dprintf("serverData=%s",serverData);
       Widgets.layout(label,1,0,TableLayoutData.W);
       widgetPathURL = Widgets.newText(composite);
       widgetPathURL.setText(serverData.name);
+      widgetPathURL.setEnabled(serverData.id > 0);
       Widgets.layout(widgetPathURL,1,1,TableLayoutData.WE);
 
       label = Widgets.newLabel(composite,BARControl.tr("Login")+":");
@@ -2079,6 +2278,7 @@ Dprintf.dprintf("serverData=%s",serverData);
       Widgets.layout(subComposite,2,1,TableLayoutData.WE);
       {
         widgetLoginName = Widgets.newText(subComposite);
+        widgetLoginName.setToolTipText(BARControl.tr("Login name."));
         widgetLoginName.setText(serverData.loginName);
         widgetLoginName.setEnabled(   (serverData.type == ServerTypes.FTP)
                                    || (serverData.type == ServerTypes.SSH)
@@ -2089,6 +2289,7 @@ Dprintf.dprintf("serverData=%s",serverData);
         label = Widgets.newLabel(subComposite,BARControl.tr("Port")+":");
         Widgets.layout(label,0,1,TableLayoutData.E);
         widgetPort = Widgets.newSpinner(subComposite);
+        widgetPort.setToolTipText(BARControl.tr("Port number. Set to 0 to use default port number."));
         widgetPort.setMinimum(0);
         widgetPort.setMaximum(65535);
         widgetPort.setSelection(serverData.port);
@@ -2166,6 +2367,34 @@ Dprintf.dprintf("serverData=%s",serverData);
           }
         });
       }
+
+      label = Widgets.newLabel(composite,BARControl.tr("Max. storage size")+":");
+      Widgets.layout(label,6,0,TableLayoutData.NW);
+      widgetMaxConnectionCount = Widgets.newSpinner(composite);
+      widgetMaxConnectionCount.setToolTipText(BARControl.tr("Max. number of concurrent connections."));
+      widgetMaxConnectionCount.setMinimum(0);
+      widgetMaxConnectionCount.setSelection(serverData.maxConnectionCount);
+      Widgets.layout(widgetMaxConnectionCount,6,1,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
+      Widgets.addModifyListener(new WidgetModifyListener(widgetPort,serverData)
+      {
+        public void modified(Control control)
+        {
+          Widgets.setEnabled(control,
+                                (serverData.type == ServerTypes.FTP)
+                             || (serverData.type == ServerTypes.SSH)
+                             || (serverData.type == ServerTypes.WEBDAV)
+                            );
+        }
+      });
+
+      label = Widgets.newLabel(composite,BARControl.tr("Max. storage size")+":");
+      Widgets.layout(label,7,0,TableLayoutData.NW);
+      widgetMaxStorageSize = Widgets.newCombo(composite);
+      widgetMaxStorageSize.setToolTipText(BARControl.tr("Total size limit for storage."));
+      widgetMaxStorageSize.setItems(new String[]{"32M","64M","128M","140M","256M","280M","512M","600M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
+      widgetMaxStorageSize.setData("showedErrorDialog",false);
+      widgetMaxStorageSize.setText(Units.formatByteSize(serverData.maxStorageSize));
+      Widgets.layout(widgetMaxStorageSize,7,1,TableLayoutData.W);
     }
 
     // buttons
@@ -2213,7 +2442,7 @@ throw new Error("NYI");
       {
         Combo widget = (Combo)selectionEvent.widget;
 
-        serverData.type = Widgets.getSelectedComboItem(widget,ServerTypes.FILESYSTEM);
+        serverData.type = Widgets.getSelectedComboItem(widget,ServerTypes.FILE);
 Dprintf.dprintf("serverData.type=%s",serverData.type);
         Widgets.modified(serverData);
       }
@@ -2227,13 +2456,15 @@ Dprintf.dprintf("serverData.type=%s",serverData.type);
       {
         Button widget  = (Button)selectionEvent.widget;
 
-        serverData.name       = widgetName.getText().trim();
-        serverData.pathURL    = widgetPathURL.getText().trim();
-        serverData.loginName  = widgetLoginName.getText();
-        serverData.port       = widgetPort.getSelection();
-        serverData.password   = !widgetPassword.getText().isEmpty() ? widgetPassword.getText() : null;
-        serverData.publicKey  = !widgetPublicKey.getText().trim().isEmpty() ? widgetPublicKey.getText().trim() : null;
-        serverData.privateKey = !widgetPrivateKey.getText().trim().isEmpty() ? widgetPrivateKey.getText().trim() : null;
+        serverData.name               = widgetName.getText().trim();
+        serverData.pathURL            = widgetPathURL.getText().trim();
+        serverData.loginName          = widgetLoginName.getText();
+        serverData.port               = widgetPort.getSelection();
+        serverData.password           = !widgetPassword.getText().isEmpty() ? widgetPassword.getText() : null;
+        serverData.publicKey          = !widgetPublicKey.getText().trim().isEmpty() ? widgetPublicKey.getText().trim() : null;
+        serverData.privateKey         = !widgetPrivateKey.getText().trim().isEmpty() ? widgetPrivateKey.getText().trim() : null;
+        serverData.maxConnectionCount = widgetMaxConnectionCount.getSelection();
+        serverData.maxStorageSize     = Units.parseByteSize(widgetMaxStorageSize.getText());
 
         Dialogs.close(dialog,true);
       }
