@@ -1143,6 +1143,7 @@ fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(name),strerror
       }
     }
   }
+fprintf(stderr,"%s, %d: -----------\n",__FILE__,__LINE__);
 
   // free resources
   String_delete(name);
