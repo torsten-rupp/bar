@@ -191,19 +191,46 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
        (variable) = (variable)->next \
       )
 
-#define LIST_REMOVE(list,variable,condition) \
+/***********************************************************************\
+* Name   : LIST_FIND
+* Purpose: find in list
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#if 0
+#define LIST_FIND(list,condition) \
+  List_findFirst(list,({ return condition; }),NULL)
+#endif
+
+/***********************************************************************\
+* Name   : LIST_REMOVE
+* Purpose: find and remove entry in list
+* Input  : list      - list
+*          variable  - iteration variable
+*          condition - additional condition
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define LIST_REMOVE(list,condition) \
   do \
   { \
-    variable = list->head; \
-    while (variable != NULL) \
+    ListNode *__listNode; \
+    \
+    __listNode = list->head; \
+    while (__listNode != NULL) \
     { \
       if (condition) \
       { \
-        variable = List_remove(list,variable); \
+        __listNode = List_remove(list,__listNode); \
       } \
       else \
       { \
-        variable = variable->next; \
+        __listNode = __listNode->next; \
       } \
     } \
   } \
