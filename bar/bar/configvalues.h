@@ -95,19 +95,6 @@ typedef struct
     void       *special;
     const char *newName;
   }                variable;                      // variable, new name or NULL
-  union
-  {
-    int        i;
-    int64      l;
-    double     d;
-    bool       b;
-    uint       enumeration;
-    uint       select;
-    ulong      set;
-    char       *cString;
-    String     string;
-    void       *special;
-  }                defaultValue;                  // default value
   int              offset;                        // offset in struct or -1
   struct
   {
@@ -317,7 +304,6 @@ typedef struct
     CONFIG_VALUE_TYPE_END,\
     NULL,\
     {NULL},\
-    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -348,7 +334,6 @@ typedef struct
     CONFIG_VALUE_TYPE_BEGIN_SECTION,\
     name,\
     {NULL},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -366,7 +351,6 @@ typedef struct
     CONFIG_VALUE_TYPE_END_SECTION,\
     NULL,\
     {NULL},\
-    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -400,7 +384,6 @@ typedef struct
     CONFIG_VALUE_TYPE_INTEGER,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {min,max,units},\
     {0LL,0LL,NULL},\
@@ -436,7 +419,6 @@ typedef struct
     CONFIG_VALUE_TYPE_INTEGER64,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {min,max,units},\
@@ -472,7 +454,6 @@ typedef struct
     CONFIG_VALUE_TYPE_DOUBLE,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -506,7 +487,6 @@ typedef struct
     CONFIG_VALUE_TYPE_BOOLEAN,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -540,7 +520,6 @@ typedef struct
     CONFIG_VALUE_TYPE_BOOLEAN,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -575,7 +554,6 @@ typedef struct
     CONFIG_VALUE_TYPE_ENUM,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -610,7 +588,6 @@ typedef struct
     CONFIG_VALUE_TYPE_SELECT,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -645,7 +622,6 @@ typedef struct
     CONFIG_VALUE_TYPE_SET,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -679,7 +655,6 @@ typedef struct
     CONFIG_VALUE_TYPE_CSTRING,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -713,7 +688,6 @@ typedef struct
     CONFIG_VALUE_TYPE_STRING,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -753,7 +727,6 @@ typedef struct
     CONFIG_VALUE_TYPE_SPECIAL,\
     name,\
     {variablePointer},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -783,7 +756,6 @@ typedef struct
     CONFIG_VALUE_TYPE_IGNORE,\
     name,\
     {NULL},\
-    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -813,7 +785,6 @@ typedef struct
     CONFIG_VALUE_TYPE_DEPRECATED,\
     name,\
     {NULL},\
-    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -844,7 +815,6 @@ typedef struct
     CONFIG_VALUE_TYPE_BEGIN_SECTION,\
     name,\
     {NULL},\
-    {0},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -863,7 +833,6 @@ typedef struct
     CONFIG_VALUE_TYPE_END_SECTION,\
     NULL,\
     {NULL},\
-    {0},\
     0,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
