@@ -610,28 +610,43 @@ double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilte
 /***********************************************************************\
 * Name   : Misc_base64Encode
 * Purpose: encode base64
-* Input  : s      - string variable
-*          data   - data to encode
-*          length - length of data to encode
+* Input  : string     - string variable to append to
+*          data       - data to encode
+*          dataLength - length of data to encode
 * Output : -
 * Return : encoded string
 * Notes  : -
 \***********************************************************************/
 
-String Misc_base64Encode(String s, const byte *data, uint length);
+String Misc_base64Encode(String string, const byte *data, uint dataLength);
 
 /***********************************************************************\
 * Name   : Misc_base64Decode
 * Purpose: decode base64
-* Input  : data      - data variable
-*          maxLength - max. length of data
-*          s         - base64 string
+* Input  : data          - data variable
+*          maxDataLength - max. length of data
+*          string,s      - base64 string
+*          index         - start index or STRING_BEGIN
 * Output : -
 * Return : length of decoded data or -1 on error
 * Notes  : -
 \***********************************************************************/
 
-int Misc_base64Decode(byte *data, uint maxLength, const String s);
+bool Misc_base64Decode(byte *data, uint dataLength, ConstString string, ulong index);
+bool Misc_base64DecodeCString(byte *data, uint dataLength, const char *s);
+
+/***********************************************************************\
+* Name   : Misc_base64DecodeLength
+* Purpose: get base64 decode length
+* Input  : string,s - base64 string
+*          index    - start index or STRING_BEGIN
+* Output : -
+* Return : decoded length
+* Notes  : -
+\***********************************************************************/
+
+uint Misc_base64DecodeLength(ConstString string, ulong index);
+uint Misc_base64DecodeLengthCString(const char *s);
 
 #ifdef __cplusplus
   }
