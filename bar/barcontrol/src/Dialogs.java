@@ -3623,7 +3623,7 @@ class Dialogs
                              String   defaultFileExtension
                             )
   {
-    File oldFile = (oldFileName != null)?new File(oldFileName):null;
+    File oldFile = (oldFileName != null) ? new File(oldFileName) : null;
 
     FileDialog dialog = new FileDialog(parentShell,type);
     dialog.setText(title);
