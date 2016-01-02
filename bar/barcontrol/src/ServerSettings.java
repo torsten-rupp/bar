@@ -114,14 +114,14 @@ public class ServerSettings
     int         id;
     String      name;
     ServerTypes type;
-    String     pathURL;
-    String     loginName;
-    int        port;
-    String     password;
-    String     publicKey;
-    String     privateKey;
-    int        maxConnectionCount;
-    long       maxStorageSize;
+    String      pathURL;
+    String      loginName;
+    int         port;
+    String      password;
+    String      publicKey;
+    String      privateKey;
+    int         maxConnectionCount;
+    long        maxStorageSize;
 
     /** create storage server data
      * @param id id
@@ -130,17 +130,21 @@ public class ServerSettings
      * @param pathURL path/URL
      * @param loginName login name
      * @param port port number
+     * @param maxConnectionCount max. concurrent connections
+     * @param maxStorageSize max. storage size [bytes]
      */
-    ServerData(int id, String name, ServerTypes type, String pathURL, String loginName, int port)
+    ServerData(int id, String name, ServerTypes type, String pathURL, String loginName, int port, int maxConnectionCount, long maxStorageSize)
     {
-      this.id         = id;
-      this.name       = name;
-      this.type       = type;
-      this.pathURL    = pathURL;
-      this.port       = port;
-      this.loginName  = loginName;
-      this.publicKey  = null;
-      this.privateKey = null;
+      this.id                 = id;
+      this.name               = name;
+      this.type               = type;
+      this.pathURL            = pathURL;
+      this.port               = port;
+      this.loginName          = loginName;
+      this.publicKey          = null;
+      this.privateKey         = null;
+      this.maxConnectionCount = maxConnectionCount;
+      this.maxStorageSize     = maxStorageSize;
     }
 
     /** create storage server data
@@ -150,7 +154,7 @@ public class ServerSettings
      */
     ServerData(int id, String name, ServerTypes type)
     {
-      this(id,name,type,"","",0);
+      this(id,name,type,"","",0,0,0L);
     }
 
     /** create storage server data
@@ -165,7 +169,7 @@ public class ServerSettings
      */
     public ServerData clone()
     {
-      return new ServerData(id,name,type,pathURL,loginName,port);
+      return new ServerData(id,name,type,pathURL,loginName,port,maxConnectionCount,maxStorageSize);
     }
 
     /** convert data to string
@@ -2092,13 +2096,13 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       int         id                 = resultMap.getInt   ("id"                          );
       String      name               = resultMap.getString("name"                        );
       ServerTypes serverType         = resultMap.getEnum  ("serverType",ServerTypes.class);
+      int         port               = resultMap.getInt   ("port"                        );
       String      loginName          = resultMap.getString("loginName"                   );
       int         maxConnectionCount = resultMap.getInt   ("maxConnectionCount"          );
       long        maxStorageSize     = resultMap.getLong  ("maxStorageSize"              );
 
       // create server data
-      serverData = new ServerData(id,name,serverType);
-//      servers.value.put(id,serverData);
+      serverData = new ServerData(id,name,serverType,"",loginName,port,maxConnectionCount,maxStorageSize);
 
       // add table entry
       Widgets.insertTableItem(widgetServerTable,
@@ -2371,7 +2375,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("Max. storage size")+":");
       Widgets.layout(label,6,0,TableLayoutData.NW);
       widgetMaxConnectionCount = Widgets.newSpinner(composite);
-      widgetMaxConnectionCount.setToolTipText(BARControl.tr("Max. number of concurrent connections."));
+      widgetMaxConnectionCount.setToolTipText(BARControl.tr("Max. number of concurrent connections. 0 for unlimited number of concurrent connections."));
       widgetMaxConnectionCount.setMinimum(0);
       widgetMaxConnectionCount.setSelection(serverData.maxConnectionCount);
       Widgets.layout(widgetMaxConnectionCount,6,1,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
