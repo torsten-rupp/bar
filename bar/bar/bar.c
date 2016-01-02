@@ -892,7 +892,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SELECT            ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_STRING            ("crypt-public-key",             &jobOptions.cryptPublicKeyFileName,-1                          ),
   CONFIG_VALUE_STRING            ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                         ),
 
@@ -1007,41 +1007,41 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_STRING            ("ftp-login-name",               &defaultFTPServer.ftpServer.loginName,-1                       ),
-  CONFIG_VALUE_SPECIAL           ("ftp-password",                 &defaultFTPServer.ftpServer.password,-1,                       configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("ftp-password",                 &defaultFTPServer.ftpServer.password,-1,                       configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_INTEGER           ("ftp-max-connections",          &defaultFTPServer.maxConnectionCount,-1,                       0,MAX_INT,NULL),
   CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",         &defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
   CONFIG_VALUE_BEGIN_SECTION     ("ftp-server",-1),
     CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",               Server,ftpServer.loginName                                     ),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                 Server,ftpServer.password,                                     configValueParsePassword,NULL,NULL,NULL,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                 Server,ftpServer.password,                                     configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",          Server,maxConnectionCount,                                     0,MAX_INT,NULL),
     CONFIG_STRUCT_VALUE_INTEGER64("ftp-max-storage-size",         Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_INTEGER           ("ssh-port",                     &defaultSSHServer.sshServer.port,-1,                           0,65535,NULL),
   CONFIG_VALUE_STRING            ("ssh-login-name",               &defaultSSHServer.sshServer.loginName,-1                       ),
-  CONFIG_VALUE_SPECIAL           ("ssh-password",                 &defaultSSHServer.sshServer.password,-1,                       configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("ssh-public-key",               &defaultSSHServer.sshServer.publicKey,-1,                      configValueReadKeyFile,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("ssh-private-key",              &defaultSSHServer.sshServer.privateKey,-1,                     configValueReadKeyFile,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("ssh-password",                 &defaultSSHServer.sshServer.password,-1,                       configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_VALUE_SPECIAL           ("ssh-public-key",               &defaultSSHServer.sshServer.publicKey,-1,                      configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("ssh-private-key",              &defaultSSHServer.sshServer.privateKey,-1,                     configValueParseKey,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_INTEGER           ("ssh-max-connections",          &defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL),
   CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",         &defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
   CONFIG_VALUE_BEGIN_SECTION     ("ssh-server",-1),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                     Server,sshServer.port,                                         0,65535,NULL),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",               Server,sshServer.loginName                                     ),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                 Server,sshServer.password,                                     configValueParsePassword,NULL,NULL,NULL,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",               Server,sshServer.publicKey,                                    configValueReadKeyFile,NULL,NULL,NULL,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",              Server,sshServer.privateKey,                                   configValueReadKeyFile,NULL,NULL,NULL,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                 Server,sshServer.password,                                     configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",               Server,sshServer.publicKey,                                    configValueParseKey,configValueFormatInitKey,configValueFormatDoneKey,configValueFormatKey,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",              Server,sshServer.privateKey,                                   configValueParseKey,configValueFormatInitKey,configValueFormatDoneKey,configValueFormatKey,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",          Server,maxConnectionCount,                                     0,MAX_INT,NULL),
     CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",         Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
   CONFIG_VALUE_END_SECTION(),
 
 //  CONFIG_VALUE_INTEGER           ("webdav-port",                  &defaultWebDAVServer.webDAVServer.port,-1,                     0,65535,NULL),
   CONFIG_VALUE_STRING            ("webdav-login-name",            &defaultWebDAVServer.webDAVServer.loginName,-1                 ),
-  CONFIG_VALUE_SPECIAL           ("webdav-password",              &defaultWebDAVServer.webDAVServer.password,-1,                 configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("webdav-password",              &defaultWebDAVServer.webDAVServer.password,-1,                 configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_INTEGER           ("webdav-max-connections",       &defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL),
   CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",      &defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL),
   CONFIG_VALUE_BEGIN_SECTION     ("webdav-server",-1),
     CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",            Server,webDAVServer.loginName                                  ),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",              Server,webDAVServer.password,                                  configValueParsePassword,NULL,NULL,NULL,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",              Server,webDAVServer.password,                                  configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",       Server,maxConnectionCount,                                     0,MAX_INT,NULL),
     CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",      Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
   CONFIG_VALUE_END_SECTION(),
@@ -1085,7 +1085,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("server-ca-file",               &serverCAFileName,-1                                           ),
   CONFIG_VALUE_CSTRING           ("server-cert-file",             &serverCertFileName,-1                                         ),
   CONFIG_VALUE_CSTRING           ("server-key-file",              &serverKeyFileName,-1                                          ),
-  CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_CSTRING           ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
 
   CONFIG_VALUE_STRING            ("remote-bar-executable",        &globalOptions.remoteBARExecutable,-1                          ),
@@ -3078,14 +3078,14 @@ LOCAL Errors initAll(void)
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
   if (File_exists(fileName))
   {
-    readKeyFile(&defaultSSHServer.sshServer.publicKey,String_cString(fileName));
-    readKeyFile(&defaultWebDAVServer.webDAVServer.publicKey,String_cString(fileName));
+    (void)readKeyFile(&defaultSSHServer.sshServer.publicKey,String_cString(fileName));
+    (void)readKeyFile(&defaultWebDAVServer.webDAVServer.publicKey,String_cString(fileName));
   }
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
   if (File_exists(fileName))
   {
-    readKeyFile(&defaultSSHServer.sshServer.privateKey,String_cString(fileName));
-    readKeyFile(&defaultWebDAVServer.webDAVServer.privateKey,String_cString(fileName));
+    (void)readKeyFile(&defaultSSHServer.sshServer.privateKey,String_cString(fileName));
+    (void)readKeyFile(&defaultWebDAVServer.webDAVServer.privateKey,String_cString(fileName));
   }
   String_delete(fileName);
 
@@ -3282,7 +3282,6 @@ Errors updateConfig(void)
   StringList        configLinesList;
   String            line;
   Errors            error;
-  FileHandle        fileHandle;
   uint              i;
   StringNode        *nextStringNode;
   ConfigValueFormat configValueFormat;
@@ -4543,6 +4542,13 @@ void doneKey(Key *key)
   }
 }
 
+bool isKeyAvailable(const Key *key)
+{
+  assert(key != NULL);
+
+  return key->data != NULL;
+}
+
 void clearKey(Key *key)
 {
   assert(key != NULL);
@@ -4552,18 +4558,36 @@ void clearKey(Key *key)
   key->length = 0;
 }
 
-bool isKeyAvailable(const Key *key)
+bool setKey(Key *key, const void *keyData, uint keyLength)
 {
+  void *data;
+
   assert(key != NULL);
 
-  return key->data != NULL;
+  data = Password_allocSecure(keyLength);
+  if (data == NULL)
+  {
+    return FALSE;
+  }
+  memcpy(data,keyData,keyLength);
+
+  if (key->data != NULL) Password_freeSecure(key->data);
+  key->data   = data;
+  key->length = keyLength;
+
+  return TRUE;
+}
+
+bool setKeyString(Key *key, ConstString string)
+{
+  return setKey(key,String_cString(string),String_length(string));
 }
 
 Errors readKeyFile(Key *key, const char *fileName)
 {
   Errors     error;
   FileHandle fileHandle;
-  uint       length;
+  uint       dataLength;
   void       *data;
 
   assert(key != NULL);
@@ -4579,10 +4603,10 @@ Errors readKeyFile(Key *key, const char *fileName)
   }
 
   // get file size
-  length = (uint)File_getSize(&fileHandle);
+  dataLength = (uint)File_getSize(&fileHandle);
 
   // allocate secure memory
-  data = Password_allocSecure(length);
+  data = Password_allocSecure(dataLength);
   if (data == NULL)
   {
     (void)File_close(&fileHandle);
@@ -4592,7 +4616,7 @@ Errors readKeyFile(Key *key, const char *fileName)
   // read file data
   error = File_read(&fileHandle,
                     data,
-                    length,
+                    dataLength,
                     NULL
                    );
   if (error != ERROR_NONE)
@@ -4605,10 +4629,10 @@ Errors readKeyFile(Key *key, const char *fileName)
   // close file
   (void)File_close(&fileHandle);
 
-  // store data
+  // set key data
   if (key->data != NULL) Password_freeSecure(key->data);
   key->data   = data;
-  key->length = length;
+  key->length = dataLength;
 
   return ERROR_NONE;
 }
@@ -4787,7 +4811,7 @@ void freeServerNode(ServerNode *serverNode, void *userData)
   doneServer(&serverNode->server);
 }
 
-ServerNode *findServerNodeByID(uint id)
+ServerNode *findServerNodeById(uint id)
 {
   ServerNode *serverNode;
 
@@ -4802,14 +4826,14 @@ ServerNode *findServerNodeByID(uint id)
   return serverNode;
 }
 
-ServerNode *findServerNodeByName(const char *name)
+ServerNode *findServerNodeByName(ConstString name)
 {
   ServerNode *serverNode;
 
   assert(name != NULL);
 
   serverNode = globalOptions.serverList.head;
-  while ((serverNode != NULL) && stringEquals(serverNode->server.name,name))
+  while ((serverNode != NULL) && !String_equals(serverNode->server.name,name))
   {
     serverNode = serverNode->next;
   }
@@ -5966,10 +5990,12 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
   }
 }
 
-bool configValueReadKeyFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+bool configValueParseKey(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   Key    *key = (Key*)variable;
   Errors error;
+  uint   dataLength;
+  void   *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -5981,14 +6007,112 @@ bool configValueReadKeyFile(void *userData, void *variable, const char *name, co
 
   if (File_existsCString(value))
   {
+    // read key file
     error = readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
       return FALSE;
     }
   }
+  else if (stringStartsWith(value,"base64:"))
+  {
+    // get key data length
+    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+
+    if (dataLength > 0)
+    {
+      // allocate key memory
+      data = Password_allocSecure(dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
+
+      // decode base64
+      if (Misc_base64DecodeCString((byte*)data,dataLength,&value[7]) == -1)
+      {
+        Password_freeSecure(data);
+        return FALSE;
+      }
+    }
+    else
+    {
+      data = NULL;
+    }
+
+    // set key data
+    if (key->data != NULL) Password_freeSecure(key->data);
+    key->data   = data;
+    key->length = dataLength;
+  }
+  else
+  {
+    // get key data length
+    dataLength = strlen(value);
+
+    if (dataLength > 0)
+    {
+      // allocate key memory
+      data = Password_allocSecure(dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
+
+      // copy data
+      memcpy(data,value,dataLength);
+    }
+    else
+    {
+      data = NULL;
+    }
+
+    // set key data
+    if (key->data != NULL) Password_freeSecure(key->data);
+    key->data   = data;
+    key->length = dataLength;
+  }
 
   return TRUE;
+}
+
+void configValueFormatInitKey(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (Key*)variable;
+}
+
+void configValueFormatDoneKey(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatKey(void **formatUserData, void *userData, String line)
+{
+  Key *key;
+
+  assert(formatUserData != NULL);
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  key = (Key*)(*formatUserData);
+  if (key != NULL)
+  {
+    String_appendCString(line,"base64:");
+    Misc_base64Encode(line,key->data,key->length);
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 //TODO

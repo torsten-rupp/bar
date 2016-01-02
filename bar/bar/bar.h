@@ -534,6 +534,17 @@ bool duplicateKey(Key *toKey, const Key *fromKey);
 void doneKey(Key *key);
 
 /***********************************************************************\
+* Name   : isKeyAvailable
+* Purpose: check if public/private key is available
+* Input  : key - key
+* Output : -
+* Return : TRUE iff key is available
+* Notes  : -
+\***********************************************************************/
+
+bool isKeyAvailable(const Key *key);
+
+/***********************************************************************\
 * Name   : clearKey
 * Purpose: clear public/private key
 * Input  : key - key
@@ -545,15 +556,29 @@ void doneKey(Key *key);
 void clearKey(Key *key);
 
 /***********************************************************************\
-* Name   : isKeyAvailable
-* Purpose: check if public/private key is available
-* Input  : key - key
+* Name   : setKey
+* Purpose: set public/private key
+* Input  : key       - key
+*          keyData   - key data
+*          keyLength - length of key data [bytes]
 * Output : -
-* Return : TRUE iff key is available
+* Return : TRUE iff set
 * Notes  : -
 \***********************************************************************/
 
-bool isKeyAvailable(const Key *key);
+bool setKey(Key *key, const void *keyData, uint keyLength);
+
+/***********************************************************************\
+* Name   : setKeyString
+* Purpose: set public/private key with string
+* Input  : key    - key
+*          string - key data
+* Output : -
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
+
+bool setKeyString(Key *key, ConstString string);
 
 /***********************************************************************\
 * Name   : readKeyFile
@@ -603,7 +628,7 @@ void deleteServerNode(ServerNode *serverNode);
 void freeServerNode(ServerNode *serverNode, void *userData);
 
 /***********************************************************************\
-* Name   : findServerNodeByID
+* Name   : findServerNodeById
 * Purpose: find server node by id
 * Input  : id - id
 * Output : -
@@ -611,7 +636,7 @@ void freeServerNode(ServerNode *serverNode, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-ServerNode *findServerNodeByID(uint id);
+ServerNode *findServerNodeById(uint id);
 
 /***********************************************************************\
 * Name   : findServerNodeByName
@@ -622,7 +647,7 @@ ServerNode *findServerNodeByID(uint id);
 * Notes  : -
 \***********************************************************************/
 
-ServerNode *findServerNodeByName(const char *name);
+ServerNode *findServerNodeByName(ConstString name);
 
 /***********************************************************************\
 * Name   : getFTPServerSettings
@@ -1343,7 +1368,7 @@ void configValueFormatDoneCompressAlgorithms(void **formatUserData, void *userDa
 bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueReadKeyFile
+* Name   : configValueParseKeyFile
 * Purpose: config value option call back for reading key
 * Input  : userData - user data
 *          variable - config variable
@@ -1355,7 +1380,48 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
 * Notes  : -
 \***********************************************************************/
 
-bool configValueReadKeyFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueParseKey(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueFormatInitKey
+* Purpose: init format config key
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitKey(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneKey
+* Purpose: done format of config key
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneKey(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatKey
+* Purpose: format key config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatKey(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseOverwriteArchiveFiles
