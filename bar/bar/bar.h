@@ -71,7 +71,7 @@ extern const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[];
 extern const ConfigValueUnit   CONFIG_VALUE_TIME_UNITS[];
 extern const ConfigValueSet    CONFIG_VALUE_LOG_TYPES[];
 extern const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[];
-extern const ConfigValue       CONFIG_VALUES[];
+extern ConfigValue             CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
 
@@ -151,6 +151,17 @@ extern locale_t      POSIXLocale;            // POSIX locale
 \***********************************************************************/
 
 String getConfigFileName(String fileName);
+
+/***********************************************************************\
+* Name   : updateConfig
+* Purpose: update config file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors updateConfig(void);
 
 /***********************************************************************\
 * Name   : getArchiveTypeName
@@ -555,6 +566,63 @@ bool isKeyAvailable(const Key *key);
 \***********************************************************************/
 
 Errors readKeyFile(Key *key, const char *fileName);
+
+/***********************************************************************\
+* Name   : newServerNode
+* Purpose: new server node
+* Input  : serverType - server type
+*          name       - server name
+* Output : -
+* Return : server node
+* Notes  : -
+\***********************************************************************/
+
+ServerNode *newServerNode(ConstString name, ServerTypes serverType);
+
+/***********************************************************************\
+* Name   : deleteServerNode
+* Purpose: delete server node
+* Input  : serverNode - server node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void deleteServerNode(ServerNode *serverNode);
+
+/***********************************************************************\
+* Name   : freeServerNode
+* Purpose: free server node
+* Input  : serverNode - server node
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeServerNode(ServerNode *serverNode, void *userData);
+
+/***********************************************************************\
+* Name   : findServerNodeByID
+* Purpose: find server node by id
+* Input  : id - id
+* Output : -
+* Return : server node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+ServerNode *findServerNodeByID(uint id);
+
+/***********************************************************************\
+* Name   : findServerNodeByName
+* Purpose: find server node by name
+* Input  : name - server name
+* Output : -
+* Return : server node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+ServerNode *findServerNodeByName(const char *name);
 
 /***********************************************************************\
 * Name   : getFTPServerSettings

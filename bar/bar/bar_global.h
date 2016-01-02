@@ -133,9 +133,6 @@ typedef enum
 #define LOG_TYPE_NONE 0x00000000
 #define LOG_TYPE_ALL  0xFFFFffff
 
-#define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
-#define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
-
 // log handle
 typedef struct
 {
@@ -209,6 +206,7 @@ typedef struct
 // server types
 typedef enum
 {
+  SERVER_TYPE_FILE,
   SERVER_TYPE_FTP,
   SERVER_TYPE_SSH,
   SERVER_TYPE_WEBDAV
@@ -217,11 +215,13 @@ typedef enum
 // server
 typedef struct
 {
-  Semaphore   lock;
+//TODO
+  Semaphore lock;
   String      name;                                           // server name
   ServerTypes type;                                           // server type
   union
   {
+    FileServer   fileServer;
     FTPServer    ftpServer;
     SSHServer    sshServer;
     WebDAVServer webDAVServer;
@@ -241,13 +241,17 @@ typedef struct ServerNode
 {
   LIST_NODE_HEADER(struct ServerNode);
 
-  Server server;
+  uint      id;
+  Server    server;
 } ServerNode;
 
 // server list
 typedef struct
 {
   LIST_HEADER(ServerNode);
+
+  uint      id;
+  Semaphore lock;
 } ServerList;
 
 // file settings
@@ -330,6 +334,7 @@ typedef struct DeviceNode
 {
   LIST_NODE_HEADER(struct DeviceNode);
 
+  uint   id;
   String name;                                                // device name
   Device device;
 } DeviceNode;
@@ -337,6 +342,9 @@ typedef struct DeviceNode
 typedef struct
 {
   LIST_HEADER(DeviceNode);
+
+  Semaphore lock;
+  uint      id;
 } DeviceList;
 
 // global options
@@ -367,7 +375,8 @@ typedef struct
   Server                 *webDAVServer;                       // current selected WebDAV server
   Server                 *defaultWebDAVServer;                // default WebDAV server
 
-  const ServerList       *serverList;                         // list with FTP/SSH/WebDAV servers
+  ServerList             serverList;                          // list with FTP/SSH/WebDAV servers
+  DeviceList             deviceList;                          // list with devices
 
   String                 remoteBARExecutable;
 
@@ -381,7 +390,6 @@ typedef struct
   OpticalDisk            bd;                                  // BD settings
 
   Device                 *device;                             // current selected device
-  const DeviceList       *deviceList;                         // list with devices
   Device                 *defaultDevice;                      // default device
 
   bool                   indexDatabaseAutoUpdateFlag;         // TRUE for automatic update of index datbase

@@ -104,10 +104,10 @@
 #define DEFAULT_BD_DEVICE_NAME                "/dev/bd"
 #define DEFAULT_DEVICE_NAME                   "/dev/raw"
 
-#define DEFAULT_CD_VOLUME_SIZE                MAX_INT64
-#define DEFAULT_DVD_VOLUME_SIZE               MAX_INT64
-#define DEFAULT_BD_VOLUME_SIZE                MAX_INT64
-#define DEFAULT_DEVICE_VOLUME_SIZE            MAX_INT64
+#define DEFAULT_CD_VOLUME_SIZE                0LL
+#define DEFAULT_DVD_VOLUME_SIZE               0LL
+#define DEFAULT_BD_VOLUME_SIZE                0LL
+#define DEFAULT_DEVICE_VOLUME_SIZE            0LL
 
 #define DEFAULT_DATABASE_INDEX_FILE           "/var/lib/bar/index.db"
 
@@ -190,9 +190,6 @@ LOCAL String          jobName;
 LOCAL JobOptions      jobOptions;
 LOCAL String          uuid;
 LOCAL String          storageName;
-LOCAL ServerList      serverList;
-LOCAL Semaphore       serverListLock;
-LOCAL DeviceList      deviceList;
 LOCAL EntryList       includeEntryList;
 LOCAL PatternList     excludePatternList;
 LOCAL PatternList     compressExcludePatternList;
@@ -850,7 +847,7 @@ const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[] = CONFIG_VALUE_SET_ARR
   {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE },
 );
 
-const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   // general settings
   CONFIG_VALUE_SPECIAL           ("config",                       &configFileNameList,-1,                                        configValueParseConfigFile,NULL,NULL,NULL,NULL),
@@ -956,7 +953,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("webdav-write-pre-command",     &globalOptions.webdav.writePreProcessCommand,-1                ),
   CONFIG_VALUE_STRING            ("webdav-write-post-command",    &globalOptions.webdav.writePostProcessCommand,-1               ),
 
-  CONFIG_VALUE_STRING            ("cd-device",                    &globalOptions.bd.deviceName,-1                                ),
+  CONFIG_VALUE_STRING            ("cd-device",                    &globalOptions.cd.deviceName,-1                                ),
   CONFIG_VALUE_STRING            ("cd-request-volume-command",    &globalOptions.cd.requestVolumeCommand,-1                      ),
   CONFIG_VALUE_STRING            ("cd-unload-volume-command",     &globalOptions.cd.unloadVolumeCommand,-1                       ),
   CONFIG_VALUE_STRING            ("cd-load-volume-command",       &globalOptions.cd.loadVolumeCommand,-1                         ),
@@ -972,7 +969,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("cd-write-command",             &globalOptions.cd.writeCommand,-1                              ),
   CONFIG_VALUE_STRING            ("cd-write-image-command",       &globalOptions.cd.writeImageCommand,-1                         ),
 
-  CONFIG_VALUE_STRING            ("dvd-device",                   &globalOptions.bd.deviceName,-1                                ),
+  CONFIG_VALUE_STRING            ("dvd-device",                   &globalOptions.dvd.deviceName,-1                               ),
   CONFIG_VALUE_STRING            ("dvd-request-volume-command",   &globalOptions.dvd.requestVolumeCommand,-1                     ),
   CONFIG_VALUE_STRING            ("dvd-unload-volume-command",    &globalOptions.dvd.unloadVolumeCommand,-1                      ),
   CONFIG_VALUE_STRING            ("dvd-load-volume-command",      &globalOptions.dvd.loadVolumeCommand,-1                        ),
@@ -1004,15 +1001,20 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("bd-write-command",             &globalOptions.bd.writeCommand,-1                              ),
   CONFIG_VALUE_STRING            ("bd-write-image-command",       &globalOptions.bd.writeImageCommand,-1                         ),
 
+//  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",        &defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("file-server",-1),
+    CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",        Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_END_SECTION(),
+
   CONFIG_VALUE_STRING            ("ftp-login-name",               &defaultFTPServer.ftpServer.loginName,-1                       ),
   CONFIG_VALUE_SPECIAL           ("ftp-password",                 &defaultFTPServer.ftpServer.password,-1,                       configValueParsePassword,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_INTEGER           ("ftp-max-connections",          &defaultFTPServer.maxConnectionCount,-1,                       0,MAX_INT,NULL),
-//TODO
-//  CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",         &defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",         &defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
   CONFIG_VALUE_BEGIN_SECTION     ("ftp-server",-1),
     CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",               Server,ftpServer.loginName                                     ),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                 Server,ftpServer.password,                                     configValueParsePassword,NULL,NULL,NULL,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",          Server,maxConnectionCount,                                     0,MAX_INT,NULL),
+    CONFIG_STRUCT_VALUE_INTEGER64("ftp-max-storage-size",         Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_INTEGER           ("ssh-port",                     &defaultSSHServer.sshServer.port,-1,                           0,65535,NULL),
@@ -1021,8 +1023,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("ssh-public-key",               &defaultSSHServer.sshServer.publicKey,-1,                      configValueReadKeyFile,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("ssh-private-key",              &defaultSSHServer.sshServer.privateKey,-1,                     configValueReadKeyFile,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_INTEGER           ("ssh-max-connections",          &defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL),
-//TODO
-//  CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",         &defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",         &defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
   CONFIG_VALUE_BEGIN_SECTION     ("ssh-server",-1),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                     Server,sshServer.port,                                         0,65535,NULL),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",               Server,sshServer.loginName                                     ),
@@ -1030,18 +1031,19 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",               Server,sshServer.publicKey,                                    configValueReadKeyFile,NULL,NULL,NULL,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",              Server,sshServer.privateKey,                                   configValueReadKeyFile,NULL,NULL,NULL,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",          Server,maxConnectionCount,                                     0,MAX_INT,NULL),
+    CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",         Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
   CONFIG_VALUE_END_SECTION(),
 
 //  CONFIG_VALUE_INTEGER           ("webdav-port",                  &defaultWebDAVServer.webDAVServer.port,-1,                     0,65535,NULL),
   CONFIG_VALUE_STRING            ("webdav-login-name",            &defaultWebDAVServer.webDAVServer.loginName,-1                 ),
   CONFIG_VALUE_SPECIAL           ("webdav-password",              &defaultWebDAVServer.webDAVServer.password,-1,                 configValueParsePassword,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_INTEGER           ("webdav-max-connections",       &defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL),
-//TODO
-//  CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",      &defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",      &defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL),
   CONFIG_VALUE_BEGIN_SECTION     ("webdav-server",-1),
     CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",            Server,webDAVServer.loginName                                  ),
     CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",              Server,webDAVServer.password,                                  configValueParsePassword,NULL,NULL,NULL,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",       Server,maxConnectionCount,                                     0,MAX_INT,NULL),
+    CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",      Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_STRING            ("device",                       &defaultDevice.name,-1                                         ),
@@ -1329,8 +1331,8 @@ LOCAL void initServer(Server *server, ConstString name, ServerTypes serverType)
         break; // not reached
     #endif /* NDEBUG */
   }
-  server->maxConnectionCount                  = MAX_CONNECTION_COUNT_UNLIMITED;
-  server->maxStorageSize                      = MAX_STORAGE_SIZE_UNLIMITED;
+  server->maxConnectionCount                  = 0;
+  server->maxStorageSize                      = 0;
   server->connection.lowPriorityRequestCount  = 0;
   server->connection.highPriorityRequestCount = 0;
   server->connection.count                    = 0;
@@ -1378,51 +1380,6 @@ LOCAL void doneServer(Server *server)
 }
 
 /***********************************************************************\
-* Name   : newServerNode
-* Purpose: new server node
-* Input  : serverType - server type
-*          name       - server name
-* Output : -
-* Return : server node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ServerNode *newServerNode(ConstString name, ServerTypes serverType)
-{
-  ServerNode *serverNode;
-
-  assert(name != NULL);
-
-  serverNode = LIST_NEW_NODE(ServerNode);
-  if (serverNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  initServer(&serverNode->server,name,serverType);
-
-  return serverNode;
-}
-
-/***********************************************************************\
-* Name   : freeServerNode
-* Purpose: free server node
-* Input  : serverNode - server node
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeServerNode(ServerNode *serverNode, void *userData)
-{
-  assert(serverNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  doneServer(&serverNode->server);
-}
-
-/***********************************************************************\
 * Name   : initDevice
 * Purpose: init device
 * Input  : device - device
@@ -1462,14 +1419,25 @@ LOCAL void initDevice(Device *device)
 
 LOCAL DeviceNode *newDeviceNode(ConstString name)
 {
-  DeviceNode *deviceNode;
+  SemaphoreLock semaphoreLock;
+  uint          id;
+  DeviceNode    *deviceNode;
 
+  // get new id
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    globalOptions.serverList.id++;
+    id = globalOptions.serverList.id;
+  }
+
+  // allocate new device node
   deviceNode = LIST_NEW_NODE(DeviceNode);
   if (deviceNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   initDevice(&deviceNode->device);
+  deviceNode->id          = id;
   deviceNode->name        = String_duplicate(name);
   deviceNode->device.name = String_duplicate(name);
 
@@ -1572,25 +1540,80 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
   {
     // parse line
-    if      (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
+    if      (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
     {
-#if 0
-      ServerNode *serverNode;
-
-      serverNode = newServerNode(name,SERVER_TYPE_FTP);
-      List_append(&serverList,serverNode);
-#else
-      ServerNode *serverNode;
+      SemaphoreLock semaphoreLock;
+      ServerNode    *serverNode;
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
-      LIST_ITERATE(&serverList,serverNode)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
-        if (String_equals(serverNode->server.name,name))
+        serverNode = findServerNodeByName(name);
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+      }
+      if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FILE);
+
+      // parse section
+      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+            )
+      {
+        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          List_remove(&serverList,serverNode);
-          break;
+          String_unquote(value,STRING_QUOTES);
+          String_unescape(value,
+                          STRING_ESCAPE_CHARACTER,
+                          STRING_ESCAPE_CHARACTERS_MAP_TO,
+                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                        );
+          if (!ConfigValue_parse(String_cString(name),
+                                 String_cString(value),
+                                 CONFIG_VALUES,
+                                 "file-server",
+                                 NULL, // errorOutputHandle
+                                 NULL, // errorPrefix
+                                 &serverNode->server
+                                )
+             )
+          {
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+                       String_cString(name),
+                       "ftp-server",
+                       String_cString(fileName),
+                       lineNb
+                      );
+          }
         }
+        else
+        {
+          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+                     String_cString(fileName),
+                     lineNb,
+                     String_cString(line)
+                    );
+        }
+      }
+      File_ungetLine(&fileHandle,line,&lineNb);
+
+      // add to server list
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        List_append(&globalOptions.serverList,serverNode);
+      }
+    }
+    else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
+    {
+      SemaphoreLock semaphoreLock;
+      ServerNode    *serverNode;
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      // find/allocate server node
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        serverNode = findServerNodeByName(name);
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
       }
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FTP);
 
@@ -1638,28 +1661,22 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      List_append(&serverList,serverNode);
-#endif
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        List_append(&globalOptions.serverList,serverNode);
+      }
     }
     else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
     {
-#if 0
-      ServerNode *serverNode;
-
-      serverNode = newServerNode(name,SERVER_TYPE_SSH);
-      List_append(&serverList,serverNode);
-#else
-      ServerNode *serverNode;
+      SemaphoreLock semaphoreLock;
+      ServerNode    *serverNode;
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
-      LIST_ITERATE(&serverList,serverNode)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
-        if (String_equals(serverNode->server.name,name))
-        {
-          List_remove(&serverList,serverNode);
-          break;
-        }
+        serverNode = findServerNodeByName(name);
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
       }
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_SSH);
 
@@ -1707,28 +1724,22 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      List_append(&serverList,serverNode);
-#endif
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        List_append(&globalOptions.serverList,serverNode);
+      }
     }
     else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
     {
-#if 0
-      ServerNode *serverNode;
-
-      serverNode = newServerNode(name,SERVER_TYPE_WEBDAV);
-      List_append(&serverList,serverNode);
-#else
-      ServerNode *serverNode;
+      SemaphoreLock semaphoreLock;
+      ServerNode    *serverNode;
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
-      LIST_ITERATE(&serverList,serverNode)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
-        if (String_equals(serverNode->server.name,name))
-        {
-          List_remove(&serverList,serverNode);
-          break;
-        }
+        serverNode = findServerNodeByName(name);
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
       }
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_WEBDAV);
 
@@ -1776,27 +1787,27 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      List_append(&serverList,serverNode);
-#endif
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        List_append(&globalOptions.serverList,serverNode);
+      }
     }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
     {
-#if 0
-      DeviceNode *deviceNode;
-
-      deviceNode = newDeviceNode(name);
-      List_append(&deviceList,deviceNode);
-#else
-      DeviceNode *deviceNode;
+      SemaphoreLock semaphoreLock;
+      DeviceNode    *deviceNode;
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate device node
-      LIST_ITERATE(&deviceList,deviceNode)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
-        if (String_equals(deviceNode->name,name))
+        LIST_ITERATE(&globalOptions.deviceList,deviceNode)
         {
-          List_remove(&deviceList,deviceNode);
-          break;
+          if (String_equals(deviceNode->name,name))
+          {
+            List_remove(&globalOptions.deviceList,deviceNode);
+            break;
+          }
         }
       }
       if (deviceNode == NULL) deviceNode = newDeviceNode(name);
@@ -1845,8 +1856,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to device list
-      List_append(&deviceList,deviceNode);
-#endif
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        List_append(&globalOptions.deviceList,deviceNode);
+      }
     }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
     {
@@ -2659,7 +2672,10 @@ LOCAL void initGlobalOptions(void)
   globalOptions.webDAVServer                                    = &defaultWebDAVServer;
   globalOptions.defaultWebDAVServer                             = &defaultWebDAVServer;
 
-  globalOptions.serverList                                      = &serverList;
+  List_init(&globalOptions.serverList);
+  Semaphore_init(&globalOptions.serverList.lock);
+  List_init(&globalOptions.deviceList);
+  Semaphore_init(&globalOptions.deviceList.lock);
 
   globalOptions.remoteBARExecutable                             = NULL;
 
@@ -2724,7 +2740,6 @@ LOCAL void initGlobalOptions(void)
   globalOptions.bd.writeImageCommand                            = String_newCString(BD_WRITE_IMAGE_COMMAND);
 
   globalOptions.device                                          = globalOptions.defaultDevice;
-  globalOptions.deviceList                                      = &deviceList;
   globalOptions.defaultDevice                                   = &defaultDevice;
 
   globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
@@ -2815,6 +2830,12 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.file.writePreProcessCommand);
 
   String_delete(globalOptions.remoteBARExecutable);
+
+  Semaphore_done(&globalOptions.deviceList.lock);
+  List_done(&globalOptions.deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
+  Semaphore_done(&globalOptions.serverList.lock);
+  List_done(&globalOptions.serverList,(ListNodeFreeFunction)freeServerNode,NULL);
+
   List_done(&globalOptions.maxBandWidthList,(ListNodeFreeFunction)freeBandWidthNode,NULL);
   String_delete(globalOptions.tmpDirectory);
 }
@@ -3006,10 +3027,6 @@ LOCAL Errors initAll(void)
   storageName                           = NULL;
   initJobOptions(&jobOptions);
 
-  List_init(&serverList);
-  Semaphore_init(&serverListLock);
-
-  List_init(&deviceList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&compressExcludePatternList);
@@ -3073,7 +3090,7 @@ LOCAL Errors initAll(void)
   String_delete(fileName);
 
   // initialize command line options and config values
-  ConfigValue_init(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
+  ConfigValue_init(CONFIG_VALUES);
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
   // done resources
@@ -3097,7 +3114,7 @@ LOCAL void doneAll(void)
 
   // deinitialize command line options and config values
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
-  ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
+  ConfigValue_done(CONFIG_VALUES);
 
   // deinitialize variables
   freelocale(POSIXLocale);
@@ -3122,10 +3139,6 @@ LOCAL void doneAll(void)
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   Password_delete(serverPassword);
-  List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
-
-  Semaphore_done(&serverListLock);
-  List_done(&serverList,(ListNodeFreeFunction)freeServerNode,NULL);
 
   doneJobOptions(&jobOptions);
   String_delete(storageName);
@@ -3261,6 +3274,192 @@ String getConfigFileName(String fileName)
 
   return fileName;
 }
+
+
+Errors updateConfig(void)
+{
+  String            configFileName;
+  StringList        configLinesList;
+  String            line;
+  Errors            error;
+  FileHandle        fileHandle;
+  uint              i;
+  StringNode        *nextStringNode;
+  ConfigValueFormat configValueFormat;
+  ServerNode        *serverNode;
+
+  // init variables
+  configFileName = String_new();
+  StringList_init(&configLinesList);
+  line           = String_new();
+
+  // get config file name
+  getConfigFileName(configFileName);
+  if (String_isEmpty(configFileName))
+  {
+    String_delete(configFileName);
+    return ERROR_NO_FILE_NAME;
+  }
+fprintf(stderr,"%s, %d: configFileName=%s\n",__FILE__,__LINE__,String_cString(configFileName));
+
+  // read file
+  error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&configLinesList);
+    String_delete(line);
+    String_delete(configFileName);
+    return error;
+  }
+
+  // update config entries
+  CONFIG_VALUE_ITERATE(CONFIG_VALUES,i)
+  {
+    // delete old entries, get position for insert new entries
+    nextStringNode = ConfigValue_deleteEntries(&configLinesList,NULL,CONFIG_VALUES[i].name);
+
+    // insert new entries
+    ConfigValue_formatInit(&configValueFormat,
+                           &CONFIG_VALUES[i],
+                           CONFIG_VALUE_FORMAT_MODE_LINE,
+                           NULL  // variable
+                          );
+    while (ConfigValue_format(&configValueFormat,line))
+    {
+      StringList_insert(&configLinesList,line,nextStringNode);
+    }
+    ConfigValue_formatDone(&configValueFormat);
+  }
+
+  // update storage servers
+  nextStringNode = ConfigValue_deleteSections(&configLinesList,"file-server");
+  LIST_ITERATE(&globalOptions.serverList,serverNode)
+  {
+    if (serverNode->server.type == SERVER_TYPE_FILE)
+    {
+      // insert new schedule sections
+      String_format(String_clear(line),"[file-server %'S]",serverNode->server.name);
+      StringList_insert(&configLinesList,line,nextStringNode);
+
+      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"file-server",i)
+      {
+        ConfigValue_formatInit(&configValueFormat,
+                               &CONFIG_VALUES[i],
+                               CONFIG_VALUE_FORMAT_MODE_LINE,
+                               &serverNode->server
+                              );
+        while (ConfigValue_format(&configValueFormat,line))
+        {
+          StringList_insert(&configLinesList,line,nextStringNode);
+        }
+        ConfigValue_formatDone(&configValueFormat);
+      }
+
+      StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+      StringList_insertCString(&configLinesList,"",nextStringNode);
+    }
+  }
+  nextStringNode = ConfigValue_deleteSections(&configLinesList,"ftp-server");
+  LIST_ITERATE(&globalOptions.serverList,serverNode)
+  {
+    if (serverNode->server.type == SERVER_TYPE_FTP)
+    {
+      // insert new schedule sections
+      String_format(String_clear(line),"[ftp-server %'S]",serverNode->server.name);
+      StringList_insert(&configLinesList,line,nextStringNode);
+
+      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"ftp-server",i)
+      {
+        ConfigValue_formatInit(&configValueFormat,
+                               &CONFIG_VALUES[i],
+                               CONFIG_VALUE_FORMAT_MODE_LINE,
+                               &serverNode->server
+                              );
+        while (ConfigValue_format(&configValueFormat,line))
+        {
+          StringList_insert(&configLinesList,line,nextStringNode);
+        }
+        ConfigValue_formatDone(&configValueFormat);
+      }
+
+      StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+      StringList_insertCString(&configLinesList,"",nextStringNode);
+    }
+  }
+  nextStringNode = ConfigValue_deleteSections(&configLinesList,"ssh-server");
+  LIST_ITERATE(&globalOptions.serverList,serverNode)
+  {
+    if (serverNode->server.type == SERVER_TYPE_SSH)
+    {
+      // insert new schedule sections
+      String_format(String_clear(line),"[ssh-server %'S]",serverNode->server.name);
+      StringList_insert(&configLinesList,line,nextStringNode);
+
+      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"ssh-server",i)
+      {
+        ConfigValue_formatInit(&configValueFormat,
+                               &CONFIG_VALUES[i],
+                               CONFIG_VALUE_FORMAT_MODE_LINE,
+                               &serverNode->server
+                              );
+        while (ConfigValue_format(&configValueFormat,line))
+        {
+          StringList_insert(&configLinesList,line,nextStringNode);
+        }
+        ConfigValue_formatDone(&configValueFormat);
+      }
+
+      StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+      StringList_insertCString(&configLinesList,"",nextStringNode);
+    }
+  }
+  nextStringNode = ConfigValue_deleteSections(&configLinesList,"webdav-server");
+  LIST_ITERATE(&globalOptions.serverList,serverNode)
+  {
+    if (serverNode->server.type == SERVER_TYPE_WEBDAV)
+    {
+      // insert new schedule sections
+      String_format(String_clear(line),"[webdav-server %'S]",serverNode->server.name);
+      StringList_insert(&configLinesList,line,nextStringNode);
+
+      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"webdav-server",i)
+      {
+        ConfigValue_formatInit(&configValueFormat,
+                               &CONFIG_VALUES[i],
+                               CONFIG_VALUE_FORMAT_MODE_LINE,
+                               &serverNode->server
+                              );
+        while (ConfigValue_format(&configValueFormat,line))
+        {
+          StringList_insert(&configLinesList,line,nextStringNode);
+        }
+        ConfigValue_formatDone(&configValueFormat);
+      }
+
+      StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+      StringList_insertCString(&configLinesList,"",nextStringNode);
+    }
+  }
+
+  // write file
+  error = ConfigValue_writeConfigFileLines(configFileName,&configLinesList);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    StringList_done(&configLinesList);
+    String_delete(configFileName);
+    return error;
+  }
+
+  // free resources
+  String_delete(line);
+  StringList_done(&configLinesList);
+  String_delete(configFileName);
+
+  return ERROR_NONE;
+}
+
+/*---------------------------------------------------------------------*/
 
 const char *getArchiveTypeName(ArchiveTypes archiveType)
 {
@@ -4424,7 +4623,7 @@ bool allocateServer(Server *server, ServerConnectionPriorities priority, long ti
   SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // get max. number of allowed concurrent connections
-    if (server->maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
+    if (server->maxConnectionCount != 0)
     {
       maxConnectionCount = server->maxConnectionCount;
     }
@@ -4454,7 +4653,7 @@ bool allocateServer(Server *server, ServerConnectionPriorities priority, long ti
     switch (priority)
     {
       case SERVER_CONNECTION_PRIORITY_LOW:
-        if (   (maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
+        if (   (maxConnectionCount != 0)
             && (server->connection.count >= maxConnectionCount)
            )
         {
@@ -4477,7 +4676,7 @@ bool allocateServer(Server *server, ServerConnectionPriorities priority, long ti
         }
         break;
       case SERVER_CONNECTION_PRIORITY_HIGH:
-        if (   (maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
+        if (   (maxConnectionCount != 0)
             && (server->connection.count >= maxConnectionCount)
            )
         {
@@ -4543,6 +4742,81 @@ bool isServerAllocationPending(Server *server)
   return pendingFlag;
 }
 
+ServerNode *newServerNode(ConstString name, ServerTypes serverType)
+{
+  SemaphoreLock semaphoreLock;
+  uint          id;
+  ServerNode    *serverNode;
+
+  assert(name != NULL);
+
+  // get new id
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    globalOptions.serverList.id++;
+    id = globalOptions.serverList.id;
+  }
+
+  // allocate server node
+  serverNode = LIST_NEW_NODE(ServerNode);
+  if (serverNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  initServer(&serverNode->server,name,serverType);
+  serverNode->id   = id;
+//  serverNode->name = String_duplicate(name);
+
+  return serverNode;
+}
+
+void deleteServerNode(ServerNode *serverNode)
+{
+  assert(serverNode != NULL);
+
+  freeServerNode(serverNode,NULL);
+  LIST_DELETE_NODE(serverNode);
+}
+
+void freeServerNode(ServerNode *serverNode, void *userData)
+{
+  assert(serverNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  doneServer(&serverNode->server);
+}
+
+ServerNode *findServerNodeByID(uint id)
+{
+  ServerNode *serverNode;
+
+  assert(id > 0);
+
+  serverNode = globalOptions.serverList.head;
+  while ((serverNode != NULL) && (serverNode->id != id))
+  {
+    serverNode = serverNode->next;
+  }
+
+  return serverNode;
+}
+
+ServerNode *findServerNodeByName(const char *name)
+{
+  ServerNode *serverNode;
+
+  assert(name != NULL);
+
+  serverNode = globalOptions.serverList.head;
+  while ((serverNode != NULL) && stringEquals(serverNode->server.name,name))
+  {
+    serverNode = serverNode->next;
+  }
+
+  return serverNode;
+}
+
 Server *getFTPServerSettings(ConstString      hostName,
                              const JobOptions *jobOptions,
                              FTPServer        *ftpServer
@@ -4553,8 +4827,9 @@ Server *getFTPServerSettings(ConstString      hostName,
   assert(hostName != NULL);
   assert(ftpServer != NULL);
 
+#warning lock
   // find FTP server
-  serverNode = globalOptions.serverList->head;
+  serverNode = globalOptions.serverList.head;
   while (   (serverNode != NULL)
          && (   (serverNode->server.type != SERVER_TYPE_FTP)
              || !String_equals(serverNode->server.name,hostName)
@@ -4581,8 +4856,9 @@ Server *getSSHServerSettings(ConstString      hostName,
   assert(hostName != NULL);
   assert(sshServer != NULL);
 
+#warning lock
   // find SSH server
-  serverNode = globalOptions.serverList->head;
+  serverNode = globalOptions.serverList.head;
   while (   (serverNode != NULL)
          && (   (serverNode->server.type != SERVER_TYPE_SSH)
              || !String_equals(serverNode->server.name,hostName)
@@ -4612,8 +4888,9 @@ Server *getWebDAVServerSettings(ConstString      hostName,
   assert(hostName != NULL);
   assert(webDAVServer != NULL);
 
+#warning lock
   // find WebDAV server
-  serverNode = globalOptions.serverList->head;
+  serverNode = globalOptions.serverList.head;
   while (   (serverNode != NULL)
          && (   (serverNode->server.type != SERVER_TYPE_WEBDAV)
              || !String_equals(serverNode->server.name,hostName)
@@ -4707,30 +4984,34 @@ void getDeviceSettings(ConstString      name,
                        Device           *device
                       )
 {
-  DeviceNode *deviceNode;
+  SemaphoreLock semaphoreLock;
+  DeviceNode    *deviceNode;
 
   assert(name != NULL);
   assert(device != NULL);
 
-  deviceNode = globalOptions.deviceList->head;
-  while ((deviceNode != NULL) && !String_equals(deviceNode->name,name))
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    deviceNode = deviceNode->next;
+    deviceNode = globalOptions.deviceList.head;
+    while ((deviceNode != NULL) && !String_equals(deviceNode->name,name))
+    {
+      deviceNode = deviceNode->next;
+    }
+    device->name                    = ((jobOptions != NULL) && (jobOptions->device.name                    != NULL)) ? jobOptions->device.name                    : ((deviceNode != NULL) ? deviceNode->device.name                    : globalOptions.defaultDevice->name                   );
+    device->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->device.requestVolumeCommand    != NULL)) ? jobOptions->device.requestVolumeCommand    : ((deviceNode != NULL) ? deviceNode->device.requestVolumeCommand    : globalOptions.defaultDevice->requestVolumeCommand   );
+    device->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->device.unloadVolumeCommand     != NULL)) ? jobOptions->device.unloadVolumeCommand     : ((deviceNode != NULL) ? deviceNode->device.unloadVolumeCommand     : globalOptions.defaultDevice->unloadVolumeCommand    );
+    device->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->device.loadVolumeCommand       != NULL)) ? jobOptions->device.loadVolumeCommand       : ((deviceNode != NULL) ? deviceNode->device.loadVolumeCommand       : globalOptions.defaultDevice->loadVolumeCommand      );
+    device->volumeSize              = ((jobOptions != NULL) && (jobOptions->device.volumeSize              != 0LL )) ? jobOptions->device.volumeSize              : ((deviceNode != NULL) ? deviceNode->device.volumeSize              : globalOptions.defaultDevice->volumeSize             );
+    device->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->device.imagePreProcessCommand  != NULL)) ? jobOptions->device.imagePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.imagePreProcessCommand  : globalOptions.defaultDevice->imagePreProcessCommand );
+    device->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->device.imagePostProcessCommand != NULL)) ? jobOptions->device.imagePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.imagePostProcessCommand : globalOptions.defaultDevice->imagePostProcessCommand);
+    device->imageCommand            = ((jobOptions != NULL) && (jobOptions->device.imageCommand            != NULL)) ? jobOptions->device.imageCommand            : ((deviceNode != NULL) ? deviceNode->device.imageCommand            : globalOptions.defaultDevice->imageCommand           );
+    device->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->device.eccPreProcessCommand    != NULL)) ? jobOptions->device.eccPreProcessCommand    : ((deviceNode != NULL) ? deviceNode->device.eccPreProcessCommand    : globalOptions.defaultDevice->eccPreProcessCommand   );
+    device->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->device.eccPostProcessCommand   != NULL)) ? jobOptions->device.eccPostProcessCommand   : ((deviceNode != NULL) ? deviceNode->device.eccPostProcessCommand   : globalOptions.defaultDevice->eccPostProcessCommand  );
+    device->eccCommand              = ((jobOptions != NULL) && (jobOptions->device.eccCommand              != NULL)) ? jobOptions->device.eccCommand              : ((deviceNode != NULL) ? deviceNode->device.eccCommand              : globalOptions.defaultDevice->eccCommand             );
+    device->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->device.writePreProcessCommand  != NULL)) ? jobOptions->device.writePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.writePreProcessCommand  : globalOptions.defaultDevice->writePreProcessCommand );
+    device->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->device.writePostProcessCommand != NULL)) ? jobOptions->device.writePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.writePostProcessCommand : globalOptions.defaultDevice->writePostProcessCommand);
+    device->writeCommand            = ((jobOptions != NULL) && (jobOptions->device.writeCommand            != NULL)) ? jobOptions->device.writeCommand            : ((deviceNode != NULL) ? deviceNode->device.writeCommand            : globalOptions.defaultDevice->writeCommand           );
   }
-  device->name                    = ((jobOptions != NULL) && (jobOptions->device.name                    != NULL)) ? jobOptions->device.name                    : ((deviceNode != NULL) ? deviceNode->device.name                    : globalOptions.defaultDevice->name                   );
-  device->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->device.requestVolumeCommand    != NULL)) ? jobOptions->device.requestVolumeCommand    : ((deviceNode != NULL) ? deviceNode->device.requestVolumeCommand    : globalOptions.defaultDevice->requestVolumeCommand   );
-  device->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->device.unloadVolumeCommand     != NULL)) ? jobOptions->device.unloadVolumeCommand     : ((deviceNode != NULL) ? deviceNode->device.unloadVolumeCommand     : globalOptions.defaultDevice->unloadVolumeCommand    );
-  device->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->device.loadVolumeCommand       != NULL)) ? jobOptions->device.loadVolumeCommand       : ((deviceNode != NULL) ? deviceNode->device.loadVolumeCommand       : globalOptions.defaultDevice->loadVolumeCommand      );
-  device->volumeSize              = ((jobOptions != NULL) && (jobOptions->device.volumeSize              != 0LL )) ? jobOptions->device.volumeSize              : ((deviceNode != NULL) ? deviceNode->device.volumeSize              : globalOptions.defaultDevice->volumeSize             );
-  device->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->device.imagePreProcessCommand  != NULL)) ? jobOptions->device.imagePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.imagePreProcessCommand  : globalOptions.defaultDevice->imagePreProcessCommand );
-  device->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->device.imagePostProcessCommand != NULL)) ? jobOptions->device.imagePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.imagePostProcessCommand : globalOptions.defaultDevice->imagePostProcessCommand);
-  device->imageCommand            = ((jobOptions != NULL) && (jobOptions->device.imageCommand            != NULL)) ? jobOptions->device.imageCommand            : ((deviceNode != NULL) ? deviceNode->device.imageCommand            : globalOptions.defaultDevice->imageCommand           );
-  device->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->device.eccPreProcessCommand    != NULL)) ? jobOptions->device.eccPreProcessCommand    : ((deviceNode != NULL) ? deviceNode->device.eccPreProcessCommand    : globalOptions.defaultDevice->eccPreProcessCommand   );
-  device->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->device.eccPostProcessCommand   != NULL)) ? jobOptions->device.eccPostProcessCommand   : ((deviceNode != NULL) ? deviceNode->device.eccPostProcessCommand   : globalOptions.defaultDevice->eccPostProcessCommand  );
-  device->eccCommand              = ((jobOptions != NULL) && (jobOptions->device.eccCommand              != NULL)) ? jobOptions->device.eccCommand              : ((deviceNode != NULL) ? deviceNode->device.eccCommand              : globalOptions.defaultDevice->eccCommand             );
-  device->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->device.writePreProcessCommand  != NULL)) ? jobOptions->device.writePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.writePreProcessCommand  : globalOptions.defaultDevice->writePreProcessCommand );
-  device->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->device.writePostProcessCommand != NULL)) ? jobOptions->device.writePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.writePostProcessCommand : globalOptions.defaultDevice->writePostProcessCommand);
-  device->writeCommand            = ((jobOptions != NULL) && (jobOptions->device.writeCommand            != NULL)) ? jobOptions->device.writeCommand            : ((deviceNode != NULL) ? deviceNode->device.writeCommand            : globalOptions.defaultDevice->writeCommand           );
 }
 
 Errors inputCryptPassword(void        *userData,
