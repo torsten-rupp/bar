@@ -524,10 +524,10 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKey,         configValueReadKeyFile,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key-data",     JobNode,jobOptions.sshServer.publicKey,         configValueReadKey,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueReadKeyFile,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueReadKey,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKey,         configValueParseKey,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key-data",     JobNode,jobOptions.sshServer.publicKey,         configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
@@ -6374,6 +6374,8 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const Strin
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
+#if 0
+obsolete?
 /***********************************************************************\
 * Name   : serverCommand_serverListClear
 * Purpose: clear server list
@@ -6399,16 +6401,25 @@ LOCAL void serverCommand_serverListClear(ClientInfo *clientInfo, uint id, const 
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-#if 0
-    // remove from list
-    List_removeAndFree(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-    jobNode->modifiedFlag         = TRUE;
-    jobNode->scheduleModifiedFlag = TRUE;
-#endif
+    // clear list
+    while (!List_isEmpty(&globalOptions.serverList))
+    {
+      List_removeAndFree(&globalOptions.serverList,globalOptions.serverList.head,CALLBACK((ListNodeFreeFunction)freeServerNode,NULL));
+    }
+
+    // update config files
+    error = updateConfig();
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&globalOptions.serverList.lock);
+      sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+      return;
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
+#endif
 
 /***********************************************************************\
 * Name   : serverCommand_serverListAdd
@@ -6507,6 +6518,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
     String_delete(name);
     return;
   }
+fprintf(stderr,"%s, %d: privateKey=%s\n",__FILE__,__LINE__,String_cString(privateKey));
   if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
@@ -6546,15 +6558,35 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
       case SERVER_TYPE_SSH:
         serverNode->server.sshServer.port               = port;
         String_set(serverNode->server.sshServer.loginName,loginName);
-        Password_set(serverNode->server.sshServer.password,password);
-//        String_set(serverNode->server.sshServer.publicKey,publicKey);
-//        String_set(serverNode->server.sshServer.privateKey,privateKey);
+        if (!String_isEmpty(password))
+        {
+          if (serverNode->server.sshServer.password == NULL)
+          {
+            serverNode->server.sshServer.password = Password_newString(password);
+          }
+          else
+          {
+            Password_setString(serverNode->server.sshServer.password,password);
+          }
+        }
+        setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
+        setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
         break;
       case SERVER_TYPE_WEBDAV:
         String_set(serverNode->server.webDAVServer.loginName,loginName);
-        Password_set(serverNode->server.webDAVServer.password,password);
-//        String_set(serverNode->server.webDAVServer.publicKey,publicKey);
-//        String_set(serverNode->server.webDAVServer.privateKey,privateKey);
+        if (!String_isEmpty(password))
+        {
+          if (serverNode->server.webDAVServer.password == NULL)
+          {
+            serverNode->server.webDAVServer.password = Password_newString(password);
+          }
+          else
+          {
+            Password_setString(serverNode->server.webDAVServer.password,password);
+          }
+        }
+        setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
+        setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
         break;
     }
 ///TODO
@@ -6688,6 +6720,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
     String_delete(name);
     return;
   }
+fprintf(stderr,"%s, %d: publicKey=%s\n",__FILE__,__LINE__,String_cString(publicKey));
+fprintf(stderr,"%s, %d: privateKey=%s\n",__FILE__,__LINE__,String_cString(privateKey));
   if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
@@ -6712,7 +6746,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find storage server
-    serverNode = findServerNodeByID(serverId);
+    serverNode = findServerNodeById(serverId);
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -6727,20 +6761,50 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
         break;
       case SERVER_TYPE_FTP:
         String_set(serverNode->server.ftpServer.loginName,loginName);
-        String_set(serverNode->server.ftpServer.password,password);
+        if (!String_isEmpty(password))
+        {
+          if (serverNode->server.ftpServer.password == NULL)
+          {
+            serverNode->server.ftpServer.password = Password_newString(password);
+          }
+          else
+          {
+            Password_setString(serverNode->server.ftpServer.password,password);
+          }
+        }
         break;
       case SERVER_TYPE_SSH:
         serverNode->server.sshServer.port               = port;
         String_set(serverNode->server.sshServer.loginName,loginName);
-//        Password_set(serverNode->server.sshServer.password,password);
-//        String_set(serverNode->server.sshServer.publicKey,publicKey);
-//        String_set(serverNode->server.sshServer.privateKey,privateKey);
+        if (!String_isEmpty(password))
+        {
+          if (serverNode->server.sshServer.password == NULL)
+          {
+            serverNode->server.sshServer.password = Password_newString(password);
+          }
+          else
+          {
+            Password_setString(serverNode->server.sshServer.password,password);
+          }
+        }
+        setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
+        setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
         break;
       case SERVER_TYPE_WEBDAV:
         String_set(serverNode->server.webDAVServer.loginName,loginName);
-//        Password_set(serverNode->server.webDAVServer.password,password);
-//        String_set(serverNode->server.webDAVServer.publicKey,publicKey);
-//        String_set(serverNode->server.webDAVServer.privateKey,privateKey);
+        if (!String_isEmpty(password))
+        {
+          if (serverNode->server.webDAVServer.password == NULL)
+          {
+            serverNode->server.webDAVServer.password = Password_newString(password);
+          }
+          else
+          {
+            Password_setString(serverNode->server.webDAVServer.password,password);
+          }
+        }
+        setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
+        setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
         break;
     }
 ///TODO
@@ -6801,7 +6865,7 @@ LOCAL void serverCommand_serverListDelete(ClientInfo *clientInfo, uint id, const
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find storage server
-    serverNode = findServerNodeByID(serverId);
+    serverNode = findServerNodeById(serverId);
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -14869,7 +14933,7 @@ SERVER_COMMANDS[] =
   { "SERVER_OPTION_SET",          serverCommand_serverOptionSet,         AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_FLUSH",        serverCommand_serverOptionFlush,       AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST",                serverCommand_serverList,              AUTHORIZATION_STATE_OK      },
-  { "SERVER_LIST_CLEAR",          serverCommand_serverListClear,         AUTHORIZATION_STATE_OK      },
+//  { "SERVER_LIST_CLEAR",          serverCommand_serverListClear,         AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_ADD",            serverCommand_serverListAdd,           AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_UPDATE",         serverCommand_serverListUpdate,        AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_DELETE",         serverCommand_serverListDelete,        AUTHORIZATION_STATE_OK      },
