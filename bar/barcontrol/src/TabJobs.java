@@ -6972,7 +6972,7 @@ Dprintf.dprintf("");
           {
             StyledText widget = (StyledText)modifyEvent.widget;
             Color      color  = COLOR_MODIFIED;
-            String     string = widget.getText();
+            String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
             if (preCommand.equals(string)) color = null;
             widget.setBackground(color);
           }
@@ -6982,7 +6982,7 @@ Dprintf.dprintf("");
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             StyledText widget = (StyledText)selectionEvent.widget;
-            String     text   = widget.getText();
+            String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
             BARServer.setJobOption(selectedJobData.uuid,"pre-command",text);
             widget.setBackground(null);
           }
@@ -6998,7 +6998,7 @@ Dprintf.dprintf("");
           public void focusLost(FocusEvent focusEvent)
           {
             StyledText widget = (StyledText)focusEvent.widget;
-            String     text   = widget.getText();
+            String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
             BARServer.setJobOption(selectedJobData.uuid,"pre-command",text);
             widget.setBackground(null);
           }
@@ -7017,7 +7017,7 @@ Dprintf.dprintf("");
           {
             StyledText widget = (StyledText)modifyEvent.widget;
             Color      color  = COLOR_MODIFIED;
-            String string = widget.getText();
+            String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
             if (postCommand.equals(string)) color = null;
             widget.setBackground(color);
           }
@@ -7027,7 +7027,7 @@ Dprintf.dprintf("");
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             StyledText widget = (StyledText)selectionEvent.widget;
-            String     text   = widget.getText();
+            String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
             BARServer.setJobOption(selectedJobData.uuid,"post-command",text);
             widget.setBackground(null);
           }
@@ -7043,7 +7043,7 @@ Dprintf.dprintf("");
           public void focusLost(FocusEvent focusEvent)
           {
             StyledText widget = (StyledText)focusEvent.widget;
-            String     text   = widget.getText();
+            String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
             BARServer.setJobOption(selectedJobData.uuid,"post-command",text);
             widget.setBackground(null);
           }
