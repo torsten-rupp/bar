@@ -596,7 +596,6 @@ class WidgetModifyListener
    */
   void modified(Widget widget, WidgetVariable variable)
   {
-assert variable != null;
     if      (widget instanceof Label)
     {
       Label widgetLabel = (Label)widget;
@@ -8602,6 +8601,20 @@ private static void printTree(Tree tree)
   public static void removeModifyListener(WidgetModifyListener widgetModifyListener)
   {
     widgetModifyListenerHashSet.remove(widgetModifyListener);
+  }
+
+  /** execute modify listeners
+   * @param variable modified variable
+   */
+  public static void modified(WidgetVariable widgetVariable)
+  {
+    for (WidgetModifyListener widgetModifyListener : widgetModifyListenerHashSet)
+    {
+      if (widgetModifyListener.equals(widgetVariable))
+      {
+        widgetModifyListener.modified();
+      }
+    }
   }
 
   /** execute modify listeners
