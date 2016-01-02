@@ -6,12 +6,32 @@
     overwrite-archive-files (deprecated)
   * BARControl: file requester with remote file list
     local file requester with CTRL+click
-  * added option --archive-file-mode=<mode>
+  * added option --archive-file-mode=<mode>;
+    deprecated config option --overwrite-archive-files
   * BARControl: added support to connect to different servers;
     added connect menu
   * BARControl: added unit TByte/TB
   * added option --log-format for log date format, standard
     log date format is now YYYY-MM-DD hh:mm:ss
+  * fixed clean-up duplicate database entries: delete
+    storage index
+  * separate log for each executed job
+  * removed macro %last for archive names
+  * support full-text-search in database
+  * BARControl: removed "connector" button in restore tab;
+    search is automatically filtered by selected entities
+
+2015-12-06 0.19c
+  * added user, group, permission to long list output
+  * fix get user/group name with large number of names
+  * BARControl: fixed parsing float number with different
+    locales
+  * BARControl: fixed edit pre/post-scripts on Windows:
+    replace line ending CRLR by LF.
+  * BARControl: improved restore dialog: show failed
+    entries, show total progress bar
+  * fixed assert in restore archives
+  * BARControl: fixed restore complete archives
 
 2015-11-22 0.19b
   * fixed reading job files with none-LF at end
