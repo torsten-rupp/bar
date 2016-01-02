@@ -92,7 +92,7 @@ void Password_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-void *Password_allocSecure(ulong size);
+void *Password_allocSecure(size_t size);
 
 /***********************************************************************\
 * Name   : Password_freeSecure

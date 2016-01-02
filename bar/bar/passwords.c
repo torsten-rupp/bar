@@ -89,7 +89,7 @@ void Password_doneAll(void)
 {
 }
 
-void *Password_allocSecure(ulong size)
+void *Password_allocSecure(size_t size)
 {
   void *p;
   #ifndef HAVE_GCRYPT
