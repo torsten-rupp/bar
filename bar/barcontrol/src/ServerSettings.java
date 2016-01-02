@@ -10,6 +10,10 @@
 
 /****************************** Imports ********************************/
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -249,6 +253,8 @@ public class ServerSettings
     }
   }
 
+  private static String lastKeyFileName = "";
+
   /** edit server settings
    * @param shell shell
    */
@@ -342,7 +348,7 @@ public class ServerSettings
     WidgetVariable          deviceWriteCommand         = new WidgetVariable<String >("",   "device-write-command"           );
 
     WidgetVariable          serverPort                 = new WidgetVariable<Long   >(0,    "server-port"                    );
-    WidgetVariable          serverTLSPort              = new WidgetVariable<Long   >(0,    "server-tls-port"                );
+//    WidgetVariable          serverTLSPort              = new WidgetVariable<Long   >(0,    "server-tls-port"                );
     WidgetVariable          serverCAFile               = new WidgetVariable<String >("",   "server-ca-file"                 );
     WidgetVariable          serverCertFile             = new WidgetVariable<String >("",   "server-cert-file"               );
     WidgetVariable          serverKeyFile              = new WidgetVariable<String >("",   "server-key-file"                );
@@ -352,8 +358,6 @@ public class ServerSettings
     WidgetVariable          logFile                    = new WidgetVariable<String >("",   "log-file"                       );
     WidgetVariable          logFormat                  = new WidgetVariable<String >("",   "log-format"                     );
     WidgetVariable          logPostCommand             = new WidgetVariable<String >("",   "log-post-command"               );
-
-//    WidgetVariable          servers                    = new WidgetVariable<HashMap<Integer,ServerData> >(new HashMap<Integer,ServerData>());
 
     final ServerDataComparator serverDataComparator;
 
@@ -483,7 +487,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("Port")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       spinner = BARWidgets.newNumber(composite,
-                                     BARControl.tr("Server port number."),
+                                     BARControl.tr("BAR server port number."),
                                      serverPort,
                                      0,
                                      65535
@@ -494,7 +498,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("CA file")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("CA file."),
+                                           BARControl.tr("BAR CA file."),
                                            serverCAFile,
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
@@ -506,7 +510,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("Cert file")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("Cert file."),
+                                           BARControl.tr("BAR cert file."),
                                            serverCertFile,
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
@@ -518,7 +522,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("Key file")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("Key file."),
+                                           BARControl.tr("BAR key file."),
                                            serverKeyFile,
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
@@ -530,7 +534,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("Password")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       text = BARWidgets.newPassword(composite,
-                                    BARControl.tr("CA file."),
+                                    BARControl.tr("BAR password."),
                                     serverPassword
                                    );
       Widgets.layout(text,row,1,TableLayoutData.WE);
@@ -542,11 +546,17 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
 
       widgetServerTable = Widgets.newTable(composite);
       Widgets.layout(widgetServerTable,row,0,TableLayoutData.NSWE,0,2);
-      tableColumn = Widgets.addTableColumn(widgetServerTable,0,BARControl.tr("Type"),SWT.LEFT,60);
+      tableColumn = Widgets.addTableColumn(widgetServerTable,0,BARControl.tr("Type"),SWT.LEFT, 60,false);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort by type."));
+      tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+      tableColumn = Widgets.addTableColumn(widgetServerTable,1,BARControl.tr("Name"),SWT.LEFT,512,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort by name."));
       tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-      tableColumn = Widgets.addTableColumn(widgetServerTable,1,BARControl.tr("Name"),SWT.LEFT,512,true);
-      tableColumn.setToolTipText(BARControl.tr("Click to sort by name."));
+      tableColumn = Widgets.addTableColumn(widgetServerTable,2,BARControl.tr("#"),   SWT.LEFT, 32,false);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort by max. number of concurrent connections."));
+      tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+      tableColumn = Widgets.addTableColumn(widgetServerTable,3,BARControl.tr("Size"),SWT.LEFT, 64,false);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort by max. storage size."));
       tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
       row++;
       serverDataComparator = new ServerDataComparator(widgetServerTable);
@@ -614,7 +624,9 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                   Widgets.updateTableItem(tableItem,
                                           serverData,
                                           serverData.type.toString(),
-                                          serverData.name
+                                          serverData.name,
+                                          (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                          (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                                          );
                 }
                 else
@@ -670,7 +682,9 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                           serverDataComparator,
                                           (Object)cloneServerData,
                                           cloneServerData.type.toString(),
-                                          cloneServerData.name
+                                          cloneServerData.name,
+                                          (cloneServerData.maxConnectionCount > 0) ? cloneServerData.maxConnectionCount : "-",
+                                          (cloneServerData.maxStorageSize > 0) ? Units.formatByteSize(cloneServerData.maxStorageSize) : "-"
                                          );
                 }
                 else
@@ -2038,7 +2052,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
     BARServer.getServerOption(deviceWriteCommand         );
 
     BARServer.getServerOption(serverPort                 );
-    BARServer.getServerOption(serverTLSPort              );
+//    BARServer.getServerOption(serverTLSPort              );
     BARServer.getServerOption(serverCAFile               );
     BARServer.getServerOption(serverCertFile             );
     BARServer.getServerOption(serverKeyFile              );
@@ -2059,7 +2073,9 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                             serverDataComparator,
                             (Object)serverData,
                             ServerTypes.FTP.toString(),
-                            "default"
+                            "default",
+                            (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                            (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                            );
 //    servers.getValue().put(0,serverData);
     serverData = new ServerData(0,"default",ServerTypes.SSH);
@@ -2067,7 +2083,9 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                             serverDataComparator,
                             (Object)serverData,
                             ServerTypes.SSH.toString(),
-                            "default"
+                            "default",
+                            (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                            (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                            );
 //    servers.getValue().put(0,serverData);
     serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
@@ -2075,7 +2093,9 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                             serverDataComparator,
                             (Object)serverData,
                             ServerTypes.WEBDAV.toString(),
-                            "default"
+                            "default",
+                            (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                            (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                            );
 //    servers.getValue().put(0,serverData);
 
@@ -2109,7 +2129,9 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                               serverDataComparator,
                               (Object)serverData,
                               serverType.toString(),
-                              name
+                              serverData.name,
+                              (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                              (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                              );
     }
 
@@ -2193,7 +2215,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       BARServer.setServerOption(deviceWriteCommand         );
 
       BARServer.setServerOption(serverPort                 );
-      BARServer.setServerOption(serverTLSPort              );
+//      BARServer.setServerOption(serverTLSPort              );
       BARServer.setServerOption(serverCAFile               );
       BARServer.setServerOption(serverCertFile             );
       BARServer.setServerOption(serverKeyFile              );
@@ -2220,13 +2242,17 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
    * @param okText OK button text
    * @return true iff edited
    */
-  private static boolean serverEdit(final Shell shell, final ServerData serverData, String title, String okText)
+  private static boolean serverEdit(final Shell      shell,
+                                    final ServerData serverData,
+                                    String           title,
+                                    String           okText
+                                   )
   {
     Composite composite,subComposite;
     Label     label;
     Button    button;
 
-    final Shell dialog = Dialogs.openModal(shell,title,400,300,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,title,600,500,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text       widgetName;
@@ -2311,10 +2337,10 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         });
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("New password")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Password")+":");
       Widgets.layout(label,3,0,TableLayoutData.W);
       widgetPassword = Widgets.newPassword(composite);
-      widgetPassword.setToolTipText(BARControl.tr("New password. Note: existing password is not shown."));
+      widgetPassword.setToolTipText(BARControl.tr("Set initial or new password. Note: existing password is not shown."));
       Widgets.layout(widgetPassword,3,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(widgetPassword,serverData)
       {
@@ -2328,14 +2354,14 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         }
       });
 
-      label = Widgets.newLabel(composite,BARControl.tr("New public key")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Public key")+":");
       Widgets.layout(label,4,0,TableLayoutData.NW);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},new double[]{1.0,0.0}));
       Widgets.layout(subComposite,4,1,TableLayoutData.NSWE);
       {
         widgetPublicKey = Widgets.newStyledText(subComposite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-        widgetPublicKey.setToolTipText(BARControl.tr("New public key. Note: existing public key is not shown."));
+        widgetPublicKey.setToolTipText(BARControl.tr("Set initial or new public key. Note: existing public key is not shown."));
         Widgets.layout(widgetPublicKey,0,0,TableLayoutData.NSWE);
         Widgets.addModifyListener(new WidgetModifyListener(widgetPublicKey,serverData)
         {
@@ -2348,16 +2374,50 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                               );
           }
         });
+
+        button = Widgets.newButton(subComposite,BARControl.tr("Load\u2026"));
+        Widgets.layout(button,1,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String fileName = Dialogs.fileOpen(dialog,
+                                               BARControl.tr("Select public key file"),
+                                               lastKeyFileName,
+                                               new String[]{BARControl.tr("Public keys"),"*.pub",
+                                                            BARControl.tr("Public keys"),"*.public",
+                                                            BARControl.tr("Key files"),"*.key",
+                                                            BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                           },
+                                               "*.pub"
+                                              );
+            if (fileName != null)
+            {
+              try
+              {
+                widgetPublicKey.setText(readKeyFile(fileName,widgetPublicKey.getLineDelimiter()));
+                lastKeyFileName = fileName;
+              }
+              catch (IOException exception)
+              {
+                Dialogs.error(dialog,BARControl.tr("Cannot load public key file ''{0}'' (error: {1})",fileName,BARControl.reniceIOException(exception).getMessage()));
+              }
+            }
+          }
+        });
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("New private key")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Private key")+":");
       Widgets.layout(label,5,0,TableLayoutData.NW);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},new double[]{1.0,0.0}));
       Widgets.layout(subComposite,5,1,TableLayoutData.NSWE);
       {
         widgetPrivateKey = Widgets.newStyledText(subComposite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-        widgetPrivateKey.setToolTipText(BARControl.tr("New private key. Note: existing private key is not shown."));
+        widgetPrivateKey.setToolTipText(BARControl.tr("Set initial or new private key. Note: existing private key is not shown."));
         Widgets.layout(widgetPrivateKey,0,0,TableLayoutData.NSWE);
         Widgets.addModifyListener(new WidgetModifyListener(widgetPrivateKey,serverData)
         {
@@ -2370,9 +2430,42 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                               );
           }
         });
+
+        button = Widgets.newButton(subComposite,BARControl.tr("Load\u2026"));
+        Widgets.layout(button,1,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String fileName = Dialogs.fileOpen(dialog,
+                                               BARControl.tr("Select private key file"),
+                                               lastKeyFileName,
+                                               new String[]{BARControl.tr("Private keys"),"*.private",
+                                                            BARControl.tr("Key files"),"*.key",
+                                                            BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                           },
+                                               "*"
+                                              );
+            if (fileName != null)
+            {
+              try
+              {
+                widgetPrivateKey.setText(readKeyFile(fileName,widgetPrivateKey.getLineDelimiter()));
+                lastKeyFileName = fileName;
+              }
+              catch (IOException exception)
+              {
+                Dialogs.error(dialog,BARControl.tr("Cannot load private key file ''{0}'' (error: {1})",fileName,BARControl.reniceIOException(exception).getMessage()));
+              }
+            }
+          }
+        });
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Max. storage size")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Max. connections")+":");
       Widgets.layout(label,6,0,TableLayoutData.NW);
       widgetMaxConnectionCount = Widgets.newSpinner(composite);
       widgetMaxConnectionCount.setToolTipText(BARControl.tr("Max. number of concurrent connections. 0 for unlimited number of concurrent connections."));
@@ -2464,9 +2557,9 @@ Dprintf.dprintf("serverData.type=%s",serverData.type);
         serverData.pathURL            = widgetPathURL.getText().trim();
         serverData.loginName          = widgetLoginName.getText();
         serverData.port               = widgetPort.getSelection();
-        serverData.password           = !widgetPassword.getText().isEmpty() ? widgetPassword.getText() : null;
-        serverData.publicKey          = !widgetPublicKey.getText().trim().isEmpty() ? widgetPublicKey.getText().trim() : null;
-        serverData.privateKey         = !widgetPrivateKey.getText().trim().isEmpty() ? widgetPrivateKey.getText().trim() : null;
+        serverData.password           = widgetPassword.getText();
+        serverData.publicKey          = widgetPublicKey.getText().replace(widgetPublicKey.getLineDelimiter(),"\n").trim();
+        serverData.privateKey         = widgetPrivateKey.getText().replace(widgetPublicKey.getLineDelimiter(),"\n").trim();
         serverData.maxConnectionCount = widgetMaxConnectionCount.getSelection();
         serverData.maxStorageSize     = Units.parseByteSize(widgetMaxStorageSize.getText());
 
@@ -2477,6 +2570,49 @@ Dprintf.dprintf("serverData.type=%s",serverData.type);
     widgetName.forceFocus();
 
     return (Boolean)Dialogs.run(dialog,false);
+  }
+
+  /** read key file
+   * @param fileName file name
+   * @param lineDelimiter line delimiter
+   * @return key data
+   */
+  private static String readKeyFile(String fileName, String lineDelimiter)
+    throws IOException
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    BufferedReader input = null;
+    try
+    {
+      // open file
+      input = new BufferedReader(new FileReader(fileName));
+
+      // read file
+      String   line;
+      while ((line = input.readLine()) != null)
+      {
+        line = line.trim();
+
+        buffer.append(line+lineDelimiter);
+      }
+
+      // close file
+      input.close(); input = null;
+    }
+    finally
+    {
+      try
+      {
+        if (input != null) input.close();
+      }
+      catch (IOException exception)
+      {
+        // ignored
+      }
+    }
+
+    return buffer.toString();
   }
 }
 
