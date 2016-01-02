@@ -4777,8 +4777,9 @@ bool String_matchCString(ConstString string, ulong index, const char *pattern, l
 
 int String_toInteger(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
 {
-  int  n;
-  char *nextData;
+  double d;
+  int    n;
+  char   *nextData;
 
   assert(convertString != NULL);
 
@@ -4786,12 +4787,12 @@ int String_toInteger(ConstString convertString, ulong index, long *nextIndex, co
 
   if (index < convertString->length)
   {
-    n = strtol(&convertString->data[index],&nextData,0);
+    d = strtod(&convertString->data[index],&nextData);
     if ((ulong)(nextData-convertString->data) < convertString->length)
     {
       if (stringUnitCount > 0)
       {
-        n = n*(int)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+        n = (int)(d*getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex));
       }
       else
       {
@@ -4801,6 +4802,7 @@ int String_toInteger(ConstString convertString, ulong index, long *nextIndex, co
     }
     else
     {
+      n = (int)d;
       if (nextIndex != NULL) (*nextIndex) = STRING_END;
     }
   }
@@ -4815,28 +4817,30 @@ int String_toInteger(ConstString convertString, ulong index, long *nextIndex, co
 
 int64 String_toInteger64(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
 {
-  int64 n;
-  char  *nextData;
+  double d;
+  int64  n;
+  char   *nextData;
 
   assert(convertString != NULL);
 
   if (index < convertString->length)
   {
-    n = strtoll(&convertString->data[index],&nextData,0);
+    d = strtod(&convertString->data[index],&nextData);
     if ((ulong)(nextData-convertString->data) < convertString->length)
     {
       if (stringUnitCount > 0)
       {
-        n = n*(int64)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+        n = (int64)(d*(int64)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex));
       }
       else
       {
-        n = 0;
+        n = 0LL;
         if (nextIndex != NULL) (*nextIndex) = (ulong)(nextData-convertString->data);
       }
     }
     else
     {
+      n = (uint64)d;
       if (nextIndex != NULL) (*nextIndex) = STRING_END;
     }
   }
