@@ -1328,26 +1328,27 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
     }
 
     // allocate file key
-    fileCryptKeyLength = String_length(string);
+    fileCryptKeyLength = Misc_base64DecodeLength(string,STRING_BEGIN);
+    assert(fileCryptKeyLength >= sizeof(FileCryptKey));
     fileCryptKey = (FileCryptKey*)Password_allocSecure(fileCryptKeyLength);
     if (fileCryptKey == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
     memset(fileCryptKey,0,fileCryptKeyLength);
-    data = (char*)fileCryptKey->data;
 
     // decode base64
-    if (Misc_base64Decode((byte*)fileCryptKey,fileCryptKeyLength,string) == -1)
+    if (Misc_base64Decode((byte*)fileCryptKey,fileCryptKeyLength,string,STRING_BEGIN) == -1)
     {
       return ERROR_INVALID_KEY;
     }
 
-    // get data length
+    // get data, data length
+    data       = (char*)fileCryptKey->data;
     dataLength = ntohs(fileCryptKey->dataLength);
 
     // check key CRC
-    crc = crc32(crc32(0,Z_NULL,0),fileCryptKey->data,dataLength);
+    crc = crc32(crc32(0,Z_NULL,0),(Bytef*)data,dataLength);
     if (crc != ntohl(fileCryptKey->crc))
     {
       return ERROR_INVALID_KEY;
@@ -1373,7 +1374,7 @@ p++;
       }
 
       // decrypt
-      error = Crypt_decrypt(&cryptInfo,data,ALIGN(dataLength,blockLength));
+      error = Crypt_decrypt(&cryptInfo,fileCryptKey->data,ALIGN(dataLength,blockLength));
       if (error != ERROR_NONE)
       {
         Crypt_done(&cryptInfo);
