@@ -618,6 +618,31 @@ LOCAL bool                  quitFlag;              // TRUE iff quit requested
 #endif
 
 /***********************************************************************\
+* Name   : parseServerType
+* Purpose: parse server type
+* Input  : name - file|ftp|ssh|webdav
+* Output : serverType - server type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool parseServerType(const char *name, ServerTypes *serverType)
+{
+  const ConfigValueSelect *select;
+
+  assert(name != NULL);
+  assert(serverType != NULL);
+
+  if      (stringEqualsIgnoreCase(name,"FILE"  )) (*serverType) = SERVER_TYPE_FILE;
+  else if (stringEqualsIgnoreCase(name,"FTP"   )) (*serverType) = SERVER_TYPE_FTP;
+  else if (stringEqualsIgnoreCase(name,"SSH"   )) (*serverType) = SERVER_TYPE_SSH;
+  else if (stringEqualsIgnoreCase(name,"WEBDAV")) (*serverType) = SERVER_TYPE_WEBDAV;
+  else return FALSE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : parseArchiveType
 * Purpose: parse archive type
 * Input  : name - normal|full|incremental|differential
@@ -1519,231 +1544,8 @@ LOCAL ScheduleNode *parseScheduleDateTime(const String date,
   return scheduleNode;
 }
 
-/***********************************************************************\
-* Name   : deleteEntries
-* Purpose: delete all entries with given name
-* Input  : stringList - file string list to modify
-*          section    - name of section or NULL
-*          name       - name of value
-* Output : -
-* Return : next entry in string list or NULL
-* Notes  : -
-\***********************************************************************/
-
-LOCAL StringNode *deleteEntries(StringList *stringList,
-                                const char *section,
-                                const char *name
-                               )
-{
-  StringNode *nextStringNode;
-
-  StringNode *stringNode;
-  String     line;
-  String     string;
-
-  nextStringNode = NULL;
-
-  line       = String_new();
-  string     = String_new();
-  stringNode = stringList->head;
-  while (stringNode != NULL)
-  {
-    // skip comments, empty lines
-    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-    {
-      stringNode = stringNode->next;
-      continue;
-    }
-
-    // parse and match
-    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL))
-    {
-      // keep line: begin section
-      stringNode = stringNode->next;
-
-      if (String_equalsCString(string,section))
-      {
-        // section found: remove matching entries
-        while (stringNode != NULL)
-        {
-          // skip comments, empty lines
-          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-          {
-            stringNode = stringNode->next;
-            continue;
-          }
-
-          // parse and match
-          if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
-          {
-            // keep line: end section
-            stringNode = stringNode->next;
-            break;
-          }
-          else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
-                   && String_equalsCString(string,name)
-                  )
-          {
-            // delete line
-            stringNode = StringList_remove(stringList,stringNode);
-
-            // store next line
-            nextStringNode = stringNode;
-          }
-          else
-          {
-            // keep line
-            stringNode = stringNode->next;
-          }
-        }
-      }
-      else
-      {
-        // section not found: skip
-        while (stringNode != NULL)
-        {
-          // skip comments, empty lines
-          String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-          if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-          {
-            stringNode = stringNode->next;
-            continue;
-          }
-
-          // keep line
-          stringNode = stringNode->next;
-
-          // parse and match
-          if (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
-          {
-            // end section
-            break;
-          }
-        }
-      }
-    }
-    else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
-             && String_equalsCString(string,name)
-            )
-    {
-      // delete line
-      stringNode = StringList_remove(stringList,stringNode);
-
-      // store next line
-      nextStringNode = stringNode;
-    }
-    else
-    {
-      // keep line
-      stringNode = stringNode->next;
-    }
-  }
-  String_delete(string);
-  String_delete(line);
-
-  return nextStringNode;
-}
-
-/***********************************************************************\
-* Name   : deleteSections
-* Purpose: delete all sections with given name
-* Input  : stringList - file string list to modify
-*          section    - name of section
-* Output : -
-* Return : next entry in string list or NULL
-* Notes  : -
-\***********************************************************************/
-
-LOCAL StringNode *deleteSections(StringList *stringList,
-                                 const char *section
-                                )
-{
-  StringNode *nextStringNode;
-
-  StringNode *stringNode;
-  String     line;
-  String     string;
-
-  nextStringNode = NULL;
-
-  line       = String_new();
-  string     = String_new();
-  stringNode = stringList->head;
-  while (stringNode != NULL)
-  {
-    // skip comments, empty lines
-    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
-    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-    {
-      stringNode = stringNode->next;
-      continue;
-    }
-
-    // parse and match
-    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL)
-        && String_equalsCString(string,section)
-       )
-    {
-      // delete section
-      stringNode = StringList_remove(stringList,stringNode);
-      while (   (stringNode != NULL)
-             && !String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        stringNode = StringList_remove(stringList,stringNode);
-      }
-      if (stringNode != NULL)
-      {
-        if (String_matchCString(stringNode->string,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
-        {
-          stringNode = StringList_remove(stringList,stringNode);
-        }
-      }
-
-      // delete following empty lines
-      while (   (stringNode != NULL)
-             && String_isEmpty(String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES))
-            )
-      {
-        stringNode = StringList_remove(stringList,stringNode);
-      }
-
-      // store next line
-      nextStringNode = stringNode;
-    }
-    else
-    {
-      // keep line
-      stringNode = stringNode->next;
-    }
-  }
-  if (nextStringNode != NULL)
-  {
-    // delete previous empty lines
-    while (   (nextStringNode->prev != NULL)
-           && String_isEmpty(String_trim(String_set(line,nextStringNode->prev->string),STRING_WHITE_SPACES))
-          )
-    {
-      StringList_remove(stringList,nextStringNode->prev);
-    }
-  }
-  else
-  {
-    // delete empty lines at end
-    while (!StringList_isEmpty(stringList) && String_isEmpty(StringList_last(stringList,NULL)))
-    {
-      StringList_remove(stringList,stringList->tail);
-    }
-  }
-  String_delete(string);
-  String_delete(line);
-
-  return nextStringNode;
-}
-
-LOCAL Errors updateConfig(ConstString configFileName)
+#warning remove
+LOCAL Errors XupdateConfig(ConstString configFileName)
 {
   StringList        configLinesList;
   String            line;
@@ -1765,22 +1567,7 @@ fprintf(stderr,"%s, %d: configFileName=%s\n",__FILE__,__LINE__,String_cString(co
   }
 
   // read file
-  error = File_open(&fileHandle,configFileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    StringList_done(&configLinesList);
-    String_delete(line);
-    return error;
-  }
-  while (!File_eof(&fileHandle))
-  {
-    // read line
-    error = File_readLine(&fileHandle,line);
-    if (error != ERROR_NONE) break;
-
-    StringList_append(&configLinesList,line);
-  }
-  File_close(&fileHandle);
+  error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
   if (error != ERROR_NONE)
   {
     StringList_done(&configLinesList);
@@ -1803,7 +1590,7 @@ fprintf(stderr,"%s, %d: configFileName=%s\n",__FILE__,__LINE__,String_cString(co
   {
     // delete old entries, get position for insert new entries
 fprintf(stderr,"%s, %d: write %d: %s\n",__FILE__,__LINE__,i,CONFIG_VALUES[i].name);
-    nextStringNode = deleteEntries(&configLinesList,NULL,CONFIG_VALUES[i].name);
+    nextStringNode = ConfigValue_deleteEntries(&configLinesList,NULL,CONFIG_VALUES[i].name);
 
     // insert new entries
     ConfigValue_formatInit(&configValueFormat,
@@ -1819,20 +1606,7 @@ fprintf(stderr,"%s, %d: write %d: %s\n",__FILE__,__LINE__,i,CONFIG_VALUES[i].nam
   }
 
   // write file
-  error = File_open(&fileHandle,configFileName,FILE_OPEN_CREATE);
-  if (error != ERROR_NONE)
-  {
-    String_delete(line);
-    StringList_done(&configLinesList);
-    return error;
-  }
-  while (!StringList_isEmpty(&configLinesList))
-  {
-    StringList_getFirst(&configLinesList,line);
-    error = File_writeLine(&fileHandle,line);
-    if (error != ERROR_NONE) break;
-  }
-  File_close(&fileHandle);
+  error = ConfigValue_writeConfigFileLines(configFileName,&configLinesList);
   if (error != ERROR_NONE)
   {
     String_delete(line);
@@ -2633,44 +2407,19 @@ LOCAL Errors updateJob(JobNode *jobNode)
     line = String_new();
 
     // read file
-    error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
+    error = ConfigValue_readConfigFileLines(jobNode->fileName,&jobLinesList);
     if (error != ERROR_NONE)
     {
       StringList_done(&jobLinesList);
       String_delete(line);
       return error;
-    }
-    while (!File_eof(&fileHandle))
-    {
-      // read line
-      error = File_readLine(&fileHandle,line);
-      if (error != ERROR_NONE) break;
-
-      StringList_append(&jobLinesList,line);
-    }
-    File_close(&fileHandle);
-    if (error != ERROR_NONE)
-    {
-      StringList_done(&jobLinesList);
-      String_delete(line);
-      return error;
-    }
-
-    // trim empty lines at begin/end
-    while (!StringList_isEmpty(&jobLinesList) && String_isEmpty(StringList_first(&jobLinesList,NULL)))
-    {
-      StringList_remove(&jobLinesList,jobLinesList.head);
-    }
-    while (!StringList_isEmpty(&jobLinesList) && String_isEmpty(StringList_last(&jobLinesList,NULL)))
-    {
-      StringList_remove(&jobLinesList,jobLinesList.tail);
     }
 
     // update line list
     CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,i)
     {
       // delete old entries, get position for insert new entries
-      nextStringNode = deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
+      nextStringNode = ConfigValue_deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
 
       // insert new entries
       ConfigValue_formatInit(&configValueFormat,
@@ -2686,7 +2435,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
     }
 
     // delete old schedule sections, get position for insert new schedule sections
-    nextStringNode = deleteSections(&jobLinesList,"schedule");
+    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"schedule");
     if (!List_isEmpty(&jobNode->scheduleList))
     {
       StringList_insertCString(&jobLinesList,"",nextStringNode);
@@ -2716,20 +2465,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
     }
 
     // write file
-    error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_CREATE);
-    if (error != ERROR_NONE)
-    {
-      String_delete(line);
-      StringList_done(&jobLinesList);
-      return error;
-    }
-    while (!StringList_isEmpty(&jobLinesList))
-    {
-      StringList_getFirst(&jobLinesList,line);
-      error = File_writeLine(&fileHandle,line);
-      if (error != ERROR_NONE) break;
-    }
-    File_close(&fileHandle);
+    error = ConfigValue_writeConfigFileLines(jobNode->fileName,&jobLinesList);
     if (error != ERROR_NONE)
     {
       String_delete(line);
@@ -6538,7 +6274,6 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, uint id, const 
 
 LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String configFileName;
   Errors error;
 
   assert(clientInfo != NULL);
@@ -6546,19 +6281,550 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, uint id, cons
 
   UNUSED_VARIABLE(argumentMap);
 
-  configFileName = getConfigFileName(String_new());
-  error = updateConfig(configFileName);
+  error = updateConfig();
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"write config file");
-    String_delete(configFileName);
+    sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
     return;
   }
-  String_delete(configFileName);
 
   // free resources
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_serverList
+* Purpose: get job server list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            id=<n>
+*            name=<name>
+*            serverType=filesystem|ftp|ssh|webdav
+*            path=<path|URL>
+*            loginName=<name>
+*            port=<n>
+*            maxConnectionCount=<n>
+*            maxStorageSize=<n>
+*            ...
+\***********************************************************************/
+
+LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  SemaphoreLock    semaphoreLock;
+  ServerNode       *serverNode;
+  String           date,weekDays,time;
+  Errors           error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    LIST_ITERATE(&globalOptions.serverList,serverNode)
+    {
+      switch (serverNode->server.type)
+      {
+        case SERVER_TYPE_FTP:
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                           serverNode->id,
+                           serverNode->server.name,
+                           "FTP",
+                           serverNode->server.ftpServer.loginName,
+                           serverNode->server.maxConnectionCount,
+                           serverNode->server.maxStorageSize
+                          );
+          break;
+        case SERVER_TYPE_SSH:
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "id=%u name=%'S serverType=%s port=%d loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                           serverNode->id,
+                           serverNode->server.name,
+                           "SSH",
+                           serverNode->server.sshServer.port,
+                           serverNode->server.sshServer.loginName,
+                           serverNode->server.maxConnectionCount,
+                           serverNode->server.maxStorageSize
+                          );
+          break;
+        case SERVER_TYPE_WEBDAV:
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                           "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                           serverNode->id,
+                           serverNode->server.name,
+                           "WEBDAV",
+                           serverNode->server.webDAVServer.loginName,
+                           serverNode->server.maxConnectionCount,
+                           serverNode->server.maxStorageSize
+                          );
+          break;
+      }
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_serverListClear
+* Purpose: clear server list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_serverListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+#if 0
+    // remove from list
+    List_removeAndFree(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+    jobNode->modifiedFlag         = TRUE;
+    jobNode->scheduleModifiedFlag = TRUE;
+#endif
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_serverListAdd
+* Purpose: add entry to server list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            name=<name>
+*            serverType=filesystem|ftp|ssh|webdav
+*            path=<path|URL>
+*            port=<n>
+*            loginName=<name>
+*            [password=<password>]
+*            [publicKey=<data>]
+*            [privateKey=<data>]
+*          Result:
+*            id=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  String        name;
+  ServerTypes   serverType;
+  uint          port;
+  String        loginName;
+  String        password;
+  String        publicKey;
+  String        privateKey;
+  uint          maxConnectionCount;
+  uint64        maxStorageSize;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+  Errors        error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get name, server type, login name, port, password, public/private key, max. connections, max. storage size
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected serverType=<FILE|FTP|SSH|WEBDAV>");
+    String_delete(name);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"port",&port,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    String_delete(name);
+    return;
+  }
+  loginName = String_new();
+  if (!StringMap_getString(argumentMap,"loginName",loginName,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  password = String_new();
+  if (!StringMap_getString(argumentMap,"password",password,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password=<password>");
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  publicKey = String_new();
+  if (!StringMap_getString(argumentMap,"publicKey",publicKey,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected publicKey=<data>");
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  privateKey = String_new();
+  if (!StringMap_getString(argumentMap,"privateKey",privateKey,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected privateKey=<data>");
+    String_delete(privateKey);
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
+    String_delete(privateKey);
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxStorageSize=<n>");
+    String_delete(privateKey);
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // allocate storage server node
+    serverNode = newServerNode(name,serverType);
+    assert(serverNode != NULL);
+
+    // init storage server settings
+    switch (serverType)
+    {
+      case SERVER_TYPE_FILE:
+        break;
+      case SERVER_TYPE_FTP:
+        String_set(serverNode->server.ftpServer.loginName,loginName);
+        String_set(serverNode->server.ftpServer.password,password);
+        break;
+      case SERVER_TYPE_SSH:
+        serverNode->server.sshServer.port               = port;
+        String_set(serverNode->server.sshServer.loginName,loginName);
+        Password_set(serverNode->server.sshServer.password,password);
+//        String_set(serverNode->server.sshServer.publicKey,publicKey);
+//        String_set(serverNode->server.sshServer.privateKey,privateKey);
+        break;
+      case SERVER_TYPE_WEBDAV:
+        String_set(serverNode->server.webDAVServer.loginName,loginName);
+        Password_set(serverNode->server.webDAVServer.password,password);
+//        String_set(serverNode->server.webDAVServer.publicKey,publicKey);
+//        String_set(serverNode->server.webDAVServer.privateKey,privateKey);
+        break;
+    }
+///TODO
+    serverNode->server.maxConnectionCount = maxConnectionCount;
+    serverNode->server.maxStorageSize     = maxStorageSize;
+
+    // add to server list
+    List_append(&globalOptions.serverList,serverNode);
+
+    // update config files
+    error = updateConfig();
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&globalOptions.serverList.lock);
+      sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+      return;
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%d",serverNode->id);
+
+  // free resources
+  String_delete(privateKey);
+  String_delete(publicKey);
+  String_delete(password);
+  String_delete(loginName);
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_serverListUpdate
+* Purpose: update entry in server list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            id=<n>
+*            name=<name>
+*            serverType=filesystem|ftp|ssh|webdav
+*            path=<path|URL>
+*            loginName=<name>
+*            port=<n>
+*            [password=<password>]
+*            [publicKey=<data>]
+*            [privateKey=<data>]
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  uint          serverId;
+  String        name;
+  ServerTypes   serverType;
+  uint          port;
+  String        loginName;
+  String        password;
+  String        publicKey;
+  String        privateKey;
+  uint          maxConnectionCount;
+  uint64        maxStorageSize;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+  Errors        error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get id, name, server type, login name, port, password, public/private key, max. connections, max. storage size
+  if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    String_delete(name);
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected serverType=<FILE|FTP|SSH|WEBDAV>");
+    String_delete(name);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"port",&port,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    String_delete(name);
+    return;
+  }
+  loginName = String_new();
+  if (!StringMap_getString(argumentMap,"loginName",loginName,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  password = String_new();
+  if (!StringMap_getString(argumentMap,"password",password,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password=<password>");
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  publicKey = String_new();
+  if (!StringMap_getString(argumentMap,"publicKey",publicKey,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected publicKey=<data>");
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  privateKey = String_new();
+  if (!StringMap_getString(argumentMap,"privateKey",privateKey,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected privateKey=<data>");
+    String_delete(privateKey);
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
+    String_delete(privateKey);
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxStorageSize=<n>");
+    String_delete(privateKey);
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find storage server
+    serverNode = findServerNodeByID(serverId);
+    if (serverNode == NULL)
+    {
+      Semaphore_unlock(&globalOptions.serverList.lock);
+      sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%d not found",serverId);
+      return;
+    }
+
+    // update storage server settings
+    switch (serverType)
+    {
+      case SERVER_TYPE_FILE:
+        break;
+      case SERVER_TYPE_FTP:
+        String_set(serverNode->server.ftpServer.loginName,loginName);
+        String_set(serverNode->server.ftpServer.password,password);
+        break;
+      case SERVER_TYPE_SSH:
+        serverNode->server.sshServer.port               = port;
+        String_set(serverNode->server.sshServer.loginName,loginName);
+//        Password_set(serverNode->server.sshServer.password,password);
+//        String_set(serverNode->server.sshServer.publicKey,publicKey);
+//        String_set(serverNode->server.sshServer.privateKey,privateKey);
+        break;
+      case SERVER_TYPE_WEBDAV:
+        String_set(serverNode->server.webDAVServer.loginName,loginName);
+//        Password_set(serverNode->server.webDAVServer.password,password);
+//        String_set(serverNode->server.webDAVServer.publicKey,publicKey);
+//        String_set(serverNode->server.webDAVServer.privateKey,privateKey);
+        break;
+    }
+///TODO
+    serverNode->server.maxConnectionCount = maxConnectionCount;
+    serverNode->server.maxStorageSize     = maxStorageSize;
+
+    // update config files
+    error = updateConfig();
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&globalOptions.serverList.lock);
+      sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+      return;
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%d",serverNode->id);
+
+  // free resources
+  String_delete(privateKey);
+  String_delete(publicKey);
+  String_delete(password);
+  String_delete(loginName);
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_serverListDelete
+* Purpose: delete entry in server list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            id=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_serverListDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  int           serverId;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+  Errors        error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get storage server id
+  if (!StringMap_getInt(argumentMap,"id",&serverId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find storage server
+    serverNode = findServerNodeByID(serverId);
+    if (serverNode == NULL)
+    {
+      Semaphore_unlock(&globalOptions.serverList.lock);
+      sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%d not found",serverId);
+      return;
+    }
+
+    // delete storage server
+    List_removeAndFree(&globalOptions.serverList,serverNode,CALLBACK((ListNodeFreeFunction)freeServerNode,NULL));
+
+    // update config file
+    error = updateConfig();
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&globalOptions.serverList.lock);
+      sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+      return;
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
 }
 
 /***********************************************************************\
@@ -14602,6 +14868,11 @@ SERVER_COMMANDS[] =
   { "SERVER_OPTION_GET",          serverCommand_serverOptionGet,         AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_SET",          serverCommand_serverOptionSet,         AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_FLUSH",        serverCommand_serverOptionFlush,       AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST",                serverCommand_serverList,              AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST_CLEAR",          serverCommand_serverListClear,         AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST_ADD",            serverCommand_serverListAdd,           AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST_UPDATE",         serverCommand_serverListUpdate,        AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST_DELETE",         serverCommand_serverListDelete,        AUTHORIZATION_STATE_OK      },
   { "GET",                        serverCommand_get,                     AUTHORIZATION_STATE_OK      },
   { "ABORT",                      serverCommand_abort,                   AUTHORIZATION_STATE_OK      },
   { "STATUS",                     serverCommand_status,                  AUTHORIZATION_STATE_OK      },
