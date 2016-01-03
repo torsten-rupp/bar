@@ -3382,7 +3382,7 @@ LOCAL void purgeStorageByJobUUID(ConstString jobUUID, uint64 maxStorageSize, Log
 fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageSize);
   do
   {
-    // get storage size, find oldest entry
+    // get storage size, find oldest storage entry
     storageSize           = 0LL;
     oldestStorageId       = DATABASE_ID_NONE;
     oldestEntityId        = DATABASE_ID_NONE;
@@ -3448,7 +3448,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
     if ((storageSize > maxStorageSize) && (oldestStorageId != DATABASE_ID_NONE))
     {
 fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
-      // delete oldest storage
+      // delete oldest storage entry
       error = Storage_parseName(&storageSpecifier,oldestStorageName);
       if (error == ERROR_NONE)
       {
