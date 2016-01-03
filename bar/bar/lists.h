@@ -208,11 +208,26 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
                  (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
                                                          (const typeof(* (list)->head) *variable, void *userData)\
                                                          { \
+                                                           UNUSED_VARIABLE(userData); \
+                                                           \
                                                            return condition; \
                                                          },\
                                                          NULL \
                                                         ) \
                 )
+
+#define LIST_FIND2(list,variable,condition) \
+  { \
+    assert(list != NULL); \
+    \
+    typeof(* (list)->head) *variable = list->head; \
+    \
+    while ((variable != NULL) && !condition) \
+    { \
+      variable = variable->next; \
+    } \
+  },\
+  variable
 
 /***********************************************************************\
 * Name   : LIST_REMOVE
@@ -715,10 +730,30 @@ bool List_contains(const void             *list,
 * Notes  : -
 \***********************************************************************/
 
-const Node *List_findFirst(const void             *list,
-                           ListNodeEqualsFunction listNodeEqualsFunction,
-                           void                   *listNodeEqualsUserData
-                          );
+INLINE const Node *List_findFirst(const void             *list,
+                                  ListNodeEqualsFunction listNodeEqualsFunction,
+                                  void                   *listNodeEqualsUserData
+                                 );
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+INLINE const Node *List_findFirst(const void             *list,
+                                  ListNodeEqualsFunction listNodeEqualsFunction,
+                                  void                   *listNodeEqualsUserData
+                                 )
+{
+  Node *node;
+
+  assert(list != NULL);
+  assert(listNodeEqualsFunction != NULL);
+
+  node = ((List*)list)->head;
+  while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+  {
+    node = node->next;
+  }
+
+  return node;
+}
+#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : List_findNext
@@ -732,11 +767,35 @@ const Node *List_findFirst(const void             *list,
 * Notes  : -
 \***********************************************************************/
 
-const Node *List_findNext(const void             *list,
-                          const void             *node,
-                          ListNodeEqualsFunction listNodeEqualsFunction,
-                          void                   *listNodeEqualsUserData
-                         );
+INLINE const Node *List_findNext(const void             *list,
+                                 const void             *node,
+                                 ListNodeEqualsFunction listNodeEqualsFunction,
+                                 void                   *listNodeEqualsUserData
+                                );
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+INLINE const Node *List_findNext(const void             *list,
+                                 const void             *node,
+                                 ListNodeEqualsFunction listNodeEqualsFunction,
+                                 void                   *listNodeEqualsUserData
+                                )
+{
+  assert(list != NULL);
+  assert(listNodeEqualsFunction != NULL);
+
+  UNUSED_VARIABLE(list);
+
+  if (node != NULL)
+  {
+    node = (((Node*)node))->next;
+    while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+    {
+      node = (((Node*)node))->next;
+    }
+  }
+
+  return node;
+}
+#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : List_sort
