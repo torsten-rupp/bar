@@ -360,6 +360,98 @@ Errors EntryList_appendCString(EntryList    *entryList,
   return ERROR_NONE;
 }
 
+Errors EntryList_update(EntryList    *entryList,
+                        uint         id,
+                        EntryTypes   type,
+                        ConstString  string,
+                        PatternTypes patternType
+                       )
+{
+  assert(entryList != NULL);
+  assert(string != NULL);
+
+  return EntryList_updateCString(entryList,id,type,String_cString(string),patternType);
+}
+
+Errors EntryList_updateCString(EntryList    *entryList,
+                               uint         id,
+                               EntryTypes   type,
+                               const char   *string,
+                               PatternTypes patternType
+                              )
+{
+  EntryNode *entryNode;
+  Pattern   pattern;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String    escapedString;
+  #endif /* PLATFORM_... */
+  Errors    error;
+
+  assert(entryList != NULL);
+  assert(string != NULL);
+
+  // find pattern node
+  entryNode = (EntryNode*)LIST_FIND(entryList,entryNode,entryNode->id == id);
+  if (entryNode != NULL)
+  {
+    // init pattern
+    #if   defined(PLATFORM_LINUX)
+      error = Pattern_initCString(&pattern,
+                                  string,
+                                  patternType,
+                                  PATTERN_FLAG_NONE
+                                 );
+    #elif defined(PLATFORM_WINDOWS)
+      // escape all '\' by '\\'
+      escapedString = String_newCString(string);
+      String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
+
+      error = Pattern_init(&pattern,
+                           escapedString,
+                           patternType,
+                           PATTERN_FLAG_IGNORE_CASE
+                          );
+
+      // free resources
+      String_delete(escapedString);
+    #endif /* PLATFORM_... */
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // store
+    entryNode->type        = type;
+    String_set(entryNode->string,string);
+    entryNode->patternType = patternType;
+    Pattern_done(&entryNode->pattern);
+    entryNode->pattern     = pattern;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors EntryList_remove(EntryList *entryList,
+                        uint      id
+                       )
+{
+  EntryNode *entryNode;
+
+  assert(entryList != NULL);
+
+  entryNode = (EntryNode*)LIST_FIND(entryList,entryNode,entryNode->id == id);
+  if (entryNode != NULL)
+  {
+    List_removeAndFree(entryList,entryNode,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 bool EntryList_match(const EntryList   *entryList,
                      ConstString       string,
                      PatternMatchModes patternMatchMode

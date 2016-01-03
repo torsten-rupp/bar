@@ -257,6 +257,76 @@ Errors PatternList_appendCString(PatternList  *patternList,
   return ERROR_NONE;
 }
 
+Errors PatternList_update(PatternList  *patternList,
+                          uint         id,
+                          ConstString  string,
+                          PatternTypes patternType
+                         )
+{
+  assert(patternList != NULL);
+  assert(string != NULL);
+
+  return PatternList_updateCString(patternList,id,String_cString(string),patternType);
+}
+
+Errors PatternList_updateCString(PatternList  *patternList,
+                                 uint         id,
+                                 const char   *string,
+                                 PatternTypes patternType
+                                )
+{
+  PatternNode *patternNode;
+  Pattern     pattern;
+  Errors      error;
+
+  assert(patternList != NULL);
+  assert(string != NULL);
+
+  // find pattern node
+  patternNode = (PatternNode*)LIST_FIND(patternList,patternNode,patternNode->id == id);
+  if (patternNode != NULL)
+  {
+    // compile pattern
+    error = Pattern_initCString(&pattern,
+                                string,
+                                patternType,
+                                PATTERN_FLAG_IGNORE_CASE
+                               );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // store
+    String_setCString(patternNode->string,string);
+    patternNode->patternType = patternType;
+    Pattern_done(&patternNode->pattern);
+    patternNode->pattern     = pattern;
+  }
+
+  return ERROR_NONE;
+}
+
+bool PatternList_remove(PatternList *patternList,
+                        uint        id
+                       )
+{
+  PatternNode *patternNode;
+
+  assert(patternList != NULL);
+
+  patternNode = (PatternNode*)LIST_FIND(patternList,patternNode,patternNode->id == id);
+  if (patternNode != NULL)
+  {
+    List_removeAndFree(patternList,patternNode,(ListNodeFreeFunction)freePatternNode,NULL);
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 bool PatternList_match(const PatternList *patternList,
                        ConstString       string,
                        PatternMatchModes patternMatchMode

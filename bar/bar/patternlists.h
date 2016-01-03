@@ -44,10 +44,10 @@ typedef struct PatternNode
 {
   LIST_NODE_HEADER(struct PatternNode);
 
-  uint         id;
-  String       string;
-  PatternTypes patternType;
-  Pattern      pattern;
+  uint         id;               // unique node id
+  String       string;           // pattern string
+  PatternTypes patternType;      // pattern type
+  Pattern      pattern;          // compiled pattern
 } PatternNode;
 
 typedef struct
@@ -223,7 +223,7 @@ void PatternList_move(PatternList       *fromPatternList,
 * Input  : patternList - pattern list
 *          string      - pattern
 *          patternType - pattern type; see PATTERN_TTYPE_*
-* Output : id - id (can be NULL)
+* Output : id - pattern node id (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -236,8 +236,45 @@ Errors PatternList_append(PatternList  *patternList,
 Errors PatternList_appendCString(PatternList  *patternList,
                                  const char   *string,
                                  PatternTypes patternType,
-                          uint         *id
+                                 uint         *id
                                 );
+
+/***********************************************************************\
+* Name   : PatternList_update, PatternList_updateCString
+* Purpose: update pattern in pattern list
+* Input  : patternList - pattern list
+*          id          - pattern node id
+*          string      - pattern
+*          patternType - pattern type; see PATTERN_TTYPE_*
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors PatternList_update(PatternList  *patternList,
+                          uint         id,
+                          ConstString  string,
+                          PatternTypes patternType
+                         );
+Errors PatternList_updateCString(PatternList  *patternList,
+                                 uint         id,
+                                 const char   *string,
+                                 PatternTypes patternType
+                                );
+
+/***********************************************************************\
+* Name   : PatternList_remove
+* Purpose: remove pattern from pattern list
+* Input  : patternList - pattern list
+*          id          - pattern node id
+* Output : -
+* Return : TRUE iff removed
+* Notes  : -
+\***********************************************************************/
+
+bool PatternList_remove(PatternList *patternList,
+                        uint        id
+                       );
 
 /***********************************************************************\
 * Name   : PatternList_match, PatternList_matchStringList

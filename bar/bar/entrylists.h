@@ -214,7 +214,7 @@ void EntryList_move(EntryList       *fromEntryList,
 +          type        - entry type; see ENTRY_TYPE_*
 *          string      - string
 *          patternType - pattern type; see PATTERN_TYPE_*
-* Output : id - id (can be NULL)
+* Output : id - entry node id (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -231,6 +231,46 @@ Errors EntryList_appendCString(EntryList    *entryList,
                                PatternTypes patternType,
                                uint         *id
                               );
+
+/***********************************************************************\
+* Name   : EntryList_update, EntryList_updateCString
+* Purpose: update entry in entry list
+* Input  : entryList   - entry list
++          id          - entry node id
++          type        - entry type; see ENTRY_TYPE_*
+*          string      - string
+*          patternType - pattern type; see PATTERN_TYPE_*
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors EntryList_update(EntryList    *entryList,
+                        uint         id,
+                        EntryTypes   type,
+                        ConstString  string,
+                        PatternTypes patternType
+                       );
+Errors EntryList_updateCString(EntryList    *entryList,
+                               uint         id,
+                               EntryTypes   type,
+                               const char   *string,
+                               PatternTypes patternType
+                              );
+
+/***********************************************************************\
+* Name   : EntryList_remove
+* Purpose: remove entry from entry list
+* Input  : entryList - entry list
++          id        - entry node id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors EntryList_remove(EntryList *entryList,
+                        uint      id
+                       );
 
 /***********************************************************************\
 * Name   : EntryList_match, EntryList_matchStringList

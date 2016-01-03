@@ -229,7 +229,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
 
     // add to list
     List_append(deltaSourceList,deltaSourceNode);
- }
+  }
   else
   {
     // add matching files
@@ -312,6 +312,157 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
   if (id != NULL) (*id) = deltaSourceNode->id;
 
   return ERROR_NONE;
+}
+
+Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
+                              uint            id,
+                              ConstString     storageName,
+                              PatternTypes    patternType
+                             )
+{
+  StorageSpecifier           storageSpecifier;
+  Errors                     error;
+  DeltaSourceNode            *deltaSourceNode;
+  JobOptions                 jobOptions;
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  Pattern                    pattern;
+  String                     fileName;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String    string;
+  #endif /* PLATFORM_... */
+
+  assert(deltaSourceList != NULL);
+  assert(storageName != NULL);
+
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+
+  // parse storage name
+  Storage_initSpecifier(&storageSpecifier);
+  error = Storage_parseName(&storageSpecifier,storageName);
+  if (error != ERROR_NONE)
+  {
+    Storage_doneSpecifier(&storageSpecifier);
+    return error;
+  }
+
+  deltaSourceNode = NULL;
+
+  if (String_isEmpty(storageSpecifier.archivePatternString))
+  {
+    // add file entry
+    deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+    if (deltaSourceNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    deltaSourceNode->id          = getNewId();
+    deltaSourceNode->storageName = String_duplicate(storageName);
+    deltaSourceNode->patternType = patternType;
+
+    // add to list
+    List_append(deltaSourceList,deltaSourceNode);
+  }
+  else
+  {
+    // add matching files
+    initJobOptions(&jobOptions);
+
+    //open directory list
+    error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                      &storageSpecifier,
+                                      &jobOptions,
+                                      SERVER_CONNECTION_PRIORITY_LOW,
+                                      NULL  // archiveName
+                                     );
+    if (error == ERROR_NONE)
+    {
+      error = Pattern_init(&pattern,
+                           storageSpecifier.archivePatternString,
+                           patternType,
+                           PATTERN_FLAG_NONE
+                          );
+      if (error == ERROR_NONE)
+      {
+        fileName = String_new();
+        while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
+        {
+          // read next directory entry
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
+          if (error != ERROR_NONE)
+          {
+            continue;
+          }
+
+         // match pattern
+          if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
+          {
+            continue;
+          }
+
+          // add file entry
+          deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+          if (deltaSourceNode == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+          deltaSourceNode->id          = getNewId();
+          deltaSourceNode->storageName = String_duplicate(fileName);
+          deltaSourceNode->patternType = patternType;
+
+          List_append(deltaSourceList,deltaSourceNode);
+        }
+        String_delete(fileName);
+        Pattern_done(&pattern);
+      }
+      Storage_closeDirectoryList(&storageDirectoryListHandle);
+    }
+    doneJobOptions(&jobOptions);
+  }
+
+  // add file entry directly if no matching entry found in directory
+  if (deltaSourceNode == NULL)
+  {
+    printWarning("No matching entry for delta source '%s' found\n",
+                 String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                );
+
+    deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+    if (deltaSourceNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    deltaSourceNode->id          = getNewId();
+    deltaSourceNode->storageName = String_duplicate(storageName);
+    deltaSourceNode->patternType = patternType;
+
+    List_append(deltaSourceList,deltaSourceNode);
+  }
+
+  // free resources
+  Storage_doneSpecifier(&storageSpecifier);
+
+  return ERROR_NONE;
+}
+
+bool DeltaSourceList_remove(DeltaSourceList *deltaSourceList,
+                            uint            id
+                           )
+{
+  DeltaSourceNode *deltaSourceNode;
+
+  assert(deltaSourceList != NULL);
+
+  deltaSourceNode = (DeltaSourceNode*)LIST_FIND(deltaSourceList,deltaSourceNode,deltaSourceNode->id == id);
+  if (deltaSourceNode != NULL)
+  {
+    List_removeAndFree(deltaSourceList,deltaSourceNode,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 #ifdef __cplusplus

@@ -44,10 +44,10 @@ typedef struct DeltaSourceNode
 {
   LIST_NODE_HEADER(struct DeltaSourceNode);
 
-  uint         id;
-  String       storageName;
-  PatternTypes patternType;
-  bool         locked;
+  uint         id;                  // unique node id
+  String       storageName;         // storage name
+  PatternTypes patternType;         // pattern type
+  bool         locked;              // TRUE iff locked
 } DeltaSourceNode;
 
 typedef struct
@@ -92,8 +92,8 @@ void DeltaSourceList_doneAll(void);
 
 /***********************************************************************\
 * Name   : DeltaSourceList_init
-* Purpose: init entry list
-* Input  : entryList - entry list
+* Purpose: init delta source list
+* Input  : entryList - delta source list
 * Output : -
 * Return : -
 * Notes  : -
@@ -104,7 +104,7 @@ void DeltaSourceList_init(DeltaSourceList *deltaSourceList);
 /***********************************************************************\
 * Name   : DeltaSourceList_initDuplicate
 * Purpose: init duplicated delta source list
-* Input  : deltaSourceList            - delta source list
+* Input  : deltaSourceList             - delta source list
 *          fromDeltaSourceList         - from delta source list (source)
 *          fromDeltaSourceListFromNode - from node (could be NULL)
 *          fromDeltaSourceListToNode   - to node (could be NULL)
@@ -161,8 +161,8 @@ void DeltaSourceList_copy(const DeltaSourceList *fromDeltaSourceList,
 
 /***********************************************************************\
 * Name   : DeltaSourceList_append
-* Purpose: add entry to entry list
-* Input  : entryList   - entry list
+* Purpose: add entry to delta source list
+* Input  : entryList   - delta source list
 +          type        - entry type; see ENTRY_TYPE_*
 *          pattern     - pattern
 *          patternType - pattern type; see PATTERN_TYPE_*
@@ -178,9 +178,43 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
                              );
 
 /***********************************************************************\
+* Name   : DeltaSourceList_append
+* Purpose: add entry to delta source list
+* Input  : entryList   - delta source list
++          type        - entry type; see ENTRY_TYPE_*
+*          pattern     - pattern
+*          patternType - pattern type; see PATTERN_TYPE_*
+* Output : id - id (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
+                              uint            id,
+                              ConstString     storageName,
+                              PatternTypes    patternType
+                             );
+
+/***********************************************************************\
+* Name   : DeltaSourceList_remove
+* Purpose: remove entry from delta source list
+* Input  : entryList   - delta source list
++          type        - entry type; see ENTRY_TYPE_*
+*          pattern     - pattern
+*          patternType - pattern type; see PATTERN_TYPE_*
+* Output : id - id (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+bool DeltaSourceList_remove(DeltaSourceList *deltaSourceList,
+                            uint            id
+                           );
+
+/***********************************************************************\
 * Name   : DeltaSourceList_match, DeltaSourceList_matchStringList
 * Purpose: patch string/string list with all entrys of list
-* Input  : entryList        - entry list
+* Input  : entryList        - delta source list
 *          string           - string
 *          stringList       - string list
 *          patternMatchMode - pattern match mode; see PatternMatchModes
