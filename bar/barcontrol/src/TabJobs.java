@@ -6964,7 +6964,7 @@ Dprintf.dprintf("");
         Widgets.layout(label,0,0,TableLayoutData.W);
 
         styledText = Widgets.newStyledText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-        styledText.setToolTipText(BARControl.tr("Command or script to execute before start of a job."));
+        styledText.setToolTipText(BARControl.tr("Command or script to execute before start of a job.\nMacros:%name - job name\n"));
         Widgets.layout(styledText,1,0,TableLayoutData.NSWE);
         styledText.addModifyListener(new ModifyListener()
         {

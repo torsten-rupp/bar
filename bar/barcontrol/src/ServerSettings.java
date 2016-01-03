@@ -102,7 +102,7 @@ public class ServerSettings
     {
       switch (this)
       {
-        case FILE:   return "filesystem";
+        case FILE:   return "file";
         case FTP:    return "ftp";
         case SSH:    return "ssh";
         case WEBDAV: return "webdav";
@@ -118,7 +118,6 @@ public class ServerSettings
     int         id;
     String      name;
     ServerTypes type;
-    String      pathURL;
     String      loginName;
     int         port;
     String      password;
@@ -131,18 +130,16 @@ public class ServerSettings
      * @param id id
      * @param name name
      * @param type server type
-     * @param pathURL path/URL
      * @param loginName login name
      * @param port port number
      * @param maxConnectionCount max. concurrent connections
      * @param maxStorageSize max. storage size [bytes]
      */
-    ServerData(int id, String name, ServerTypes type, String pathURL, String loginName, int port, int maxConnectionCount, long maxStorageSize)
+    ServerData(int id, String name, ServerTypes type, String loginName, int port, int maxConnectionCount, long maxStorageSize)
     {
       this.id                 = id;
       this.name               = name;
       this.type               = type;
-      this.pathURL            = pathURL;
       this.port               = port;
       this.loginName          = loginName;
       this.publicKey          = null;
@@ -158,7 +155,7 @@ public class ServerSettings
      */
     ServerData(int id, String name, ServerTypes type)
     {
-      this(id,name,type,"","",0,0,0L);
+      this(id,name,type,"",0,0,0L);
     }
 
     /** create storage server data
@@ -173,7 +170,7 @@ public class ServerSettings
      */
     public ServerData clone()
     {
-      return new ServerData(id,name,type,pathURL,loginName,port,maxConnectionCount,maxStorageSize);
+      return new ServerData(id,name,type,loginName,port,maxConnectionCount,maxStorageSize);
     }
 
     /** convert data to string
@@ -275,7 +272,7 @@ public class ServerSettings
     WidgetVariable          maxTmpSize                 = new WidgetVariable<String >("",   "max-tmp-size"                   );
     WidgetVariable          niceLevel                  = new WidgetVariable<Long   >(0,    "nice-level"                     );
     WidgetVariable          maxThreads                 = new WidgetVariable<Long   >(0,    "max-threads"                    );
-    WidgetVariable          maxBandWidth               = new WidgetVariable<String >("",   "max-band-width"                 );
+//    WidgetVariable          maxBandWidth               = new WidgetVariable<String >("",   "max-band-width"                 );
     WidgetVariable          compressMinSize            = new WidgetVariable<String >("",   "compress-min-size"              );
     WidgetVariable          serverJobsDirectory        = new WidgetVariable<String >("",   "server-jobs-directory"          );
 
@@ -398,7 +395,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         combo = BARWidgets.newNumber(subComposite,
                                      BARControl.tr("Size limit for temporary files."),
                                      maxTmpSize,
-                                     new String[]{"32M","64M","128M","140M","256M","280M","512M","600M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
+                                     new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
                                     );
         Widgets.layout(combo,0,2,TableLayoutData.WE);
       }
@@ -426,6 +423,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       Widgets.layout(spinner,row,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       row++;
 
+/*
       label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       combo = BARWidgets.newNumber(composite,
@@ -434,7 +432,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                    new String[]{"0","64K","128K","256K","512K","1M","2M","4M","8M","16M","32M","64M","128M","256M","512M","1G","10G"}
                                   );
       Widgets.layout(combo,row,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
-      row++;
+      row++;*/
 
       label = Widgets.newLabel(composite,BARControl.tr("Min. compress size")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
@@ -579,6 +577,41 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
             serverData.type = ServerTypes.FILE;
             if (serverEdit(dialog,serverData,BARControl.tr("Add storage server"),BARControl.tr("Add")))
             {
+              String[] resultErrorMessage = new String[1];
+              ValueMap resultMap          = new ValueMap();
+
+              int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_ADD name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
+                                                                       serverData.name,
+                                                                       serverData.type,
+                                                                       serverData.loginName,
+                                                                       serverData.port,
+                                                                       serverData.password,
+                                                                       serverData.publicKey,
+                                                                       serverData.privateKey,
+                                                                       serverData.maxConnectionCount,
+                                                                       serverData.maxStorageSize
+                                                                      ),
+                                                   0,
+                                                   resultErrorMessage,
+                                                   resultMap
+                                                  );
+              if (error == Errors.NONE)
+              {
+                serverData.id = resultMap.getInt("id");
+
+                Widgets.insertTableItem(widgetServerTable,
+                                        serverDataComparator,
+                                        (Object)serverData,
+                                        serverData.type.toString(),
+                                        serverData.name,
+                                        (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                        (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                       );
+              }
+              else
+              {
+                Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",resultErrorMessage[0]));
+              }
             }
           }
         });
@@ -654,7 +687,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
               ServerData serverData = (ServerData)tableItem.getData();
 
               ServerData cloneServerData = (ServerData)serverData.clone();
-              if (serverEdit(dialog,cloneServerData,BARControl.tr("Add storage server"),BARControl.tr("Add")))
+              if (serverEdit(dialog,cloneServerData,BARControl.tr("Clone storage server"),BARControl.tr("Add")))
               {
                 String[] resultErrorMessage = new String[1];
                 ValueMap resultMap          = new ValueMap();
@@ -1980,7 +2013,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
     BARServer.getServerOption(maxTmpSize                 );
     BARServer.getServerOption(niceLevel                  );
     BARServer.getServerOption(maxThreads                 );
-    BARServer.getServerOption(maxBandWidth               );
+//    BARServer.getServerOption(maxBandWidth               );
     BARServer.getServerOption(compressMinSize            );
 
     BARServer.getServerOption(indexDatabase              );
@@ -2087,7 +2120,6 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                             (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
                             (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                            );
-//    servers.getValue().put(0,serverData);
     serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
     Widgets.insertTableItem(widgetServerTable,
                             serverDataComparator,
@@ -2097,7 +2129,6 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                             (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
                             (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                            );
-//    servers.getValue().put(0,serverData);
 
     String[]             resultErrorMessage   = new String[1];
     ArrayList<ValueMap>  resultMapList        = new ArrayList<ValueMap>();
@@ -2108,6 +2139,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                         );
     if (error != Errors.NONE)
     {
+      Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",resultErrorMessage[0]));
       return;
     }
     for (ValueMap resultMap : resultMapList)
@@ -2116,13 +2148,13 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       int         id                 = resultMap.getInt   ("id"                          );
       String      name               = resultMap.getString("name"                        );
       ServerTypes serverType         = resultMap.getEnum  ("serverType",ServerTypes.class);
-      int         port               = resultMap.getInt   ("port"                        );
-      String      loginName          = resultMap.getString("loginName"                   );
-      int         maxConnectionCount = resultMap.getInt   ("maxConnectionCount"          );
+      int         port               = resultMap.getInt   ("port",0                      );
+      String      loginName          = resultMap.getString("loginName",""                );
+      int         maxConnectionCount = resultMap.getInt   ("maxConnectionCount",0        );
       long        maxStorageSize     = resultMap.getLong  ("maxStorageSize"              );
 
       // create server data
-      serverData = new ServerData(id,name,serverType,"",loginName,port,maxConnectionCount,maxStorageSize);
+      serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
 
       // add table entry
       Widgets.insertTableItem(widgetServerTable,
@@ -2137,19 +2169,17 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
 
     if ((Boolean)Dialogs.run(dialog,false))
     {
-      final String[] errorMessage = new String[1];
+      BARServer.setServerOption(tmpDirectory);
+      BARServer.setServerOption(maxTmpSize);
+      BARServer.setServerOption(niceLevel);
+      BARServer.setServerOption(maxThreads);
+//      BARServer.setServerOption(maxBandWidth);
+      BARServer.setServerOption(compressMinSize);
 
-      BARServer.setServerOption(tmpDirectory,errorMessage);
-      BARServer.setServerOption(maxTmpSize,errorMessage);
-      BARServer.setServerOption(niceLevel,errorMessage);
-      BARServer.setServerOption(maxThreads,errorMessage);
-      BARServer.setServerOption(maxBandWidth,errorMessage);
-      BARServer.setServerOption(compressMinSize,errorMessage);
-
-      BARServer.setServerOption(indexDatabase,errorMessage);
-      BARServer.setServerOption(indexDatabaseAutoUpdate,errorMessage);
-//      BARServer.setServerOption(indexDatabaseMaxBandWidth,errorMessage);
-      BARServer.setServerOption(indexDatabaseKeepTime,errorMessage);
+      BARServer.setServerOption(indexDatabase);
+      BARServer.setServerOption(indexDatabaseAutoUpdate);
+//      BARServer.setServerOption(indexDatabaseMaxBandWidth);
+      BARServer.setServerOption(indexDatabaseKeepTime);
 
       BARServer.setServerOption(cdDevice                   );
       BARServer.setServerOption(cdRequestVolumeCommand     );
@@ -2222,16 +2252,15 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       BARServer.setServerOption(serverPassword             );
       BARServer.setServerOption(serverJobsDirectory        );
 
-      BARServer.setServerOption(log,errorMessage           );
-      BARServer.setServerOption(logFile,errorMessage       );
-      BARServer.setServerOption(logFormat,errorMessage     );
-      BARServer.setServerOption(logPostCommand,errorMessage);
+      BARServer.setServerOption(log                        );
+      BARServer.setServerOption(logFile                    );
+      BARServer.setServerOption(logFormat                  );
+      BARServer.setServerOption(logPostCommand             );
 
-      if (BARServer.flushServerOption(errorMessage) != Errors.NONE)
+      if (BARServer.flushServerOption(resultErrorMessage) != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",errorMessage[0]));
+        Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",resultErrorMessage[0]));
       }
-
     }
   }
 
@@ -2257,7 +2286,6 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
     // create widgets
     final Text       widgetName;
     final Combo      widgetType;
-    final Text       widgetPathURL;
     final Text       widgetLoginName;
     final Spinner    widgetPort;
     final Text       widgetPassword;
@@ -2267,7 +2295,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
     final Combo      widgetMaxStorageSize;
     final Button     widgetOK;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,0.0,1.0,1.0},new double[]{0.0,1.0},4));
+    composite.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,1.0,1.0,0.0,0.0},new double[]{0.0,1.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE,0,0,4);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
@@ -2278,7 +2306,6 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       {
         widgetName = Widgets.newText(subComposite);
         widgetName.setText(serverData.name);
-        widgetName.setEnabled(serverData.id > 0);
         Widgets.layout(widgetName,0,0,TableLayoutData.WE);
 
         widgetType = Widgets.newCombo(subComposite,SWT.READ_ONLY);
@@ -2290,22 +2317,14 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                           }
                            );
         Widgets.setSelectedComboItem(widgetType,serverData.type);
-        widgetType.setEnabled(serverData.id > 0);
         Widgets.layout(widgetType,0,1,TableLayoutData.E);
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Path/URL")+":");
-      Widgets.layout(label,1,0,TableLayoutData.W);
-      widgetPathURL = Widgets.newText(composite);
-      widgetPathURL.setText(serverData.name);
-      widgetPathURL.setEnabled(serverData.id > 0);
-      Widgets.layout(widgetPathURL,1,1,TableLayoutData.WE);
-
       label = Widgets.newLabel(composite,BARControl.tr("Login")+":");
-      Widgets.layout(label,2,0,TableLayoutData.W);
+      Widgets.layout(label,1,0,TableLayoutData.W);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
-      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
         widgetLoginName = Widgets.newText(subComposite);
         widgetLoginName.setToolTipText(BARControl.tr("Login name."));
@@ -2338,10 +2357,10 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Password")+":");
-      Widgets.layout(label,3,0,TableLayoutData.W);
+      Widgets.layout(label,2,0,TableLayoutData.W);
       widgetPassword = Widgets.newPassword(composite);
       widgetPassword.setToolTipText(BARControl.tr("Set initial or new password. Note: existing password is not shown."));
-      Widgets.layout(widgetPassword,3,1,TableLayoutData.WE);
+      Widgets.layout(widgetPassword,2,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(widgetPassword,serverData)
       {
         public void modified(Control control)
@@ -2355,10 +2374,10 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       });
 
       label = Widgets.newLabel(composite,BARControl.tr("Public key")+":");
-      Widgets.layout(label,4,0,TableLayoutData.NW);
+      Widgets.layout(label,3,0,TableLayoutData.NW);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},new double[]{1.0,0.0}));
-      Widgets.layout(subComposite,4,1,TableLayoutData.NSWE);
+      Widgets.layout(subComposite,3,1,TableLayoutData.NSWE);
       {
         widgetPublicKey = Widgets.newStyledText(subComposite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
         widgetPublicKey.setToolTipText(BARControl.tr("Set initial or new public key. Note: existing public key is not shown."));
@@ -2411,10 +2430,10 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Private key")+":");
-      Widgets.layout(label,5,0,TableLayoutData.NW);
+      Widgets.layout(label,4,0,TableLayoutData.NW);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},new double[]{1.0,0.0}));
-      Widgets.layout(subComposite,5,1,TableLayoutData.NSWE);
+      Widgets.layout(subComposite,4,1,TableLayoutData.NSWE);
       {
         widgetPrivateKey = Widgets.newStyledText(subComposite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
         widgetPrivateKey.setToolTipText(BARControl.tr("Set initial or new private key. Note: existing private key is not shown."));
@@ -2466,12 +2485,12 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Max. connections")+":");
-      Widgets.layout(label,6,0,TableLayoutData.NW);
+      Widgets.layout(label,5,0,TableLayoutData.NW);
       widgetMaxConnectionCount = Widgets.newSpinner(composite);
       widgetMaxConnectionCount.setToolTipText(BARControl.tr("Max. number of concurrent connections. 0 for unlimited number of concurrent connections."));
       widgetMaxConnectionCount.setMinimum(0);
       widgetMaxConnectionCount.setSelection(serverData.maxConnectionCount);
-      Widgets.layout(widgetMaxConnectionCount,6,1,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
+      Widgets.layout(widgetMaxConnectionCount,5,1,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
       Widgets.addModifyListener(new WidgetModifyListener(widgetPort,serverData)
       {
         public void modified(Control control)
@@ -2485,13 +2504,13 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       });
 
       label = Widgets.newLabel(composite,BARControl.tr("Max. storage size")+":");
-      Widgets.layout(label,7,0,TableLayoutData.NW);
+      Widgets.layout(label,6,0,TableLayoutData.NW);
       widgetMaxStorageSize = Widgets.newCombo(composite);
       widgetMaxStorageSize.setToolTipText(BARControl.tr("Total size limit for storage."));
-      widgetMaxStorageSize.setItems(new String[]{"32M","64M","128M","140M","256M","280M","512M","600M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
+      widgetMaxStorageSize.setItems(new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"});
       widgetMaxStorageSize.setData("showedErrorDialog",false);
       widgetMaxStorageSize.setText(Units.formatByteSize(serverData.maxStorageSize));
-      Widgets.layout(widgetMaxStorageSize,7,1,TableLayoutData.W);
+      Widgets.layout(widgetMaxStorageSize,6,1,TableLayoutData.W);
     }
 
     // buttons
@@ -2554,7 +2573,6 @@ Dprintf.dprintf("serverData.type=%s",serverData.type);
         Button widget  = (Button)selectionEvent.widget;
 
         serverData.name               = widgetName.getText().trim();
-        serverData.pathURL            = widgetPathURL.getText().trim();
         serverData.loginName          = widgetLoginName.getText();
         serverData.port               = widgetPort.getSelection();
         serverData.password           = widgetPassword.getText();
