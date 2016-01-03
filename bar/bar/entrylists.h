@@ -61,8 +61,6 @@ typedef struct EntryNode
 typedef struct
 {
   LIST_HEADER(EntryNode);
-
-  uint id;
 } EntryList;
 
 /***************************** Variables *******************************/

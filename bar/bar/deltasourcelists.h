@@ -44,6 +44,7 @@ typedef struct DeltaSourceNode
 {
   LIST_NODE_HEADER(struct DeltaSourceNode);
 
+  uint         id;
   String       storageName;
   PatternTypes patternType;
   bool         locked;
@@ -165,14 +166,15 @@ void DeltaSourceList_copy(const DeltaSourceList *fromDeltaSourceList,
 +          type        - entry type; see ENTRY_TYPE_*
 *          pattern     - pattern
 *          patternType - pattern type; see PATTERN_TYPE_*
-* Output : -
+* Output : id - id (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
                               ConstString     storageName,
-                              PatternTypes    patternType
+                              PatternTypes    patternType,
+                              uint            *id
                              );
 
 /***********************************************************************\

@@ -2071,7 +2071,7 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  error = PatternList_appendCString((PatternList*)variable,value,patternType);
+  error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
     strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
@@ -2114,7 +2114,7 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
   else                                 { String_setCString(storageName, value  ); patternType = PATTERN_TYPE_GLOB;           }
 
   // append to delta source list
-  DeltaSourceList_append((DeltaSourceList*)variable,storageName,patternType);
+  DeltaSourceList_append((DeltaSourceList*)variable,storageName,patternType,NULL);
 
   // free resources
   String_delete(storageName);
@@ -5661,7 +5661,7 @@ bool configValueParsePattern(void *userData, void *variable, const char *name, c
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  error = PatternList_appendCString((PatternList*)variable,value,patternType);
+  error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
     strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';

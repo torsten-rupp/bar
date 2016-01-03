@@ -94,6 +94,7 @@ LOCAL PatternNode *duplicatePatternNode(PatternNode *patternNode,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  newPatternNode->id     = getNewId();
   newPatternNode->string = String_duplicate(patternNode->string);
 
   // create pattern
@@ -203,18 +204,20 @@ void PatternList_move(PatternList       *fromPatternList,
 
 Errors PatternList_append(PatternList  *patternList,
                           ConstString  string,
-                          PatternTypes patternType
+                          PatternTypes patternType,
+                          uint         *id
                          )
 {
   assert(patternList != NULL);
   assert(string != NULL);
 
-  return PatternList_appendCString(patternList,String_cString(string),patternType);
+  return PatternList_appendCString(patternList,String_cString(string),patternType,id);
 }
 
 Errors PatternList_appendCString(PatternList  *patternList,
                                  const char   *string,
-                                 PatternTypes patternType
+                                 PatternTypes patternType,
+                                 uint         *id
                                 )
 {
   PatternNode *patternNode;
@@ -229,6 +232,7 @@ Errors PatternList_appendCString(PatternList  *patternList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  patternNode->id          = getNewId();
   patternNode->string      = String_newCString(string);
   patternNode->patternType = patternType;
 
@@ -247,6 +251,8 @@ Errors PatternList_appendCString(PatternList  *patternList,
 
   // add to list
   List_append(patternList,patternNode);
+
+  if (id != NULL) (*id) = patternNode->id;
 
   return ERROR_NONE;
 }

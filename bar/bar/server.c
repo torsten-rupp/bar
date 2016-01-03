@@ -6574,7 +6574,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%d",serverNode->id);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",serverNode->id);
 
   // free resources
   String_delete(privateKey);
@@ -8990,7 +8990,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
     LIST_ITERATE(&jobNode->includeEntryList,entryNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "id=%d entryType=%s patternType=%s pattern=%'S",
+                       "id=%u entryType=%s patternType=%s pattern=%'S",
                        entryNode->id,
                        EntryList_entryTypeToString(entryNode->type,"unknown"),
                        Pattern_patternTypeToString(entryNode->pattern.type,"unknown"),
@@ -9123,7 +9123,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
     jobIncludeExcludeChanged(jobNode);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%d",entryId);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",entryId);
 
   // free resources
   String_delete(patternString);
@@ -9141,7 +9141,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            patternType=<type> pattern=<text>
+*            id=<n> patternType=<type> pattern=<text>
 *            ...
 \***********************************************************************/
 
@@ -9177,7 +9177,8 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
     LIST_ITERATE(&jobNode->excludePatternList,patternNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "patternType=%s pattern=%'S",
+                       "id=%u patternType=%s pattern=%'S",
+                       patternNode->id,
                        Pattern_patternTypeToString(patternNode->pattern.type,"unknown"),
                        patternNode->string
                       );
@@ -9262,6 +9263,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
   String        patternString;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  uint          patternId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9294,14 +9296,14 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
     }
 
     // add to exclude list
-    PatternList_append(&jobNode->excludePatternList,patternString,patternType);
+    PatternList_append(&jobNode->excludePatternList,patternString,patternType,&patternId);
     jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",patternId);
 
   // free resources
   String_delete(patternString);
@@ -9355,7 +9357,8 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
     LIST_ITERATE(&jobNode->deltaSourceList,deltaSourceNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "patternType=%s pattern=%'S",
+                       "id=%u patternType=%s pattern=%'S",
+                       deltaSourceNode->id,
 //TODO
                        Pattern_patternTypeToString(PATTERN_TYPE_GLOB,"unknown"),
                        deltaSourceNode->storageName
@@ -9438,6 +9441,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
   String        patternString;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  uint          deltaSourceId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9470,11 +9474,11 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
     }
 
     // add to source list
-    DeltaSourceList_append(&jobNode->deltaSourceList,patternString,patternType);
+    DeltaSourceList_append(&jobNode->deltaSourceList,patternString,patternType,&deltaSourceId);
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",deltaSourceId);
 
   // free resources
   String_delete(patternString);
@@ -9610,6 +9614,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
   String        patternString;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  uint          patternId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9642,11 +9647,11 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
     }
 
     // add to exclude list
-    PatternList_append(&jobNode->compressExcludePatternList,patternString,patternType);
+    PatternList_append(&jobNode->compressExcludePatternList,patternString,patternType,&patternId);
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",patternId);
 
   // free resources
   String_delete(patternString);

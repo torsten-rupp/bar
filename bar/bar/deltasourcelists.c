@@ -96,6 +96,7 @@ LOCAL DeltaSourceNode *duplicateDeltaSourceNode(DeltaSourceNode *deltaSourceNode
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  newDeltaSourceNode->id          = getNewId();
   newDeltaSourceNode->storageName = String_duplicate(deltaSourceNode->storageName);
   newDeltaSourceNode->patternType = deltaSourceNode->patternType;
 
@@ -184,7 +185,8 @@ void DeltaSourceList_copy(const DeltaSourceList *fromDeltaSourceList,
 
 Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
                               ConstString     storageName,
-                              PatternTypes    patternType
+                              PatternTypes    patternType,
+                              uint            *id
                              )
 {
   StorageSpecifier           storageSpecifier;
@@ -221,6 +223,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
+    deltaSourceNode->id          = getNewId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
 
@@ -270,7 +273,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-
+          deltaSourceNode->id          = getNewId();
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
 
@@ -296,7 +299,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-
+    deltaSourceNode->id          = getNewId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
 
@@ -305,6 +308,8 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
+
+  if (id != NULL) (*id) = deltaSourceNode->id;
 
   return ERROR_NONE;
 }
