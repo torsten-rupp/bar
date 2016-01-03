@@ -628,28 +628,6 @@ void deleteServerNode(ServerNode *serverNode);
 void freeServerNode(ServerNode *serverNode, void *userData);
 
 /***********************************************************************\
-* Name   : findServerNodeById
-* Purpose: find server node by id
-* Input  : id - id
-* Output : -
-* Return : server node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-ServerNode *findServerNodeById(uint id);
-
-/***********************************************************************\
-* Name   : findServerNodeByName
-* Purpose: find server node by name
-* Input  : name - server name
-* Output : -
-* Return : server node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-ServerNode *findServerNodeByName(ConstString name);
-
-/***********************************************************************\
 * Name   : getFTPServerSettings
 * Purpose: get FTP server settings
 * Input  : hostName   - FTP server host name

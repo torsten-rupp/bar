@@ -1553,7 +1553,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
       SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
-        serverNode = findServerNodeByName(name);
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
       }
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FILE);
@@ -1616,7 +1616,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
       SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
-        serverNode = findServerNodeByName(name);
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
       }
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FTP);
@@ -1679,7 +1679,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
       SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
-        serverNode = findServerNodeByName(name);
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
       }
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_SSH);
@@ -1742,7 +1742,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
       SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
-        serverNode = findServerNodeByName(name);
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
       }
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_WEBDAV);
@@ -4818,36 +4818,6 @@ void freeServerNode(ServerNode *serverNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   doneServer(&serverNode->server);
-}
-
-ServerNode *findServerNodeById(uint id)
-{
-  ServerNode *serverNode;
-
-  assert(id > 0);
-
-  serverNode = globalOptions.serverList.head;
-  while ((serverNode != NULL) && (serverNode->id != id))
-  {
-    serverNode = serverNode->next;
-  }
-
-  return serverNode;
-}
-
-ServerNode *findServerNodeByName(ConstString name)
-{
-  ServerNode *serverNode;
-
-  assert(name != NULL);
-
-  serverNode = globalOptions.serverList.head;
-  while ((serverNode != NULL) && !String_equals(serverNode->server.name,name))
-  {
-    serverNode = serverNode->next;
-  }
-
-  return serverNode;
 }
 
 Server *getFTPServerSettings(ConstString      hostName,
