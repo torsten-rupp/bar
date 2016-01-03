@@ -6521,7 +6521,17 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
         break;
       case SERVER_TYPE_FTP:
         String_set(serverNode->server.ftpServer.loginName,loginName);
-        String_set(serverNode->server.ftpServer.password,password);
+        if (!String_isEmpty(password))
+        {
+          if (serverNode->server.ftpServer.password == NULL)
+          {
+            serverNode->server.ftpServer.password = Password_newString(password);
+          }
+          else
+          {
+            Password_setString(serverNode->server.ftpServer.password,password);
+          }
+        }
         break;
       case SERVER_TYPE_SSH:
         serverNode->server.sshServer.port               = port;
@@ -6628,8 +6638,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
   // get id, name, server type, login name, port, password, public/private key, max. connections, max. storage size
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
-    String_delete(name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
   name = String_new();
@@ -6712,11 +6721,11 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find storage server
-    serverNode = findServerNodeById(serverId);
+    serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
-      sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%d not found",serverId);
+      sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
       return;
     }
 
@@ -6797,7 +6806,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
 }
 
 /***********************************************************************\
-* Name   : serverCommand_serverListDelete
+* Name   : serverCommand_serverListRemove
 * Purpose: delete entry in server list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -6810,7 +6819,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_serverListDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   int           serverId;
   SemaphoreLock semaphoreLock;
@@ -6830,11 +6839,11 @@ LOCAL void serverCommand_serverListDelete(ClientInfo *clientInfo, uint id, const
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find storage server
-    serverNode = findServerNodeById(serverId);
+    serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
-      sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%d not found",serverId);
+      sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
       return;
     }
 
@@ -7690,8 +7699,8 @@ UNUSED_VARIABLE(value);
         error = File_touch(noBackupFileName);
         if (error != ERROR_NONE)
         {
-          sendClientResult(clientInfo,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
           String_delete(noBackupFileName);
+          sendClientResult(clientInfo,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
           Semaphore_unlock(&jobList.lock);
           String_delete(value);
           String_delete(name);
@@ -7824,8 +7833,8 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, con
         error = File_delete(noBackupFileName,FALSE);
         if (error != ERROR_NONE)
         {
-          sendClientResult(clientInfo,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
           String_delete(noBackupFileName);
+          sendClientResult(clientInfo,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
           Semaphore_unlock(&jobList.lock);
           String_delete(name);
           String_delete(attribute);
@@ -9068,6 +9077,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 *            pattern=<text>
 *            [patternType=<type>]
 *          Result:
+*            id=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -9109,8 +9119,8 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      Semaphore_unlock(&jobList.lock);
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
     }
@@ -9127,6 +9137,152 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 
   // free resources
   String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_includeListUpdate
+* Purpose: update entry to job include list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*            entryType=<type>
+*            pattern=<text>
+*            [patternType=<type>]
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          entryId;
+  EntryTypes    entryType;
+  PatternTypes  patternType;
+  String        patternString;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id, entry type, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    return;
+  }
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
+    return;
+  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(patternString);
+      return;
+    }
+
+    // update include list
+    EntryList_update(&jobNode->includeEntryList,entryId,entryType,patternString,patternType);
+    jobNode->modifiedFlag = TRUE;
+
+    // notify about changed lists
+    jobIncludeExcludeChanged(jobNode);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_includeListRemove
+* Purpose: remove entry from job include list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          entryId;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // remove from include list
+    if (!EntryList_remove(&jobNode->includeEntryList,entryId))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"entry with id #%u not found",entryId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    jobNode->modifiedFlag = TRUE;
+
+    // notify about changed lists
+    jobIncludeExcludeChanged(jobNode);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -9254,6 +9410,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 *            pattern=<text>
 *            [patternType=<type>]
 *          Result:
+*            id=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -9289,8 +9446,8 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      Semaphore_unlock(&jobList.lock);
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
     }
@@ -9310,6 +9467,148 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 }
 
 /***********************************************************************\
+* Name   : serverCommand_excludeListUpdate
+* Purpose: update entry in job exclude list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*            pattern=<text>
+*            [patternType=<type>]
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          patternId;
+  PatternTypes  patternType;
+  String        patternString;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, pattern id, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
+    return;
+  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(patternString);
+      return;
+    }
+
+    // update exclude list
+    PatternList_update(&jobNode->excludePatternList,patternId,patternString,patternType);
+    jobNode->modifiedFlag = TRUE;
+
+    // notify about changed lists
+    jobIncludeExcludeChanged(jobNode);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_excludeListRemove
+* Purpose: remove entry from job exclude list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          patternId;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  PatternNode   *patternNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // remove from exclude list
+    if (!PatternList_remove(&jobNode->excludePatternList,patternId))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    jobNode->modifiedFlag = TRUE;
+
+    // notify about changed lists
+    jobIncludeExcludeChanged(jobNode);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : serverCommand_sourceList
 * Purpose: get soource list
 * Input  : clientInfo    - client info
@@ -9321,7 +9620,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            patternType=<type> pattern=<text>
+*            id=<n> patternType=<type> pattern=<text>
 *            ...
 \***********************************************************************/
 
@@ -9432,6 +9731,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 *            pattern=<text>
 *            [patternType=<type>]
 *          Result:
+*            id=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -9482,6 +9782,141 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 
   // free resources
   String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_sourceListUpdate
+* Purpose: update entry in source list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*            pattern=<text>
+*            [patternType=<type>]
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          deltaSourceId;
+  PatternTypes  patternType;
+  String        patternString;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id, type, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&deltaSourceId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
+    return;
+  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(patternString);
+      return;
+    }
+
+    // update source list
+    DeltaSourceList_update(&jobNode->deltaSourceList,deltaSourceId,patternString,patternType);
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_sourceListRemove
+* Purpose: remove entry from source list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          deltaSourceId;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&deltaSourceId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // remove from source list
+    if (!EntryList_remove(&jobNode->deltaSourceList,deltaSourceId))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"delta source with id #%u not found",deltaSourceId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
 }
 
 /***********************************************************************\
@@ -9605,6 +10040,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 *            pattern=<text>
 *            [patternType=<type>]
 *          Result:
+*            id=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -9640,8 +10076,8 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      Semaphore_unlock(&jobList.lock);
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
     }
@@ -9655,6 +10091,142 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 
   // free resources
   String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_excludeCompressListUpdate
+* Purpose: update entry in job exclude compress list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*            pattern=<text>
+*            [patternType=<type>]
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          patternId;
+  PatternTypes  patternType;
+  String        patternString;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id, type, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
+    return;
+  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(patternString);
+      return;
+    }
+
+    // update exclude list
+    PatternList_update(&jobNode->compressExcludePatternList,patternId,patternString,patternType);
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_excludeCompressListAdd
+* Purpose: add entry to job exclude compress list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          patternId;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // add to exclude list
+    // remove from exclude list
+    if (!PatternList_remove(&jobNode->compressExcludePatternList,patternId))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
 }
 
 /***********************************************************************\
@@ -10082,8 +10654,8 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
 }
 
 /***********************************************************************\
-* Name   : serverCommand_scheduleDelete
-* Purpose: clear job schedule list
+* Name   : serverCommand_scheduleRemove
+* Purpose: remove entry from job schedule list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -10096,7 +10668,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -14896,104 +15468,116 @@ const struct
 }
 SERVER_COMMANDS[] =
 {
-  { "ERROR_INFO",                 serverCommand_errorInfo,               AUTHORIZATION_STATE_OK      },
-  { "START_SSL",                  serverCommand_startSSL,                AUTHORIZATION_STATE_WAITING },
-  { "AUTHORIZE",                  serverCommand_authorize,               AUTHORIZATION_STATE_WAITING },
-  { "VERSION",                    serverCommand_version,                 AUTHORIZATION_STATE_OK      },
-  { "QUIT",                       serverCommand_quit,                    AUTHORIZATION_STATE_OK      },
-  { "SERVER_OPTION_GET",          serverCommand_serverOptionGet,         AUTHORIZATION_STATE_OK      },
-  { "SERVER_OPTION_SET",          serverCommand_serverOptionSet,         AUTHORIZATION_STATE_OK      },
-  { "SERVER_OPTION_FLUSH",        serverCommand_serverOptionFlush,       AUTHORIZATION_STATE_OK      },
-  { "SERVER_LIST",                serverCommand_serverList,              AUTHORIZATION_STATE_OK      },
-  { "SERVER_LIST_ADD",            serverCommand_serverListAdd,           AUTHORIZATION_STATE_OK      },
-  { "SERVER_LIST_UPDATE",         serverCommand_serverListUpdate,        AUTHORIZATION_STATE_OK      },
-  { "SERVER_LIST_DELETE",         serverCommand_serverListDelete,        AUTHORIZATION_STATE_OK      },
-  { "GET",                        serverCommand_get,                     AUTHORIZATION_STATE_OK      },
-  { "ABORT",                      serverCommand_abort,                   AUTHORIZATION_STATE_OK      },
-  { "STATUS",                     serverCommand_status,                  AUTHORIZATION_STATE_OK      },
-  { "PAUSE",                      serverCommand_pause,                   AUTHORIZATION_STATE_OK      },
-  { "SUSPEND",                    serverCommand_suspend,                 AUTHORIZATION_STATE_OK      },
-  { "CONTINUE",                   serverCommand_continue,                AUTHORIZATION_STATE_OK      },
-  { "DEVICE_LIST",                serverCommand_deviceList,              AUTHORIZATION_STATE_OK      },
-  { "ROOT_LIST",                  serverCommand_rootList,                AUTHORIZATION_STATE_OK      },
-  { "FILE_LIST",                  serverCommand_fileList,                AUTHORIZATION_STATE_OK      },
-  { "FILE_ATTRIBUTE_GET",         serverCommand_fileAttributeGet,        AUTHORIZATION_STATE_OK      },
-  { "FILE_ATTRIBUTE_SET",         serverCommand_fileAttributeSet,        AUTHORIZATION_STATE_OK      },
-  { "FILE_ATTRIBUTE_CLEAR",       serverCommand_fileAttributeClear,      AUTHORIZATION_STATE_OK      },
-  { "DIRECTORY_INFO",             serverCommand_directoryInfo,           AUTHORIZATION_STATE_OK      },
-  { "JOB_LIST",                   serverCommand_jobList,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_INFO",                   serverCommand_jobInfo,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_NEW",                    serverCommand_jobNew,                  AUTHORIZATION_STATE_OK      },
-  { "JOB_CLONE",                  serverCommand_jobClone,                AUTHORIZATION_STATE_OK      },
-  { "JOB_RENAME",                 serverCommand_jobRename,               AUTHORIZATION_STATE_OK      },
-  { "JOB_DELETE",                 serverCommand_jobDelete,               AUTHORIZATION_STATE_OK      },
-  { "JOB_START",                  serverCommand_jobStart,                AUTHORIZATION_STATE_OK      },
-  { "JOB_ABORT",                  serverCommand_jobAbort,                AUTHORIZATION_STATE_OK      },
-  { "JOB_FLUSH",                  serverCommand_jobFlush,                AUTHORIZATION_STATE_OK      },
-  { "JOB_OPTION_GET",             serverCommand_jobOptionGet,            AUTHORIZATION_STATE_OK      },
-  { "JOB_OPTION_SET",             serverCommand_jobOptionSet,            AUTHORIZATION_STATE_OK      },
-  { "JOB_OPTION_DELETE",          serverCommand_jobOptionDelete,         AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST",               serverCommand_includeList,             AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST_CLEAR",         serverCommand_includeListClear,        AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST_ADD",           serverCommand_includeListAdd,          AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST",               serverCommand_excludeList,             AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST_CLEAR",         serverCommand_excludeListClear,        AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST_ADD",           serverCommand_excludeListAdd,          AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST",                serverCommand_sourceList,              AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST_CLEAR",          serverCommand_sourceListClear,         AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST_ADD",            serverCommand_sourceListAdd,           AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST",      serverCommand_excludeCompressList,     AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST_CLEAR",serverCommand_excludeCompressListClear,AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST_ADD",  serverCommand_excludeCompressListAdd,  AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST",              serverCommand_scheduleList,            AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_ADD",               serverCommand_scheduleAdd,             AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_DELETE",            serverCommand_scheduleDelete,          AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_OPTION_GET",        serverCommand_scheduleOptionGet,       AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_OPTION_SET",        serverCommand_scheduleOptionSet,       AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_OPTION_DELETE",     serverCommand_scheduleOptionDelete,    AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_TRIGGER",           serverCommand_scheduleTrigger,         AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_CLEAR",     serverCommand_decryptPasswordsClear,   AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_ADD",       serverCommand_decryptPasswordAdd,      AUTHORIZATION_STATE_OK      },
-  { "FTP_PASSWORD",               serverCommand_ftpPassword,             AUTHORIZATION_STATE_OK      },
-  { "SSH_PASSWORD",               serverCommand_sshPassword,             AUTHORIZATION_STATE_OK      },
-  { "WEBDAV_PASSWORD",            serverCommand_webdavPassword,          AUTHORIZATION_STATE_OK      },
-  { "CRYPT_PASSWORD",             serverCommand_cryptPassword,           AUTHORIZATION_STATE_OK      },
-  { "PASSWORDS_CLEAR",            serverCommand_passwordsClear,          AUTHORIZATION_STATE_OK      },
-  { "VOLUME_LOAD",                serverCommand_volumeLoad,              AUTHORIZATION_STATE_OK      },
-  { "VOLUME_UNLOAD",              serverCommand_volumeUnload,            AUTHORIZATION_STATE_OK      },
+  { "ERROR_INFO",                  serverCommand_errorInfo,                AUTHORIZATION_STATE_OK      },
+  { "START_SSL",                   serverCommand_startSSL,                 AUTHORIZATION_STATE_WAITING },
+  { "AUTHORIZE",                   serverCommand_authorize,                AUTHORIZATION_STATE_WAITING },
+  { "VERSION",                     serverCommand_version,                  AUTHORIZATION_STATE_OK      },
+  { "QUIT",                        serverCommand_quit,                     AUTHORIZATION_STATE_OK      },
+  { "SERVER_OPTION_GET",           serverCommand_serverOptionGet,          AUTHORIZATION_STATE_OK      },
+  { "SERVER_OPTION_SET",           serverCommand_serverOptionSet,          AUTHORIZATION_STATE_OK      },
+  { "SERVER_OPTION_FLUSH",         serverCommand_serverOptionFlush,        AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST",                 serverCommand_serverList,               AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST_ADD",             serverCommand_serverListAdd,            AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST_UPDATE",          serverCommand_serverListUpdate,         AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST_REMOVE",          serverCommand_serverListRemove,         AUTHORIZATION_STATE_OK      },
+  { "GET",                         serverCommand_get,                      AUTHORIZATION_STATE_OK      },
+  { "ABORT",                       serverCommand_abort,                    AUTHORIZATION_STATE_OK      },
+  { "STATUS",                      serverCommand_status,                   AUTHORIZATION_STATE_OK      },
+  { "PAUSE",                       serverCommand_pause,                    AUTHORIZATION_STATE_OK      },
+  { "SUSPEND",                     serverCommand_suspend,                  AUTHORIZATION_STATE_OK      },
+  { "CONTINUE",                    serverCommand_continue,                 AUTHORIZATION_STATE_OK      },
+  { "DEVICE_LIST",                 serverCommand_deviceList,               AUTHORIZATION_STATE_OK      },
+  { "ROOT_LIST",                   serverCommand_rootList,                 AUTHORIZATION_STATE_OK      },
+  { "FILE_LIST",                   serverCommand_fileList,                 AUTHORIZATION_STATE_OK      },
+  { "FILE_ATTRIBUTE_GET",          serverCommand_fileAttributeGet,         AUTHORIZATION_STATE_OK      },
+  { "FILE_ATTRIBUTE_SET",          serverCommand_fileAttributeSet,         AUTHORIZATION_STATE_OK      },
+  { "FILE_ATTRIBUTE_CLEAR",        serverCommand_fileAttributeClear,       AUTHORIZATION_STATE_OK      },
+  { "DIRECTORY_INFO",              serverCommand_directoryInfo,            AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",                    serverCommand_jobList,                  AUTHORIZATION_STATE_OK      },
+  { "JOB_INFO",                    serverCommand_jobInfo,                  AUTHORIZATION_STATE_OK      },
+  { "JOB_NEW",                     serverCommand_jobNew,                   AUTHORIZATION_STATE_OK      },
+  { "JOB_CLONE",                   serverCommand_jobClone,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_RENAME",                  serverCommand_jobRename,                AUTHORIZATION_STATE_OK      },
+  { "JOB_DELETE",                  serverCommand_jobDelete,                AUTHORIZATION_STATE_OK      },
+  { "JOB_START",                   serverCommand_jobStart,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_ABORT",                   serverCommand_jobAbort,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_FLUSH",                   serverCommand_jobFlush,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_OPTION_GET",              serverCommand_jobOptionGet,             AUTHORIZATION_STATE_OK      },
+  { "JOB_OPTION_SET",              serverCommand_jobOptionSet,             AUTHORIZATION_STATE_OK      },
+  { "JOB_OPTION_DELETE",           serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST",                serverCommand_includeList,              AUTHORIZATION_STATE_OK      },
+//TODO remove
+  { "INCLUDE_LIST_CLEAR",          serverCommand_includeListClear,         AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST_ADD",            serverCommand_includeListAdd,           AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST_UPDATE",         serverCommand_includeListUpdate,        AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST_REMOVE",         serverCommand_includeListRemove,        AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST",                serverCommand_excludeList,              AUTHORIZATION_STATE_OK      },
+//TODO remove
+  { "EXCLUDE_LIST_CLEAR",          serverCommand_excludeListClear,         AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST_ADD",            serverCommand_excludeListAdd,           AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST_UPDATE",         serverCommand_excludeListUpdate,        AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST_REMOVE",         serverCommand_excludeListRemove,        AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST",                 serverCommand_sourceList,               AUTHORIZATION_STATE_OK      },
+//TODO remove
+  { "SOURCE_LIST_CLEAR",           serverCommand_sourceListClear,          AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST_ADD",             serverCommand_sourceListAdd,            AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST_UPDATE",          serverCommand_sourceListUpdate,            AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST_REMOVE",          serverCommand_sourceListRemove,            AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST",       serverCommand_excludeCompressList,      AUTHORIZATION_STATE_OK      },
+//TODO remove
+  { "EXCLUDE_COMPRESS_LIST_CLEAR", serverCommand_excludeCompressListClear, AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST_ADD",   serverCommand_excludeCompressListAdd,   AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST_UPDATE",serverCommand_excludeCompressListUpdate,AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST_REMOVE",serverCommand_excludeCompressListRemove,AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST",               serverCommand_scheduleList,             AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_ADD",                serverCommand_scheduleAdd,              AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_REMOVE",             serverCommand_scheduleRemove,           AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_OPTION_GET",         serverCommand_scheduleOptionGet,        AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_OPTION_SET",         serverCommand_scheduleOptionSet,        AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_OPTION_DELETE",      serverCommand_scheduleOptionDelete,     AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_TRIGGER",            serverCommand_scheduleTrigger,          AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_CLEAR",      serverCommand_decryptPasswordsClear,    AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_ADD",        serverCommand_decryptPasswordAdd,       AUTHORIZATION_STATE_OK      },
+  { "FTP_PASSWORD",                serverCommand_ftpPassword,              AUTHORIZATION_STATE_OK      },
+  { "SSH_PASSWORD",                serverCommand_sshPassword,              AUTHORIZATION_STATE_OK      },
+  { "WEBDAV_PASSWORD",             serverCommand_webdavPassword,           AUTHORIZATION_STATE_OK      },
+  { "CRYPT_PASSWORD",              serverCommand_cryptPassword,            AUTHORIZATION_STATE_OK      },
+  { "PASSWORDS_CLEAR",             serverCommand_passwordsClear,           AUTHORIZATION_STATE_OK      },
+  { "VOLUME_LOAD",                 serverCommand_volumeLoad,               AUTHORIZATION_STATE_OK      },
+  { "VOLUME_UNLOAD",               serverCommand_volumeUnload,             AUTHORIZATION_STATE_OK      },
 
-  { "ARCHIVE_LIST",               serverCommand_archiveList,             AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",                serverCommand_archiveList,              AUTHORIZATION_STATE_OK      },
 
-  { "STORAGE_LIST_CLEAR",         serverCommand_storageListClear,        AUTHORIZATION_STATE_OK      },
-  { "STORAGE_LIST_ADD",           serverCommand_storageListAdd,          AUTHORIZATION_STATE_OK      },
+  { "STORAGE_LIST_CLEAR",          serverCommand_storageListClear,         AUTHORIZATION_STATE_OK      },
+  { "STORAGE_LIST_ADD",            serverCommand_storageListAdd,           AUTHORIZATION_STATE_OK      },
 
-  { "STORAGE_DELETE",             serverCommand_storageDelete,           AUTHORIZATION_STATE_OK      },
+  { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_OK      },
 
-//  { "RESTORE_LIST_CLEAR",         serverCommand_restoreListClear,        AUTHORIZATION_STATE_OK      },
-//  { "RESTORE_LIST_ADD",           serverCommand_restoreListAdd,          AUTHORIZATION_STATE_OK      },
-  { "RESTORE",                    serverCommand_restore,                 AUTHORIZATION_STATE_OK      },
+//  { "RESTORE_LIST_CLEAR",          serverCommand_restoreListClear,         AUTHORIZATION_STATE_OK      },
+//  { "RESTORE_LIST_ADD",            serverCommand_restoreListAdd,           AUTHORIZATION_STATE_OK      },
+  { "RESTORE",                     serverCommand_restore,                  AUTHORIZATION_STATE_OK      },
 
-  { "INDEX_UUID_LIST",            serverCommand_indexUUIDList,           AUTHORIZATION_STATE_OK      },
-  { "INDEX_ENTITY_LIST",          serverCommand_indexEntityList,         AUTHORIZATION_STATE_OK      },
-  { "INDEX_ENTITY_ADD",           serverCommand_indexEntityAdd,          AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_INFO",         serverCommand_indexStorageInfo,        AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_LIST",         serverCommand_indexStorageList,        AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_ADD",          serverCommand_indexStorageAdd,         AUTHORIZATION_STATE_OK      },
-  { "INDEX_ASSIGN",               serverCommand_indexAssign,             AUTHORIZATION_STATE_OK      },
-  { "INDEX_REFRESH",              serverCommand_indexRefresh,            AUTHORIZATION_STATE_OK      },
-  { "INDEX_REMOVE",               serverCommand_indexRemove,             AUTHORIZATION_STATE_OK      },
+  { "INDEX_UUID_LIST",             serverCommand_indexUUIDList,            AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_INFO",          serverCommand_indexStorageInfo,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_OK      },
+  { "INDEX_ASSIGN",                serverCommand_indexAssign,              AUTHORIZATION_STATE_OK      },
+  { "INDEX_REFRESH",               serverCommand_indexRefresh,             AUTHORIZATION_STATE_OK      },
+  { "INDEX_REMOVE",                serverCommand_indexRemove,              AUTHORIZATION_STATE_OK      },
 
-  { "INDEX_ENTRIES_LIST",         serverCommand_indexEntriesList,        AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTRIES_LIST",          serverCommand_indexEntriesList,         AUTHORIZATION_STATE_OK      },
 
   // obsolete
-  { "OPTION_GET",                 serverCommand_jobOptionGet,            AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",                 serverCommand_jobOptionSet,            AUTHORIZATION_STATE_OK      },
-  { "OPTION_DELETE",              serverCommand_jobOptionDelete,         AUTHORIZATION_STATE_OK      },
+  { "OPTION_GET",                  serverCommand_jobOptionGet,             AUTHORIZATION_STATE_OK      },
+  { "OPTION_SET",                  serverCommand_jobOptionSet,             AUTHORIZATION_STATE_OK      },
+  { "OPTION_DELETE",               serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_OK      },
 
   #ifndef NDEBUG
-  { "DEBUG_PRINT_STATISTICS",     serverCommand_debugPrintStatistics,    AUTHORIZATION_STATE_OK      },
-  { "DEBUG_PRINT_MEMORY_INFO",    serverCommand_debugPrintMemoryInfo,    AUTHORIZATION_STATE_OK      },
-  { "DEBUG_DUMP_MEMORY_INFO",     serverCommand_debugDumpMemoryInfo,     AUTHORIZATION_STATE_OK      },
+  { "DEBUG_PRINT_STATISTICS",      serverCommand_debugPrintStatistics,     AUTHORIZATION_STATE_OK      },
+  { "DEBUG_PRINT_MEMORY_INFO",     serverCommand_debugPrintMemoryInfo,     AUTHORIZATION_STATE_OK      },
+  { "DEBUG_DUMP_MEMORY_INFO",      serverCommand_debugDumpMemoryInfo,      AUTHORIZATION_STATE_OK      },
   #endif /* NDEBUG */
 };
 
