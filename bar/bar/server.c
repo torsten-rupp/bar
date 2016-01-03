@@ -15521,8 +15521,8 @@ SERVER_COMMANDS[] =
 //TODO remove
   { "SOURCE_LIST_CLEAR",           serverCommand_sourceListClear,          AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST_ADD",             serverCommand_sourceListAdd,            AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST_UPDATE",          serverCommand_sourceListUpdate,            AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST_REMOVE",          serverCommand_sourceListRemove,            AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST_UPDATE",          serverCommand_sourceListUpdate,         AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST_REMOVE",          serverCommand_sourceListRemove,         AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST",       serverCommand_excludeCompressList,      AUTHORIZATION_STATE_OK      },
 //TODO remove
   { "EXCLUDE_COMPRESS_LIST_CLEAR", serverCommand_excludeCompressListClear, AUTHORIZATION_STATE_OK      },
