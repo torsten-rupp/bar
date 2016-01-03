@@ -51,6 +51,7 @@ typedef struct EntryNode
 {
   LIST_NODE_HEADER(struct EntryNode);
 
+  uint         id;                      // unique id
   EntryTypes   type;                    // entry type; see ENTRY_TYPES_...
   String       string;                  // entry string pattern
   PatternTypes patternType;             // pattern type
@@ -60,6 +61,8 @@ typedef struct EntryNode
 typedef struct
 {
   LIST_HEADER(EntryNode);
+
+  uint id;
 } EntryList;
 
 /***************************** Variables *******************************/
@@ -213,7 +216,7 @@ void EntryList_move(EntryList       *fromEntryList,
 +          type        - entry type; see ENTRY_TYPE_*
 *          string      - string
 *          patternType - pattern type; see PATTERN_TYPE_*
-* Output : -
+* Output : id - id (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -221,12 +224,14 @@ void EntryList_move(EntryList       *fromEntryList,
 Errors EntryList_append(EntryList    *entryList,
                         EntryTypes   type,
                         ConstString  string,
-                        PatternTypes patternType
+                        PatternTypes patternType,
+                        uint         *id
                        );
 Errors EntryList_appendCString(EntryList    *entryList,
                                EntryTypes   type,
                                const char   *string,
-                               PatternTypes patternType
+                               PatternTypes patternType,
+                               uint         *id
                               );
 
 /***********************************************************************\

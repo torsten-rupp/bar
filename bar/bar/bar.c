@@ -1308,6 +1308,8 @@ LOCAL void initServer(Server *server, ConstString name, ServerTypes serverType)
   server->type                                = serverType;
   switch (serverType)
   {
+    case SERVER_TYPE_FILE:
+      break;
     case SERVER_TYPE_FTP:
       server->ftpServer.loginName             = NULL;
       server->ftpServer.password              = NULL;
@@ -1353,6 +1355,8 @@ LOCAL void doneServer(Server *server)
 
   switch (server->type)
   {
+    case SERVER_TYPE_FILE:
+      break;
     case SERVER_TYPE_FTP:
       if (server->ftpServer.password != NULL) Password_delete(server->ftpServer.password);
       if (server->ftpServer.loginName != NULL) String_delete(server->ftpServer.loginName);
@@ -2029,7 +2033,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType);
+  error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
     strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
@@ -2248,6 +2252,8 @@ LOCAL bool parseBandWidthNumber(ConstString s, ulong *n)
 {
   const StringUnit UNITS[] =
   {
+    {"T",1024LL*1024LL*1024LL*1024LL},
+    {"G",1024LL*1024LL*1024LL},
     {"M",1024LL*1024LL},
     {"K",1024LL},
   };
@@ -2309,10 +2315,10 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s)
 
   assert(s != NULL);
 
-  // allocate new schedule node
+  // allocate new bandwidth node
   bandWidthNode = newBandWidthNode();
 
-  // parse schedule. Format: (<band width>[K|M])|<file name> <date> [<weekday>] <time>
+  // parse bandwidth. Format: (<band width>[K|M])|<file name> <date> [<weekday>] <time>
   errorFlag = FALSE;
   s0 = String_new();
   s1 = String_new();
@@ -2336,7 +2342,7 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s)
   {
     errorFlag = TRUE;
   }
-  if (nextIndex != STRING_END)
+  if (nextIndex < (long)String_length(s))
   {
     if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
     {
@@ -2348,7 +2354,7 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s)
     {
       errorFlag = TRUE;
     }
-    if (nextIndex != STRING_END)
+    if (nextIndex < (long)String_length(s))
     {
       if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
       {
@@ -2371,7 +2377,7 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s)
   String_delete(s1);
   String_delete(s0);
 
-  if (errorFlag || (nextIndex != STRING_END))
+  if (errorFlag || (nextIndex < (long)String_length(s)))
   {
     String_delete(bandWidthNode->fileName);
     LIST_DELETE_NODE(bandWidthNode);
@@ -4656,6 +4662,9 @@ bool allocateServer(Server *server, ServerConnectionPriorities priority, long ti
       maxConnectionCount = 0;
       switch (server->type)
       {
+        case SERVER_TYPE_FILE:
+          maxConnectionCount = MAX_UINT;
+          break;
         case SERVER_TYPE_FTP:
           maxConnectionCount = defaultFTPServer.maxConnectionCount;
           break;
@@ -5505,7 +5514,7 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
 #warning TODO String_mapCString needed?
 #endif
   pattern = String_mapCString(String_newCString(value),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-  error = EntryList_append((EntryList*)variable,entryType,pattern,patternType);
+  error = EntryList_append((EntryList*)variable,entryType,pattern,patternType,NULL);
   if (error != ERROR_NONE)
   {
     strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
@@ -6794,7 +6803,7 @@ exit(1);
             }
             for (z = 2; z < argc; z++)
             {
-              error = EntryList_appendCString(&includeEntryList,entryType,argv[z],jobOptions.patternType);
+              error = EntryList_appendCString(&includeEntryList,entryType,argv[z],jobOptions.patternType,NULL);
               if (error != ERROR_NONE)
               {
                 break;

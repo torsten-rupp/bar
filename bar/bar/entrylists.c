@@ -50,6 +50,7 @@ LOCAL const struct
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+LOCAL uint id = 0;
 
 /****************************** Macros *********************************/
 
@@ -62,18 +63,35 @@ LOCAL const struct
 #endif
 
 /***********************************************************************\
-* Name   : copyEntryNode
-* Purpose: copy allocated entry node
+* Name   : getNewId
+* Purpose: get new id
+* Input  : -
+* Output : -
+* Return : id
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint getNewId()
+{
+  id++;
+
+  return id;
+}
+
+/***********************************************************************\
+* Name   : duplicateEntryNode
+* Purpose: duplicate entry node
 * Input  : entryNode - entry node
 * Output : -
 * Return : copied entry node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL EntryNode *copyEntryNode(EntryNode *entryNode,
-                               void      *userData
-                              )
+LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
+                                    void      *userData
+                                   )
 {
+  EntryList *entryList = (EntryList*)userData;
   EntryNode *newEntryNode;
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
@@ -93,6 +111,7 @@ LOCAL EntryNode *copyEntryNode(EntryNode *entryNode,
   }
 
   // create entry
+  newEntryNode->id     = getNewId();
   newEntryNode->type   = entryNode->type;
   newEntryNode->string = String_duplicate(entryNode->string);
   #if   defined(PLATFORM_LINUX)
@@ -249,7 +268,7 @@ void EntryList_copy(const EntryList *fromEntryList,
   assert(fromEntryList != NULL);
   assert(toEntryList != NULL);
 
-  List_copy(fromEntryList,toEntryList,fromEntryListFromNode,fromEntryListToNode,NULL,(ListNodeCopyFunction)copyEntryNode,NULL);
+  List_copy(fromEntryList,toEntryList,fromEntryListFromNode,fromEntryListToNode,NULL,(ListNodeDuplicateFunction)duplicateEntryNode,NULL);
 }
 
 void EntryList_move(EntryList       *fromEntryList,
@@ -267,19 +286,21 @@ void EntryList_move(EntryList       *fromEntryList,
 Errors EntryList_append(EntryList    *entryList,
                         EntryTypes   type,
                         ConstString  string,
-                        PatternTypes patternType
+                        PatternTypes patternType,
+                        uint         *id
                        )
 {
   assert(entryList != NULL);
   assert(string != NULL);
 
-  return EntryList_appendCString(entryList,type,String_cString(string),patternType);
+  return EntryList_appendCString(entryList,type,String_cString(string),patternType,id);
 }
 
 Errors EntryList_appendCString(EntryList    *entryList,
                                EntryTypes   type,
                                const char   *string,
-                               PatternTypes patternType
+                               PatternTypes patternType,
+                               uint         *id
                               )
 {
   EntryNode *entryNode;
@@ -298,6 +319,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  entryNode->id          = getNewId();
   entryNode->type        = type;
   entryNode->string      = String_newCString(string);
   entryNode->patternType = patternType;
@@ -332,6 +354,8 @@ Errors EntryList_appendCString(EntryList    *entryList,
 
   // add to list
   List_append(entryList,entryNode);
+
+  if (id != NULL) (*id) = entryNode->id;
 
   return ERROR_NONE;
 }
