@@ -29,6 +29,7 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
@@ -250,6 +251,10 @@ public class ServerSettings
     }
   }
 
+  // inactive background color
+  private final static Color COLOR_INACTIVE = new Color(null,0xF4,0xF4,0xF4);
+
+  // last key file name
   private static String lastKeyFileName = "";
 
   /** edit server settings
@@ -2329,11 +2334,18 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         widgetLoginName = Widgets.newText(subComposite);
         widgetLoginName.setToolTipText(BARControl.tr("Login name."));
         widgetLoginName.setText(serverData.loginName);
-        widgetLoginName.setEnabled(   (serverData.type == ServerTypes.FTP)
-                                   || (serverData.type == ServerTypes.SSH)
-                                   || (serverData.type == ServerTypes.WEBDAV)
-                                  );
         Widgets.layout(widgetLoginName,0,0,TableLayoutData.WE);
+        Widgets.addModifyListener(new WidgetModifyListener(widgetLoginName,serverData)
+        {
+          public void modified(Control control)
+          {
+            Widgets.setEnabled(control,
+                                  (serverData.type == ServerTypes.FTP)
+                               || (serverData.type == ServerTypes.SSH)
+                               || (serverData.type == ServerTypes.WEBDAV)
+                              );
+          }
+        });
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Port")+":");
         Widgets.layout(label,0,1,TableLayoutData.E);
@@ -2386,11 +2398,11 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         {
           public void modified(Control control)
           {
-            Widgets.setEnabled(control,
-                                  (serverData.type == ServerTypes.FTP)
-                               || (serverData.type == ServerTypes.SSH)
-                               || (serverData.type == ServerTypes.WEBDAV)
-                              );
+            boolean enabled =    (serverData.type == ServerTypes.FTP)
+                              || (serverData.type == ServerTypes.SSH)
+                              || (serverData.type == ServerTypes.WEBDAV);
+            control.setBackground(enabled ? null : COLOR_INACTIVE);
+            Widgets.setEnabled(control,enabled);
           }
         });
 
@@ -2427,6 +2439,17 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
             }
           }
         });
+        Widgets.addModifyListener(new WidgetModifyListener(button,serverData)
+        {
+          public void modified(Control control)
+          {
+            Widgets.setEnabled(control,
+                                  (serverData.type == ServerTypes.FTP)
+                               || (serverData.type == ServerTypes.SSH)
+                               || (serverData.type == ServerTypes.WEBDAV)
+                              );
+          }
+        });
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Private key")+":");
@@ -2442,11 +2465,11 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         {
           public void modified(Control control)
           {
-            Widgets.setEnabled(control,
-                                  (serverData.type == ServerTypes.FTP)
-                               || (serverData.type == ServerTypes.SSH)
-                               || (serverData.type == ServerTypes.WEBDAV)
-                              );
+            boolean enabled =    (serverData.type == ServerTypes.FTP)
+                              || (serverData.type == ServerTypes.SSH)
+                              || (serverData.type == ServerTypes.WEBDAV);
+            control.setBackground(enabled ? null : COLOR_INACTIVE);
+            Widgets.setEnabled(control,enabled);
           }
         });
 
@@ -2480,6 +2503,17 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                 Dialogs.error(dialog,BARControl.tr("Cannot load private key file ''{0}'' (error: {1})",fileName,BARControl.reniceIOException(exception).getMessage()));
               }
             }
+          }
+        });
+        Widgets.addModifyListener(new WidgetModifyListener(button,serverData)
+        {
+          public void modified(Control control)
+          {
+            Widgets.setEnabled(control,
+                                  (serverData.type == ServerTypes.FTP)
+                               || (serverData.type == ServerTypes.SSH)
+                               || (serverData.type == ServerTypes.WEBDAV)
+                              );
           }
         });
       }
