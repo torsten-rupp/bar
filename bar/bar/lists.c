@@ -602,12 +602,12 @@ void List_init(void *list)
   ((List*)list)->count = 0;
 }
 
-void List_initDuplicate(void                 *list,
-                        const void           *fromList,
-                        const void           *fromListFromNode,
-                        const void           *fromListToNode,
-                        ListNodeCopyFunction listNodeCopyFunction,
-                        void                 *listNodeCopyUserData
+void List_initDuplicate(void                      *list,
+                        const void                *fromList,
+                        const void                *fromListFromNode,
+                        const void                *fromListToNode,
+                        ListNodeDuplicateFunction listNodeDuplicateFunction,
+                        void                      *listNodeDuplicateUserData
                        )
 {
   assert(list != NULL);
@@ -619,8 +619,8 @@ void List_initDuplicate(void                 *list,
             fromListFromNode,
             fromListToNode,
             NULL,
-            listNodeCopyFunction,
-            listNodeCopyUserData
+            listNodeDuplicateFunction,
+            listNodeDuplicateUserData
            );
 }
 
@@ -646,17 +646,17 @@ List *List_new(void)
   return list;
 }
 
-List *List_duplicate(const void           *fromList,
-                     const void           *fromListFromNode,
-                     const void           *fromListToNode,
-                     ListNodeCopyFunction listNodeCopyFunction,
-                     void                 *listNodeCopyUserData
+List *List_duplicate(const void                *fromList,
+                     const void                *fromListFromNode,
+                     const void                *fromListToNode,
+                     ListNodeDuplicateFunction listNodeDuplicateFunction,
+                     void                      *listNodeDuplicateUserData
                     )
 {
   List *list;
 
   assert(fromList != NULL);
-  assert(listNodeCopyFunction != NULL);
+  assert(listNodeDuplicateFunction != NULL);
 
   list = (List*)malloc(sizeof(List));
   if (list == NULL) return NULL;
@@ -665,8 +665,8 @@ List *List_duplicate(const void           *fromList,
                      fromList,
                      fromListFromNode,
                      fromListToNode,
-                     listNodeCopyFunction,
-                     listNodeCopyUserData
+                     listNodeDuplicateFunction,
+                     listNodeDuplicateUserData
                     );
 
   return list;
@@ -717,13 +717,13 @@ void *List_clear(void                 *list,
   return list;
 }
 
-void List_copy(const void           *fromList,
-               void                 *toList,
-               const void           *fromListFromNode,
-               const void           *fromListToNode,
-               void                 *toListNextNode,
-               ListNodeCopyFunction listNodeCopyFunction,
-               void                 *listNodeCopyUserData
+void List_copy(const void                *fromList,
+               void                      *toList,
+               const void                *fromListFromNode,
+               const void                *fromListToNode,
+               void                      *toListNextNode,
+               ListNodeDuplicateFunction listNodeDuplicateFunction,
+               void                      *listNodeDuplicateUserData
               )
 {
   Node *node;
@@ -731,20 +731,20 @@ void List_copy(const void           *fromList,
 
   assert(fromList != NULL);
   assert(toList != NULL);
-  assert(listNodeCopyFunction != NULL);
+  assert(listNodeDuplicateFunction != NULL);
 
   if (fromListFromNode == LIST_START) fromListFromNode = ((List*)fromList)->head;
 
   node = (Node*)fromListFromNode;
   while (node != fromListToNode)
   {
-    newNode = listNodeCopyFunction(node,listNodeCopyUserData);
+    newNode = listNodeDuplicateFunction(node,listNodeDuplicateUserData);
     List_insert(toList,newNode,toListNextNode);
     node = node->next;
   }
   if (node != NULL)
   {
-    newNode = listNodeCopyFunction(node,listNodeCopyUserData);
+    newNode = listNodeDuplicateFunction(node,listNodeDuplicateUserData);
     List_insert(toList,newNode,toListNextNode);
   }
 }

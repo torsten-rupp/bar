@@ -43,6 +43,7 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+LOCAL uint id = 0;
 
 /****************************** Macros *********************************/
 
@@ -55,17 +56,33 @@
 #endif
 
 /***********************************************************************\
-* Name   : copyDeltaSourceNode
-* Purpose: copy allocated delta source node
+* Name   : getNewId
+* Purpose: get new id
+* Input  : -
+* Output : -
+* Return : id
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint getNewId()
+{
+  id++;
+
+  return id;
+}
+
+/***********************************************************************\
+* Name   : duplicateDeltaSourceNode
+* Purpose: duplicate delta source node
 * Input  : deltaSourceNode - delta source node
 * Output : -
 * Return : copied delta source node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DeltaSourceNode *copyDeltaSourceNode(DeltaSourceNode *deltaSourceNode,
-                                           void            *userData
-                                          )
+LOCAL DeltaSourceNode *duplicateDeltaSourceNode(DeltaSourceNode *deltaSourceNode,
+                                                void            *userData
+                                               )
 {
   DeltaSourceNode *newDeltaSourceNode;
 
@@ -162,7 +179,7 @@ void DeltaSourceList_copy(const DeltaSourceList *fromDeltaSourceList,
   assert(fromDeltaSourceList != NULL);
   assert(toDeltaSourceList != NULL);
 
-  List_copy(fromDeltaSourceList,toDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode,NULL,(ListNodeCopyFunction)copyDeltaSourceNode,NULL);
+  List_copy(fromDeltaSourceList,toDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode,NULL,(ListNodeDuplicateFunction)duplicateDeltaSourceNode,NULL);
 }
 
 Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,

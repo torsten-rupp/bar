@@ -40,6 +40,7 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+LOCAL uint id = 0;
 
 /****************************** Macros *********************************/
 
@@ -52,17 +53,33 @@
 #endif
 
 /***********************************************************************\
-* Name   : copyPatternNode
-* Purpose: copy allocated pattern node
+* Name   : getNewId
+* Purpose: get new id
+* Input  : -
+* Output : -
+* Return : id
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint getNewId()
+{
+  id++;
+
+  return id;
+}
+
+/***********************************************************************\
+* Name   : duplicatePatternNode
+* Purpose: duplicate pattern node
 * Input  : patternNode - pattern node
 * Output : -
 * Return : copied pattern node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL PatternNode *copyPatternNode(PatternNode *patternNode,
-                                   void        *userData
-                                  )
+LOCAL PatternNode *duplicatePatternNode(PatternNode *patternNode,
+                                        void        *userData
+                                       )
 {
   PatternNode *newPatternNode;
   Errors      error;
@@ -169,7 +186,7 @@ void PatternList_copy(const PatternList *fromPatternList,
   assert(fromPatternList != NULL);
   assert(toPatternList != NULL);
 
-  List_copy(fromPatternList,toPatternList,fromPatternListFromNode,fromPatternListToNode,NULL,(ListNodeCopyFunction)copyPatternNode,NULL);
+  List_copy(fromPatternList,toPatternList,fromPatternListFromNode,fromPatternListToNode,NULL,(ListNodeDuplicateFunction)duplicatePatternNode,NULL);
 }
 
 void PatternList_move(PatternList       *fromPatternList,
