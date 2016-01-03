@@ -749,7 +749,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                 String[] resultErrorMessage = new String[1];
                 ValueMap resultMap          = new ValueMap();
 
-                int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_DELETE id=%d",
+                int error = BARServer.executeCommand(StringParser.format("SERVER_LIST_REMOVE id=%d",
                                                                          serverData.id
                                                                         ),
                                                      0,

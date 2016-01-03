@@ -11697,7 +11697,7 @@ throw new Error("NYI");
 
           String[] resultErrorMessage = new String[1];
           ValueMap resultMap          = new ValueMap();
-          int error = BARServer.executeCommand(StringParser.format("SCHEDULE_DELETE jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
+          int error = BARServer.executeCommand(StringParser.format("SCHEDULE_REMOVE jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
           if (error != Errors.NONE)
           {
             Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n{0}",resultErrorMessage[0]));
