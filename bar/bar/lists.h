@@ -194,16 +194,25 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 /***********************************************************************\
 * Name   : LIST_FIND
 * Purpose: find in list
-* Input  : -
+* Input  : list      - list
+*          variable  - variable name
+*          condition - condition code
 * Output : -
-* Return : -
-* Notes  : -
+* Return : node or NULL if not found
+* Notes  : usage:
+*          LIST_FIND(list,node,node->... == ...)
 \***********************************************************************/
 
-#if 0
-#define LIST_FIND(list,condition) \
-  List_findFirst(list,({ return condition; }),NULL)
-#endif
+#define LIST_FIND(list,variable,condition) \
+  List_findFirst(list,\
+                 (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
+                                                         (const typeof(* (list)->head) *variable, void *userData)\
+                                                         { \
+                                                           return condition; \
+                                                         },\
+                                                         NULL \
+                                                        ) \
+                )
 
 /***********************************************************************\
 * Name   : LIST_REMOVE
