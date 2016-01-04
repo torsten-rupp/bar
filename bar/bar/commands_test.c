@@ -1011,15 +1011,18 @@ Errors Command_test(const StringList                *storageNameList,
           String_delete(fileName);
           Pattern_done(&pattern);
         }
+        else
+        {
+          printError("Cannot open storage '%s' (error: %s)!\n",
+                     String_cString(storageName),
+                     Error_getText(error)
+                    );
+        }
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
     if (error != ERROR_NONE)
     {
-      printError("Cannot open storage '%s' (error: %s)!\n",
-                 String_cString(storageName),
-                 Error_getText(error)
-                );
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
