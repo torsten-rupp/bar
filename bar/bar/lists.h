@@ -730,12 +730,12 @@ bool List_contains(const void             *list,
 * Notes  : -
 \***********************************************************************/
 
-INLINE const Node *List_findFirst(const void             *list,
+INLINE const void *List_findFirst(const void             *list,
                                   ListNodeEqualsFunction listNodeEqualsFunction,
                                   void                   *listNodeEqualsUserData
                                  );
 #if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
-INLINE const Node *List_findFirst(const void             *list,
+INLINE const void *List_findFirst(const void             *list,
                                   ListNodeEqualsFunction listNodeEqualsFunction,
                                   void                   *listNodeEqualsUserData
                                  )
@@ -767,13 +767,13 @@ INLINE const Node *List_findFirst(const void             *list,
 * Notes  : -
 \***********************************************************************/
 
-INLINE const Node *List_findNext(const void             *list,
+INLINE const void *List_findNext(const void             *list,
                                  const void             *node,
                                  ListNodeEqualsFunction listNodeEqualsFunction,
                                  void                   *listNodeEqualsUserData
                                 );
 #if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
-INLINE const Node *List_findNext(const void             *list,
+INLINE const void *List_findNext(const void             *list,
                                  const void             *node,
                                  ListNodeEqualsFunction listNodeEqualsFunction,
                                  void                   *listNodeEqualsUserData
