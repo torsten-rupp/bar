@@ -3345,7 +3345,7 @@ UNUSED_VARIABLE(archiveType);
 
 /***********************************************************************\
 * Name   : purgeStorageByJobUUID
-* Purpose: purge storage by job UUID
+* Purpose: purge old storages by job UUID
 * Input  : jobUUID        - job UUID
 *          maxStorageSize - max. storage size [bytes] or 0
 *          logHandle      - log handle (can be NULL)
@@ -3359,7 +3359,7 @@ LOCAL void purgeStorageByJobUUID(ConstString jobUUID, uint64 maxStorageSize, Log
   String           storageName;
   StorageSpecifier storageSpecifier;
   Errors           error;
-  uint64           storageSize;
+  uint64           totalStorageSize;
   DatabaseId       oldestStorageId;
   DatabaseId       oldestEntityId;
   String           oldestStorageName;
@@ -3382,8 +3382,8 @@ LOCAL void purgeStorageByJobUUID(ConstString jobUUID, uint64 maxStorageSize, Log
 fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageSize);
   do
   {
-    // get storage size, find oldest storage entry
-    storageSize           = 0LL;
+    // get total storage size, find oldest storage entry
+    totalStorageSize      = 0LL;
     oldestStorageId       = DATABASE_ID_NONE;
     oldestEntityId        = DATABASE_ID_NONE;
     String_clear(oldestStorageName);
@@ -3441,11 +3441,11 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
         oldestCreatedDateTime = createdDateTime;
         oldestSize            = size;
       }
-      storageSize += size;
+      totalStorageSize += size;
     }
     Index_doneList(&indexQueryHandle);
 
-    if ((storageSize > maxStorageSize) && (oldestStorageId != DATABASE_ID_NONE))
+    if ((totalStorageSize > maxStorageSize) && (oldestStorageId != DATABASE_ID_NONE))
     {
 fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
       // delete oldest storage entry
@@ -3462,9 +3462,12 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
                             );
         if (error == ERROR_NONE)
         {
+          // delete storage
           (void)Storage_delete(&storageHandle,
                                NULL  // archiveName
                               );
+
+          // prune empty directories
           (void)Storage_pruneDirectories(&storageHandle,oldestStorageName);
         }
         else
@@ -3496,6 +3499,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
       }
       (void)Index_pruneEntity(indexHandle,oldestEntityId);
 
+      // log
       Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
@@ -3506,7 +3510,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
                 );
     }
   }
-  while (   (storageSize > maxStorageSize)
+  while (   (totalStorageSize > maxStorageSize)
          && (oldestStorageId != DATABASE_ID_NONE)
         );
 fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
