@@ -659,7 +659,7 @@ void Storage_doneAll(void)
   storageSpecifier->loginPassword        = Password_new();
   storageSpecifier->deviceName           = String_new();
   storageSpecifier->archiveName          = String_new();
-  storageSpecifier->archivePatternString = String_new();
+  storageSpecifier->archivePatternString = NULL;
   storageSpecifier->storageName          = String_new();
   storageSpecifier->printableStorageName = String_new();
 
@@ -693,7 +693,7 @@ void Storage_doneAll(void)
   destinationStorageSpecifier->loginPassword        = Password_duplicate(sourceStorageSpecifier->loginPassword);
   destinationStorageSpecifier->deviceName           = String_duplicate(sourceStorageSpecifier->deviceName);
   destinationStorageSpecifier->archiveName          = String_duplicate(sourceStorageSpecifier->archiveName);
-  if (!String_isEmpty(sourceStorageSpecifier->archivePatternString))
+  if (sourceStorageSpecifier->archivePatternString != NULL)
   {
     destinationStorageSpecifier->archivePatternString = String_duplicate(sourceStorageSpecifier->archivePatternString);
     Pattern_copy(&destinationStorageSpecifier->archivePattern,&sourceStorageSpecifier->archivePattern);
@@ -732,11 +732,11 @@ void Storage_doneAll(void)
 
   String_delete(storageSpecifier->printableStorageName);
   String_delete(storageSpecifier->storageName);
-  if (!String_isEmpty(storageSpecifier->archivePatternString))
+  if (storageSpecifier->archivePatternString != NULL)
   {
     Pattern_done(&storageSpecifier->archivePattern);
+    String_delete(storageSpecifier->archivePatternString);
   }
-  String_delete(storageSpecifier->archivePatternString);
   String_delete(storageSpecifier->archiveName);
   String_delete(storageSpecifier->deviceName);
   Password_delete(storageSpecifier->loginPassword);
@@ -1290,10 +1290,10 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   File_doneSplitFileName(&archiveNameTokenizer);
 
-  // get file pattern string
-  String_clear(storageSpecifier->archivePatternString);
   if (hasPatternFlag)
   {
+    // get file pattern string
+    storageSpecifier->archivePatternString = String_new();
     File_initSplitFileName(&archiveNameTokenizer,archiveName);
     {
       if (File_getNextSplitFileName(&archiveNameTokenizer,&token))
@@ -1313,11 +1313,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       }
     }
     File_doneSplitFileName(&archiveNameTokenizer);
-  }
 
-  // parse file pattern
-  if (!String_isEmpty(storageSpecifier->archivePatternString))
-  {
+    // parse file pattern
     error = Pattern_init(&storageSpecifier->archivePattern,
                          storageSpecifier->archivePatternString,
 //TODO: glob? parameter?
@@ -1446,7 +1443,7 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
   // get file to use
   if (archiveName == NULL)
   {
-    if (!String_isEmpty(storageSpecifier->archivePatternString))
+    if (storageSpecifier->archivePatternString != NULL)
     {
       archiveName = storageSpecifier->archivePatternString;
     }
