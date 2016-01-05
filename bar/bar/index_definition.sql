@@ -3,7 +3,7 @@
  Note: SQLite3 require syntax "CREATE TABLE foo(" in a single line!
 
 */
-VERSION = 5;
+VERSION = 6;
 
 PRAGMA foreign_keys = ON;
 PRAGMA auto_vacuum = INCREMENTAL;
