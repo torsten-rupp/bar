@@ -142,6 +142,17 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+/***********************************************************************\
+* Name   : TEXT_MACRO_*
+* Purpose: init text macro
+* Input  : name    - macro name (including %)
+*          value   - value
+*          pattern - regular expression pattern
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define TEXT_MACRO_INTEGER(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_INTEGER, \
@@ -177,6 +188,18 @@ typedef struct
     {0,0LL,0.0,NULL,value}, \
     pattern \ \
   }
+
+/***********************************************************************\
+* Name   : TEXT_MACRO_*
+* Purpose: init text macro
+* Input  : macro    - macro variable
+*          _name    - macro name (including %)
+*          _value   - value
+*          _pattern - regular expression pattern
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 #define TEXT_MACRO_N_INTEGER(macro,_name,_value,_pattern) \
   do { \
