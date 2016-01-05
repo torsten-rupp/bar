@@ -178,7 +178,7 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
   }
 
   // disable synchronous mode and journal to increase transaction speed
-  Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
+  (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
 
   // create tables
   error = Database_execute(&indexHandle->databaseHandle,
@@ -1335,15 +1335,16 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 }
 
 /***********************************************************************\
-* Name   : upgradeIndex
-* Purpose: upgrade index
-* Input  : indexHandle - index handle
+* Name   : importIndex
+* Purpose: upgrade and import index
+* Input  : indexHandle         - index handle
+*          oldDatabaseFileName - old database file name
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeIndex(ConstString oldDatabaseFileName, IndexHandle *indexHandle)
+LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileName)
 {
   Errors      error;
   IndexHandle oldIndexHandle;
@@ -2363,7 +2364,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
-                "XUpgrade index database '%s' fail: %s\n",
+                "Upgrade index database '%s' fail: %s\n",
                 indexHandle->databaseFileName,
                 Error_getText(error)
                );
@@ -2378,14 +2379,14 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   {
     if (String_startsWith(oldDatabaseFileName,prefixFileName))
     {
-      error = upgradeIndex(oldDatabaseFileName,indexHandle);
+      error = importIndex(indexHandle,oldDatabaseFileName);
       if (error == ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
-                    "Upgraded index database '%s': %s\n",
-                    oldDatabaseFileName,Error_getText(error)
+                    "Imported index database '%s'\n",
+                    String_cString(oldDatabaseFileName)
                    );
         (void)File_delete(oldDatabaseFileName,FALSE);
       }
@@ -2394,8 +2395,8 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
-                    "XyyyyUpgrade index database '%s' fail: %s\n",
-                    oldDatabaseFileName,
+                    "Import index database '%s' fail: %s\n",
+                    String_cString(oldDatabaseFileName),
                     Error_getText(error)
                    );
       }
