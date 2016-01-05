@@ -5719,7 +5719,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // store files
+  // store entries
   while (   (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
          && MsgQueue_get(&createInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
