@@ -6964,7 +6964,7 @@ Dprintf.dprintf("");
         Widgets.layout(label,0,0,TableLayoutData.W);
 
         styledText = Widgets.newStyledText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-        styledText.setToolTipText(BARControl.tr("Command or script to execute before start of a job.\nMacros:%name - job name\n"));
+        styledText.setToolTipText(BARControl.tr("Command or script to execute before start of a job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
         Widgets.layout(styledText,1,0,TableLayoutData.NSWE);
         styledText.addModifyListener(new ModifyListener()
         {
@@ -7009,7 +7009,7 @@ Dprintf.dprintf("");
         label = Widgets.newLabel(tab,BARControl.tr("Post-script")+":");
         Widgets.layout(label,2,0,TableLayoutData.W);
         styledText = Widgets.newStyledText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-        styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of a job."));
+        styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of a job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
         Widgets.layout(styledText,3,0,TableLayoutData.NSWE);
         styledText.addModifyListener(new ModifyListener()
         {
