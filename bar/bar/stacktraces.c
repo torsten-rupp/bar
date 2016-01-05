@@ -45,7 +45,7 @@
 
 /**************************** Functions ********************************/
 
-#ifdef HAVE_BFD_H
+#ifdef HAVE_BFD_INIT
 /***********************************************************************\
 * Name   : readSymbolTable
 * Purpose: read symbol table from BFD
@@ -510,7 +510,7 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
 
   return 0; // return value not used
 }
-#endif // HAVE_BFD_H
+#endif // HAVE_BFD_INIT
 
 /***********************************************************************\
 * Name   : Stacktrace_getSymbolInfo
@@ -532,7 +532,7 @@ void Stacktrace_getSymbolInfo(const char     *executableFileName,
                               void           *symbolUserData
                              )
 {
-#ifdef HAVE_BFD_H
+#ifdef HAVE_BFD_INIT
   uint          i;
   FileMatchInfo fileMatchInfo;
   bool          symbolInfoFromFile;
@@ -600,7 +600,7 @@ void Stacktrace_getSymbolInfo(const char     *executableFileName,
       symbolFunction(addresses[i],fileName,symbolName,0,symbolUserData);
     }
   }
-#endif // HAVE_BFD_H
+#endif // HAVE_BFD_INIT
 }
 
 /* end of file */
