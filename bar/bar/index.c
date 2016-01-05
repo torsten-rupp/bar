@@ -6162,9 +6162,10 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
     UNUSED_VARIABLE(id);
   }
 
+  // prune storage if empty
   if (!existsFlag)
   {
-    // delete old entity (now empty)
+    // delete storage entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM storage WHERE id=%lld;",
@@ -6174,6 +6175,8 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    // delete directory if empty
   }
 
   return ERROR_NONE;
@@ -6252,9 +6255,9 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
   }
   UNUSED_VARIABLE(storageId);
 
+  // prune entity if empty
   if (!existsFlag)
   {
-fprintf(stderr,"%s, %d: prune entiry %llu\n",__FILE__,__LINE__,entityId);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entities WHERE id=%lld;",
