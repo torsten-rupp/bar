@@ -1774,7 +1774,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     }
     if ((bytesRead%archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
     {
-      return ERROR_DECRYPT_FAIL;
+      return ERROR_INCOMPLETE_ARCHIVE;
     }
 
     // decrypt data
@@ -2318,7 +2318,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     }
     if ((bytesRead%archiveEntryInfo->image.byteCompressInfo.blockLength) != 0)
     {
-      return ERROR_DECRYPT_FAIL;
+      return ERROR_INCOMPLETE_ARCHIVE;
     }
 
     // decrypt data
@@ -2901,7 +2901,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     }
     if ((bytesRead%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) != 0)
     {
-      return ERROR_DECRYPT_FAIL;
+      return ERROR_INCOMPLETE_ARCHIVE;
     }
 
     // decrypt data
