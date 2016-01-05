@@ -4,10 +4,9 @@
   * added option --archive-file-mode: stop, append or
     override; removed configurationm option
     overwrite-archive-files (deprecated)
+  * delete empty directories when purge old storage files
   * BARControl: file requester with remote file list
     local file requester with CTRL+click
-  * added option --archive-file-mode=<mode>;
-    deprecated config option --overwrite-archive-files
   * BARControl: added support to connect to different servers;
     added connect menu
   * BARControl: added unit TByte/TB

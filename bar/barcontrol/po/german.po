@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-03 14:19+0100\n"
+"POT-Creation-Date: 2016-01-05 06:42+0100\n"
 "PO-Revision-Date: 2015-12-25 11:45+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1990,20 +1990,36 @@ msgid "Pre-script"
 msgstr "Vorverarbeitungs-Skript"
 
 #: src/TabJobs.java:6967
-#, fuzzy
 msgid ""
 "Command or script to execute before start of a job.\n"
-"Macros:%name - job name\n"
-msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
+"\n"
+"Macros:\n"
+"\n"
+"%name - job name\n"
+"%archive - archive name\n"
+"%file - archive file name\n"
+"%directory - archive directory\n"
+"\n"
+"Additional time macros are available."
+msgstr ""
 
 #: src/TabJobs.java:7009
 msgid "Post-script"
 msgstr "Nachverarbeitungs-Skript"
 
 #: src/TabJobs.java:7012
-msgid "Command or script to execute after termination of a job."
+msgid ""
+"Command or script to execute after termination of a job.\n"
+"\n"
+"Macros:\n"
+"\n"
+"%name - job name\n"
+"%archive - archive name\n"
+"%file - archive file name\n"
+"%directory - archive directory\n"
+"\n"
+"Additional time macros are available."
 msgstr ""
-"Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
 #: src/TabJobs.java:7054
 msgid "Schedule"
@@ -3395,6 +3411,17 @@ msgstr "Schublade öffnen"
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: {0})"
+
+#, fuzzy
+#~ msgid ""
+#~ "Command or script to execute before start of a job.\n"
+#~ "Macros:%name - job name\n"
+#~ msgstr ""
+#~ "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
+
+#~ msgid "Command or script to execute after termination of a job."
+#~ msgstr ""
+#~ "Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
 
 #, fuzzy
 #~ msgid "Path/URL"

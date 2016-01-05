@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-03 14:19+0100\n"
+"POT-Creation-Date: 2016-01-05 06:42+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -1973,19 +1973,36 @@ msgid "Pre-script"
 msgstr "プレスクリプト"
 
 #: src/TabJobs.java:6967
-#, fuzzy
 msgid ""
 "Command or script to execute before start of a job.\n"
-"Macros:%name - job name\n"
-msgstr "タスクをスタートする前に実行のためのコマンドかスクリプトを記述。"
+"\n"
+"Macros:\n"
+"\n"
+"%name - job name\n"
+"%archive - archive name\n"
+"%file - archive file name\n"
+"%directory - archive directory\n"
+"\n"
+"Additional time macros are available."
+msgstr ""
 
 #: src/TabJobs.java:7009
 msgid "Post-script"
 msgstr "ポストスクリプト"
 
 #: src/TabJobs.java:7012
-msgid "Command or script to execute after termination of a job."
-msgstr "タスク終了後、実行のためのコマンドかスクリプトを記述。"
+msgid ""
+"Command or script to execute after termination of a job.\n"
+"\n"
+"Macros:\n"
+"\n"
+"%name - job name\n"
+"%archive - archive name\n"
+"%file - archive file name\n"
+"%directory - archive directory\n"
+"\n"
+"Additional time macros are available."
+msgstr ""
 
 #: src/TabJobs.java:7054
 msgid "Schedule"
@@ -3379,6 +3396,15 @@ msgstr "トレーを開く"
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr "ボリュームを交換できません（エラー: {0}）"
+
+#, fuzzy
+#~ msgid ""
+#~ "Command or script to execute before start of a job.\n"
+#~ "Macros:%name - job name\n"
+#~ msgstr "タスクをスタートする前に実行のためのコマンドかスクリプトを記述。"
+
+#~ msgid "Command or script to execute after termination of a job."
+#~ msgstr "タスク終了後、実行のためのコマンドかスクリプトを記述。"
 
 #, fuzzy
 #~ msgid "New public key"
