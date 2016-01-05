@@ -240,7 +240,15 @@ ERROR INVALID_CRYPT_PASSWORD         "invalid encryption password"
 ERROR CRYPT_PASSWORDS_MISMATCH       "encryption passwords mismatch"
 ERROR INIT_CIPHER                    "init cipher fail"
 ERROR ENCRYPT_FAIL                   "encrypt fail"
-ERROR DECRYPT_FAIL                   "decrypt fail"
+ERROR DECRYPT_FAIL
+  strncpy(errorText,"decrypt fail",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR CREATE_KEY_FAIL
   if (ERROR_TEXT != NULL)
   {
@@ -474,6 +482,8 @@ ERROR NO_FILE_DATA
     strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
+
+ERROR INCOMPLETE_ARCHIVE             "incomplete archive"
 
 ERROR NO_DIRECTORY_ENTRY             "no directory entry"
 ERROR NO_LINK_ENTRY                  "no link entry"
