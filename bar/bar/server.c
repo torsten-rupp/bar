@@ -3095,6 +3095,7 @@ LOCAL void jobThreadCode(void)
 {
   StorageSpecifier storageSpecifier;
   String           storageName;
+  String           directory;
   JobNode          *jobNode;
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -3110,13 +3111,14 @@ LOCAL void jobThreadCode(void)
   String           script;
   time_t           startTime;
   StringList       archiveFileNameList;
-  TextMacro        textMacros[2];
+  TextMacro        textMacros[4];
   StaticString     (s,64);
   uint             n;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName        = String_new();
+  directory          = String_new();
   Remote_initHost(&remoteHost);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
@@ -3147,7 +3149,6 @@ LOCAL void jobThreadCode(void)
       break;
     }
     assert(jobNode != NULL);
-fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode->name),String_cString(jobNode->remoteHost.name));
 
     // start job
     startJob(jobNode);
@@ -3206,11 +3207,11 @@ fprintf(stderr,"%s, %d: start %s: %s\n",__FILE__,__LINE__,String_cString(jobNode
     {
       if (jobNode->jobOptions.preProcessScript != NULL)
       {
-        TEXT_MACRO_N_STRING (textMacros[0],"%name",     String_cString(jobNode->name),NULL);
-//???
-//        TEXT_MACRO_N_STRING (textMacros[0],"%directory",String_cString(jobNode->name),NULL);
-
         // get script
+        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobNode->name,NULL);
+        TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[2],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_N_STRING (textMacros[3],"%file",     storageSpecifier.archiveName,NULL);
         script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
                                 startTime,
@@ -3409,9 +3410,11 @@ NULL,//                                                        scheduleTitle,
     {
       if (jobNode->jobOptions.postProcessScript != NULL)
       {
-        TEXT_MACRO_N_STRING (textMacros[0],"%name",String_cString(jobNode->name),NULL);
-
         // get script
+        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobNode->name,NULL);
+        TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[2],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_N_STRING (textMacros[3],"%file",     storageSpecifier.archiveName,NULL);
         script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
                                 startTime,
@@ -3485,6 +3488,7 @@ NULL,//                                                        scheduleTitle,
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   Remote_doneHost(&remoteHost);
+  String_delete(directory);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 }
