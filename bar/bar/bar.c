@@ -4818,31 +4818,58 @@ void freeServerNode(ServerNode *serverNode, void *userData)
   doneServer(&serverNode->server);
 }
 
+Server *getFileServerSettings(ConstString      directory,
+                              const JobOptions *jobOptions,
+                              FileServer       *fileServer
+                             )
+{
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+
+  assert(directory != NULL);
+  assert(fileServer != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find file server
+    serverNode = LIST_FIND(&globalOptions.serverList,
+                           serverNode,
+                              (serverNode->server.type == SERVER_TYPE_FILE)
+                           && String_startsWith(serverNode->server.name,directory)
+                          );
+
+  // get file server settings
+//  fileServer->loginName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName) ) ? jobOptions->ftpServer.loginName : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName : globalOptions.defaultFTPServer->ftpServer.loginName);
+//  fileServer->password  = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
+  }
+
+  return (serverNode != NULL) ? &serverNode->server : NULL;
+}
+
 Server *getFTPServerSettings(ConstString      hostName,
                              const JobOptions *jobOptions,
                              FTPServer        *ftpServer
                             )
 {
-  ServerNode *serverNode;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
 
   assert(hostName != NULL);
   assert(ftpServer != NULL);
 
-#warning lock
-  // find FTP server
-  serverNode = globalOptions.serverList.head;
-  while (   (serverNode != NULL)
-         && (   (serverNode->server.type != SERVER_TYPE_FTP)
-             || !String_equals(serverNode->server.name,hostName)
-            )
-        )
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    serverNode = serverNode->next;
-  }
+    // find FTP server
+    serverNode = LIST_FIND(&globalOptions.serverList,
+                           serverNode,
+                              (serverNode->server.type == SERVER_TYPE_FTP)
+                           && String_equals(serverNode->server.name,hostName)
+                          );
 
-  // get FTP server settings
-  ftpServer->loginName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName) ) ? jobOptions->ftpServer.loginName : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName : globalOptions.defaultFTPServer->ftpServer.loginName);
-  ftpServer->password  = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
+    // get FTP server settings
+    ftpServer->loginName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName) ) ? jobOptions->ftpServer.loginName : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName : globalOptions.defaultFTPServer->ftpServer.loginName);
+    ftpServer->password  = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
+  }
 
   return (serverNode != NULL) ? &serverNode->server : &defaultFTPServer;
 }
@@ -4852,29 +4879,28 @@ Server *getSSHServerSettings(ConstString      hostName,
                              SSHServer        *sshServer
                             )
 {
-  ServerNode *serverNode;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
 
   assert(hostName != NULL);
   assert(sshServer != NULL);
 
-#warning lock
-  // find SSH server
-  serverNode = globalOptions.serverList.head;
-  while (   (serverNode != NULL)
-         && (   (serverNode->server.type != SERVER_TYPE_SSH)
-             || !String_equals(serverNode->server.name,hostName)
-            )
-        )
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    serverNode = serverNode->next;
-  }
+    // find SSH server
+    serverNode = LIST_FIND(&globalOptions.serverList,
+                           serverNode,
+                              (serverNode->server.type == SERVER_TYPE_SSH)
+                           && String_equals(serverNode->server.name,hostName)
+                          );
 
-  // get SSH server settings
-  sshServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                ) ? jobOptions->sshServer.port       : ((serverNode != NULL) ? serverNode->server.sshServer.port       : globalOptions.defaultSSHServer->sshServer.port      );
-  sshServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName) ) ? jobOptions->sshServer.loginName  : ((serverNode != NULL) ? serverNode->server.sshServer.loginName  : globalOptions.defaultSSHServer->sshServer.loginName );
-  sshServer->password   = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)) ? jobOptions->sshServer.password   : ((serverNode != NULL) ? serverNode->server.sshServer.password   : globalOptions.defaultSSHServer->sshServer.password  );
-  sshServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey) ) ? jobOptions->sshServer.publicKey  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKey  : globalOptions.defaultSSHServer->sshServer.publicKey );
-  sshServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey)) ? jobOptions->sshServer.privateKey : ((serverNode != NULL) ? serverNode->server.sshServer.privateKey : globalOptions.defaultSSHServer->sshServer.privateKey);
+    // get SSH server settings
+    sshServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                ) ? jobOptions->sshServer.port       : ((serverNode != NULL) ? serverNode->server.sshServer.port       : globalOptions.defaultSSHServer->sshServer.port      );
+    sshServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName) ) ? jobOptions->sshServer.loginName  : ((serverNode != NULL) ? serverNode->server.sshServer.loginName  : globalOptions.defaultSSHServer->sshServer.loginName );
+    sshServer->password   = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)) ? jobOptions->sshServer.password   : ((serverNode != NULL) ? serverNode->server.sshServer.password   : globalOptions.defaultSSHServer->sshServer.password  );
+    sshServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey) ) ? jobOptions->sshServer.publicKey  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKey  : globalOptions.defaultSSHServer->sshServer.publicKey );
+    sshServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey)) ? jobOptions->sshServer.privateKey : ((serverNode != NULL) ? serverNode->server.sshServer.privateKey : globalOptions.defaultSSHServer->sshServer.privateKey);
+  }
 
   return (serverNode != NULL) ? &serverNode->server : &defaultSSHServer;
 }
@@ -4884,29 +4910,28 @@ Server *getWebDAVServerSettings(ConstString      hostName,
                                 WebDAVServer     *webDAVServer
                                )
 {
-  ServerNode *serverNode;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
 
   assert(hostName != NULL);
   assert(webDAVServer != NULL);
 
-#warning lock
   // find WebDAV server
-  serverNode = globalOptions.serverList.head;
-  while (   (serverNode != NULL)
-         && (   (serverNode->server.type != SERVER_TYPE_WEBDAV)
-             || !String_equals(serverNode->server.name,hostName)
-            )
-        )
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    serverNode = serverNode->next;
-  }
+    serverNode = LIST_FIND(&globalOptions.serverList,
+                           serverNode,
+                              (serverNode->server.type == SERVER_TYPE_WEBDAV)
+                           && String_equals(serverNode->server.name,hostName)
+                          );
 
-  // get WebDAV server settings
-//  webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
-  webDAVServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName) ) ? jobOptions->webDAVServer.loginName  : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName  : globalOptions.defaultWebDAVServer->webDAVServer.loginName );
-  webDAVServer->password   = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->webDAVServer.password)) ? jobOptions->webDAVServer.password   : ((serverNode != NULL) ? serverNode->server.webDAVServer.password   : globalOptions.defaultWebDAVServer->webDAVServer.password  );
-  webDAVServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey) ) ? jobOptions->webDAVServer.publicKey  : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKey  : globalOptions.defaultWebDAVServer->webDAVServer.publicKey );
-  webDAVServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey)) ? jobOptions->webDAVServer.privateKey : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKey : globalOptions.defaultWebDAVServer->webDAVServer.privateKey);
+    // get WebDAV server settings
+//    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
+    webDAVServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName) ) ? jobOptions->webDAVServer.loginName  : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName  : globalOptions.defaultWebDAVServer->webDAVServer.loginName );
+    webDAVServer->password   = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->webDAVServer.password)) ? jobOptions->webDAVServer.password   : ((serverNode != NULL) ? serverNode->server.webDAVServer.password   : globalOptions.defaultWebDAVServer->webDAVServer.password  );
+    webDAVServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey) ) ? jobOptions->webDAVServer.publicKey  : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKey  : globalOptions.defaultWebDAVServer->webDAVServer.publicKey );
+    webDAVServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey)) ? jobOptions->webDAVServer.privateKey : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKey : globalOptions.defaultWebDAVServer->webDAVServer.privateKey);
+  }
 
   return (serverNode != NULL) ? &serverNode->server : &defaultWebDAVServer;
 }
@@ -4993,11 +5018,13 @@ void getDeviceSettings(ConstString      name,
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    deviceNode = globalOptions.deviceList.head;
-    while ((deviceNode != NULL) && !String_equals(deviceNode->name,name))
-    {
-      deviceNode = deviceNode->next;
-    }
+    // find device
+    deviceNode = LIST_FIND(&globalOptions.deviceList,
+                           deviceNode,
+                           String_equals(deviceNode->name,name)
+                          );
+
+    // get device settings
     device->name                    = ((jobOptions != NULL) && (jobOptions->device.name                    != NULL)) ? jobOptions->device.name                    : ((deviceNode != NULL) ? deviceNode->device.name                    : globalOptions.defaultDevice->name                   );
     device->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->device.requestVolumeCommand    != NULL)) ? jobOptions->device.requestVolumeCommand    : ((deviceNode != NULL) ? deviceNode->device.requestVolumeCommand    : globalOptions.defaultDevice->requestVolumeCommand   );
     device->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->device.unloadVolumeCommand     != NULL)) ? jobOptions->device.unloadVolumeCommand     : ((deviceNode != NULL) ? deviceNode->device.unloadVolumeCommand     : globalOptions.defaultDevice->unloadVolumeCommand    );

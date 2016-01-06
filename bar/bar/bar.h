@@ -628,6 +628,22 @@ void deleteServerNode(ServerNode *serverNode);
 void freeServerNode(ServerNode *serverNode, void *userData);
 
 /***********************************************************************\
+* Name   : getFileServerSettings
+* Purpose: get file server settings
+* Input  : directory  - directory
+*          jobOptions - job options
+* Output : fileServer - file server settings from job options, server
+*                       list or default FTP server values
+* Return : server
+* Notes  : -
+\***********************************************************************/
+
+Server *getFileServerSettings(ConstString      directory,
+                              const JobOptions *jobOptions,
+                              FileServer       *fileServer
+                             );
+
+/***********************************************************************\
 * Name   : getFTPServerSettings
 * Purpose: get FTP server settings
 * Input  : hostName   - FTP server host name
