@@ -4641,138 +4641,6 @@ Errors readKeyFile(Key *key, const char *fileName)
   return ERROR_NONE;
 }
 
-bool allocateServer(Server *server, ServerConnectionPriorities priority, long timeout)
-{
-  SemaphoreLock semaphoreLock;
-  uint          maxConnectionCount;
-
-  assert(server != NULL);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    // get max. number of allowed concurrent connections
-    if (server->maxConnectionCount != 0)
-    {
-      maxConnectionCount = server->maxConnectionCount;
-    }
-    else
-    {
-      maxConnectionCount = 0;
-      switch (server->type)
-      {
-        case SERVER_TYPE_FILE:
-          maxConnectionCount = MAX_UINT;
-          break;
-        case SERVER_TYPE_FTP:
-          maxConnectionCount = defaultFTPServer.maxConnectionCount;
-          break;
-        case SERVER_TYPE_SSH:
-          maxConnectionCount = defaultSSHServer.maxConnectionCount;
-          break;
-        case SERVER_TYPE_WEBDAV:
-          maxConnectionCount = defaultWebDAVServer.maxConnectionCount;
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
-      }
-    }
-
-    // allocate server
-    switch (priority)
-    {
-      case SERVER_CONNECTION_PRIORITY_LOW:
-        if (   (maxConnectionCount != 0)
-            && (server->connection.count >= maxConnectionCount)
-           )
-        {
-          // request low priority connection
-          server->connection.lowPriorityRequestCount++;
-
-          // wait for free connection
-          while (server->connection.count >= maxConnectionCount)
-          {
-            if (!Semaphore_waitModified(&server->lock,timeout))
-            {
-              Semaphore_unlock(&server->lock);
-              return FALSE;
-            }
-          }
-
-          // low priority request done
-          assert(server->connection.lowPriorityRequestCount > 0);
-          server->connection.lowPriorityRequestCount--;
-        }
-        break;
-      case SERVER_CONNECTION_PRIORITY_HIGH:
-        if (   (maxConnectionCount != 0)
-            && (server->connection.count >= maxConnectionCount)
-           )
-        {
-          // request high priority connection
-          server->connection.highPriorityRequestCount++;
-
-          // wait for free connection
-          while (server->connection.count >= maxConnectionCount)
-          {
-            if (!Semaphore_waitModified(&server->lock,timeout))
-            {
-              Semaphore_unlock(&server->lock);
-              return FALSE;
-            }
-          }
-
-          // high priority request done
-          assert(server->connection.highPriorityRequestCount > 0);
-          server->connection.highPriorityRequestCount--;
-        }
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-
-    // allocated connection
-    server->connection.count++;
-  }
-
-  return TRUE;
-}
-
-void freeServer(Server *server)
-{
-  SemaphoreLock semaphoreLock;
-
-  assert(server != NULL);
-  assert(server->connection.count > 0);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    // free connection
-    server->connection.count--;
-  }
-}
-
-bool isServerAllocationPending(Server *server)
-{
-  SemaphoreLock semaphoreLock;
-  bool          pendingFlag;
-
-  assert(server != NULL);
-
-  pendingFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ)
-  {
-    pendingFlag = (server->connection.highPriorityRequestCount > 0);
-  }
-
-  return pendingFlag;
-}
-
 ServerNode *newServerNode(ConstString name, ServerTypes serverType)
 {
   SemaphoreLock semaphoreLock;
@@ -4818,16 +4686,18 @@ void freeServerNode(ServerNode *serverNode, void *userData)
   doneServer(&serverNode->server);
 }
 
-Server *getFileServerSettings(ConstString      directory,
-                              const JobOptions *jobOptions,
-                              FileServer       *fileServer
-                             )
+uint getFileServerSettings(ConstString      directory,
+                           const JobOptions *jobOptions,
+                           FileServer       *fileServer
+                          )
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
 
   assert(directory != NULL);
   assert(fileServer != NULL);
+
+  UNUSED_VARIABLE(jobOptions);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
@@ -4843,13 +4713,13 @@ Server *getFileServerSettings(ConstString      directory,
 //  fileServer->password  = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
   }
 
-  return (serverNode != NULL) ? &serverNode->server : NULL;
+  return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-Server *getFTPServerSettings(ConstString      hostName,
-                             const JobOptions *jobOptions,
-                             FTPServer        *ftpServer
-                            )
+uint getFTPServerSettings(ConstString      hostName,
+                          const JobOptions *jobOptions,
+                          FTPServer        *ftpServer
+                         )
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
@@ -4871,13 +4741,13 @@ Server *getFTPServerSettings(ConstString      hostName,
     ftpServer->password  = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
   }
 
-  return (serverNode != NULL) ? &serverNode->server : &defaultFTPServer;
+  return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-Server *getSSHServerSettings(ConstString      hostName,
-                             const JobOptions *jobOptions,
-                             SSHServer        *sshServer
-                            )
+uint getSSHServerSettings(ConstString      hostName,
+                          const JobOptions *jobOptions,
+                          SSHServer        *sshServer
+                         )
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
@@ -4902,13 +4772,13 @@ Server *getSSHServerSettings(ConstString      hostName,
     sshServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey)) ? jobOptions->sshServer.privateKey : ((serverNode != NULL) ? serverNode->server.sshServer.privateKey : globalOptions.defaultSSHServer->sshServer.privateKey);
   }
 
-  return (serverNode != NULL) ? &serverNode->server : &defaultSSHServer;
+  return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-Server *getWebDAVServerSettings(ConstString      hostName,
-                                const JobOptions *jobOptions,
-                                WebDAVServer     *webDAVServer
-                               )
+uint getWebDAVServerSettings(ConstString      hostName,
+                             const JobOptions *jobOptions,
+                             WebDAVServer     *webDAVServer
+                            )
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
@@ -4933,7 +4803,7 @@ Server *getWebDAVServerSettings(ConstString      hostName,
     webDAVServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey)) ? jobOptions->webDAVServer.privateKey : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKey : globalOptions.defaultWebDAVServer->webDAVServer.privateKey);
   }
 
-  return (serverNode != NULL) ? &serverNode->server : &defaultWebDAVServer;
+  return (serverNode != NULL) ? serverNode->id : 0;
 }
 
 void getCDSettings(const JobOptions *jobOptions,
@@ -5040,6 +4910,160 @@ void getDeviceSettings(ConstString      name,
     device->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->device.writePostProcessCommand != NULL)) ? jobOptions->device.writePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.writePostProcessCommand : globalOptions.defaultDevice->writePostProcessCommand);
     device->writeCommand            = ((jobOptions != NULL) && (jobOptions->device.writeCommand            != NULL)) ? jobOptions->device.writeCommand            : ((deviceNode != NULL) ? deviceNode->device.writeCommand            : globalOptions.defaultDevice->writeCommand           );
   }
+}
+
+bool allocateServer(uint serverId, ServerConnectionPriorities priority, long timeout)
+{
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+  uint          maxConnectionCount;
+
+  assert(serverId != 0);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find server
+    serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+    if (serverNode == NULL)
+    {
+      Semaphore_unlock(&globalOptions.deviceList.lock);
+      return FALSE;
+    }
+
+    // get max. number of allowed concurrent connections
+    if (serverNode->server.maxConnectionCount != 0)
+    {
+      maxConnectionCount = serverNode->server.maxConnectionCount;
+    }
+    else
+    {
+      maxConnectionCount = 0;
+      switch (serverNode->server.type)
+      {
+        case SERVER_TYPE_FILE:
+          maxConnectionCount = MAX_UINT;
+          break;
+        case SERVER_TYPE_FTP:
+          maxConnectionCount = defaultFTPServer.maxConnectionCount;
+          break;
+        case SERVER_TYPE_SSH:
+          maxConnectionCount = defaultSSHServer.maxConnectionCount;
+          break;
+        case SERVER_TYPE_WEBDAV:
+          maxConnectionCount = defaultWebDAVServer.maxConnectionCount;
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
+      }
+    }
+
+    // allocate server
+    switch (priority)
+    {
+      case SERVER_CONNECTION_PRIORITY_LOW:
+        if (   (maxConnectionCount != 0)
+            && (serverNode->server.connection.count >= maxConnectionCount)
+           )
+        {
+          // request low priority connection
+          serverNode->server.connection.lowPriorityRequestCount++;
+
+          // wait for free connection
+          while (serverNode->server.connection.count >= maxConnectionCount)
+          {
+            if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
+            {
+              Semaphore_unlock(&globalOptions.serverList.lock);
+              return FALSE;
+            }
+          }
+
+          // low priority request done
+          assert(serverNode->server.connection.lowPriorityRequestCount > 0);
+          serverNode->server.connection.lowPriorityRequestCount--;
+        }
+        break;
+      case SERVER_CONNECTION_PRIORITY_HIGH:
+        if (   (maxConnectionCount != 0)
+            && (serverNode->server.connection.count >= maxConnectionCount)
+           )
+        {
+          // request high priority connection
+          serverNode->server.connection.highPriorityRequestCount++;
+
+          // wait for free connection
+          while (serverNode->server.connection.count >= maxConnectionCount)
+          {
+            if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
+            {
+              Semaphore_unlock(&globalOptions.serverList.lock);
+              return FALSE;
+            }
+          }
+
+          // high priority request done
+          assert(serverNode->server.connection.highPriorityRequestCount > 0);
+          serverNode->server.connection.highPriorityRequestCount--;
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    // allocated connection
+    serverNode->server.connection.count++;
+  }
+
+  return TRUE;
+}
+
+void freeServer(uint serverId)
+{
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+
+  assert(serverId != 0);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find server
+    serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+    if (serverNode != NULL)
+    {
+      assert(serverNode->server.connection.count > 0);
+
+      // free connection
+      serverNode->server.connection.count--;
+    }
+  }
+}
+
+bool isServerAllocationPending(uint serverId)
+{
+  bool          pendingFlag;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+
+  assert(serverId != 0);
+
+  pendingFlag = FALSE;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find server
+    serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+    if (serverNode != NULL)
+    {
+      pendingFlag = (serverNode->server.connection.highPriorityRequestCount > 0);
+    }
+  }
+
+  return pendingFlag;
 }
 
 Errors inputCryptPassword(void        *userData,

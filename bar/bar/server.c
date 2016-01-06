@@ -6138,8 +6138,6 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, uint id, const 
 LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   String name,value;
-  String configFileName;
-  Errors error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);

@@ -638,10 +638,10 @@ void freeServerNode(ServerNode *serverNode, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-Server *getFileServerSettings(ConstString      directory,
-                              const JobOptions *jobOptions,
-                              FileServer       *fileServer
-                             );
+uint getFileServerSettings(ConstString      directory,
+                           const JobOptions *jobOptions,
+                           FileServer       *fileServer
+                          );
 
 /***********************************************************************\
 * Name   : getFTPServerSettings
@@ -654,10 +654,10 @@ Server *getFileServerSettings(ConstString      directory,
 * Notes  : -
 \***********************************************************************/
 
-Server *getFTPServerSettings(ConstString      hostName,
-                             const JobOptions *jobOptions,
-                             FTPServer        *ftpServer
-                            );
+uint getFTPServerSettings(ConstString      hostName,
+                          const JobOptions *jobOptions,
+                          FTPServer        *ftpServer
+                         );
 
 /***********************************************************************\
 * Name   : getSSHServerSettings
@@ -670,10 +670,10 @@ Server *getFTPServerSettings(ConstString      hostName,
 * Notes  : -
 \***********************************************************************/
 
-Server *getSSHServerSettings(ConstString      hostName,
-                             const JobOptions *jobOptions,
-                             SSHServer        *sshServer
-                            );
+uint getSSHServerSettings(ConstString      hostName,
+                          const JobOptions *jobOptions,
+                          SSHServer        *sshServer
+                         );
 
 /***********************************************************************\
 * Name   : getWebDAVServerSettings
@@ -686,10 +686,10 @@ Server *getSSHServerSettings(ConstString      hostName,
 * Notes  : -
 \***********************************************************************/
 
-Server *getWebDAVServerSettings(ConstString      hostName,
-                                const JobOptions *jobOptions,
-                                WebDAVServer     *webDAVServer
-                               );
+uint getWebDAVServerSettings(ConstString      hostName,
+                             const JobOptions *jobOptions,
+                             WebDAVServer     *webDAVServer
+                            );
 
 /***********************************************************************\
 * Name   : getCDSettings
@@ -749,7 +749,7 @@ void getDeviceSettings(ConstString      name,
 /***********************************************************************\
 * Name   : allocateServer
 * Purpose: allocate server
-* Input  : server   - server
+* Input  : serverId - server id
 *          priority - server connection priority; see
 *                     SERVER_CONNECTION_PRIORITY_...
 *          timeout  - timeout or -1 [ms]
@@ -758,30 +758,30 @@ void getDeviceSettings(ConstString      name,
 * Notes  : -
 \***********************************************************************/
 
-bool allocateServer(Server *server, ServerConnectionPriorities priority, long timeout);
+bool allocateServer(uint serverId, ServerConnectionPriorities priority, long timeout);
 
 /***********************************************************************\
 * Name   : freeServer
 * Purpose: free allocated server
-* Input  : server - server
+* Input  : serverId - server id
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void freeServer(Server *server);
+void freeServer(uint serverId);
 
 /***********************************************************************\
 * Name   : isServerAllocationPending
 * Purpose: check if a server allocation with high priority is pending
-* Input  : server - server
+* Input  : serverId - server id
 * Output : -
 * Return : TRUE if server allocation with high priority is pending,
 *          FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool isServerAllocationPending(Server *server);
+bool isServerAllocationPending(uint serverId);
 
 /***********************************************************************\
 * Name   : inputCryptPassword

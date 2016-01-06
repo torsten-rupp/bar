@@ -1050,7 +1050,7 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
       initBandWidthLimiter(&storageHandle->ftp.bandWidthLimiter,maxBandWidthList);
 
       // get FTP server settings
-      storageHandle->ftp.server = getFTPServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
+      storageHandle->ftp.serverId = getFTPServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
       if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,ftpServer.loginName);
       if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
       if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
@@ -1061,7 +1061,7 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
       }
 
       // allocate FTP server
-      if (!allocateServer(storageHandle->ftp.server,serverConnectionPriority,60*1000L))
+      if (!allocateServer(storageHandle->ftp.serverId,serverConnectionPriority,60*1000L))
       {
         doneBandWidthLimiter(&storageHandle->ftp.bandWidthLimiter);
         return ERROR_TOO_MANY_CONNECTIONS;
@@ -1123,7 +1123,7 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
       }
       if (error != ERROR_NONE)
       {
-        freeServer(storageHandle->ftp.server);
+        freeServer(storageHandle->ftp.serverId);
         doneBandWidthLimiter(&storageHandle->ftp.bandWidthLimiter);
         return error;
       }
@@ -1148,7 +1148,7 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
       }
 
       // allocate FTP server
-      if (!allocateServer(storageHandle->ftp.server,serverConnectionPriority,60*1000L))
+      if (!allocateServer(storageHandle->ftp.serverId,serverConnectionPriority,60*1000L))
       {
         doneBandWidthLimiter(&storageHandle->ftp.bandWidthLimiter);
         return ERROR_TOO_MANY_CONNECTIONS;
@@ -1210,7 +1210,7 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
       }
       if (error != ERROR_NONE)
       {
-        freeServer(storageHandle->ftp.server);
+        freeServer(storageHandle->ftp.serverId);
         doneBandWidthLimiter(&storageHandle->ftp.bandWidthLimiter);
         return error;
       }
@@ -1234,9 +1234,9 @@ LOCAL Errors StorageFTP_done(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   #if   defined(HAVE_CURL)
-    freeServer(storageHandle->ftp.server);
+    freeServer(storageHandle->ftp.serverId);
   #elif defined(HAVE_FTP)
-    freeServer(storageHandle->ftp.server);
+    freeServer(storageHandle->ftp.serverId);
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -1253,7 +1253,7 @@ LOCAL bool StorageFTP_isServerAllocationPending(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    serverAllocationPending = isServerAllocationPending(storageHandle->ftp.server);
+    serverAllocationPending = isServerAllocationPending(storageHandle->ftp.serverId);
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
 
@@ -3345,7 +3345,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.lineList,{ StringList_done(&storageDirectoryListHandle->ftp.lineList); });
 
     // get FTP server settings
-    storageDirectoryListHandle->ftp.server = getFTPServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
+    storageDirectoryListHandle->ftp.serverId = getFTPServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,ftpServer.loginName);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
@@ -3356,12 +3356,12 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     }
 
     // allocate FTP server
-    if (!allocateServer(storageDirectoryListHandle->ftp.server,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageDirectoryListHandle->ftp.serverId,serverConnectionPriority,60*1000L))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
-    AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->ftp.server,{ freeServer(storageDirectoryListHandle->ftp.server); });
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.serverId,{ freeServer(storageDirectoryListHandle->ftp.serverId); });
 
     // check FTP login, get correct password
     error = ERROR_UNKNOWN;
@@ -3636,7 +3636,7 @@ LOCAL void StorageFTP_closeDirectoryList(StorageDirectoryListHandle *storageDire
   assert(storageDirectoryListHandle->type == STORAGE_TYPE_FTP);
 
   #if   defined(HAVE_CURL)
-    freeServer(storageDirectoryListHandle->ftp.server);
+    freeServer(storageDirectoryListHandle->ftp.serverId);
     String_delete(storageDirectoryListHandle->ftp.fileName);
     StringList_done(&storageDirectoryListHandle->ftp.lineList);
   #elif defined(HAVE_FTP)

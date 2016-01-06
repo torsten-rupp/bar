@@ -346,7 +346,7 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
     initBandWidthLimiter(&storageHandle->sftp.bandWidthLimiter,maxBandWidthList);
 
     // get SSH server settings
-    storageHandle->sftp.server = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
+    storageHandle->sftp.serverId = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,sshServer.loginName);
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
@@ -360,12 +360,12 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
     }
 
     // allocate SSH server
-    if (!allocateServer(storageHandle->sftp.server,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageHandle->sftp.serverId,serverConnectionPriority,60*1000L))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
-    AUTOFREE_ADD(&autoFreeList,storageHandle->sftp.server,{ freeServer(storageHandle->sftp.server); });
+    AUTOFREE_ADD(&autoFreeList,&storageHandle->sftp.serverId,{ freeServer(storageHandle->sftp.serverId); });
 
     // check if SSH login is possible
     error = ERROR_UNKNOWN;
@@ -445,7 +445,7 @@ LOCAL Errors StorageSFTP_done(StorageHandle *storageHandle)
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   #ifdef HAVE_SSH2
-    freeServer(storageHandle->sftp.server);
+    freeServer(storageHandle->sftp.serverId);
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 
@@ -461,7 +461,7 @@ LOCAL bool StorageSFTP_isServerAllocationPending(StorageHandle *storageHandle)
 
   serverAllocationPending = FALSE;
   #if defined(HAVE_SSH2)
-    serverAllocationPending = isServerAllocationPending(storageHandle->sftp.server);
+    serverAllocationPending = isServerAllocationPending(storageHandle->sftp.serverId);
   #else /* not HAVE_SSH2 */
     serverAllocationPending = FALSE;
   #endif /* HAVE_SSH2 */

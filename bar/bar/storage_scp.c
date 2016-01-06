@@ -357,7 +357,7 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
     initBandWidthLimiter(&storageHandle->scp.bandWidthLimiter,maxBandWidthList);
 
     // get SSH server settings
-    storageHandle->scp.server = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
+    storageHandle->scp.serverId = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,sshServer.loginName);
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
@@ -374,12 +374,12 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
     }
 
     // allocate SSH server
-    if (!allocateServer(storageHandle->scp.server,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageHandle->scp.serverId,serverConnectionPriority,60*1000L))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
-    AUTOFREE_ADD(&autoFreeList,storageHandle->scp.server,{ freeServer(storageHandle->scp.server); });
+    AUTOFREE_ADD(&autoFreeList,&storageHandle->scp.serverId,{ freeServer(storageHandle->scp.serverId); });
 
     // check if SSH login is possible
     error = ERROR_UNKNOWN;
@@ -458,7 +458,7 @@ LOCAL Errors StorageSCP_done(StorageHandle *storageHandle)
 
   // free SSH server connection
   #ifdef HAVE_SSH2
-    freeServer(storageHandle->scp.server);
+    freeServer(storageHandle->scp.serverId);
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 
@@ -474,7 +474,7 @@ LOCAL bool StorageSCP_isServerAllocationPending(StorageHandle *storageHandle)
 
   serverAllocationPending = FALSE;
       #if defined(HAVE_SSH2)
-        serverAllocationPending = isServerAllocationPending(storageHandle->scp.server);
+        serverAllocationPending = isServerAllocationPending(storageHandle->scp.serverId);
       #else /* not HAVE_SSH2 */
         serverAllocationPending = FALSE;
       #endif /* HAVE_SSH2 */

@@ -1740,7 +1740,7 @@ bool Storage_isServerAllocationPending(StorageHandle *storageHandle)
       break;
     case STORAGE_TYPE_SSH:
       #if defined(HAVE_SSH2)
-        serverAllocationPending = isServerAllocationPending(storageHandle->ssh.server);
+        serverAllocationPending = isServerAllocationPending(storageHandle->ssh.serverId);
       #else /* not HAVE_SSH2 */
         serverAllocationPending = FALSE;
       #endif /* HAVE_SSH2 */

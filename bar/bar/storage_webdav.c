@@ -608,7 +608,7 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
     initBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter,maxBandWidthList);
 
     // get WebDAV server settings
-    storageHandle->webdav.server = getWebDAVServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
+    storageHandle->webdav.serverId = getWebDAVServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
@@ -619,12 +619,12 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
     }
 
     // allocate WebDAV server
-    if (!allocateServer(storageHandle->webdav.server,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageHandle->webdav.serverId,serverConnectionPriority,60*1000L))
     {
       doneBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
-    AUTOFREE_ADD(&autoFreeList,storageHandle->webdav.server,{ freeServer(storageHandle->webdav.server); });
+    AUTOFREE_ADD(&autoFreeList,&storageHandle->webdav.serverId,{ freeServer(storageHandle->webdav.serverId); });
 
     // check WebDAV login, get correct password
     error = ERROR_WEBDAV_SESSION_FAIL;
@@ -704,7 +704,7 @@ LOCAL Errors StorageWebDAV_done(StorageHandle *storageHandle)
 
   // free WebDAV server connection
   #ifdef HAVE_CURL
-    freeServer(storageHandle->webdav.server);
+    freeServer(storageHandle->webdav.serverId);
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -721,7 +721,7 @@ LOCAL bool StorageWebDAV_isServerAllocationPending(StorageHandle *storageHandle)
 
   serverAllocationPending = FALSE;
   #ifdef HAVE_CURL
-    serverAllocationPending = isServerAllocationPending(storageHandle->webdav.server);
+    serverAllocationPending = isServerAllocationPending(storageHandle->webdav.serverId);
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
 
@@ -2207,7 +2207,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     storageDirectoryListHandle->webdav.currentNode = NULL;
 
     // get WebDAV server settings
-    storageDirectoryListHandle->webdav.server = getWebDAVServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
+    storageDirectoryListHandle->webdav.serverId = getWebDAVServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
@@ -2218,12 +2218,12 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     }
 
     // allocate WebDAV server
-    if (!allocateServer(storageDirectoryListHandle->webdav.server,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageDirectoryListHandle->webdav.serverId,serverConnectionPriority,60*1000L))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
-    AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->webdav.server,{ freeServer(storageDirectoryListHandle->webdav.server); });
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->webdav.serverId,{ freeServer(storageDirectoryListHandle->webdav.serverId); });
 
     // check WebDAV login, get correct password
     error = ERROR_UNKNOWN;

@@ -219,21 +219,21 @@ typedef struct
       // FTP storage
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
         StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
       } ftp;
 
       // WebDAV storage
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
         StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
       } webdav;
     #elif defined(HAVE_FTP)
       // FTP storage
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
 #if 0
         netbuf                  *control;
         netbuf                  *data;
@@ -254,7 +254,7 @@ typedef struct
       // ssh storage (remote BAR)
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
 //        String                  hostName;                  // ssh server host name
 //        uint                    hostPort;                  // ssh server port number
 //        String                  loginName;                 // ssh login name
@@ -269,7 +269,7 @@ typedef struct
       // scp storage
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
         Key                     publicKey;                 // ssh public key data (ssh,scp,sftp)
@@ -280,7 +280,7 @@ typedef struct
       // sftp storage
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
         Key                     publicKey;                 // ssh public key data (ssh,scp,sftp)
@@ -532,7 +532,6 @@ typedef struct
 // directory list handle
 typedef struct
 {
-//int x;
   StorageSpecifier storageSpecifier;                       // storage specifier data
 
   StorageTypes type;
@@ -545,7 +544,7 @@ typedef struct
     #if   defined(HAVE_CURL)
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
         String                  pathName;                  // directory name
         StringList              lineList;
 
@@ -561,7 +560,7 @@ typedef struct
 
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
         String                  pathName;                  // directory name
 
         mxml_node_t             *rootNode;
@@ -582,7 +581,7 @@ typedef struct
     #elif defined(HAVE_FTP)
       struct
       {
-        Server                  *server;
+        uint                    serverId;                  // id of allocated server
         String                  pathName;                  // directory name
 
         String                  fileListFileName;
