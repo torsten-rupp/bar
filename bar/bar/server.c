@@ -6357,6 +6357,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
@@ -6502,6 +6503,11 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
       sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+      String_delete(privateKey);
+      String_delete(publicKey);
+      String_delete(password);
+      String_delete(loginName);
+      String_delete(name);
       return;
     }
   }
@@ -6567,6 +6573,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
@@ -6648,6 +6655,11 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
       sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
+      String_delete(privateKey);
+      String_delete(publicKey);
+      String_delete(password);
+      String_delete(loginName);
+      String_delete(name);
       return;
     }
 
@@ -6713,6 +6725,11 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
       sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+      String_delete(privateKey);
+      String_delete(publicKey);
+      String_delete(password);
+      String_delete(loginName);
+      String_delete(name);
       return;
     }
   }
