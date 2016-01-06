@@ -1466,16 +1466,13 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               }
               break;
             case FILE_TYPE_DIRECTORY:
-              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
-              {
-                // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+              // add to known names history
+              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
 
-                SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                {
-                  createInfo->statusInfo.totalEntries++;
-                  updateStatusInfo(createInfo);
-                }
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+              {
+                createInfo->statusInfo.totalEntries++;
+                updateStatusInfo(createInfo);
               }
               break;
             case FILE_TYPE_LINK:
@@ -1648,227 +1645,224 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               }
               break;
             case FILE_TYPE_DIRECTORY:
-              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
+              // add to known names history
+              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+
+              if (!isNoBackup(name))
               {
-                // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
-
-                if (!isNoBackup(name))
+                if (   isIncluded(includeEntryNode,name)
+                    && !isInExcludedList(createInfo->excludePatternList,name)
+                    )
                 {
-                  if (   isIncluded(includeEntryNode,name)
-                      && !isInExcludedList(createInfo->excludePatternList,name)
-                      )
+                  switch (includeEntryNode->type)
                   {
-                    switch (includeEntryNode->type)
-                    {
-                      case ENTRY_TYPE_FILE:
-                        if (   !createInfo->partialFlag
-                            || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
-                           )
+                    case ENTRY_TYPE_FILE:
+                      if (   !createInfo->partialFlag
+                          || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                         )
+                      {
+                        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
-                          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                          {
-                            createInfo->statusInfo.totalEntries++;
-                            updateStatusInfo(createInfo);
-                          }
+                          createInfo->statusInfo.totalEntries++;
+                          updateStatusInfo(createInfo);
                         }
-                        break;
-                      case ENTRY_TYPE_IMAGE:
-                        break;
-                      default:
-                        #ifndef NDEBUG
-                          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                        #endif /* NDEBUG */
-                        break; /* not reached */
-                    }
+                      }
+                      break;
+                    case ENTRY_TYPE_IMAGE:
+                      break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break; /* not reached */
                   }
+                }
 
-                  // open directory contents
-                  error = File_openDirectoryList(&directoryListHandle,name);
-                  if (error == ERROR_NONE)
+                // open directory contents
+                error = File_openDirectoryList(&directoryListHandle,name);
+                if (error == ERROR_NONE)
+                {
+                  // read directory contents
+                  while (   (createInfo->failError == ERROR_NONE)
+                          && !isAborted(createInfo)
+                          && !File_endOfDirectoryList(&directoryListHandle)
+                        )
                   {
-                    // read directory contents
-                    while (   (createInfo->failError == ERROR_NONE)
-                            && !isAborted(createInfo)
-                            && !File_endOfDirectoryList(&directoryListHandle)
-                          )
-                    {
-                      // pause
-                      pauseCreate(createInfo);
+                    // pause
+                    pauseCreate(createInfo);
 
-                      // read next directory entry
-                      error = File_readDirectoryList(&directoryListHandle,fileName);
+                    // read next directory entry
+                    error = File_readDirectoryList(&directoryListHandle,fileName);
+                    if (error != ERROR_NONE)
+                    {
+                      continue;
+                    }
+
+                    if (   isIncluded(includeEntryNode,fileName)
+                        && !isInExcludedList(createInfo->excludePatternList,fileName)
+                       )
+                    {
+                      // read file info
+                      error = File_getFileInfo(fileName,&fileInfo);
                       if (error != ERROR_NONE)
                       {
                         continue;
                       }
 
-                      if (   isIncluded(includeEntryNode,fileName)
-                          && !isInExcludedList(createInfo->excludePatternList,fileName)
-                         )
+                      if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
                       {
-                        // read file info
-                        error = File_getFileInfo(fileName,&fileInfo);
-                        if (error != ERROR_NONE)
+                        switch (fileInfo.type)
                         {
-                          continue;
-                        }
+                          case FILE_TYPE_FILE:
+                            if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            {
+                              // add to known names history
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
 
-                        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
-                        {
-                          switch (fileInfo.type)
-                          {
-                            case FILE_TYPE_FILE:
-                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                              switch (includeEntryNode->type)
                               {
-                                // add to known names history
-                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
-
-                                switch (includeEntryNode->type)
-                                {
-                                  case ENTRY_TYPE_FILE:
-                                    if (   !createInfo->partialFlag
-                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                        )
+                                case ENTRY_TYPE_FILE:
+                                  if (   !createInfo->partialFlag
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      )
+                                  {
+                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
-                                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                                      createInfo->statusInfo.totalEntries++;
+                                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                                      updateStatusInfo(createInfo);
+                                    }
+                                  }
+                                  break;
+                                case ENTRY_TYPE_IMAGE:
+                                  break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
+                              }
+                            }
+                            break;
+                          case FILE_TYPE_DIRECTORY:
+                            // add to name list
+                            StringList_append(&nameList,fileName);
+                            break;
+                          case FILE_TYPE_LINK:
+                            if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            {
+                              // add to known names history
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+
+                              switch (includeEntryNode->type)
+                              {
+                                case ENTRY_TYPE_FILE:
+                                  if (   !createInfo->partialFlag
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                     )
+                                  {
+                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                                    {
+                                      createInfo->statusInfo.totalEntries++;
+                                      updateStatusInfo(createInfo);
+                                    }
+                                  }
+                                  break;
+                                case ENTRY_TYPE_IMAGE:
+                                  break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
+                              }
+                            }
+                            break;
+                          case FILE_TYPE_HARDLINK:
+                            if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            {
+                              // add to known names history
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+
+                              switch (includeEntryNode->type)
+                              {
+                                case ENTRY_TYPE_FILE:
+                                  if (  !createInfo->partialFlag
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      )
+                                  {
+                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                                    {
+                                      createInfo->statusInfo.totalEntries++;
+                                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                                      updateStatusInfo(createInfo);
+                                    }
+                                  }
+                                  break;
+                                case ENTRY_TYPE_IMAGE:
+                                  break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
+                              }
+                            }
+                            break;
+                          case FILE_TYPE_SPECIAL:
+                            if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            {
+                              // add to known names history
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+
+                              switch (includeEntryNode->type)
+                              {
+                                case ENTRY_TYPE_FILE:
+                                  if (  !createInfo->partialFlag
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      )
+                                  {
+                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                                    {
+                                      createInfo->statusInfo.totalEntries++;
+                                      if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
+                                          && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                          )
                                       {
-                                        createInfo->statusInfo.totalEntries++;
                                         createInfo->statusInfo.totalBytes += fileInfo.size;
-                                        updateStatusInfo(createInfo);
                                       }
+                                      updateStatusInfo(createInfo);
                                     }
-                                    break;
-                                  case ENTRY_TYPE_IMAGE:
-                                    break;
-                                  default:
-                                    #ifndef NDEBUG
-                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                    #endif /* NDEBUG */
-                                    break; /* not reached */
-                                }
-                              }
-                              break;
-                            case FILE_TYPE_DIRECTORY:
-                              // add to name list
-                              StringList_append(&nameList,fileName);
-                              break;
-                            case FILE_TYPE_LINK:
-                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
-                              {
-                                // add to known names history
-                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
-
-                                switch (includeEntryNode->type)
-                                {
-                                  case ENTRY_TYPE_FILE:
-                                    if (   !createInfo->partialFlag
-                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                       )
+                                  }
+                                  break;
+                                case ENTRY_TYPE_IMAGE:
+                                  if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                  {
+                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
-                                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                                      {
-                                        createInfo->statusInfo.totalEntries++;
-                                        updateStatusInfo(createInfo);
-                                      }
+                                      createInfo->statusInfo.totalEntries++;
+                                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                                      updateStatusInfo(createInfo);
                                     }
-                                    break;
-                                  case ENTRY_TYPE_IMAGE:
-                                    break;
-                                  default:
-                                    #ifndef NDEBUG
-                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                    #endif /* NDEBUG */
-                                    break; /* not reached */
-                                }
+                                  }
+                                  break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
                               }
-                              break;
-                            case FILE_TYPE_HARDLINK:
-                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
-                              {
-                                // add to known names history
-                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
-
-                                switch (includeEntryNode->type)
-                                {
-                                  case ENTRY_TYPE_FILE:
-                                    if (  !createInfo->partialFlag
-                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                        )
-                                    {
-                                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                                      {
-                                        createInfo->statusInfo.totalEntries++;
-                                        createInfo->statusInfo.totalBytes += fileInfo.size;
-                                        updateStatusInfo(createInfo);
-                                      }
-                                    }
-                                    break;
-                                  case ENTRY_TYPE_IMAGE:
-                                    break;
-                                  default:
-                                    #ifndef NDEBUG
-                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                    #endif /* NDEBUG */
-                                    break; /* not reached */
-                                }
-                              }
-                              break;
-                            case FILE_TYPE_SPECIAL:
-                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
-                              {
-                                // add to known names history
-                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
-
-                                switch (includeEntryNode->type)
-                                {
-                                  case ENTRY_TYPE_FILE:
-                                    if (  !createInfo->partialFlag
-                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                        )
-                                    {
-                                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                                      {
-                                        createInfo->statusInfo.totalEntries++;
-                                        if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
-                                            && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                            )
-                                        {
-                                          createInfo->statusInfo.totalBytes += fileInfo.size;
-                                        }
-                                        updateStatusInfo(createInfo);
-                                      }
-                                    }
-                                    break;
-                                  case ENTRY_TYPE_IMAGE:
-                                    if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                    {
-                                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                                      {
-                                        createInfo->statusInfo.totalEntries++;
-                                        createInfo->statusInfo.totalBytes += fileInfo.size;
-                                        updateStatusInfo(createInfo);
-                                      }
-                                    }
-                                    break;
-                                  default:
-                                    #ifndef NDEBUG
-                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                    #endif /* NDEBUG */
-                                    break; /* not reached */
-                                }
-                              }
-                              break;
-                            default:
-                              break;
-                          }
+                            }
+                            break;
+                          default:
+                            break;
                         }
                       }
                     }
-
-                    // close directory
-                    File_closeDirectoryList(&directoryListHandle);
                   }
+
+                  // close directory
+                  File_closeDirectoryList(&directoryListHandle);
                 }
               }
               break;
@@ -2150,21 +2144,18 @@ fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString
               }
               break;
             case FILE_TYPE_DIRECTORY:
-              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
-              {
-                // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+              // add to known names history
+              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
 
-                // add to entry list
-                if (createInfo->partialFlag && isPrintInfo(2))
-                {
-                  printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
-                }
-                appendDirectoryToEntryList(&createInfo->entryMsgQueue,
-                                           ENTRY_TYPE_FILE,
-                                           name
-                                          );
+              // add to entry list
+              if (createInfo->partialFlag && isPrintInfo(2))
+              {
+                printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
               }
+              appendDirectoryToEntryList(&createInfo->entryMsgQueue,
+                                         ENTRY_TYPE_FILE,
+                                         name
+                                        );
               break;
             case FILE_TYPE_LINK:
               if (   isInIncludedList(createInfo->includeEntryList,name)
@@ -2460,334 +2451,320 @@ fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString
               }
               break;
             case FILE_TYPE_DIRECTORY:
-              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
+              // add to known names history
+              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+
+              if (!isNoBackup(name))
               {
-                // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
-
-                if (!isNoBackup(name))
+                if (   isIncluded(includeEntryNode,name)
+                    && !isInExcludedList(createInfo->excludePatternList,name)
+                   )
                 {
-                  if (   isIncluded(includeEntryNode,name)
-                      && !isInExcludedList(createInfo->excludePatternList,name)
-                     )
+                  switch (includeEntryNode->type)
                   {
-                    switch (includeEntryNode->type)
-                    {
-                      case ENTRY_TYPE_FILE:
-                        if (   !createInfo->partialFlag
-                            || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
-                          )
+                    case ENTRY_TYPE_FILE:
+                      if (   !createInfo->partialFlag
+                          || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        )
+                      {
+                        // add to entry list
+                        if (createInfo->partialFlag && isPrintInfo(2))
                         {
-                          // add to entry list
-                          if (createInfo->partialFlag && isPrintInfo(2))
-                          {
-                            printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
-                          }
-                          appendDirectoryToEntryList(&createInfo->entryMsgQueue,
-                                                     ENTRY_TYPE_FILE,
-                                                     name
-                                                    );
+                          printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                         }
-                        break;
-                      case ENTRY_TYPE_IMAGE:
-                        break;
-                      default:
-                        #ifndef NDEBUG
-                          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                        #endif /* NDEBUG */
-                        break; /* not reached */
-                    }
+                        appendDirectoryToEntryList(&createInfo->entryMsgQueue,
+                                                   ENTRY_TYPE_FILE,
+                                                   name
+                                                  );
+                      }
+                      break;
+                    case ENTRY_TYPE_IMAGE:
+                      break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break; /* not reached */
                   }
-                  else
-                  {
-                    logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                }
+                else
+                {
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                    {
-                      createInfo->statusInfo.skippedEntries++;
-                      createInfo->statusInfo.skippedBytes += fileInfo.size;
-                      updateStatusInfo(createInfo);
-                    }
+                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                  {
+                    createInfo->statusInfo.skippedEntries++;
+                    createInfo->statusInfo.skippedBytes += fileInfo.size;
+                    updateStatusInfo(createInfo);
                   }
+                }
 
-                  // open directory contents
-                  error = File_openDirectoryList(&directoryListHandle,name);
-                  if (error == ERROR_NONE)
+                // open directory contents
+                error = File_openDirectoryList(&directoryListHandle,name);
+                if (error == ERROR_NONE)
+                {
+                  // read directory content
+                  while (   (createInfo->failError == ERROR_NONE)
+                         && !isAborted(createInfo)
+                         && !File_endOfDirectoryList(&directoryListHandle)
+                        )
                   {
-                    // read directory content
-                    while (   (createInfo->failError == ERROR_NONE)
-                           && !isAborted(createInfo)
-                           && !File_endOfDirectoryList(&directoryListHandle)
-                          )
-                    {
-                      // pause
-                      pauseCreate(createInfo);
+                    // pause
+                    pauseCreate(createInfo);
 
-                      // read next directory entry
-                      error = File_readDirectoryList(&directoryListHandle,fileName);
+                    // read next directory entry
+                    error = File_readDirectoryList(&directoryListHandle,fileName);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+
+                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                      {
+                        createInfo->statusInfo.errorEntries++;
+                        createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+                        updateStatusInfo(createInfo);
+                      }
+                      continue;
+                    }
+//fprintf(stderr,"%s, %d: %s included=%d excluded=%d dictionary=%d\n",__FILE__,__LINE__,String_cString(fileName),isIncluded(includeEntryNode,fileName),isInExcludedList(createInfo->excludePatternList,fileName),Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)));
+
+                    if (   isIncluded(includeEntryNode,fileName)
+                        && !isInExcludedList(createInfo->excludePatternList,fileName)
+                       )
+                    {
+                      // read file info
+                      error = File_getFileInfo(fileName,&fileInfo);
                       if (error != ERROR_NONE)
                       {
-                        printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+                        printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
+                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
 
                         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
                           createInfo->statusInfo.errorEntries++;
-                          createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
                           updateStatusInfo(createInfo);
                         }
                         continue;
                       }
-  //fprintf(stderr,"%s, %d: %s included=%d excluded=%d dictionary=%d\n",__FILE__,__LINE__,String_cString(fileName),isIncluded(includeEntryNode,fileName),isInExcludedList(createInfo->excludePatternList,fileName),Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)));
 
-                      if (   isIncluded(includeEntryNode,fileName)
-                          && !isInExcludedList(createInfo->excludePatternList,fileName)
-                         )
+                      if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
                       {
-                        // read file info
-                        error = File_getFileInfo(fileName,&fileInfo);
-                        if (error != ERROR_NONE)
+                        switch (fileInfo.type)
                         {
-                          printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
-                          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+                          case FILE_TYPE_FILE:
+                            if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            {
+                              // add to known names history
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
 
-                          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                          {
-                            createInfo->statusInfo.errorEntries++;
-                            updateStatusInfo(createInfo);
-                          }
-                          continue;
-                        }
-
-                        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
-                        {
-                          switch (fileInfo.type)
-                          {
-                            case FILE_TYPE_FILE:
-                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                              switch (includeEntryNode->type)
                               {
-                                // add to known names history
-                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                                case ENTRY_TYPE_FILE:
+                                  if (   !createInfo->partialFlag
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      )
+                                  {
+                                    // add to entry list
+                                    if (createInfo->partialFlag && isPrintInfo(2))
+                                    {
+                                      printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
+                                    }
+                                    appendFileToEntryList(&createInfo->entryMsgQueue,
+                                                          ENTRY_TYPE_FILE,
+                                                          fileName
+                                                         );
+                                  }
+                                  break;
+                                case ENTRY_TYPE_IMAGE:
+                                  break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
+                              }
+                            }
+                            break;
+                          case FILE_TYPE_DIRECTORY:
+                            // add to directory search list
+                            StringList_append(&nameList,fileName);
+                            break;
+                          case FILE_TYPE_LINK:
+                            if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            {
+                              // add to known names history
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
 
-                                switch (includeEntryNode->type)
-                                {
-                                  case ENTRY_TYPE_FILE:
+                              switch (includeEntryNode->type)
+                              {
+                                case ENTRY_TYPE_FILE:
+                                  if (   !createInfo->partialFlag
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      )
+                                  {
+                                    // add to entry list
+                                    if (createInfo->partialFlag && isPrintInfo(2))
+                                    {
+                                      printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
+                                    }
+                                    appendLinkToEntryList(&createInfo->entryMsgQueue,
+                                                          ENTRY_TYPE_FILE,
+                                                          fileName
+                                                         );
+                                  }
+                                  break;
+                                case ENTRY_TYPE_IMAGE:
+                                  break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
+                              }
+                            }
+                            break;
+                          case FILE_TYPE_HARDLINK:
+                            if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            {
+                              // add to known names history
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+
+                              switch (includeEntryNode->type)
+                              {
+                                case ENTRY_TYPE_FILE:
+                                  {
+                                    union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                                    HardLinkInfo hardLinkInfo;
+
                                     if (   !createInfo->partialFlag
                                         || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                         )
                                     {
-                                      // add to entry list
-                                      if (createInfo->partialFlag && isPrintInfo(2))
-                                      {
-                                        printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
-                                      }
-                                      appendFileToEntryList(&createInfo->entryMsgQueue,
-                                                            ENTRY_TYPE_FILE,
-                                                            fileName
-                                                           );
-                                    }
-                                    break;
-                                  case ENTRY_TYPE_IMAGE:
-                                    break;
-                                  default:
-                                    #ifndef NDEBUG
-                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                    #endif /* NDEBUG */
-                                    break; /* not reached */
-                                }
-                              }
-                              break;
-                            case FILE_TYPE_DIRECTORY:
-                              // add to directory search list
-                              StringList_append(&nameList,fileName);
-                              break;
-                            case FILE_TYPE_LINK:
-                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
-                              {
-                                // add to known names history
-                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
-
-                                switch (includeEntryNode->type)
-                                {
-                                  case ENTRY_TYPE_FILE:
-                                    if (   !createInfo->partialFlag
-                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                        )
-                                    {
-                                      // add to entry list
-                                      if (createInfo->partialFlag && isPrintInfo(2))
-                                      {
-                                        printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
-                                      }
-                                      appendLinkToEntryList(&createInfo->entryMsgQueue,
-                                                            ENTRY_TYPE_FILE,
-                                                            fileName
-                                                           );
-                                    }
-                                    break;
-                                  case ENTRY_TYPE_IMAGE:
-                                    break;
-                                  default:
-                                    #ifndef NDEBUG
-                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                    #endif /* NDEBUG */
-                                    break; /* not reached */
-                                }
-                              }
-                              break;
-                            case FILE_TYPE_HARDLINK:
-                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
-                              {
-                                // add to known names history
-                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
-
-                                switch (includeEntryNode->type)
-                                {
-                                  case ENTRY_TYPE_FILE:
-                                    {
-                                      union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                                      HardLinkInfo hardLinkInfo;
-
-                                      if (   !createInfo->partialFlag
-                                          || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      if (Dictionary_find(&hardLinksDictionary,
+                                                          &fileInfo.id,
+                                                          sizeof(fileInfo.id),
+                                                          &data.value,
+                                                          NULL
+                                                         )
                                           )
                                       {
-                                        if (Dictionary_find(&hardLinksDictionary,
+                                        // append name to hard link name list
+                                        StringList_append(&data.hardLinkInfo->nameList,fileName);
+
+                                        if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                                        {
+                                          // found last hardlink -> add to entry list
+                                          appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                                                    ENTRY_TYPE_FILE,
+                                                                    &data.hardLinkInfo->nameList
+                                                                   );
+
+                                          // clear entry
+                                          Dictionary_remove(&hardLinksDictionary,
+                                                            &fileInfo.id,
+                                                            sizeof(fileInfo.id)
+                                                           );
+                                        }
+                                      }
+                                      else
+                                      {
+                                        // create hard link name list
+                                        if (createInfo->partialFlag && isPrintInfo(2))
+                                        {
+                                          printIncrementalInfo(&createInfo->namesDictionary,
+                                                                fileName,
+                                                                &fileInfo.cast
+                                                              );
+                                        }
+
+                                        hardLinkInfo.count = fileInfo.linkCount;
+                                        StringList_init(&hardLinkInfo.nameList);
+                                        StringList_append(&hardLinkInfo.nameList,fileName);
+
+                                        if (!Dictionary_add(&hardLinksDictionary,
                                                             &fileInfo.id,
                                                             sizeof(fileInfo.id),
-                                                            &data.value,
-                                                            NULL
+                                                            &hardLinkInfo,
+                                                            sizeof(hardLinkInfo),
+                                                            DICTIONARY_BYTE_COPY
                                                            )
                                             )
                                         {
-                                          // append name to hard link name list
-                                          StringList_append(&data.hardLinkInfo->nameList,fileName);
-
-                                          if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
-                                          {
-                                            // found last hardlink -> add to entry list
-                                            appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                                      ENTRY_TYPE_FILE,
-                                                                      &data.hardLinkInfo->nameList
-                                                                     );
-
-                                            // clear entry
-                                            Dictionary_remove(&hardLinksDictionary,
-                                                              &fileInfo.id,
-                                                              sizeof(fileInfo.id)
-                                                             );
-                                          }
-                                        }
-                                        else
-                                        {
-                                          // create hard link name list
-                                          if (createInfo->partialFlag && isPrintInfo(2))
-                                          {
-                                            printIncrementalInfo(&createInfo->namesDictionary,
-                                                                  fileName,
-                                                                  &fileInfo.cast
-                                                                );
-                                          }
-
-                                          hardLinkInfo.count = fileInfo.linkCount;
-                                          StringList_init(&hardLinkInfo.nameList);
-                                          StringList_append(&hardLinkInfo.nameList,fileName);
-
-                                          if (!Dictionary_add(&hardLinksDictionary,
-                                                              &fileInfo.id,
-                                                              sizeof(fileInfo.id),
-                                                              &hardLinkInfo,
-                                                              sizeof(hardLinkInfo),
-                                                              DICTIONARY_BYTE_COPY
-                                                             )
-                                              )
-                                          {
-                                            HALT_INSUFFICIENT_MEMORY();
-                                          }
+                                          HALT_INSUFFICIENT_MEMORY();
                                         }
                                       }
                                     }
-                                    break;
-                                  case ENTRY_TYPE_IMAGE:
-                                    break;
-                                  default:
-                                    #ifndef NDEBUG
-                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                    #endif /* NDEBUG */
-                                    break; /* not reached */
-                                }
+                                  }
+                                  break;
+                                case ENTRY_TYPE_IMAGE:
+                                  break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
                               }
-                              break;
-                            case FILE_TYPE_SPECIAL:
-                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            }
+                            break;
+                          case FILE_TYPE_SPECIAL:
+                            if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                            {
+                              // add to known names history
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+
+                              switch (includeEntryNode->type)
                               {
-                                // add to known names history
-                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
-
-                                switch (includeEntryNode->type)
-                                {
-                                  case ENTRY_TYPE_FILE:
-                                    if (   !createInfo->partialFlag
-                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                       )
+                                case ENTRY_TYPE_FILE:
+                                  if (   !createInfo->partialFlag
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                     )
+                                  {
+                                    // add to entry list
+                                    if (createInfo->partialFlag && isPrintInfo(2))
                                     {
-                                      // add to entry list
-                                      if (createInfo->partialFlag && isPrintInfo(2))
-                                      {
-                                        printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
-                                      }
-                                      appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                               ENTRY_TYPE_FILE,
-                                                               fileName
-                                                              );
+                                      printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
                                     }
-                                    break;
-                                  case ENTRY_TYPE_IMAGE:
-                                    if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                    {
-                                      // add to entry list
-                                      appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                                ENTRY_TYPE_IMAGE,
-                                                                fileName
-                                                              );
-                                    }
-                                    break;
-                                  default:
-                                    #ifndef NDEBUG
-                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                    #endif /* NDEBUG */
-                                    break; /* not reached */
-                                }
+                                    appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                                             ENTRY_TYPE_FILE,
+                                                             fileName
+                                                            );
+                                  }
+                                  break;
+                                case ENTRY_TYPE_IMAGE:
+                                  if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                  {
+                                    // add to entry list
+                                    appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                                              ENTRY_TYPE_IMAGE,
+                                                              fileName
+                                                            );
+                                  }
+                                  break;
+                                default:
+                                  #ifndef NDEBUG
+                                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                  #endif /* NDEBUG */
+                                  break; /* not reached */
                               }
-                              break;
-                            default:
-                              printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
-                              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
+                            }
+                            break;
+                          default:
+                            printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
+                            logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
 
-                              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                              {
-                                createInfo->statusInfo.errorEntries++;
-                                createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
-                                updateStatusInfo(createInfo);
-                              }
-                              break;
-                          }
-                        }
-                        else
-                        {
-                          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(fileName));
-
-                          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                          {
-                            createInfo->statusInfo.skippedEntries++;
-                            createInfo->statusInfo.skippedBytes += fileInfo.size;
-                            updateStatusInfo(createInfo);
-                          }
+                            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                            {
+                              createInfo->statusInfo.errorEntries++;
+                              createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+                              updateStatusInfo(createInfo);
+                            }
+                            break;
                         }
                       }
                       else
                       {
-                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(fileName));
+                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(fileName));
 
                         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
@@ -2797,26 +2774,37 @@ fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString
                         }
                       }
                     }
-
-                    // close directory
-                    File_closeDirectoryList(&directoryListHandle);
-                  }
-                  else
-                  {
-                    printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                    logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
-
-                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                    else
                     {
-                      createInfo->statusInfo.errorEntries++;
-                      updateStatusInfo(createInfo);
+                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(fileName));
+
+                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                      {
+                        createInfo->statusInfo.skippedEntries++;
+                        createInfo->statusInfo.skippedBytes += fileInfo.size;
+                        updateStatusInfo(createInfo);
+                      }
                     }
                   }
+
+                  // close directory
+                  File_closeDirectoryList(&directoryListHandle);
                 }
                 else
                 {
-                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (.nobackup file)\n",String_cString(name));
+                  printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+
+                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                  {
+                    createInfo->statusInfo.errorEntries++;
+                    updateStatusInfo(createInfo);
+                  }
                 }
+              }
+              else
+              {
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (.nobackup file)\n",String_cString(name));
               }
               break;
             case FILE_TYPE_LINK:
