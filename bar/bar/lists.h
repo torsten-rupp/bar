@@ -768,13 +768,13 @@ INLINE void *List_findFirst(const void             *list,
 \***********************************************************************/
 
 INLINE void *List_findNext(const void             *list,
-                           const void             *node,
+                           void                   *node,
                            ListNodeEqualsFunction listNodeEqualsFunction,
                            void                   *listNodeEqualsUserData
                           );
 #if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
 INLINE void *List_findNext(const void             *list,
-                           const void             *node,
+                           void                   *node,
                            ListNodeEqualsFunction listNodeEqualsFunction,
                            void                   *listNodeEqualsUserData
                           )
