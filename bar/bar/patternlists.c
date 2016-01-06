@@ -61,7 +61,7 @@ LOCAL uint id = 0;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint getNewId()
+LOCAL uint getNewId(void)
 {
   id++;
 

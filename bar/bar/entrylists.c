@@ -71,7 +71,7 @@ LOCAL uint id = 0;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint getNewId()
+LOCAL uint getNewId(void)
 {
   id++;
 
@@ -91,7 +91,6 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
                                     void      *userData
                                    )
 {
-  EntryList *entryList = (EntryList*)userData;
   EntryNode *newEntryNode;
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
@@ -423,7 +422,7 @@ Errors EntryList_updateCString(EntryList    *entryList,
 
     // store
     entryNode->type        = type;
-    String_set(entryNode->string,string);
+    String_setCString(entryNode->string,string);
     entryNode->patternType = patternType;
     Pattern_done(&entryNode->pattern);
     entryNode->pattern     = pattern;

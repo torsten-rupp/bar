@@ -730,15 +730,15 @@ bool List_contains(const void             *list,
 * Notes  : -
 \***********************************************************************/
 
-INLINE const void *List_findFirst(const void             *list,
-                                  ListNodeEqualsFunction listNodeEqualsFunction,
-                                  void                   *listNodeEqualsUserData
-                                 );
+INLINE void *List_findFirst(const void             *list,
+                            ListNodeEqualsFunction listNodeEqualsFunction,
+                            void                   *listNodeEqualsUserData
+                           );
 #if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
-INLINE const void *List_findFirst(const void             *list,
-                                  ListNodeEqualsFunction listNodeEqualsFunction,
-                                  void                   *listNodeEqualsUserData
-                                 )
+INLINE void *List_findFirst(const void             *list,
+                            ListNodeEqualsFunction listNodeEqualsFunction,
+                            void                   *listNodeEqualsUserData
+                           )
 {
   Node *node;
 
@@ -767,17 +767,17 @@ INLINE const void *List_findFirst(const void             *list,
 * Notes  : -
 \***********************************************************************/
 
-INLINE const void *List_findNext(const void             *list,
-                                 const void             *node,
-                                 ListNodeEqualsFunction listNodeEqualsFunction,
-                                 void                   *listNodeEqualsUserData
-                                );
+INLINE void *List_findNext(const void             *list,
+                           const void             *node,
+                           ListNodeEqualsFunction listNodeEqualsFunction,
+                           void                   *listNodeEqualsUserData
+                          );
 #if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
-INLINE const void *List_findNext(const void             *list,
-                                 const void             *node,
-                                 ListNodeEqualsFunction listNodeEqualsFunction,
-                                 void                   *listNodeEqualsUserData
-                                )
+INLINE void *List_findNext(const void             *list,
+                           const void             *node,
+                           ListNodeEqualsFunction listNodeEqualsFunction,
+                           void                   *listNodeEqualsUserData
+                          )
 {
   assert(list != NULL);
   assert(listNodeEqualsFunction != NULL);

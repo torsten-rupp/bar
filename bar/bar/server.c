@@ -628,8 +628,6 @@ LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 LOCAL bool parseServerType(const char *name, ServerTypes *serverType)
 {
-  const ConfigValueSelect *select;
-
   assert(name != NULL);
   assert(serverType != NULL);
 
@@ -1544,83 +1542,6 @@ LOCAL ScheduleNode *parseScheduleDateTime(const String date,
   return scheduleNode;
 }
 
-#warning remove
-LOCAL Errors XupdateConfig(ConstString configFileName)
-{
-  StringList        configLinesList;
-  String            line;
-  Errors            error;
-  FileHandle        fileHandle;
-  uint              i;
-  StringNode        *nextStringNode;
-  ConfigValueFormat configValueFormat;
-
-fprintf(stderr,"%s, %d: configFileName=%s\n",__FILE__,__LINE__,String_cString(configFileName));
-  // init variables
-  StringList_init(&configLinesList);
-  line = String_new();
-
-  // get config file name
-  if (String_isEmpty(configFileName))
-  {
-    return ERROR_NO_FILE_NAME;
-  }
-
-  // read file
-  error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
-  if (error != ERROR_NONE)
-  {
-    StringList_done(&configLinesList);
-    String_delete(line);
-    return error;
-  }
-
-  // trim empty lines at begin/end
-  while (!StringList_isEmpty(&configLinesList) && String_isEmpty(StringList_first(&configLinesList,NULL)))
-  {
-    StringList_remove(&configLinesList,configLinesList.head);
-  }
-  while (!StringList_isEmpty(&configLinesList) && String_isEmpty(StringList_last(&configLinesList,NULL)))
-  {
-    StringList_remove(&configLinesList,configLinesList.tail);
-  }
-
-  // update line list
-  CONFIG_VALUE_ITERATE(CONFIG_VALUES,i)
-  {
-    // delete old entries, get position for insert new entries
-fprintf(stderr,"%s, %d: write %d: %s\n",__FILE__,__LINE__,i,CONFIG_VALUES[i].name);
-    nextStringNode = ConfigValue_deleteEntries(&configLinesList,NULL,CONFIG_VALUES[i].name);
-
-    // insert new entries
-    ConfigValue_formatInit(&configValueFormat,
-                           &CONFIG_VALUES[i],
-                           CONFIG_VALUE_FORMAT_MODE_LINE,
-                           NULL  // variable
-                          );
-    while (ConfigValue_format(&configValueFormat,line))
-    {
-      StringList_insert(&configLinesList,line,nextStringNode);
-    }
-    ConfigValue_formatDone(&configValueFormat);
-  }
-
-  // write file
-  error = ConfigValue_writeConfigFileLines(configFileName,&configLinesList);
-  if (error != ERROR_NONE)
-  {
-    String_delete(line);
-    StringList_done(&configLinesList);
-    return error;
-  }
-
-  // free resources
-  String_delete(line);
-  StringList_done(&configLinesList);
-
-  return ERROR_NONE;
-}
-
 /***********************************************************************\
 * Name   : storageRequestVolume
 * Purpose: request volume call-back
@@ -2392,7 +2313,6 @@ LOCAL Errors updateJob(JobNode *jobNode)
   StringList        jobLinesList;
   String            line;
   Errors            error;
-  FileHandle        fileHandle;
   uint              i;
   StringNode        *nextStringNode;
   ScheduleNode      *scheduleNode;
@@ -6323,10 +6243,8 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, uint id, cons
 
 LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  SemaphoreLock    semaphoreLock;
-  ServerNode       *serverNode;
-  String           date,weekDays,time;
-  Errors           error;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6825,7 +6743,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  int           serverId;
+  uint          serverId;
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
   Errors        error;
@@ -6834,7 +6752,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, uint id, const
   assert(argumentMap != NULL);
 
   // get storage server id
-  if (!StringMap_getInt(argumentMap,"id",&serverId,0))
+  if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
@@ -9566,7 +9484,6 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, uint id, cons
   uint          patternId;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
-  PatternNode   *patternNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9909,7 +9826,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, uint id, const
     }
 
     // remove from source list
-    if (!EntryList_remove(&jobNode->deltaSourceList,deltaSourceId))
+    if (!DeltaSourceList_remove(&jobNode->deltaSourceList,deltaSourceId))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"delta source with id #%u not found",deltaSourceId);
       Semaphore_unlock(&jobList.lock);
