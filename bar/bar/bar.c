@@ -3281,7 +3281,6 @@ String getConfigFileName(String fileName)
   return fileName;
 }
 
-
 Errors updateConfig(void)
 {
   String            configFileName;
@@ -3305,7 +3304,6 @@ Errors updateConfig(void)
     String_delete(configFileName);
     return ERROR_NO_FILE_NAME;
   }
-fprintf(stderr,"%s, %d: configFileName=%s\n",__FILE__,__LINE__,String_cString(configFileName));
 
   // read file
   error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
