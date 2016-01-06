@@ -6664,6 +6664,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
     }
 
     // update storage server settings
+    String_set(serverNode->server.name,name);
     switch (serverType)
     {
       case SERVER_TYPE_FILE:
