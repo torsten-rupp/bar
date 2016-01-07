@@ -273,15 +273,21 @@ typedef struct
 * Name   : LAMBDA
 * Purpose: define a lambda-function
 * Input  : functionReturnType - call-back function return type
+*          functionSignature  - call-back function signature
 *          functionBody       - call-back function body
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : example
+*          List_removeAndFree(list,
+*                             node,
+*                             CALLBACK_INLINE(ListNodeFreeFunction,(...),{ ... },NULL)
+*                            );
 \***********************************************************************/
 
-#define LAMBDA(functionReturnType,functionBody) \
+#define LAMBDA(functionReturnType,functionSignature,functionBody) \
   ({ \
-    functionReturnType __closure__ functionBody \
+    auto functionReturnType __closure__ functionSignature; \
+    functionReturnType __closure__ functionSignature functionBody \
     __closure__; \
   })
 
@@ -289,6 +295,7 @@ typedef struct
 * Name   : CALLBACK_INLINE
 * Purpose: define an inline call-back function (lambda-function)
 * Input  : functionReturnType - call-back function signature
+*          functionSignature  - call-back function signature
 *          functionBody       - call-back function body
 *          functionUserData   - call-back function user data
 * Output : -
@@ -296,13 +303,14 @@ typedef struct
 * Notes  : example
 *          List_removeAndFree(list,
 *                             node,
-*                             CALLBACK_INLINE(ListNodeFreeFunction,{ ... },NULL)
+*                             CALLBACK_INLINE(ListNodeFreeFunction,(...),{ ... },NULL)
 *                            );
 \***********************************************************************/
 
-#define CALLBACK_INLINE(functionReturnType,functionBody,functionUserData) \
+#define CALLBACK_INLINE(functionReturnType,functionSignature,functionBody,functionUserData) \
   ({ \
-    functionReturnType __closure__ functionBody \
+    auto functionReturnType __closure__ functionSignature; \
+    functionReturnType __closure__ functionSignature functionBody \
     __closure__; \
   }), \
   functionUserData

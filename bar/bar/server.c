@@ -4936,7 +4936,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                       );
             File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
             error = Storage_forAll(pattern,
-                                   CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
+                                   CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                    {
                                      StorageSpecifier storageSpecifier;
                                      Errors           error;
@@ -13479,7 +13479,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   // create index for matching files
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Storage_forAll(patternString,
-                         CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
+                         CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                          {
                            StorageSpecifier storageSpecifier;
 

@@ -4085,7 +4085,7 @@ fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
       {
         // delete all matching storage files which are unknown
         (void)Storage_forAll(pattern,
-                             CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData)
+                             CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                              {
                                StorageSpecifier storageSpecifier;
                                Errors           error;

@@ -206,7 +206,7 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 #define LIST_FIND(list,variable,condition) \
   List_findFirst(list,\
                  (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
-                                                         (const typeof(* (list)->head) *variable, void *userData)\
+                                                         (const typeof(* (list)->head) *variable, void *userData), \
                                                          { \
                                                            UNUSED_VARIABLE(userData); \
                                                            \
