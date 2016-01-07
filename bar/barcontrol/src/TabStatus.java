@@ -29,6 +29,8 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.events.ShellAdapter;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
@@ -1256,6 +1258,16 @@ public class TabStatus
         }
       });
 
+      // work-around for SWT/GTK group bug: text will not be fully visible if initial set is to short
+      widgetSelectedJob.setText(StringUtils.repeat('#',256));
+      widgetSelectedJob.getShell().addShellListener(new ShellAdapter()
+      {
+        @Override
+        public void shellActivated(ShellEvent shellEvent)
+        {
+          widgetSelectedJob.setText(BARControl.tr("Selected")+" ''");
+        }
+      });
     }
 
     // buttons
@@ -1530,7 +1542,6 @@ public class TabStatus
       }
       catch (CommunicationError error)
       {
-Dprintf.dprintf("");
         Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n{0}",error.getMessage()));
         return;
       }
@@ -1553,7 +1564,11 @@ Dprintf.dprintf("");
     selectedJobData = jobData;
 
     Widgets.setSelectedTableItem(widgetJobTable,selectedJobData);
-    widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null) ? selectedJobData.name : "")+"'");
+    widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null)
+                                                                ? selectedJobData.name.replaceAll("&","&&")
+                                                                : ""
+                                                             )+"'"
+                             );
 
     if (tabJobs != null) tabJobs.setSelectedJob(selectedJobData);
   }
