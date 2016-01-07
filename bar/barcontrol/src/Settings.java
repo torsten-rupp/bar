@@ -475,15 +475,9 @@ public class Settings
   // server settings
   @SettingComment(text={"","Server settings"})
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
-  public static LinkedList<Server>    servers                         = new LinkedList<Server>();//[]{new Server(DEFAULT_SERVER_NAME,DEFAULT_SERVER_PORT)};
+  public static LinkedList<Server>    servers                         = new LinkedList<Server>();
   @SettingValue(name="serverName",type=String.class,obsolete=true)
   public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
-  @SettingValue(obsolete=true)
-  public static String                serverPassword                  = null;
-  @SettingValue(obsolete=true)
-  public static int                   serverPort                      = DEFAULT_SERVER_PORT;
-  @SettingValue(obsolete=true)
-  public static int                   serverTLSPort                   = DEFAULT_SERVER_TLS_PORT;
   @SettingValue
   public static String                serverKeyFileName               = null;
 
@@ -512,6 +506,17 @@ public class Settings
   // version, help
   public static boolean               versionFlag                     = false;
   public static boolean               helpFlag                        = false;
+
+  // server name
+  public static String                serverName                      = null;
+
+  // obsolete
+  @SettingValue(obsolete=true)
+  public static String                serverPassword                  = null;
+  @SettingValue(obsolete=true)
+  public static int                   serverPort                      = -1;
+  @SettingValue(obsolete=true)
+  public static int                   serverTLSPort                   = -1;
 
   // ------------------------ native functions ----------------------------
 

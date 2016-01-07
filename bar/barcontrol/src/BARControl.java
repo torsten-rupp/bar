@@ -1218,8 +1218,7 @@ public class BARControl
   private void parseArguments(String[] args)
   {
     // parse arguments
-    String serverName = null;
-    int    z          = 0;
+    int     z = 0;
     boolean endOfOptions = false;
     while (z < args.length)
     {
@@ -1239,7 +1238,7 @@ public class BARControl
       }
       else
       {
-        serverName = args[z];
+        Settings.serverName = args[z];
         z++;
       }
     }
@@ -2491,6 +2490,9 @@ public class BARControl
                                             (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                             (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
                                            );
+        if (Settings.serverName    != null) loginData.serverName = Settings.serverName;
+        if (Settings.serverPort    != -1  ) loginData.port       = Settings.serverPort;
+        if (Settings.serverTLSPort != -1  ) loginData.tlsPort    = Settings.serverTLSPort;
         boolean connectOkFlag = false;
         if (   (loginData.serverName != null)
             && !loginData.serverName.equals("")
