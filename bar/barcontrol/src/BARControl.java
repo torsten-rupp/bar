@@ -2304,7 +2304,7 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // suspend
-          error = BARServer.executeCommand(StringParser.format("SUSPEND"),
+          error = BARServer.executeCommand(StringParser.format("SUSPEND modeMask=CREATE"),
                                            0,
                                            errorMessage
                                           );
