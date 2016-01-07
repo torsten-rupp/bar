@@ -1459,6 +1459,7 @@ public class BARControl
     Boolean result = (Boolean)Dialogs.run(dialog);
 
     // store new name, shorten list
+//TODO
 /*
     Settings.serverNames.remove(loginData.serverName);
     Settings.serverNames.add(loginData.serverName);
@@ -1941,6 +1942,16 @@ public class BARControl
       // parse arguments
       parseArguments(args);
 
+      // server login data
+      final Settings.Server defaultServer = Settings.getLastServer();
+      LoginData loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
+                                          (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
+                                          (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
+                                         );
+      if (Settings.serverName    != null) loginData.serverName = Settings.serverName;
+      if (Settings.serverPort    != -1  ) loginData.port       = Settings.serverPort;
+      if (Settings.serverTLSPort != -1  ) loginData.tlsPort    = Settings.serverTLSPort;
+
       // commands
       if (   (Settings.runJobName != null)
           || (Settings.abortJobName != null)
@@ -1962,11 +1973,10 @@ public class BARControl
         // connect to server
         try
         {
-          final Settings.Server defaultServer = Settings.getLastServer();
-          BARServer.connect((defaultServer != null) ? defaultServer.name     : Settings.DEFAULT_SERVER_NAME,
-                            (defaultServer != null) ? defaultServer.port     : Settings.DEFAULT_SERVER_PORT,
-                            (defaultServer != null) ? defaultServer.port     : Settings.DEFAULT_SERVER_PORT,
-                            (defaultServer != null) ? defaultServer.password : "",
+          BARServer.connect(loginData.serverName,
+                            loginData.port,
+                            loginData.tlsPort,
+                            loginData.password,
                             Settings.serverKeyFileName
                            );
         }
@@ -2485,14 +2495,6 @@ public class BARControl
         display = new Display();
 
         // connect to server
-        final Settings.Server defaultServer = Settings.getLastServer();
-        LoginData loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
-                                            (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                            (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
-                                           );
-        if (Settings.serverName    != null) loginData.serverName = Settings.serverName;
-        if (Settings.serverPort    != -1  ) loginData.port       = Settings.serverPort;
-        if (Settings.serverTLSPort != -1  ) loginData.tlsPort    = Settings.serverTLSPort;
         boolean connectOkFlag = false;
         if (   (loginData.serverName != null)
             && !loginData.serverName.equals("")
