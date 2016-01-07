@@ -1428,7 +1428,8 @@ LOCAL DeviceNode *newDeviceNode(ConstString name)
   DeviceNode    *deviceNode;
 
   // get new id
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  id = 0;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     globalOptions.serverList.id++;
     id = globalOptions.serverList.id;
@@ -1549,9 +1550,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       SemaphoreLock semaphoreLock;
       ServerNode    *serverNode;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1602,7 +1603,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         List_append(&globalOptions.serverList,serverNode);
       }
@@ -1612,9 +1613,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       SemaphoreLock semaphoreLock;
       ServerNode    *serverNode;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1665,7 +1666,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         List_append(&globalOptions.serverList,serverNode);
       }
@@ -1675,9 +1676,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       SemaphoreLock semaphoreLock;
       ServerNode    *serverNode;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1728,7 +1729,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         List_append(&globalOptions.serverList,serverNode);
       }
@@ -1738,9 +1739,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       SemaphoreLock semaphoreLock;
       ServerNode    *serverNode;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate server node
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1791,7 +1792,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         List_append(&globalOptions.serverList,serverNode);
       }
@@ -1801,18 +1802,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       SemaphoreLock semaphoreLock;
       DeviceNode    *deviceNode;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // find/allocate device node
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      deviceNode = NULL;
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        LIST_ITERATE(&globalOptions.deviceList,deviceNode)
-        {
-          if (String_equals(deviceNode->name,name))
-          {
-            List_remove(&globalOptions.deviceList,deviceNode);
-            break;
-          }
-        }
+        deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->name,name));
+        if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
       }
       if (deviceNode == NULL) deviceNode = newDeviceNode(name);
 
@@ -1860,7 +1855,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to device list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         List_append(&globalOptions.deviceList,deviceNode);
       }
@@ -4650,7 +4645,8 @@ ServerNode *newServerNode(ConstString name, ServerTypes serverType)
   assert(name != NULL);
 
   // get new id
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  id = 0;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     globalOptions.serverList.id++;
     id = globalOptions.serverList.id;
@@ -4699,6 +4695,7 @@ uint getFileServerSettings(ConstString      directory,
 
   UNUSED_VARIABLE(jobOptions);
 
+  serverNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find file server
@@ -4727,6 +4724,7 @@ uint getFTPServerSettings(ConstString      hostName,
   assert(hostName != NULL);
   assert(ftpServer != NULL);
 
+  serverNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find FTP server
@@ -4755,6 +4753,7 @@ uint getSSHServerSettings(ConstString      hostName,
   assert(hostName != NULL);
   assert(sshServer != NULL);
 
+  serverNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find SSH server
@@ -4786,9 +4785,10 @@ uint getWebDAVServerSettings(ConstString      hostName,
   assert(hostName != NULL);
   assert(webDAVServer != NULL);
 
-  // find WebDAV server
+  serverNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
+    // find WebDAV server
     serverNode = LIST_FIND(&globalOptions.serverList,
                            serverNode,
                               (serverNode->server.type == SERVER_TYPE_WEBDAV)
