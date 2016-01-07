@@ -987,6 +987,48 @@ node = ((Node*)node)->next;
 }
 #endif /* 0 */
 
+void *List_findFirst(const void             *list,
+                     ListNodeEqualsFunction listNodeEqualsFunction,
+                     void                   *listNodeEqualsUserData
+                    )
+{
+  Node *node;
+
+  assert(list != NULL);
+  assert(listNodeEqualsFunction != NULL);
+
+  node = ((List*)list)->head;
+  while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+  {
+    node = node->next;
+  }
+
+  return node;
+}
+
+void *List_findNext(const void             *list,
+                    void                   *node,
+                    ListNodeEqualsFunction listNodeEqualsFunction,
+                    void                   *listNodeEqualsUserData
+                   )
+{
+  assert(list != NULL);
+  assert(listNodeEqualsFunction != NULL);
+
+  UNUSED_VARIABLE(list);
+
+  if (node != NULL)
+  {
+    node = (((Node*)node))->next;
+    while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+    {
+      node = (((Node*)node))->next;
+    }
+  }
+
+  return node;
+}
+
 void List_sort(void                    *list,
                ListNodeCompareFunction listNodeCompareFunction,
                void                    *listNodeCompareUserData
