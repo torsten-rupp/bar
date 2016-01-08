@@ -2693,6 +2693,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
   String              baseName;
   SemaphoreLock       semaphoreLock;
   JobNode             *jobNode;
+  const JobNode       *jobNode1,*jobNode2;
 
   assert(jobsDirectory != NULL);
 
@@ -2782,6 +2783,25 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
       {
         jobNode = jobNode->next;
       }
+    }
+  }
+
+  // check for duplicate UUIDs
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    jobNode1 = jobList.head;
+    while (jobNode1 != NULL)
+    {
+      jobNode2 = jobNode1->next;
+      while (jobNode2 != NULL)
+      {
+        if (String_equals(jobNode1->uuid,jobNode2->uuid))
+        {
+          printWarning("Duplicate job UUID in '%s' and '%s'!\n",String_cString(jobNode1->name),String_cString(jobNode2->name));
+        }
+        jobNode2 = jobNode2->next;
+      }
+      jobNode1 = jobNode1->next;
     }
   }
 
