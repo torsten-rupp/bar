@@ -399,9 +399,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s `find $destination -type d -name "zlib-*"` zlib
+        $LN -sfT `find $destination -type d -name "zlib-*"` zlib
       else
-        $LN -f -s `find $tmpDirectory -type d -name "zlib-*"` zlib
+        $LN -sfT `find $tmpDirectory -type d -name "zlib-*"` zlib
       fi
     fi
   fi
@@ -423,9 +423,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/bzip2-1.0.5 bzip2
+        $LN -sfT $destination/bzip2-1.0.5 bzip2
       else
-        $LN -f -s $tmpDirectory/bzip2-1.0.5 bzip2
+        $LN -sfT $tmpDirectory/bzip2-1.0.5 bzip2
       fi
     fi
   fi
@@ -449,9 +449,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s `find $destination -type d -name "xz-*"` xz
+        $LN -sfT `find $destination -type d -name "xz-*"` xz
       else
-        $LN -f -s `find $tmpDirectory -type d -name "xz-*"` xz
+        $LN -sfT `find $tmpDirectory -type d -name "xz-*"` xz
       fi
     fi
   fi
@@ -473,9 +473,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/lzo-$LZO_VERSION lzo
+        $LN -sfT $destination/lzo-$LZO_VERSION lzo
       else
-        $LN -f -s $tmpDirectory/lzo-$LZO_VERSION lzo
+        $LN -sfT $tmpDirectory/lzo-$LZO_VERSION lzo
       fi
     fi
   fi
@@ -503,9 +503,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s `find $destination -type d -name "lz4-*"` lz4
+        $LN -sfT `find $destination -type d -name "lz4-*"` lz4
       else
-        $LN -f -s `find $tmpDirectory -type d -name "lz4-*"` lz4
+        $LN -sfT `find $tmpDirectory -type d -name "lz4-*"` lz4
       fi
     fi
   fi
@@ -533,9 +533,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s `find $destination -type d -name "xdelta3*"` xdelta3
+        $LN -sfT `find $destination -type d -name "xdelta3*"` xdelta3
       else
-        $LN -f -s `find $tmpDirectory -type d -name "xdelta3*"` xdelta3
+        $LN -sfT `find $tmpDirectory -type d -name "xdelta3*"` xdelta3
       fi
     fi
   fi
@@ -567,11 +567,11 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error
-        $LN -f -s $destination/libgcrypt-$LIBGCRYPT_VERSION libgcrypt
+        $LN -sfT $destination/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error
+        $LN -sfT $destination/libgcrypt-$LIBGCRYPT_VERSION libgcrypt
       else
-        $LN -f -s $tmpDirectory/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error
-        $LN -f -s $tmpDirectory/libgcrypt-$LIBGCRYPT_VERSION libgcrypt
+        $LN -sfT $tmpDirectory/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error
+        $LN -sfT $tmpDirectory/libgcrypt-$LIBGCRYPT_VERSION libgcrypt
       fi
     fi
   fi
@@ -607,9 +607,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/ftplib-4.0 ftplib
+        $LN -sfT $destination/ftplib-4.0 ftplib
       else
-        $LN -f -s $tmpDirectory/ftplib-4.0 ftplib
+        $LN -sfT $tmpDirectory/ftplib-4.0 ftplib
       fi
     fi
   fi
@@ -631,9 +631,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/c-ares-1.10.0 c-ares
+        $LN -sfT $destination/c-ares-1.10.0 c-ares
       else
-        $LN -f -s $tmpDirectory/c-ares-1.10.0 c-ares
+        $LN -sfT $tmpDirectory/c-ares-1.10.0 c-ares
       fi
     fi
 
@@ -653,9 +653,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/curl-7.28.1 curl
+        $LN -sfT $destination/curl-7.28.1 curl
       else
-        $LN -f -s $tmpDirectory/curl-7.28.1 curl
+        $LN -sfT $tmpDirectory/curl-7.28.1 curl
       fi
     fi
   fi
@@ -677,9 +677,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/mxml-2.7 mxml
+        $LN -sfT $destination/mxml-2.7 mxml
       else
-        $LN -f -s $tmpDirectory/mxml-2.7 mxml
+        $LN -sfT $tmpDirectory/mxml-2.7 mxml
       fi
     fi
   fi
@@ -701,9 +701,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/openssl-1.0.1g openssl
+        $LN -sfT $destination/openssl-1.0.1g openssl
       else
-        $LN -f -s $tmpDirectory/openssl-1.0.1g openssl
+        $LN -sfT $tmpDirectory/openssl-1.0.1g openssl
       fi
     fi
   fi
@@ -730,9 +730,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/libssh2-$LIBSSH2_VERSION libssh2
+        $LN -sfT $destination/libssh2-$LIBSSH2_VERSION libssh2
       else
-        $LN -f -s $tmpDirectory/libssh2-$LIBSSH2_VERSION libssh2
+        $LN -sfT $tmpDirectory/libssh2-$LIBSSH2_VERSION libssh2
       fi
     fi
   fi
@@ -754,9 +754,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/nettle-2.6 nettle
+        $LN -sfT $destination/nettle-2.6 nettle
       else
-        $LN -f -s $tmpDirectory/nettle-2.6 nettle
+        $LN -sfT $tmpDirectory/nettle-2.6 nettle
       fi
     fi
 
@@ -776,9 +776,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s `find $destination -type d -name "gmp-*"` gmp
+        $LN -sfT `find $destination -type d -name "gmp-*"` gmp
       else
-        $LN -f -s `find $tmpDirectory -type d -name "gmp-*"` gmp
+        $LN -sfT `find $tmpDirectory -type d -name "gmp-*"` gmp
       fi
     fi
 
@@ -799,9 +799,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/gnutls-3.1.18 gnutls
+        $LN -sfT $destination/gnutls-3.1.18 gnutls
       else
-        $LN -f -s $tmpDirectory/gnutls-3.1.18 gnutls
+        $LN -sfT $tmpDirectory/gnutls-3.1.18 gnutls
       fi
     fi
   fi
@@ -824,9 +824,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/libcdio-0.92 libcdio
+        $LN -sfT $destination/libcdio-0.92 libcdio
       else
-        $LN -f -s $tmpDirectory/libcdio-0.92 libcdio
+        $LN -sfT $tmpDirectory/libcdio-0.92 libcdio
       fi
     fi
   fi
@@ -849,9 +849,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/mtx-$MTX_VERSION mtx
+        $LN -sfT $destination/mtx-$MTX_VERSION mtx
       else
-        $LN -f -s $tmpDirectory/mtx-$MTX_VERSION mtx
+        $LN -sfT $tmpDirectory/mtx-$MTX_VERSION mtx
       fi
     fi
   fi
@@ -874,9 +874,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/pcre-$PCRE_VERSION pcre
+        $LN -sfT $destination/pcre-$PCRE_VERSION pcre
       else
-        $LN -f -s $tmpDirectory/pcre-$PCRE_VERSION pcre
+        $LN -sfT $tmpDirectory/pcre-$PCRE_VERSION pcre
       fi
     fi
   fi
@@ -899,9 +899,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/icu icu
+        $LN -sfT $destination/icu icu
       else
-        $LN -f -s $tmpDirectory/icu icu
+        $LN -sfT $tmpDirectory/icu icu
       fi
     fi
   fi
@@ -924,9 +924,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/binutils-$BINUTILS_VERSION binutils
+        $LN -sfT $destination/binutils-$BINUTILS_VERSION binutils
       else
-        $LN -f -s $tmpDirectory/binutils-$BINUTILS_VERSION binutils
+        $LN -sfT $tmpDirectory/binutils-$BINUTILS_VERSION binutils
       fi
     fi
   fi
@@ -949,9 +949,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/pthreads-w32-2-9-1-release pthreads-w32
+        $LN -sfT $destination/pthreads-w32-2-9-1-release pthreads-w32
       else
-        $LN -f -s $tmpDirectory/pthreads-w32-2-9-1-release pthreads-w32
+        $LN -sfT $tmpDirectory/pthreads-w32-2-9-1-release pthreads-w32
       fi
     fi
   fi
@@ -973,9 +973,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/breakpad breakpad
+        $LN -sfT $destination/breakpad breakpad
       else
-        $LN -f -s $tmpDirectory/breakpad breakpad
+        $LN -sfT $tmpDirectory/breakpad breakpad
       fi
     fi
   fi
@@ -1001,9 +1001,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/epm-$EPM_VERSION epm
+        $LN -sfT $destination/epm-$EPM_VERSION epm
       else
-        $LN -f -s $tmpDirectory/epm-$EPM_VERSION epm
+        $LN -sfT $tmpDirectory/epm-$EPM_VERSION epm
       fi
     fi
   fi
@@ -1025,9 +1025,9 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/launch4j launch4j
+        $LN -sfT $destination/launch4j launch4j
       else
-        $LN -f -s $tmpDirectory/launch4j launch4j
+        $LN -sfT $tmpDirectory/launch4j launch4j
       fi
     fi
   fi
@@ -1055,11 +1055,11 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       if test -n "$destination"; then
-        $LN -f -s $destination/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows
-        $LN -f -s $destination/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64
+        $LN -sfT $destination/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows
+        $LN -sfT $destination/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64
       else
-        $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows
-        $LN -f -s $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64
+        $LN -sfT $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows
+        $LN -sfT $tmpDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64
       fi
     fi
   fi
