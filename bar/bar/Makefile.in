@@ -1,4 +1,3 @@
-
 #
 # $Revision$
 # $Date$
@@ -868,6 +867,7 @@ TEST_FILE_NAMES = \
   data\".dat \
   data\\.dat \
   data\\n.dat \
+  data%d%f%s%p.dat \
   delta1/test.dat \
   delta2/test.dat
 ifneq ($(ATTR)$(SETFATTR),)
@@ -1452,6 +1452,9 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -h 1>/dev/null $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
 	#
+	# special file names
+	$(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test%d%f%p%s.dat $(if $(QUIET),1>/dev/null))	
+	#
 	# different options
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar --verbose=2 $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
@@ -1678,6 +1681,9 @@ $(TEST_DATA_DIR)/data/data\\.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 $(TEST_DATA_DIR)/data/data\\n.dat:
+	$(INSTALL) -d $(@D)
+	$(ECHO) Hello World > $@
+$(TEST_DATA_DIR)/data/data%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 $(TEST_DATA_DIR)/data/delta1/test.dat:
