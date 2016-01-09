@@ -1658,7 +1658,7 @@ Errors Command_compare(const StringList                *storageNameList,
         }
         if (failError == ERROR_NONE)
         {
-          failError = ERRORX_(ENTRY_INCOMPLETE,0,String_cString(fragmentNode->name));;
+          failError = ERRORX_(ENTRY_INCOMPLETE,0,"%s",String_cString(fragmentNode->name));;
         }
       }
     }

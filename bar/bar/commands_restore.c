@@ -1409,7 +1409,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                        );
               if (jobOptions->stopOnErrorFlag)
               {
-                restoreInfo->failError = ERRORX_(FILE_EXISTS_,0,String_cString(destinationFileName));
+                restoreInfo->failError = ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName));
               }
               AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
               continue;
@@ -2085,7 +2085,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                        );
               if (jobOptions->stopOnErrorFlag)
               {
-                restoreInfo->failError = ERRORX_(FILE_EXISTS_,0,String_cString(destinationFileName));
+                restoreInfo->failError = ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName));
               }
               AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
               continue;
@@ -2389,7 +2389,7 @@ Errors Command_restore(const StringList                *storageNameList,
           }
           if (restoreInfo.failError == ERROR_NONE)
           {
-            restoreInfo.failError = ERRORX_(ENTRY_INCOMPLETE,0,String_cString(fragmentNode->name));
+            restoreInfo.failError = ERRORX_(ENTRY_INCOMPLETE,0,"%s",String_cString(fragmentNode->name));
           }
         }
 

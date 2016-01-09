@@ -574,7 +574,7 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
     }
     else if (!File_isDirectory(directory))
     {
-      error = ERRORX_(NOT_A_DIRECTORY,0,String_cString(directory));
+      error = ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(directory));
       String_delete(directory);
       return error;
     }
