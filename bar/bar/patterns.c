@@ -189,7 +189,7 @@ LOCAL Errors compilePattern(ConstString regexString,
   {
     regerror(error,regexBegin,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
     String_delete(string);
-    return ERRORX_(INVALID_PATTERN,0,buffer);
+    return ERRORX_(INVALID_PATTERN,0,"%s",buffer);
   }
 
   String_set(string,regexString);
@@ -199,7 +199,7 @@ LOCAL Errors compilePattern(ConstString regexString,
     regerror(error,regexEnd,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = '\0';
     regfree(regexBegin);
     String_delete(string);
-    return ERRORX_(INVALID_PATTERN,0,buffer);
+    return ERRORX_(INVALID_PATTERN,0,"%s",buffer);
   }
 
   String_set(string,regexString);
@@ -211,7 +211,7 @@ LOCAL Errors compilePattern(ConstString regexString,
     regfree(regexEnd);
     regfree(regexBegin);
     String_delete(string);
-    return ERRORX_(INVALID_PATTERN,0,buffer);
+    return ERRORX_(INVALID_PATTERN,0,"%s",buffer);
   }
 
   String_set(string,regexString);
@@ -222,7 +222,7 @@ LOCAL Errors compilePattern(ConstString regexString,
     regfree(regexEnd);
     regfree(regexBegin);
     String_delete(string);
-    return ERRORX_(INVALID_PATTERN,0,buffer);
+    return ERRORX_(INVALID_PATTERN,0,"%s",buffer);
   }
 
   // free resources

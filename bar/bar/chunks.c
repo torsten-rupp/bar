@@ -1078,7 +1078,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                   if (arrayData == NULL)
                   {
                     snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)arrayLength*size);
-                    error = ERRORX_(CORRUPT_DATA,0,errorText);
+                    error = ERRORX_(CORRUPT_DATA,0,"%s",errorText);
                     break;
                   }
                   memcpy(arrayData,p,(ulong)arrayLength*size);
@@ -1099,7 +1099,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                   if (strings == NULL)
                   {
                     snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)arrayLength*sizeof(String));
-                    error = ERRORX_(CORRUPT_DATA,0,errorText);
+                    error = ERRORX_(CORRUPT_DATA,0,"%s",errorText);
                     break;
                   }
 
@@ -1143,7 +1143,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             if (n != crc)
             {
               snprintf(errorText,sizeof(errorText),"%llu",offset);
-              error = ERRORX_(CRC_,0,errorText);
+              error = ERRORX_(CRC_,0,"%s",errorText);
               break;
             }
 

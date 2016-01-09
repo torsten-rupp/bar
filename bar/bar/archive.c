@@ -731,7 +731,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
     free(archiveInfo->cryptKeyData); archiveInfo->cryptKeyData = NULL;
     Chunk_close(&chunkInfoKey);
     Chunk_done(&chunkInfoKey);
-    return ERRORX_(CORRUPT_DATA,0,String_cString(archiveInfo->printableStorageName));
+    return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(archiveInfo->printableStorageName));
   }
 
   // close chunk
@@ -6335,7 +6335,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundFileEntryFlag)                                                  return ERROR_NO_FILE_ENTRY;
-    else if (!foundFileDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,String_cString(fileName));
+    else if (!foundFileDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(fileName));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -8245,7 +8245,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundHardLinkEntryFlag)                                              return ERROR_NO_FILE_ENTRY;
-    else if (!foundHardLinkDataFlag)                                               return ERRORX_(NO_FILE_DATA,0,String_cString(StringList_first(fileNameList,NULL)));
+    else if (!foundHardLinkDataFlag)                                               return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(StringList_first(fileNameList,NULL)));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 

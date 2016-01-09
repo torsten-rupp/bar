@@ -799,7 +799,7 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   sqliteResult = sqlite3_open_v2(fileName,&databaseHandle->handle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
-    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     return error;
   }
   #ifndef NDEBUG
@@ -1013,7 +1013,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
                                      );
     if (sqliteResult != SQLITE_OK)
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),sqlite3_errmsg(fromDatabaseHandle->handle));
+      return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"%s",sqlite3_errmsg(fromDatabaseHandle->handle));
     }
 
     // create insert statement
@@ -1027,7 +1027,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     if (sqliteResult != SQLITE_OK)
     {
       sqlite3_finalize(fromHandle);
-      return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),sqlite3_errmsg(toDatabaseHandle->handle));
+      return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s",sqlite3_errmsg(toDatabaseHandle->handle));
     }
 
     // copy rows
@@ -1119,7 +1119,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
       {
         sqlite3_finalize(toHandle);
         sqlite3_finalize(fromHandle);
-        return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),sqlite3_errmsg(toDatabaseHandle->handle));
+        return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s",sqlite3_errmsg(toDatabaseHandle->handle));
       }
       lastRowId = (uint64)sqlite3_last_insert_rowid(toDatabaseHandle->handle);
       LIST_ITERATE(&toColumnList,columnNode)
@@ -1442,7 +1442,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                );
     if (sqliteResult != SQLITE_OK)
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     }
 
     // copy old table -> new table
@@ -1455,7 +1455,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                      );
     if (sqliteResult != SQLITE_OK)
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     }
 
     // copy table rows
@@ -1518,7 +1518,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                  );
       if (sqliteResult != SQLITE_OK)
       {
-        return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+        return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
       }
     }
 
@@ -1632,7 +1632,7 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     }
 
     return error;
@@ -1736,7 +1736,7 @@ String_delete(s);
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     }
   });
   if (error != ERROR_NONE)
@@ -2177,7 +2177,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     }
 
     if (sqlite3_step(handle) == SQLITE_ROW)
@@ -2262,7 +2262,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     }
 
     return error;
@@ -2300,7 +2300,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
       }
       else
       {
-        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
       }
 
       return error;
@@ -2375,7 +2375,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     }
 
     if (sqlite3_step(handle) == SQLITE_ROW)
@@ -2459,7 +2459,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
     }
 
     return error;
