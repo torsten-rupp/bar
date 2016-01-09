@@ -1453,7 +1453,7 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
 	#
 	# special file names
-	$(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar test%d%f%p%s.dat $(if $(QUIET),1>/dev/null))	
+	$(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar not-existing-file-%d%f%p%s.dat $(if $(QUIET),1>/dev/null))	
 	#
 	# different options
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar --verbose=2 $(if $(QUIET),1>/dev/null))
@@ -1681,6 +1681,9 @@ $(TEST_DATA_DIR)/data/data\\.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 $(TEST_DATA_DIR)/data/data\\n.dat:
+	$(INSTALL) -d $(@D)
+	$(ECHO) Hello World > $@
+$(TEST_DATA_DIR)/data/data%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 $(TEST_DATA_DIR)/data/data%d%f%s%p.dat:
