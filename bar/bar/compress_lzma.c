@@ -116,7 +116,7 @@ LOCAL Errors CompressLZMA_compressData(CompressInfo *compressInfo)
         lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
         if (lzmaResult != LZMA_OK)
         {
-          return ERRORX_(DEFLATE_FAIL,lzmaResult,lzmaErrorText(lzmaResult));
+          return ERRORX_(DEFLATE_FAIL,lzmaResult,"%s",lzmaErrorText(lzmaResult));
         }
         RingBuffer_decrement(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->lzmalib.stream.avail_in
@@ -152,7 +152,7 @@ LOCAL Errors CompressLZMA_compressData(CompressInfo *compressInfo)
         }
         else if (lzmaResult != LZMA_OK)
         {
-          return ERRORX_(DEFLATE_FAIL,lzmaResult,lzmaErrorText(lzmaResult));
+          return ERRORX_(DEFLATE_FAIL,lzmaResult,"%s",lzmaErrorText(lzmaResult));
         }
         RingBuffer_increment(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->lzmalib.stream.avail_out
@@ -204,7 +204,7 @@ LOCAL Errors CompressLZMA_decompressData(CompressInfo *compressInfo)
         }
         else if (lzmaResult != LZMA_OK)
         {
-          return ERRORX_(INFLATE_FAIL,lzmaResult,lzmaErrorText(lzmaResult));
+          return ERRORX_(INFLATE_FAIL,lzmaResult,"%s",lzmaErrorText(lzmaResult));
         }
         RingBuffer_decrement(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->lzmalib.stream.avail_in
@@ -243,7 +243,7 @@ LOCAL Errors CompressLZMA_decompressData(CompressInfo *compressInfo)
         }
         else if (lzmaResult != LZMA_OK)
         {
-          return ERRORX_(INFLATE_FAIL,lzmaResult,lzmaErrorText(lzmaResult));
+          return ERRORX_(INFLATE_FAIL,lzmaResult,"%s",lzmaErrorText(lzmaResult));
         }
         RingBuffer_increment(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->lzmalib.stream.avail_out
@@ -295,7 +295,7 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
       {
         RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
         RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-        return ERRORX_(INIT_COMPRESS,lzmaResult,lzmaErrorText(lzmaResult));
+        return ERRORX_(INIT_COMPRESS,lzmaResult,"%s",lzmaErrorText(lzmaResult));
       }
       break;
     case COMPRESS_MODE_INFLATE:
@@ -304,7 +304,7 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
       {
         RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
         RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-        return ERRORX_(INIT_DECOMPRESS,lzmaResult,lzmaErrorText(lzmaResult));
+        return ERRORX_(INIT_DECOMPRESS,lzmaResult,"%s",lzmaErrorText(lzmaResult));
       }
       break;
     #ifndef NDEBUG

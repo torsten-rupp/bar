@@ -186,7 +186,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
                                                        );
           if (lzoError != LZO_E_OK)
           {
-            return ERRORX_(DEFLATE_FAIL,lzoError,getLZOErrorText(lzoError));
+            return ERRORX_(DEFLATE_FAIL,lzoError,"%s",getLZOErrorText(lzoError));
           }
         #else /* LZO_DEBUG_DISABLE_COMPRESS */
           compressLength = 0;
@@ -275,7 +275,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
                                                        );
           if (lzoError != LZO_E_OK)
           {
-            return ERRORX_(DEFLATE_FAIL,lzoError,getLZOErrorText(lzoError));
+            return ERRORX_(DEFLATE_FAIL,lzoError,"%s",getLZOErrorText(lzoError));
           }
         #else /* LZO_DEBUG_DISABLE_COMPRESS */
           compressLength = 0;
@@ -452,7 +452,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                                                            );
             if (lzoError != LZO_E_OK)
             {
-              return ERRORX_(INFLATE_FAIL,lzoError,getLZOErrorText(lzoError));
+              return ERRORX_(INFLATE_FAIL,lzoError,"%s",getLZOErrorText(lzoError));
             }
             assert(length <= compressInfo->lzo.bufferSize);
 
@@ -590,7 +590,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
                                                                );
                 if (lzoError != LZO_E_OK)
                 {
-                  return ERRORX_(INFLATE_FAIL,lzoError,getLZOErrorText(lzoError));
+                  return ERRORX_(INFLATE_FAIL,lzoError,"%s",getLZOErrorText(lzoError));
                 }
                 assert(length <= compressInfo->lzo.bufferSize);
 

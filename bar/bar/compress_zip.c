@@ -269,7 +269,7 @@ LOCAL Errors CompressZIP_init(CompressInfo       *compressInfo,
       {
         RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
         RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-        return ERRORX_(INIT_COMPRESS,zlibResult,zError(zlibResult));
+        return ERRORX_(INIT_COMPRESS,zlibResult,"%s",zError(zlibResult));
       }
       break;
     case COMPRESS_MODE_INFLATE:
@@ -278,7 +278,7 @@ LOCAL Errors CompressZIP_init(CompressInfo       *compressInfo,
       {
         RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
         RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-        return ERRORX_(INIT_DECOMPRESS,zlibResult,zError(zlibResult));
+        return ERRORX_(INIT_DECOMPRESS,zlibResult,"%s",zError(zlibResult));
       }
       break;
     #ifndef NDEBUG
