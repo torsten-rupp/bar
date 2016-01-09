@@ -168,13 +168,13 @@ LOCAL Errors execute(const char *command, const char *arguments[])
   }
   else if (pid < 0)
   {
-    error = ERRORX_(EXEC_FAIL,errno,command);
+    error = ERRORX_(EXEC_FAIL,errno,"%s",command);
     return error;
   }
 
   if (waitpid(pid,&status,0) == -1)
   {
-    error = ERRORX_(EXEC_FAIL,errno,command);
+    error = ERRORX_(EXEC_FAIL,errno,"%s",command);
   }
   if      (WIFEXITED(status))
   {
@@ -184,12 +184,12 @@ LOCAL Errors execute(const char *command, const char *arguments[])
     }
     else
     {
-      error = ERRORX_(EXEC_FAIL,WEXITSTATUS(status),command);
+      error = ERRORX_(EXEC_FAIL,WEXITSTATUS(status),"%s",command);
     }
   }
   else if (WIFSIGNALED(status))
   {
-    error = ERRORX_(EXEC_FAIL,WTERMSIG(status),command);
+    error = ERRORX_(EXEC_FAIL,WTERMSIG(status),"%s",command);
   }
   else
   {
@@ -219,14 +219,14 @@ Errors Device_open(DeviceHandle *deviceHandle,
       deviceHandle->file = fopen(String_cString(deviceName),"rb");
       if (deviceHandle->file == NULL)
       {
-        return ERRORX_(OPEN_DEVICE,errno,String_cString(deviceName));
+        return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
       }
       break;
     case DEVICE_OPEN_WRITE:
       deviceHandle->file = fopen(String_cString(deviceName),"r+b");
       if (deviceHandle->file == NULL)
       {
-        return ERRORX_(OPEN_DEVICE,errno,String_cString(deviceName));
+        return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
       }
       break;
     #ifndef NDEBUG
@@ -239,20 +239,20 @@ Errors Device_open(DeviceHandle *deviceHandle,
   // get device size
   if (FSEEK(deviceHandle->file,(off_t)0,SEEK_END) == -1)
   {
-    error = ERRORX_(IO_ERROR,errno,String_cString(deviceName));
+    error = ERRORX_(IO_ERROR,errno,"%s",String_cString(deviceName));
     fclose(deviceHandle->file);
     return error;
   }
   n = FTELL(deviceHandle->file);
   if (n == (off_t)(-1))
   {
-    error = ERRORX_(IO_ERROR,errno,String_cString(deviceName));
+    error = ERRORX_(IO_ERROR,errno,"%s",String_cString(deviceName));
     fclose(deviceHandle->file);
     return error;
   }
   if (FSEEK(deviceHandle->file,(off_t)0,SEEK_SET) == -1)
   {
-    error = ERRORX_(IO_ERROR,errno,String_cString(deviceName));
+    error = ERRORX_(IO_ERROR,errno,"%s",String_cString(deviceName));
     fclose(deviceHandle->file);
     return error;
   }
@@ -317,7 +317,7 @@ Errors Device_read(DeviceHandle *deviceHandle,
       || ((n < (ssize_t)bufferLength) && (bytesRead == NULL))
      )
   {
-    return ERRORX_(IO_ERROR,errno,String_cString(deviceHandle->name));
+    return ERRORX_(IO_ERROR,errno,"%s",String_cString(deviceHandle->name));
   }
   deviceHandle->index += n;
 
@@ -342,7 +342,7 @@ Errors Device_write(DeviceHandle *deviceHandle,
   if (deviceHandle->index > deviceHandle->size) deviceHandle->size = deviceHandle->index;
   if (n != (ssize_t)bufferLength)
   {
-    return ERRORX_(IO_ERROR,errno,String_cString(deviceHandle->name));
+    return ERRORX_(IO_ERROR,errno,"%s",String_cString(deviceHandle->name));
   }
 
   return ERROR_NONE;
@@ -366,7 +366,7 @@ Errors Device_tell(DeviceHandle *deviceHandle, uint64 *offset)
   n = FTELL(deviceHandle->file);
   if (n == (off_t)(-1))
   {
-    return ERRORX_(IO_ERROR,errno,String_cString(deviceHandle->name));
+    return ERRORX_(IO_ERROR,errno,"%s",String_cString(deviceHandle->name));
   }
 // NYI
 //assert(sizeof(off_t)==8);
@@ -386,7 +386,7 @@ Errors Device_seek(DeviceHandle *deviceHandle,
 
   if (FSEEK(deviceHandle->file,(off_t)offset,SEEK_SET) == -1)
   {
-    return ERRORX_(IO_ERROR,errno,String_cString(deviceHandle->name));
+    return ERRORX_(IO_ERROR,errno,"%s",String_cString(deviceHandle->name));
   }
   deviceHandle->index = offset;
 

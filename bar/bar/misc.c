@@ -169,19 +169,19 @@ t++;
     // create i/o pipes
     if (pipe(pipeStdin) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,errorText);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",errorText);
       return error;
     }
     if (pipe(pipeStdout) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,errorText);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",errorText);
       close(pipeStdin[0]);
       close(pipeStdin[1]);
       return error;
     }
     if (pipe(pipeStderr) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,errorText);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",errorText);
       close(pipeStdout[0]);
       close(pipeStdout[1]);
       close(pipeStdin[0]);
@@ -222,7 +222,7 @@ t++;
     }
     else if (pid < 0)
     {
-      error = ERRORX_(EXEC_FAIL,errno,errorText);
+      error = ERRORX_(EXEC_FAIL,errno,"%s",errorText);
 
       close(pipeStderr[0]);
       close(pipeStderr[1]);
@@ -301,14 +301,14 @@ error = ERROR_NONE;
       else
       {
         printInfo(3,"FAIL (exitcode %d)\n",exitcode);
-        error = ERRORX_(EXEC_FAIL,exitcode,errorText);
+        error = ERRORX_(EXEC_FAIL,exitcode,"%s",errorText);
         return error;
       }
     }
     else if (WIFSIGNALED(status))
     {
       terminateSignal = WTERMSIG(status);
-      error = ERRORX_(EXEC_FAIL,terminateSignal,errorText);
+      error = ERRORX_(EXEC_FAIL,terminateSignal,"%s",errorText);
       printInfo(3,"FAIL (signal %d)\n",terminateSignal);
       return error;
     }
@@ -1250,7 +1250,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
     if (!String_getNextToken(&stringTokenizer,&token,NULL))
     {
-      error = ERRORX_(PARSE_COMMAND,0,String_cString(commandLine));
+      error = ERRORX_(PARSE_COMMAND,0,"%s",String_cString(commandLine));
       String_doneTokenizer(&stringTokenizer);
       StringList_done(&argumentList);
       String_delete(command);
