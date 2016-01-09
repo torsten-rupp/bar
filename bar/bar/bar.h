@@ -466,18 +466,6 @@ void initJobOptions(JobOptions *jobOptions);
 void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
 
 /***********************************************************************\
-* Name   : copyJobOptions
-* Purpose: copy job options structure
-* Input  : fromJobOptions - source job options
-*          toJobOptions   - destination job options variable
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions);
-
-/***********************************************************************\
 * Name   : doneJobOptions
 * Purpose: done job options structure
 * Input  : jobOptions - job options

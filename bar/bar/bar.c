@@ -3741,7 +3741,7 @@ Errors initLog(LogHandle *logHandle)
   logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
   if (logHandle->logFile == NULL)
   {
-    error = ERRORX_(CREATE_FILE,errno,String_cString(logHandle->logFileName));
+    error = ERRORX_(CREATE_FILE,errno,"%s",String_cString(logHandle->logFileName));
     File_delete(logHandle->logFileName,FALSE);
     String_delete(logHandle->logFileName);
     return error;
@@ -4241,66 +4241,56 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   assert(jobOptions != NULL);
   assert(fromJobOptions != NULL);
 
-  initJobOptions(jobOptions);
-  copyJobOptions(fromJobOptions,jobOptions);
-}
+  memcpy(jobOptions,fromJobOptions,sizeof(JobOptions));
+  jobOptions->incrementalListFileName             = String_duplicate(fromJobOptions->incrementalListFileName);
+  jobOptions->destination                         = String_duplicate(fromJobOptions->destination);
 
-void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
-{
-  assert(fromJobOptions != NULL);
-  assert(toJobOptions != NULL);
+  jobOptions->cryptPassword                       = Password_duplicate(fromJobOptions->cryptPassword);
+  jobOptions->cryptPublicKeyFileName              = String_duplicate(fromJobOptions->cryptPublicKeyFileName);
+  jobOptions->cryptPrivateKeyFileName             = String_duplicate(fromJobOptions->cryptPrivateKeyFileName);
 
-  memcpy(toJobOptions,fromJobOptions,sizeof(JobOptions));
+  jobOptions->mountDeviceName                     = String_duplicate(fromJobOptions->mountDeviceName);
 
-  toJobOptions->incrementalListFileName             = String_duplicate(fromJobOptions->incrementalListFileName);
-  toJobOptions->destination                         = String_duplicate(fromJobOptions->destination);
+  jobOptions->preProcessScript                    = String_duplicate(fromJobOptions->preProcessScript);
+  jobOptions->postProcessScript                   = String_duplicate(fromJobOptions->postProcessScript);
 
-  toJobOptions->cryptPassword                       = Password_duplicate(fromJobOptions->cryptPassword);
-  toJobOptions->cryptPublicKeyFileName              = String_duplicate(fromJobOptions->cryptPublicKeyFileName);
-  toJobOptions->cryptPrivateKeyFileName             = String_duplicate(fromJobOptions->cryptPrivateKeyFileName);
+  jobOptions->ftpServer.loginName                 = String_duplicate(fromJobOptions->ftpServer.loginName);
+  jobOptions->ftpServer.password                  = Password_duplicate(fromJobOptions->ftpServer.password);
 
-  toJobOptions->mountDeviceName                     = String_duplicate(fromJobOptions->mountDeviceName);
+  jobOptions->sshServer.loginName                 = String_duplicate(fromJobOptions->sshServer.loginName);
+  jobOptions->sshServer.password                  = Password_duplicate(fromJobOptions->sshServer.password);
+  duplicateKey(&jobOptions->sshServer.publicKey,&fromJobOptions->sshServer.publicKey);
+  duplicateKey(&jobOptions->sshServer.privateKey,&fromJobOptions->sshServer.privateKey);
 
-  toJobOptions->preProcessScript                    = String_duplicate(fromJobOptions->preProcessScript);
-  toJobOptions->postProcessScript                   = String_duplicate(fromJobOptions->postProcessScript);
+  jobOptions->webDAVServer.loginName              = String_duplicate(fromJobOptions->webDAVServer.loginName);
+  jobOptions->webDAVServer.password               = Password_duplicate(fromJobOptions->webDAVServer.password);
+  duplicateKey(&jobOptions->webDAVServer.publicKey,&fromJobOptions->webDAVServer.publicKey);
+  duplicateKey(&jobOptions->webDAVServer.privateKey,&fromJobOptions->webDAVServer.privateKey);
 
-  toJobOptions->ftpServer.loginName                 = String_duplicate(fromJobOptions->ftpServer.loginName);
-  toJobOptions->ftpServer.password                  = Password_duplicate(fromJobOptions->ftpServer.password);
+  jobOptions->opticalDisk.requestVolumeCommand    = String_duplicate(fromJobOptions->opticalDisk.requestVolumeCommand);
+  jobOptions->opticalDisk.unloadVolumeCommand     = String_duplicate(fromJobOptions->opticalDisk.unloadVolumeCommand);
+  jobOptions->opticalDisk.imagePreProcessCommand  = String_duplicate(fromJobOptions->opticalDisk.imagePreProcessCommand);
+  jobOptions->opticalDisk.imagePostProcessCommand = String_duplicate(fromJobOptions->opticalDisk.imagePostProcessCommand);
+  jobOptions->opticalDisk.imageCommand            = String_duplicate(fromJobOptions->opticalDisk.imageCommand);
+  jobOptions->opticalDisk.eccPreProcessCommand    = String_duplicate(fromJobOptions->opticalDisk.eccPreProcessCommand);
+  jobOptions->opticalDisk.eccPostProcessCommand   = String_duplicate(fromJobOptions->opticalDisk.eccPostProcessCommand);
+  jobOptions->opticalDisk.eccCommand              = String_duplicate(fromJobOptions->opticalDisk.eccCommand);
+  jobOptions->opticalDisk.writePreProcessCommand  = String_duplicate(fromJobOptions->opticalDisk.writePreProcessCommand);
+  jobOptions->opticalDisk.writePostProcessCommand = String_duplicate(fromJobOptions->opticalDisk.writePostProcessCommand);
+  jobOptions->opticalDisk.writeCommand            = String_duplicate(fromJobOptions->opticalDisk.writeCommand);
 
-  toJobOptions->sshServer.loginName                 = String_duplicate(fromJobOptions->sshServer.loginName);
-  toJobOptions->sshServer.password                  = Password_duplicate(fromJobOptions->sshServer.password);
-  duplicateKey(&toJobOptions->sshServer.publicKey,&fromJobOptions->sshServer.publicKey);
-  duplicateKey(&toJobOptions->sshServer.privateKey,&fromJobOptions->sshServer.privateKey);
-
-  toJobOptions->webDAVServer.loginName              = String_duplicate(fromJobOptions->webDAVServer.loginName);
-  toJobOptions->webDAVServer.password               = Password_duplicate(fromJobOptions->webDAVServer.password);
-  duplicateKey(&toJobOptions->webDAVServer.publicKey,&fromJobOptions->webDAVServer.publicKey);
-  duplicateKey(&toJobOptions->webDAVServer.privateKey,&fromJobOptions->webDAVServer.privateKey);
-
-  toJobOptions->opticalDisk.requestVolumeCommand    = String_duplicate(fromJobOptions->opticalDisk.requestVolumeCommand);
-  toJobOptions->opticalDisk.unloadVolumeCommand     = String_duplicate(fromJobOptions->opticalDisk.unloadVolumeCommand);
-  toJobOptions->opticalDisk.imagePreProcessCommand  = String_duplicate(fromJobOptions->opticalDisk.imagePreProcessCommand);
-  toJobOptions->opticalDisk.imagePostProcessCommand = String_duplicate(fromJobOptions->opticalDisk.imagePostProcessCommand);
-  toJobOptions->opticalDisk.imageCommand            = String_duplicate(fromJobOptions->opticalDisk.imageCommand);
-  toJobOptions->opticalDisk.eccPreProcessCommand    = String_duplicate(fromJobOptions->opticalDisk.eccPreProcessCommand);
-  toJobOptions->opticalDisk.eccPostProcessCommand   = String_duplicate(fromJobOptions->opticalDisk.eccPostProcessCommand);
-  toJobOptions->opticalDisk.eccCommand              = String_duplicate(fromJobOptions->opticalDisk.eccCommand);
-  toJobOptions->opticalDisk.writePreProcessCommand  = String_duplicate(fromJobOptions->opticalDisk.writePreProcessCommand);
-  toJobOptions->opticalDisk.writePostProcessCommand = String_duplicate(fromJobOptions->opticalDisk.writePostProcessCommand);
-  toJobOptions->opticalDisk.writeCommand            = String_duplicate(fromJobOptions->opticalDisk.writeCommand);
-
-  toJobOptions->deviceName                          = String_duplicate(fromJobOptions->deviceName);
-  toJobOptions->device.requestVolumeCommand         = String_duplicate(fromJobOptions->device.requestVolumeCommand);
-  toJobOptions->device.unloadVolumeCommand          = String_duplicate(fromJobOptions->device.unloadVolumeCommand);
-  toJobOptions->device.imagePreProcessCommand       = String_duplicate(fromJobOptions->device.imagePreProcessCommand);
-  toJobOptions->device.imagePostProcessCommand      = String_duplicate(fromJobOptions->device.imagePostProcessCommand);
-  toJobOptions->device.imageCommand                 = String_duplicate(fromJobOptions->device.imageCommand);
-  toJobOptions->device.eccPreProcessCommand         = String_duplicate(fromJobOptions->device.eccPreProcessCommand);
-  toJobOptions->device.eccPostProcessCommand        = String_duplicate(fromJobOptions->device.eccPostProcessCommand);
-  toJobOptions->device.eccCommand                   = String_duplicate(fromJobOptions->device.eccCommand);
-  toJobOptions->device.writePreProcessCommand       = String_duplicate(fromJobOptions->device.writePreProcessCommand);
-  toJobOptions->device.writePostProcessCommand      = String_duplicate(fromJobOptions->device.writePostProcessCommand);
-  toJobOptions->device.writeCommand                 = String_duplicate(fromJobOptions->device.writeCommand);
+  jobOptions->deviceName                          = String_duplicate(fromJobOptions->deviceName);
+  jobOptions->device.requestVolumeCommand         = String_duplicate(fromJobOptions->device.requestVolumeCommand);
+  jobOptions->device.unloadVolumeCommand          = String_duplicate(fromJobOptions->device.unloadVolumeCommand);
+  jobOptions->device.imagePreProcessCommand       = String_duplicate(fromJobOptions->device.imagePreProcessCommand);
+  jobOptions->device.imagePostProcessCommand      = String_duplicate(fromJobOptions->device.imagePostProcessCommand);
+  jobOptions->device.imageCommand                 = String_duplicate(fromJobOptions->device.imageCommand);
+  jobOptions->device.eccPreProcessCommand         = String_duplicate(fromJobOptions->device.eccPreProcessCommand);
+  jobOptions->device.eccPostProcessCommand        = String_duplicate(fromJobOptions->device.eccPostProcessCommand);
+  jobOptions->device.eccCommand                   = String_duplicate(fromJobOptions->device.eccCommand);
+  jobOptions->device.writePreProcessCommand       = String_duplicate(fromJobOptions->device.writePreProcessCommand);
+  jobOptions->device.writePostProcessCommand      = String_duplicate(fromJobOptions->device.writePostProcessCommand);
+  jobOptions->device.writeCommand                 = String_duplicate(fromJobOptions->device.writeCommand);
 }
 
 void doneJobOptions(JobOptions *jobOptions)

@@ -1732,7 +1732,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   PatternList_init(&jobNode->compressExcludePatternList);
   DeltaSourceList_init(&jobNode->deltaSourceList);
   List_init(&jobNode->scheduleList);
-  initJobOptions(&jobNode->jobOptions);
+  initDuplicateJobOptions(&jobNode->jobOptions,serverDefaultJobOptions);
   jobNode->modifiedFlag                   = FALSE;
   jobNode->scheduleModifiedFlag           = FALSE;
 
@@ -2481,9 +2481,9 @@ LOCAL bool readJob(JobNode *jobNode)
   List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
   jobNode->jobOptions.archivePartSize              = 0LL;
-  jobNode->jobOptions.incrementalListFileName      = NULL;
+  String_clear(jobNode->jobOptions.incrementalListFileName);
   jobNode->jobOptions.directoryStripCount          = DIRECTORY_STRIP_NONE;
-  jobNode->jobOptions.destination                  = NULL;
+  String_clear(jobNode->jobOptions.destination);
   jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
   jobNode->jobOptions.compressAlgorithms.delta     = COMPRESS_ALGORITHM_NONE;
   jobNode->jobOptions.compressAlgorithms.byte      = COMPRESS_ALGORITHM_NONE;
@@ -4908,8 +4908,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     getStorageDirectories(&storageDirectoryList);
 
     // check storage locations for BAR files, send index update request
-    initJobOptions(&jobOptions);
-    copyJobOptions(serverDefaultJobOptions,&jobOptions);
+    initDuplicateJobOptions(&jobOptions,serverDefaultJobOptions);
     while (!StringList_isEmpty(&storageDirectoryList))
     {
       storageDirectoryName = StringList_getFirst(&storageDirectoryList,NULL);
@@ -8430,7 +8429,6 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
       // create new job
       jobNode = newJob(JOB_TYPE_CREATE,fileName,NULL);
       assert(jobNode != NULL);
-      copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
 
       // free resources
       String_delete(fileName);
@@ -8453,7 +8451,6 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
       jobNode = newJob(JOB_TYPE_CREATE,NULL,uuid);
       assert(jobNode != NULL);
       String_set(jobNode->master,master);
-      copyJobOptions(serverDefaultJobOptions,&jobNode->jobOptions);
 
       // add new job to list
       List_append(&jobList,jobNode);
