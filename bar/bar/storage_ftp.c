@@ -270,7 +270,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     if (curlCode != CURLE_OK)
     {
       (void)curl_easy_cleanup(curlHandle);
-      return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
 
     // login
@@ -278,7 +278,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     if (curlCode != CURLE_OK)
     {
       (void)curl_easy_cleanup(curlHandle);
-      return ERRORX_(FTP_AUTHENTICATION,0,curl_easy_strerror(curlCode));
+      return ERRORX_(FTP_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode));
     }
 
     // free resources
@@ -290,7 +290,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     // check host name (Note: FTP library crash if host name is not valid!)
     if (!Network_hostExists(hostName))
     {
-      return ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName);
+      return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(hostName);
     }
 
     // connect
@@ -1478,7 +1478,7 @@ LOCAL bool StorageFTP_exists(StorageHandle *storageHandle, ConstString archiveNa
       String_delete(baseName);
       String_delete(pathName);
       (void)curl_easy_cleanup(curlHandle);
-      return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
 
     // check if file exists (Note: by default curl use passive FTP)
@@ -1502,7 +1502,7 @@ LOCAL bool StorageFTP_exists(StorageHandle *storageHandle, ConstString archiveNa
     // FTP connect
     if (!Network_hostExists(storageHandle->storageSpecifier.hostName))
     {
-      return ERRORX_(HOST_NOT_FOUND,0,String_cString(storageHandle->storageSpecifier.hostName));
+      return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
     }
     if (FtpConnect(String_cString(storageHandle->storageSpecifier.hostName),&control) != 1)
     {
@@ -1540,7 +1540,7 @@ LOCAL bool StorageFTP_exists(StorageHandle *storageHandle, ConstString archiveNa
         File_delete(tmpFileName,FALSE);
         File_deleteFileName(tmpFileName);
         FtpClose(control);
-        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+        return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(fileName));
       }
     }
     error = File_open(&fileHandle,tmpFileName,FILE_OPEN_READ);
@@ -1593,7 +1593,7 @@ LOCAL bool StorageFTP_exists(StorageHandle *storageHandle, ConstString archiveNa
     if (!foundFlag)
     {
       FtpClose(control);
-      return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
+      return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(archiveName));
     }
 
     // close FTP connection
@@ -1694,7 +1694,7 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
         String_delete(pathName);
         (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
-        return ERRORX_(CREATE_DIRECTORY,0,curl_easy_strerror(curlCode));
+        return ERRORX_(CREATE_DIRECTORY,0,"%s",curl_easy_strerror(curlCode));
       }
 
       // init FTP upload (Note: by default curl use passive FTP)
@@ -1719,7 +1719,7 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
         String_delete(pathName);
         (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
-        return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+        return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
       }
 
       // start FTP upload
@@ -1739,7 +1739,7 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
         (void)curl_multi_remove_handle(storageArchiveHandle->ftp.curlMultiHandle,storageArchiveHandle->ftp.curlHandle);
         (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
-        return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+        return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
       }
 
       // free resources
@@ -1762,7 +1762,7 @@ LOCAL Errors StorageFTP_create(StorageArchiveHandle *storageArchiveHandle,
     // connect
     if (!Network_hostExists(storageArchiveHandle->storageSpecifier.hostName))
     {
-      return ERRORX_(HOST_NOT_FOUND,0,String_cString(storageArchiveHandle->storageSpecifier.hostName));
+      return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(storageArchiveHandle->storageSpecifier.hostName));
     }
     if (FtpConnect(String_cString(storageArchiveHandle->storageSpecifier.hostName),&storageArchiveHandle->ftp.control) != 1)
     {
@@ -1968,7 +1968,7 @@ LOCAL Errors StorageFTP_open(StorageArchiveHandle *storageArchiveHandle,
       (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
       free(storageArchiveHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
 
     // check if file exists (Note: by default curl use passive FTP)
@@ -1985,7 +1985,7 @@ LOCAL Errors StorageFTP_open(StorageArchiveHandle *storageArchiveHandle,
       (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
       free(storageArchiveHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
+      return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(archiveName));
     }
 
     // get file size
@@ -2022,7 +2022,7 @@ LOCAL Errors StorageFTP_open(StorageArchiveHandle *storageArchiveHandle,
       (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
       free(storageArchiveHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
     curlMCode = curl_multi_add_handle(storageArchiveHandle->ftp.curlMultiHandle,storageArchiveHandle->ftp.curlHandle);
     if (curlMCode != CURLM_OK)
@@ -2033,7 +2033,7 @@ LOCAL Errors StorageFTP_open(StorageArchiveHandle *storageArchiveHandle,
       (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
       free(storageArchiveHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
     }
 
     // start FTP download
@@ -2053,7 +2053,7 @@ LOCAL Errors StorageFTP_open(StorageArchiveHandle *storageArchiveHandle,
       (void)curl_easy_cleanup(storageArchiveHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageArchiveHandle->ftp.curlMultiHandle);
       free(storageArchiveHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
     }
 
     // free resources
@@ -2084,7 +2084,7 @@ LOCAL Errors StorageFTP_open(StorageArchiveHandle *storageArchiveHandle,
     if (!Network_hostExists(storageHandle->storageSpecifier.hostName))
     {
       free(storageArchiveHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(HOST_NOT_FOUND,0,String_cString(storageHandle->storageSpecifier.hostName));
+      return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
     }
     if (FtpConnect(String_cString(storageHandle->storageSpecifier.hostName),&storageArchiveHandle->ftp.control) != 1)
     {
@@ -2126,7 +2126,7 @@ LOCAL Errors StorageFTP_open(StorageArchiveHandle *storageArchiveHandle,
         File_deleteFileName(tmpFileName);
         FtpClose(storageArchiveHandle->ftp.control);
         free(storageArchiveHandle->ftp.readAheadBuffer.data);
-        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+        return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(fileName));
       }
     }
     error = File_open(&fileHandle,tmpFileName,FILE_OPEN_READ);
@@ -2181,7 +2181,7 @@ LOCAL Errors StorageFTP_open(StorageArchiveHandle *storageArchiveHandle,
     {
       FtpClose(storageArchiveHandle->ftp.control);
       free(storageArchiveHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
+      return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(archiveName));
     }
 
     // get file size
@@ -2410,7 +2410,7 @@ LOCAL Errors StorageFTP_read(StorageArchiveHandle *storageArchiveHandle,
                     );
               if (curlmCode != CURLM_OK)
               {
-                error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
+                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
               }
             }
           }
@@ -2463,7 +2463,7 @@ LOCAL Errors StorageFTP_read(StorageArchiveHandle *storageArchiveHandle,
                     );
               if (curlmCode != CURLM_OK)
               {
-                error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
+                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
               }
             }
           }
@@ -2720,7 +2720,7 @@ LOCAL Errors StorageFTP_write(StorageArchiveHandle *storageArchiveHandle,
                   );
             if (curlmCode != CURLM_OK)
             {
-              error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+              error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
             }
           }
         }
@@ -2940,7 +2940,7 @@ LOCAL Errors StorageFTP_seek(StorageArchiveHandle *storageArchiveHandle,
                         );
                   if (curlmCode != CURLM_OK)
                   {
-                    error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
+                    error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
                   }
                 }
               }
@@ -3128,7 +3128,7 @@ LOCAL Errors StorageFTP_delete(StorageHandle *storageHandle,
           }
           else
           {
-            error = ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
+            error = ERRORX_(DELETE_FILE,0,"%s",curl_multi_strerror(curlCode));
           }
           curl_slist_free_all(curlSList);
           String_delete(ftpCommand);
@@ -3274,7 +3274,7 @@ LOCAL Errors StorageFTP_getFileInfo(StorageHandle *storageHandle,
     }
     else
     {
-      error = ERRORX_(DELETE_FILE,0,curl_multi_strerror(curlCode));
+      error = ERRORX_(DELETE_FILE,0,"%s",curl_multi_strerror(curlCode));
     }
     curl_slist_free_all(curlSList);
     String_delete(ftpCommand);
@@ -3463,7 +3463,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     }
     if (curlCode != CURLE_OK)
     {
-      error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+      error = ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
       String_delete(url);
       (void)curl_easy_cleanup(curlHandle);
       AutoFree_cleanup(&autoFreeList);
@@ -3566,7 +3566,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     // FTP connect
     if (!Network_hostExists(storageDirectoryListHandle->storageSpecifier.hostName))
     {
-      error = ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
+      error = ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(hostName));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -3599,7 +3599,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
       FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,control);
       if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(archiveName),control) != 1)
       {
-        error = ERRORX_(OPEN_DIRECTORY,0,String_cString(archiveName));
+        error = ERRORX_(OPEN_DIRECTORY,0,"%s",String_cString(archiveName));
         FtpClose(control);
         AutoFree_cleanup(&autoFreeList);
         return error;

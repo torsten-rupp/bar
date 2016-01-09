@@ -259,7 +259,7 @@ LOCAL Errors checkWebDAVLogin(ConstString hostName,
   if (curlCode != CURLE_OK)
   {
     (void)curl_easy_cleanup(curlHandle);
-    return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+    return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
   }
 
   // login
@@ -267,7 +267,7 @@ LOCAL Errors checkWebDAVLogin(ConstString hostName,
   if (curlCode != CURLE_OK)
   {
     (void)curl_easy_cleanup(curlHandle);
-    return ERRORX_(WEBDAV_AUTHENTICATION,0,curl_easy_strerror(curlCode));
+    return ERRORX_(WEBDAV_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode));
   }
 
   // free resources
@@ -996,7 +996,7 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
           String_delete(baseURL);
           (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
           (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-          return ERRORX_(CREATE_DIRECTORY,0,curl_easy_strerror(curlCode));
+          return ERRORX_(CREATE_DIRECTORY,0,"%s",curl_easy_strerror(curlCode));
         }
         String_delete(url);
       }
@@ -1063,7 +1063,7 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
             String_delete(baseURL);
             (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
             (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-            return ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+            return ERRORX_(DELETE_FILE,0,"%s",curl_easy_strerror(curlCode));
           }
         }
 
@@ -1120,7 +1120,7 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
         String_delete(baseURL);
         (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-        return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+        return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
       }
       curlMCode = curl_multi_add_handle(storageArchiveHandle->webdav.curlMultiHandle,storageArchiveHandle->webdav.curlHandle);
       if (curlMCode != CURLM_OK)
@@ -1131,7 +1131,7 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
         String_delete(baseURL);
         (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-        return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+        return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
       }
       String_delete(url);
 
@@ -1151,7 +1151,7 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
         (void)curl_multi_remove_handle(storageArchiveHandle->webdav.curlMultiHandle,storageArchiveHandle->webdav.curlHandle);
         (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
         (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-        return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+        return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
       }
 
       // free resources
@@ -1336,7 +1336,7 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
       (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
       free(storageArchiveHandle->webdav.receiveBuffer.data);
-      return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+      return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
     curlMCode = curl_multi_add_handle(storageArchiveHandle->webdav.curlMultiHandle,storageArchiveHandle->webdav.curlHandle);
     if (curlMCode != CURLM_OK)
@@ -1347,7 +1347,7 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
       (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
       free(storageArchiveHandle->webdav.receiveBuffer.data);
-      return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+      return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
     }
     String_delete(url);
 
@@ -1368,7 +1368,7 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
       (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
       free(storageArchiveHandle->webdav.receiveBuffer.data);
-      return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+      return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
     }
 
     // free resources
@@ -1531,7 +1531,7 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
                     );
               if (curlmCode != CURLM_OK)
               {
-                error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
+                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
               }
             }
           }
@@ -1551,7 +1551,7 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
             {
               if ((curlMsg[i].easy_handle == storageArchiveHandle->webdav.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
               {
-                error = ERRORX_(NETWORK_RECEIVE,0,curl_easy_strerror(curlMsg[i].data.result));
+                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_easy_strerror(curlMsg[i].data.result));
                 break;
               }
               curlMsg++;
@@ -1670,7 +1670,7 @@ LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
                   );
             if (curlmCode != CURLM_OK)
             {
-              error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+              error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
             }
           }
         }
@@ -1855,7 +1855,7 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
                       );
                 if (curlmCode != CURLM_OK)
                 {
-                  error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
+                  error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
                 }
               }
             }
@@ -1981,7 +1981,7 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
         }
         if (curlCode != CURLE_OK)
         {
-          error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+          error = ERRORX_(DELETE_FILE,0,"%s",curl_easy_strerror(curlCode));
         }
 
         // check if file deleted
@@ -2011,7 +2011,7 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
           }
           else
           {
-            error = ERRORX_(DELETE_FILE,0,curl_easy_strerror(curlCode));
+            error = ERRORX_(DELETE_FILE,0,"%s",curl_easy_strerror(curlCode));
           }
         }
       }
@@ -2140,7 +2140,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(StorageHandle *storageHandle,
     }
     else
     {
-      error = ERRORX_(FILE_NOT_FOUND_,0,curl_easy_strerror(curlCode));
+      error = ERRORX_(FILE_NOT_FOUND_,0,"%s",curl_easy_strerror(curlCode));
     }
 
     // free resources

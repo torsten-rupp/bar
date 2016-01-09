@@ -1260,7 +1260,7 @@ LOCAL Errors StorageOptical_open(StorageArchiveHandle *storageArchiveHandle,
       if (!File_exists(storageArchiveHandle->storageHandle->storageSpecifier.deviceName))
       {
         free(storageArchiveHandle->opticalDisk.read.buffer.data);
-        return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
+        return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,"%s",String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
       }
 
       // open optical disk/ISO 9660 file
@@ -1270,12 +1270,12 @@ LOCAL Errors StorageOptical_open(StorageArchiveHandle *storageArchiveHandle,
         if (File_isFile(storageArchiveHandle->storageHandle->storageSpecifier.deviceName))
         {
           free(storageArchiveHandle->opticalDisk.read.buffer.data);
-          return ERRORX_(OPEN_ISO9660_FILE,errno,String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
+          return ERRORX_(OPEN_ISO9660_FILE,errno,"%s",String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
         }
         else
         {
           free(storageArchiveHandle->opticalDisk.read.buffer.data);
-          return ERRORX_(OPEN_OPTICAL_DISK,errno,String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
+          return ERRORX_(OPEN_OPTICAL_DISK,errno,"%s",String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
         }
       }
 
@@ -1287,7 +1287,7 @@ LOCAL Errors StorageOptical_open(StorageArchiveHandle *storageArchiveHandle,
       {
         iso9660_close(storageArchiveHandle->opticalDisk.read.iso9660Handle);
         free(storageArchiveHandle->opticalDisk.read.buffer.data);
-        return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(archiveName));
+        return ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(archiveName));
       }
 
       DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk,sizeof(storageArchiveHandle->opticalDisk));
@@ -1656,7 +1656,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
     }
     if (!File_exists(storageDirectoryListHandle->storageSpecifier.deviceName))
     {
-      error = ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
+      error = ERRORX_(OPTICAL_DISK_NOT_FOUND,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -1667,11 +1667,11 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
     {
       if (File_isFile(storageDirectoryListHandle->storageSpecifier.deviceName))
       {
-        error = ERRORX_(OPEN_ISO9660_FILE,errno,String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
+        error = ERRORX_(OPEN_ISO9660_FILE,errno,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
       }
       else
       {
-        error = ERRORX_(OPEN_OPTICAL_DISK,errno,String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
+        error = ERRORX_(OPEN_OPTICAL_DISK,errno,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
       }
       if (error != ERROR_NONE)
       {
@@ -1687,7 +1687,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
                                                                           );
     if (storageDirectoryListHandle->opticalDisk.cdioList == NULL)
     {
-      error = ERRORX_(FILE_NOT_FOUND_,errno,String_cString(archiveName));
+      error = ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(archiveName));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }

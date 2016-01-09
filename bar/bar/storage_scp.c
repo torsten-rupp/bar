@@ -427,8 +427,8 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
       else
       {
         error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
-                  ? ERRORX_(INVALID_SSH_PASSWORD,0,String_cString(storageHandle->storageSpecifier.hostName))
-                  : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageHandle->storageSpecifier.hostName));
+                  ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
+                  : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
       }
     }
     assert(error != ERROR_UNKNOWN);
@@ -708,6 +708,7 @@ LOCAL Errors StorageSCP_create(StorageArchiveHandle *storageArchiveHandle,
         libssh2_session_last_error(Network_getSSHSession(&storageArchiveHandle->scp.socketHandle),&sshErrorText,NULL,0);
         error = ERRORX_(SSH,
                         libssh2_session_last_errno(Network_getSSHSession(&storageArchiveHandle->scp.socketHandle)),
+                        "%s",
                         sshErrorText
                        );
         Network_disconnect(&storageArchiveHandle->scp.socketHandle);
@@ -798,6 +799,7 @@ LOCAL Errors StorageSCP_open(StorageArchiveHandle *storageArchiveHandle,
       libssh2_session_last_error(Network_getSSHSession(&storageArchiveHandle->scp.socketHandle),&sshErrorText,NULL,0);
       error = ERRORX_(SSH,
                       libssh2_session_last_errno(Network_getSSHSession(&storageArchiveHandle->scp.socketHandle)),
+                      "%s",
                       sshErrorText
                      );
       Network_disconnect(&storageArchiveHandle->scp.socketHandle);

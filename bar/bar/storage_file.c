@@ -331,7 +331,7 @@ fprintf(stderr,"%s, %d: archiveFileMode=%d exot=%d archiveFileModeOverwriteFlag=
       && File_exists(archiveName)
      )
   {
-    return ERRORX_(FILE_EXISTS_,0,String_cString(archiveName));
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(archiveName));
   }
 
   if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
@@ -394,7 +394,7 @@ LOCAL Errors StorageFile_open(StorageArchiveHandle *storageArchiveHandle,
   // check if file exists
   if (!File_exists(archiveName))
   {
-    return ERRORX_(FILE_NOT_FOUND_,0,String_cString(archiveName));
+    return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(archiveName));
   }
 
   // open file

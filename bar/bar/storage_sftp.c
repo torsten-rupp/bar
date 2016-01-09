@@ -413,8 +413,8 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
       else
       {
         error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
-                  ? ERRORX_(INVALID_SSH_PASSWORD,0,String_cString(storageHandle->storageSpecifier.hostName))
-                  : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageHandle->storageSpecifier.hostName));
+                  ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
+                  : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
       }
     }
     assert(error != ERROR_UNKNOWN);
@@ -679,6 +679,7 @@ LOCAL Errors StorageSFTP_create(StorageArchiveHandle *storageArchiveHandle,
         libssh2_session_last_error(Network_getSSHSession(&storageArchiveHandle->sftp.socketHandle),&sshErrorText,NULL,0);
         error = ERRORX_(SSH,
                         libssh2_session_last_errno(Network_getSSHSession(&storageArchiveHandle->sftp.socketHandle)),
+                        "%s",
                         sshErrorText
                        );
         Network_disconnect(&storageArchiveHandle->sftp.socketHandle);
@@ -701,6 +702,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           libssh2_session_last_error(Network_getSSHSession(&storageArchiveHandle->sftp.socketHandle),&sshErrorText,NULL,0);
           error = ERRORX_(SSH,
                           libssh2_session_last_errno(Network_getSSHSession(&storageArchiveHandle->sftp.socketHandle)),
+                          "%s",
                           sshErrorText
                          );
           libssh2_sftp_shutdown(storageArchiveHandle->sftp.sftp);
@@ -802,6 +804,7 @@ LOCAL Errors StorageSFTP_open(StorageArchiveHandle *storageArchiveHandle,
         libssh2_session_last_error(Network_getSSHSession(&storageArchiveHandle->sftp.socketHandle),&sshErrorText,NULL,0);
         error = ERRORX_(SSH,
                         libssh2_session_last_errno(Network_getSSHSession(&storageArchiveHandle->sftp.socketHandle)),
+                        "%s",
                         sshErrorText
                        );
         libssh2_sftp_shutdown(storageArchiveHandle->sftp.sftp);
@@ -821,6 +824,7 @@ LOCAL Errors StorageSFTP_open(StorageArchiveHandle *storageArchiveHandle,
         libssh2_session_last_error(Network_getSSHSession(&storageArchiveHandle->sftp.socketHandle),&sshErrorText,NULL,0);
         error = ERRORX_(SSH,
                         libssh2_session_last_errno(Network_getSSHSession(&storageArchiveHandle->sftp.socketHandle)),
+                        "%s",
                         sshErrorText
                        );
         libssh2_sftp_close(storageArchiveHandle->sftp.sftpHandle);
@@ -1332,6 +1336,7 @@ LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
              libssh2_session_last_error(Network_getSSHSession(&socketHandle),&sshErrorText,NULL,0);
              error = ERRORX_(SSH,
                              libssh2_session_last_errno(Network_getSSHSession(&socketHandle)),
+                             "%s",
                              sshErrorText
                             );
           }
@@ -1350,6 +1355,7 @@ LOCAL Errors StorageSFTP_delete(StorageHandle *storageHandle,
         libssh2_session_last_error(Network_getSSHSession(&socketHandle),&sshErrorText,NULL,0);
         error = ERRORX_(SSH,
                         libssh2_session_last_errno(Network_getSSHSession(&socketHandle)),
+                        "%s",
                         sshErrorText
                        );
         Network_disconnect(&socketHandle);
@@ -1440,6 +1446,7 @@ LOCAL Errors StorageSFTP_getFileInfo(StorageHandle *storageHandle,
              libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
              error = ERRORX_(SSH,
                              libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                             "%s",
                              sshErrorText
                             );
           }
@@ -1453,6 +1460,7 @@ LOCAL Errors StorageSFTP_getFileInfo(StorageHandle *storageHandle,
           libssh2_session_last_error(Network_getSSHSession(&storageHandle->sftp.socketHandle),&sshErrorText,NULL,0);
           error = ERRORX_(SSH,
                           libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
+                          "%s",
                           sshErrorText
                          );
           Network_disconnect(&storageHandle->sftp.socketHandle);
@@ -1568,8 +1576,8 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
         else
         {
           error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
-                    ? ERRORX_(INVALID_SSH_PASSWORD,0,String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
-                    : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
+                    ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
+                    : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
         }
       }
       assert(error != ERROR_UNKNOWN);
