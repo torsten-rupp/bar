@@ -5592,29 +5592,29 @@ LOCAL const char *getJobStateText(const JobOptions *jobOptions, JobStates jobSta
 
   assert(jobOptions != NULL);
 
-  stateText = "unknown";
+  stateText = "UNKNOWN";
   switch (jobState)
   {
     case JOB_STATE_NONE:
-      stateText = "-";
+      stateText = "NONE";
       break;
     case JOB_STATE_WAITING:
-      stateText = "waiting";
+      stateText = "WAITING";
       break;
     case JOB_STATE_RUNNING:
-      stateText = (jobOptions->dryRunFlag) ? "dry-run" : "running";
+      stateText = (jobOptions->dryRunFlag) ? "DRY_RUNNING" : "RUNNING";
       break;
     case JOB_STATE_REQUEST_VOLUME:
-      stateText = "request volume";
+      stateText = "REQUEST_VOLUME";
       break;
     case JOB_STATE_DONE:
-      stateText = "done";
+      stateText = "DONE";
       break;
     case JOB_STATE_ERROR:
       stateText = "ERROR";
       break;
     case JOB_STATE_ABORTED:
-      stateText = "aborted";
+      stateText = "ABORTED";
       break;
     #ifndef NDEBUG
       default:
