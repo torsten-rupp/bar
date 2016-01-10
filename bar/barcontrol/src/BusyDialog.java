@@ -368,6 +368,7 @@ class BusyDialog
     resizedFlag = false;
     dialog.open();
     widgetAbortCloseButton.setFocus();
+    display.update();
   }
 
   /** create busy dialog
