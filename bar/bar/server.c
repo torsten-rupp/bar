@@ -7918,6 +7918,56 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 }
 
 /***********************************************************************\
+* Name   : serverCommand_testScript
+* Purpose: test script
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            script=<directory>
+*          Result:
+*            line=<text>
+\***********************************************************************/
+
+LOCAL void serverCommand_testScript(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  String script;
+  Errors error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get script
+  script = String_new();
+  if (!StringMap_getString(argumentMap,"script",script,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected script=<script>");
+    String_delete(script);
+    return;
+  }
+
+  // execute script
+  error = Misc_executeScript(String_cString(script),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             {
+                               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"line=%'S",line);
+                             },NULL),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             {
+                               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"line=%'S",line);
+                             },NULL),
+                            );
+
+  sendClientResult(clientInfo,id,TRUE,error,"");
+
+  // free resources
+  String_delete(script);
+}
+
+/***********************************************************************\
 * Name   : serverCommand_jobOptionGet
 * Purpose: get job option
 * Input  : clientInfo    - client info
@@ -15447,6 +15497,7 @@ SERVER_COMMANDS[] =
   { "FILE_ATTRIBUTE_SET",          serverCommand_fileAttributeSet,         AUTHORIZATION_STATE_OK      },
   { "FILE_ATTRIBUTE_CLEAR",        serverCommand_fileAttributeClear,       AUTHORIZATION_STATE_OK      },
   { "DIRECTORY_INFO",              serverCommand_directoryInfo,            AUTHORIZATION_STATE_OK      },
+  { "TEST_SCRIPT",                 serverCommand_testScript,               AUTHORIZATION_STATE_OK      },
   { "JOB_LIST",                    serverCommand_jobList,                  AUTHORIZATION_STATE_OK      },
   { "JOB_INFO",                    serverCommand_jobInfo,                  AUTHORIZATION_STATE_OK      },
   { "JOB_NEW",                     serverCommand_jobNew,                   AUTHORIZATION_STATE_OK      },
