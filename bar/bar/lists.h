@@ -55,6 +55,7 @@ typedef struct
 * Return : duplicated list node
 * Notes  : -
 \***********************************************************************/
+
 typedef void(*ListNodeFreeFunction)(void *node, void *userData);
 
 /***********************************************************************\
@@ -92,6 +93,13 @@ typedef bool(*ListNodeEqualsFunction)(const void *node, void *userData);
 \***********************************************************************/
 
 typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void *userData);
+
+// list find modes
+typedef enum
+{
+  LIST_FIND_FORWARD,
+  LIST_FIND_BACKWARD
+} ListFindModes;
 
 /***************************** Variables *******************************/
 
@@ -192,19 +200,22 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
       )
 
 /***********************************************************************\
-* Name   : LIST_FIND
-* Purpose: find in list
+* Name   : LIST_FIND_FIRST, LIST_FIND_LAST, LIST_FIND
+* Purpose: find first/last entry in list
 * Input  : list      - list
 *          variable  - variable name
 *          condition - condition code
 * Output : -
 * Return : node or NULL if not found
 * Notes  : usage:
-*          LIST_FIND(list,node,node->... == ...)
+*          LIST_FIND_FIRST(list,variable,variable->... == ...)
+*          LIST_FIND_LAST(list,variable,variable->... == ...)
+*          LIST_FIND(list,variable,variable->... == ...)
 \***********************************************************************/
 
-#define LIST_FIND(list,variable,condition) \
+#define LIST_FIND_FIRST(list,variable,condition) \
   List_findFirst(list,\
+                 LIST_FIND_FORWARD,\
                  (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
                                                          (const typeof(* (list)->head) *variable, void *userData), \
                                                          { \
@@ -215,19 +226,20 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
                                                          NULL \
                                                         ) \
                 )
-
-#define LIST_FIND2(list,variable,condition) \
-  { \
-    assert(list != NULL); \
-    \
-    typeof(* (list)->head) *variable = list->head; \
-    \
-    while ((variable != NULL) && !condition) \
-    { \
-      variable = variable->next; \
-    } \
-  },\
-  variable
+#define LIST_FIND_LAST(list,variable,condition) \
+  List_findFirst(list,\
+                 LIST_FIND_BACKWARD,\
+                 (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
+                                                         (const typeof(* (list)->tail) *variable, void *userData), \
+                                                         { \
+                                                           UNUSED_VARIABLE(userData); \
+                                                           \
+                                                           return condition; \
+                                                         },\
+                                                         NULL \
+                                                        ) \
+                )
+#define LIST_FIND(list,variable,condition) LIST_FIND_FIRST(list,variable,condition)
 
 /***********************************************************************\
 * Name   : LIST_REMOVE
@@ -723,6 +735,7 @@ bool List_contains(const void             *list,
 * Name   : List_findFirst
 * Purpose: find node in list
 * Input  : list                   - list
+*          listFindMode           - list find mode
 *          listNodeEqualsFunction - equals function
 *          listNodeEqualsUserData - user data for equals function
 * Output : -
@@ -731,6 +744,7 @@ bool List_contains(const void             *list,
 \***********************************************************************/
 
 void *List_findFirst(const void             *list,
+                     ListFindModes          listFindMode,
                      ListNodeEqualsFunction listNodeEqualsFunction,
                      void                   *listNodeEqualsUserData
                     );
@@ -739,6 +753,7 @@ void *List_findFirst(const void             *list,
 * Name   : List_findNext
 * Purpose: find next node in list
 * Input  : list                    - list
+*          listFindMode           - list find mode
 *          node                    - previous found node
 *          listNodeEqualsFunction - equals function
 *          listNodeEqualsUserData - user data for equals function
@@ -748,6 +763,7 @@ void *List_findFirst(const void             *list,
 \***********************************************************************/
 
 void *List_findNext(const void             *list,
+                    ListFindModes          listFindMode,
                     void                   *node,
                     ListNodeEqualsFunction listNodeEqualsFunction,
                     void                   *listNodeEqualsUserData

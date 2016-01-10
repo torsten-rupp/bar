@@ -988,6 +988,7 @@ node = ((Node*)node)->next;
 #endif /* 0 */
 
 void *List_findFirst(const void             *list,
+                     ListFindModes          listFindMode,
                      ListNodeEqualsFunction listNodeEqualsFunction,
                      void                   *listNodeEqualsUserData
                     )
@@ -997,16 +998,29 @@ void *List_findFirst(const void             *list,
   assert(list != NULL);
   assert(listNodeEqualsFunction != NULL);
 
-  node = ((List*)list)->head;
-  while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+  switch (listFindMode)
   {
-    node = node->next;
+    case LIST_FIND_FORWARD:
+      node = ((List*)list)->head;
+      while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+      {
+        node = node->next;
+      }
+      break;
+    case LIST_FIND_BACKWARD:
+      node = ((List*)list)->tail;
+      while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+      {
+        node = node->prev;
+      }
+      break;
   }
 
   return node;
 }
 
 void *List_findNext(const void             *list,
+                    ListFindModes          listFindMode,
                     void                   *node,
                     ListNodeEqualsFunction listNodeEqualsFunction,
                     void                   *listNodeEqualsUserData
@@ -1019,10 +1033,22 @@ void *List_findNext(const void             *list,
 
   if (node != NULL)
   {
-    node = (((Node*)node))->next;
-    while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+    switch (listFindMode)
     {
-      node = (((Node*)node))->next;
+      case LIST_FIND_FORWARD:
+        node = (((Node*)node))->next;
+        while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+        {
+          node = (((Node*)node))->next;
+        }
+        break;
+      case LIST_FIND_BACKWARD:
+        node = (((Node*)node))->prev;
+        while ((node != NULL) && !listNodeEqualsFunction(node,listNodeEqualsUserData))
+        {
+          node = (((Node*)node))->prev;
+        }
+        break;
     }
   }
 

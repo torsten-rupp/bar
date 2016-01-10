@@ -42,6 +42,18 @@ typedef struct
   LIST_HEADER(StringNode);
 } StringList;
 
+/***********************************************************************\
+* Name   : StringListNodeEqualsFunction
+* Purpose: string list node equals function
+* Input  : node     - node to check
+*          userData - user data
+* Output : -
+* Return : TRUE iff node equals
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *userData);
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -110,6 +122,52 @@ typedef struct
        ((iteratorVariable) != NULL) && (condition); \
        (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
       )
+
+/***********************************************************************\
+* Name   : LIST_FIND_FIRST, LIST_FIND_LAST, LIST_FIND
+* Purpose: find first/last entry in list
+* Input  : list      - list
+*          variable  - string variable name
+*          condition - condition code
+* Output : -
+* Return : node or NULL if not found
+* Notes  : usage:
+*          STRINGLIST_FIND_FIRST(list,variable,variable == ...)
+*          STRINGLIST_FIND_LAST(list,variable,variable == ...)
+*          STRINGLIST_FIND_LAST(list,variable,variable == ...)
+\***********************************************************************/
+
+#define STRINGLIST_FIND_FIRST(list,variable,condition) \
+  List_findFirst(list,\
+                 LIST_FIND_FORWARD,\
+                 (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
+                                                         (const StringNode *stringNode, void *userData), \
+                                                         { \
+                                                           String variable = stringNode->string; \
+                                                           \
+                                                           UNUSED_VARIABLE(userData); \
+                                                           \
+                                                           return condition; \
+                                                         },\
+                                                         NULL \
+                                                        ) \
+                )
+#define STRINGLIST_FIND_LAST(list,variable,condition) \
+  List_findFirst(list,\
+                 LIST_FIND_BACKWARD,\
+                 (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
+                                                         (const StringNode *stringNode, void *userData), \
+                                                         { \
+                                                           String variable = stringNode->string; \
+                                                           \
+                                                           UNUSED_VARIABLE(userData); \
+                                                           \
+                                                           return condition; \
+                                                         },\
+                                                         NULL \
+                                                        ) \
+                )
+#define STRINGLIST_FIND(list,variable,condition) STRINGLIST_FIND_FIRST(list,variable,condition)
 
 /***************************** Forwards ********************************/
 
