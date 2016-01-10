@@ -228,6 +228,17 @@ class JobData
  */
 class JobDataComparator implements Comparator<JobData>
 {
+  static enum SortModes
+  {
+    NAME,
+    STATE,
+    TYPE,
+    PARTSIZE,
+    COMPRESS,
+    CRYPT,
+    LAST_EXECUTED_DATETIME,
+    ESTIMATED_TIME
+  };
   // Note: enum in inner classes are not possible in Java, thus use the old way...
   private final static int SORTMODE_NAME                   = 0;
   private final static int SORTMODE_STATE                  = 1;
@@ -1926,7 +1937,7 @@ public class TabStatus
 
     if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,BARControl.tr("Abort running job ''{0}''?",selectedJobData.name),false))
     {
-      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'...",BusyDialog.TEXT0|BusyDialog.AUTO_ANIMATE);
+      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'\u2026",BusyDialog.TEXT0|BusyDialog.AUTO_ANIMATE);
 
       new BackgroundTask(busyDialog)
       {
