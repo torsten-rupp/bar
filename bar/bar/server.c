@@ -7958,7 +7958,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, uint id, const Strin
                              CALLBACK_INLINE(void,(ConstString line, void *userData),
                              {
                                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"line=%'S",line);
-                             },NULL),
+                             },NULL)
                             );
 
   sendClientResult(clientInfo,id,TRUE,error,"");
