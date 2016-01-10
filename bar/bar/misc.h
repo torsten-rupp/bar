@@ -109,15 +109,15 @@ typedef enum
 /***********************************************************************\
 * Name   : ExecuteIOFunction
 * Purpose: call back for read line
-* Input  : userData - user data
-*          line     - line
+* Input  : line     - line
+*          userData - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*ExecuteIOFunction)(void        *userData,
-                                 ConstString line
+typedef void(*ExecuteIOFunction)(ConstString line,
+                                 void        *userData
                                 );
 
 // performance values

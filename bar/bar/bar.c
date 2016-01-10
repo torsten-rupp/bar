@@ -3703,18 +3703,8 @@ void printError(const char *text, ...)
   String_delete(line);
 }
 
-/***********************************************************************\
-* Name   : executeIOOutput
-* Purpose: process exec stdout, stderr output
-* Input  : userData - string list or NULL
-*          line     - line
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void executeIOOutput(void        *userData,
-                     ConstString line
+void executeIOOutput(ConstString line,
+                     void        *userData
                     )
 {
   StringList *stringList = (StringList*)userData;
@@ -4094,15 +4084,15 @@ String expandTemplate(const char       *templateString,
 /***********************************************************************\
 * Name   : executeIOlogPostProcess
 * Purpose: process log-post command stderr output
-* Input  : userData - strerr string list
-*          line     - line
+* Input  : line     - line
+*          userData - strerr string list
 * Output : -
 * Return : -
 * Notes  : string list will be shortend to last 5 entries
 \***********************************************************************/
 
-LOCAL void executeIOlogPostProcess(void        *userData,
-                                   ConstString line
+LOCAL void executeIOlogPostProcess(ConstString line,
+                                   void        *userData
                                   )
 {
   StringList *stringList = (StringList*)userData;

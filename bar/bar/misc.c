@@ -255,13 +255,13 @@ error = ERROR_NONE;
 
       if (readProcessIO(pipeStdout[0],stdoutLine))
       {
-        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutExecuteIOUserData,stdoutLine);
+        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutLine,stdoutExecuteIOUserData);
         String_clear(stdoutLine);
         sleepFlag = FALSE;
       }
       if (readProcessIO(pipeStderr[0],stderrLine))
       {
-        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrExecuteIOUserData,stderrLine);
+        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrLine,stderrExecuteIOUserData);
         String_clear(stderrLine);
         sleepFlag = FALSE;
       }
@@ -273,12 +273,12 @@ error = ERROR_NONE;
     }
     while (readProcessIO(pipeStdout[0],stdoutLine))
     {
-      if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutExecuteIOUserData,stdoutLine);
+      if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutLine,stdoutExecuteIOUserData);
       String_clear(stdoutLine);
     }
     while (readProcessIO(pipeStderr[0],stderrLine))
     {
-      if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrExecuteIOUserData,stderrLine);
+      if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrLine,stderrExecuteIOUserData);
       String_clear(stderrLine);
     }
     String_delete(stderrLine);

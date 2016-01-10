@@ -430,16 +430,16 @@ void logPostProcess(LogHandle        *logHandle,
 /***********************************************************************\
 * Name   : executeIOOutput
 * Purpose: process exec output
-* Input  : userData - string list or NULL
-*          line     - line to output and to append to strin glist (if
+* Input  : line     - line to output and to append to strin glist (if
 *                     userData is not NULL)
+*          userData - string list or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void executeIOOutput(void        *userData,
-                     ConstString line
+void executeIOOutput(ConstString line,
+                     void        *userData
                     );
 
 /***********************************************************************\

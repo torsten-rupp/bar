@@ -272,15 +272,15 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
 /***********************************************************************\
 * Name   : executeIOmkisofs
 * Purpose: process mkisofs output
-* Input  : userData - storage file handle variable
-*          line    - line
+* Input  : line     - line
+*          userData - storage file handle variable
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOmkisofs(void        *userData,
-                            ConstString line
+LOCAL void executeIOmkisofs(ConstString line,
+                            void        *userData
                            )
 {
   StorageHandle *storageHandle = (StorageHandle*)userData;
@@ -303,21 +303,21 @@ LOCAL void executeIOmkisofs(void        *userData,
   }
   String_delete(s);
 
-  executeIOOutput(NULL,line);
+  executeIOOutput(line,NULL);
 }
 
 /***********************************************************************\
 * Name   : executeIODVDisaster
 * Purpose: process dvdisaster output
-* Input  : storageHandle - storage file handle variable
-*          line              - line
+* Input  : line     - line
+*          userData - storage file handle variable
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOdvdisaster(void        *userData,
-                               ConstString line
+LOCAL void executeIOdvdisaster(ConstString line,
+                               void        *userData
                               )
 {
   StorageHandle *storageHandle = (StorageHandle*)userData;
@@ -344,21 +344,21 @@ LOCAL void executeIOdvdisaster(void        *userData,
   }
   String_delete(s);
 
-  executeIOOutput(NULL,line);
+  executeIOOutput(line,NULL);
 }
 
 /***********************************************************************\
 * Name   : executeIOgrowisofs
 * Purpose: process growisofs output
-* Input  : storageHandle - storage file handle variable
-*          line              - line
+* Input  : line     - line
+*          userData - storage file handle variable
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOgrowisofs(void        *userData,
-                              ConstString line
+LOCAL void executeIOgrowisofs(ConstString line,
+                              void        *userData
                              )
 {
   StorageHandle *storageHandle = (StorageHandle*)userData;
@@ -379,7 +379,7 @@ LOCAL void executeIOgrowisofs(void        *userData,
   }
   String_delete(s);
 
-  executeIOOutput(NULL,line);
+  executeIOOutput(line,NULL);
 }
 
 /*---------------------------------------------------------------------*/
