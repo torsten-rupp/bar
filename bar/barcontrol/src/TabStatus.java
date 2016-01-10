@@ -61,9 +61,43 @@ import org.eclipse.swt.widgets.Widget;
  */
 class JobData
 {
+  /** job states
+   */
+  static enum States
+  {
+    NONE,
+    WAITING,
+    RUNNING,
+    DRY_RUNNING,
+    REQUEST_VOLUME,
+    DONE,
+    ERROR,
+    ABORTED;
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      switch (this)
+      {
+        case NONE:           return "-";
+        case WAITING:        return BARControl.tr("waiting");
+        case RUNNING:        return BARControl.tr("running");
+        case DRY_RUNNING:    return BARControl.tr("dry Run");
+        case REQUEST_VOLUME: return BARControl.tr("request volume");
+        case DONE:           return BARControl.tr("done");
+        case ERROR:          return BARControl.tr("ERROR");
+        case ABORTED:        return BARControl.tr("aborted");
+      }
+
+      return "";
+    }
+  };
+
   String uuid;
   String name;
-  String state;
+  States state;
   String remoteHostName;
   String archiveType;
   long   archivePartSize;
@@ -93,7 +127,7 @@ class JobData
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
    */
-  JobData(String uuid, String name, String state, String remoteHostName, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  JobData(String uuid, String name, States state, String remoteHostName, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
   {
     this.uuid                   = uuid;
     this.name                   = name;
@@ -362,6 +396,9 @@ public class TabStatus
     NETWORK;
   };
 
+  // colors
+  private final Color COLOR_ERROR;
+
   // global variable references
   private Shell                 shell;
   private Display               display;
@@ -434,6 +471,9 @@ public class TabStatus
     // get shell, display
     shell = parentTabFolder.getShell();
     display = shell.getDisplay();
+
+    // get colors
+    COLOR_ERROR = new Color(null,0xFF,0xA0,0xA0);
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Status")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
@@ -1416,19 +1456,19 @@ public class TabStatus
         for (ValueMap resultMap : resultMapList)
         {
           // get data
-          String jobUUID                = resultMap.getString("jobUUID"               );
-          String name                   = resultMap.getString("name"                  );
-          String state                  = resultMap.getString("state"                 );
-          String remoteHostName         = resultMap.getString("remoteHostName",""     );
-          String archiveType            = resultMap.getString("archiveType"           );
-          long   archivePartSize        = resultMap.getLong  ("archivePartSize"       );
-          String deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm");
-          String byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm" );
-          String cryptAlgorithm         = resultMap.getString("cryptAlgorithm"        );
-          String cryptType              = resultMap.getString("cryptType"             );
-          String cryptPasswordMode      = resultMap.getString("cryptPasswordMode"     );
-          long   lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"  );
-          long   estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"     );
+          String         jobUUID                = resultMap.getString("jobUUID"                   );
+          String         name                   = resultMap.getString("name"                      );
+          JobData.States state                  = resultMap.getEnum  ("state",JobData.States.class);
+          String         remoteHostName         = resultMap.getString("remoteHostName",""         );
+          String         archiveType            = resultMap.getString("archiveType"               );
+          long           archivePartSize        = resultMap.getLong  ("archivePartSize"           );
+          String         deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm"    );
+          String         byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm"     );
+          String         cryptAlgorithm         = resultMap.getString("cryptAlgorithm"            );
+          String         cryptType              = resultMap.getString("cryptType"                 );
+          String         cryptPasswordMode      = resultMap.getString("cryptPasswordMode"         );
+          long           lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"      );
+          long           estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"         );
 
           JobData jobData = jobDataMap.get(jobUUID);
           if (jobData != null)
@@ -1492,7 +1532,7 @@ public class TabStatus
                   Widgets.updateTableItem(tableItem,
                                           jobData,
                                           jobData.name,
-                                          (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
+                                          (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
                                           jobData.remoteHostName,
                                           jobData.archiveType,
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
@@ -1512,7 +1552,7 @@ public class TabStatus
                                                       findJobTableItemIndex(jobData),
                                                       jobData,
                                                       jobData.name,
-                                                      (status == States.RUNNING) ? jobData.state : BARControl.tr("suspended"),
+                                                      (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
                                                       jobData.remoteHostName,
                                                       jobData.archiveType,
                                                       (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
@@ -1523,6 +1563,8 @@ public class TabStatus
                                                      );
                   tableItem.setData(jobData);
                 }
+
+                tableItem.setBackground((jobData.state == JobData.States.ERROR) ? COLOR_ERROR : null);
               }
 
               // remove not existing entries
