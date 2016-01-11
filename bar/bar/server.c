@@ -125,6 +125,21 @@ typedef struct
   LIST_HEADER(ScheduleNode);
 } ScheduleList;
 
+// mount
+typedef struct MountNode
+{
+  LIST_NODE_HEADER(struct MountNode);
+
+  uint   id;
+  String name;
+  bool   alwaysUnmount;
+} MountNode;
+
+typedef struct
+{
+  LIST_HEADER(MountNode);
+} MountList;
+
 // job type
 typedef enum
 {
@@ -163,6 +178,7 @@ typedef struct JobNode
   PatternList     excludePatternList;                   // excluded entry patterns
   PatternList     compressExcludePatternList;           // excluded compression patterns
   DeltaSourceList deltaSourceList;                      // delta sources
+  MountList       mountList;                            // mount list
   ScheduleList    scheduleList;                         // schedule list
   JobOptions      jobOptions;                           // options for job
 
@@ -419,6 +435,7 @@ bool abortFlag;
   PatternList         excludePatternList;
   PatternList         compressExcludePatternList;
   DeltaSourceList     deltaSourceList;
+  MountList           mountList;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
 
@@ -533,6 +550,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
@@ -8958,7 +8976,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const StringM
 
 /***********************************************************************\
 * Name   : serverCommand_includeList
-* Purpose: get include list
+* Purpose: get job include list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -9610,6 +9628,288 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, uint id, cons
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
+}
+
+/***********************************************************************\
+* Name   : serverCommand_mountList
+* Purpose: get job mount list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*          Result:
+*            id=<n> name=<name> alwaysUnmount=<yes|no>
+*            ...
+\***********************************************************************/
+
+LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  EntryNode     *entryNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // send mount list
+    LIST_ITERATE(&jobNode->mountList,mountNode)
+    {
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+//TODO
+                       "id=%u mount=%'S alwaysUnmount=no",
+                       mountNode->id,
+                       mountNode->name
+                      );
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_mountListAdd
+* Purpose: add entry to job mountlist
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            entryType=<type>
+*            pattern=<text>
+*            [patternType=<type>]
+*          Result:
+*            id=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  EntryTypes    entryType;
+  PatternTypes  patternType;
+  String        patternString;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+  uint          entryId;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, entry type, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    return;
+  }
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
+    return;
+  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(patternString);
+      return;
+    }
+
+    // add to include list
+    EntryList_append(&jobNode->includeEntryList,entryType,patternString,patternType,&entryId);
+    jobNode->modifiedFlag = TRUE;
+
+    // notify about changed lists
+    jobIncludeExcludeChanged(jobNode);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",entryId);
+
+  // free resources
+  String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_mountListUpdate
+* Purpose: update entry to job mount list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*            entryType=<type>
+*            pattern=<text>
+*            [patternType=<type>]
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          entryId;
+  EntryTypes    entryType;
+  PatternTypes  patternType;
+  String        patternString;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id, entry type, pattern type, pattern
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    return;
+  }
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
+    return;
+  }
+  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(patternString);
+      return;
+    }
+
+    // update include list
+    EntryList_update(&jobNode->includeEntryList,entryId,entryType,patternString,patternType);
+    jobNode->modifiedFlag = TRUE;
+
+    // notify about changed lists
+    jobIncludeExcludeChanged(jobNode);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(patternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_mountListRemove
+* Purpose: remove entry from job mount list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            id=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          entryId;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, id
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // remove from include list
+    if (!EntryList_remove(&jobNode->includeEntryList,entryId))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"entry with id #%u not found",entryId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+    jobNode->modifiedFlag = TRUE;
+
+    // notify about changed lists
+    jobIncludeExcludeChanged(jobNode);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -15516,7 +15816,11 @@ SERVER_COMMANDS[] =
   { "INCLUDE_LIST_ADD",            serverCommand_includeListAdd,           AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_UPDATE",         serverCommand_includeListUpdate,        AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_REMOVE",         serverCommand_includeListRemove,        AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST",                serverCommand_excludeList,              AUTHORIZATION_STATE_OK      },
+  { "MOUNT_LIST",                  serverCommand_mountList,                AUTHORIZATION_STATE_OK      },
+  { "MOUNT_LIST_ADD",              serverCommand_mountListAdd,             AUTHORIZATION_STATE_OK      },
+  { "MOUNT_LIST_UPDATE",           serverCommand_mountListUpdate,          AUTHORIZATION_STATE_OK      },
+  { "MOUNT_LIST_REMOVE",           serverCommand_mountListRemove,          AUTHORIZATION_STATE_OK      },
+ { "EXCLUDE_LIST",                 serverCommand_excludeList,              AUTHORIZATION_STATE_OK      },
 //TODO remove
   { "EXCLUDE_LIST_CLEAR",          serverCommand_excludeListClear,         AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_ADD",            serverCommand_excludeListAdd,           AUTHORIZATION_STATE_OK      },
