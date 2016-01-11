@@ -550,7 +550,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountList,                              configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
@@ -6466,85 +6466,84 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
     return;
   }
 
+  // allocate storage server node
+  serverNode = newServerNode(name,serverType);
+  assert(serverNode != NULL);
+
+  // init storage server settings
+  switch (serverType)
+  {
+    case SERVER_TYPE_FILE:
+      break;
+    case SERVER_TYPE_FTP:
+      String_set(serverNode->server.ftpServer.loginName,loginName);
+      if (!String_isEmpty(password))
+      {
+        if (serverNode->server.ftpServer.password == NULL)
+        {
+          serverNode->server.ftpServer.password = Password_newString(password);
+        }
+        else
+        {
+          Password_setString(serverNode->server.ftpServer.password,password);
+        }
+      }
+      break;
+    case SERVER_TYPE_SSH:
+      serverNode->server.sshServer.port               = port;
+      String_set(serverNode->server.sshServer.loginName,loginName);
+      if (!String_isEmpty(password))
+      {
+        if (serverNode->server.sshServer.password == NULL)
+        {
+          serverNode->server.sshServer.password = Password_newString(password);
+        }
+        else
+        {
+          Password_setString(serverNode->server.sshServer.password,password);
+        }
+      }
+      setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
+      setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
+      break;
+    case SERVER_TYPE_WEBDAV:
+      String_set(serverNode->server.webDAVServer.loginName,loginName);
+      if (!String_isEmpty(password))
+      {
+        if (serverNode->server.webDAVServer.password == NULL)
+        {
+          serverNode->server.webDAVServer.password = Password_newString(password);
+        }
+        else
+        {
+          Password_setString(serverNode->server.webDAVServer.password,password);
+        }
+      }
+      setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
+      setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
+      break;
+  }
+  serverNode->server.maxConnectionCount = maxConnectionCount;
+  serverNode->server.maxStorageSize     = maxStorageSize;
+
+  // add to server list
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    // allocate storage server node
-    serverNode = newServerNode(name,serverType);
-    assert(serverNode != NULL);
-
-    // init storage server settings
-    switch (serverType)
-    {
-      case SERVER_TYPE_FILE:
-        break;
-      case SERVER_TYPE_FTP:
-        String_set(serverNode->server.ftpServer.loginName,loginName);
-        if (!String_isEmpty(password))
-        {
-          if (serverNode->server.ftpServer.password == NULL)
-          {
-            serverNode->server.ftpServer.password = Password_newString(password);
-          }
-          else
-          {
-            Password_setString(serverNode->server.ftpServer.password,password);
-          }
-        }
-        break;
-      case SERVER_TYPE_SSH:
-        serverNode->server.sshServer.port               = port;
-        String_set(serverNode->server.sshServer.loginName,loginName);
-        if (!String_isEmpty(password))
-        {
-          if (serverNode->server.sshServer.password == NULL)
-          {
-            serverNode->server.sshServer.password = Password_newString(password);
-          }
-          else
-          {
-            Password_setString(serverNode->server.sshServer.password,password);
-          }
-        }
-        setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
-        setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
-        break;
-      case SERVER_TYPE_WEBDAV:
-        String_set(serverNode->server.webDAVServer.loginName,loginName);
-        if (!String_isEmpty(password))
-        {
-          if (serverNode->server.webDAVServer.password == NULL)
-          {
-            serverNode->server.webDAVServer.password = Password_newString(password);
-          }
-          else
-          {
-            Password_setString(serverNode->server.webDAVServer.password,password);
-          }
-        }
-        setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
-        setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
-        break;
-    }
-///TODO
-    serverNode->server.maxConnectionCount = maxConnectionCount;
-    serverNode->server.maxStorageSize     = maxStorageSize;
-
-    // add to server list
     List_append(&globalOptions.serverList,serverNode);
+  }
 
-    // update config files
-    error = updateConfig();
-    if (error != ERROR_NONE)
-    {
-      Semaphore_unlock(&globalOptions.serverList.lock);
-      sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
-      String_delete(privateKey);
-      String_delete(publicKey);
-      String_delete(password);
-      String_delete(loginName);
-      String_delete(name);
-      return;
-    }
+  // update config files
+  error = updateConfig();
+  if (error != ERROR_NONE)
+  {
+    Semaphore_unlock(&globalOptions.serverList.lock);
+    sendClientResult(clientInfo,id,TRUE,error,"write config file fail: %s",Error_getText(error));
+    String_delete(privateKey);
+    String_delete(publicKey);
+    String_delete(password);
+    String_delete(loginName);
+    String_delete(name);
+    return;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",serverNode->id);
@@ -9651,7 +9650,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const String
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
-  EntryNode     *entryNode;
+  MountNode     *mountNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
