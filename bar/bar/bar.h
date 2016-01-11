@@ -581,6 +581,30 @@ bool setKeyString(Key *key, ConstString string);
 Errors readKeyFile(Key *key, const char *fileName);
 
 /***********************************************************************\
+* Name   : initServer
+* Purpose: init server
+* Input  : server     - server variable
+*          name       - server name
+*          serverType - server type
+* Output : server - initialized server structure
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void initServer(Server *server, ConstString name, ServerTypes serverType);
+
+/***********************************************************************\
+* Name   : doneServer
+* Purpose: done server
+* Input  : server - server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneServer(Server *server);
+
+/***********************************************************************\
 * Name   : newServerNode
 * Purpose: new server node
 * Input  : serverType - server type
@@ -616,13 +640,29 @@ void deleteServerNode(ServerNode *serverNode);
 void freeServerNode(ServerNode *serverNode, void *userData);
 
 /***********************************************************************\
+* Name   : getServerSettings
+* Purpose: get server settings
+* Input  : storageName - storage name
+*          jobOptions  - job options
+* Output : server - server settings from job options, server list
+*                   default server values
+* Return : server id or 0
+* Notes  : -
+\***********************************************************************/
+
+uint getServerSettings(const StorageSpecifier *storageSpecifier,
+                       const JobOptions       *jobOptions,
+                       Server                 *server
+                      );
+
+/***********************************************************************\
 * Name   : getFileServerSettings
 * Purpose: get file server settings
 * Input  : directory  - directory
 *          jobOptions - job options
 * Output : fileServer - file server settings from job options, server
 *                       list or default FTP server values
-* Return : server
+* Return : server id or 0
 * Notes  : -
 \***********************************************************************/
 
@@ -638,7 +678,7 @@ uint getFileServerSettings(ConstString      directory,
 *          jobOptions - job options
 * Output : ftpServer - FTP server settings from job options, server
 *                      list or default FTP server values
-* Return : server
+* Return : server id or 0
 * Notes  : -
 \***********************************************************************/
 
@@ -654,7 +694,7 @@ uint getFTPServerSettings(ConstString      hostName,
 *          jobOptions - job options
 * Output : sshServer  - SSH server settings from job options, server
 *                       list or default SSH server values
-* Return : server
+* Return : server id or 0
 * Notes  : -
 \***********************************************************************/
 
@@ -670,7 +710,7 @@ uint getSSHServerSettings(ConstString      hostName,
 *          jobOptions - job options
 * Output : webDAVServer - WebDAV server settings from job options,
 *                         server list or default WebDAV server values
-* Return : server
+* Return : server id or 0
 * Notes  : -
 \***********************************************************************/
 

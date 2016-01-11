@@ -1286,104 +1286,6 @@ LOCAL void outputConsole(FILE *file, ConstString string)
 }
 
 /***********************************************************************\
-* Name   : initServer
-* Purpose: init server
-* Input  : server     - server variable
-*          name       - server name
-*          serverType - server type
-* Output : server - initialized server structure
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void initServer(Server *server, ConstString name, ServerTypes serverType)
-{
-  assert(server != NULL);
-
-  if (!Semaphore_init(&server->lock))
-  {
-    HALT_FATAL_ERROR("cannot initialize server lock semaphore");
-  }
-  server->name                                = (name != NULL) ? String_duplicate(name) : String_new();
-  server->type                                = serverType;
-  switch (serverType)
-  {
-    case SERVER_TYPE_FILE:
-      break;
-    case SERVER_TYPE_FTP:
-      server->ftpServer.loginName             = NULL;
-      server->ftpServer.password              = NULL;
-      break;
-    case SERVER_TYPE_SSH:
-      server->sshServer.port                  = 22;
-      server->sshServer.loginName             = NULL;
-      server->sshServer.password              = NULL;
-      initKey(&server->sshServer.publicKey);
-      initKey(&server->sshServer.privateKey);
-      break;
-    case SERVER_TYPE_WEBDAV:
-      server->webDAVServer.loginName          = NULL;
-      server->webDAVServer.password           = NULL;
-      initKey(&server->webDAVServer.publicKey);
-      initKey(&server->webDAVServer.privateKey);
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; // not reached
-    #endif /* NDEBUG */
-  }
-  server->maxConnectionCount                  = 0;
-  server->maxStorageSize                      = 0;
-  server->connection.lowPriorityRequestCount  = 0;
-  server->connection.highPriorityRequestCount = 0;
-  server->connection.count                    = 0;
-}
-
-/***********************************************************************\
-* Name   : doneServer
-* Purpose: done server
-* Input  : server - server
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void doneServer(Server *server)
-{
-  assert(server != NULL);
-
-  switch (server->type)
-  {
-    case SERVER_TYPE_FILE:
-      break;
-    case SERVER_TYPE_FTP:
-      if (server->ftpServer.password != NULL) Password_delete(server->ftpServer.password);
-      if (server->ftpServer.loginName != NULL) String_delete(server->ftpServer.loginName);
-      break;
-    case SERVER_TYPE_SSH:
-      if (isKeyAvailable(&server->sshServer.privateKey)) doneKey(&server->sshServer.privateKey);
-      if (isKeyAvailable(&server->sshServer.publicKey)) doneKey(&server->sshServer.publicKey);
-      if (server->sshServer.password != NULL) Password_delete(server->sshServer.password);
-      if (server->sshServer.loginName != NULL) String_delete(server->sshServer.loginName);
-      break;
-    case SERVER_TYPE_WEBDAV:
-      if (isKeyAvailable(&server->webDAVServer.privateKey)) doneKey(&server->webDAVServer.privateKey);
-      if (isKeyAvailable(&server->webDAVServer.publicKey)) doneKey(&server->webDAVServer.publicKey);
-      if (server->webDAVServer.password != NULL) Password_delete(server->webDAVServer.password);
-      if (server->webDAVServer.loginName != NULL) String_delete(server->webDAVServer.loginName);
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; // not reached
-    #endif /* NDEBUG */
-  }
-  String_delete(server->name);
-  Semaphore_done(&server->lock);
-}
-
-/***********************************************************************\
 * Name   : initDevice
 * Purpose: init device
 * Input  : device - device
@@ -1429,10 +1331,10 @@ LOCAL DeviceNode *newDeviceNode(ConstString name)
 
   // get new id
   id = 0;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    globalOptions.serverList.id++;
-    id = globalOptions.serverList.id;
+    globalOptions.deviceList.id++;
+    id = globalOptions.deviceList.id;
   }
 
   // allocate new device node
@@ -3264,13 +3166,10 @@ String getConfigFileName(String fileName)
 
   String_clear(fileName);
 
-  STRINGLIST_ITERATE(&configFileNameList,stringNode,configFileName)
+  stringNode = STRINGLIST_FIND_LAST(&configFileNameList,configFileName,File_isWriteable(configFileName));
+  if (stringNode != NULL)
   {
-    if (File_isWriteable(configFileName))
-    {
-      String_set(fileName,configFileName);
-      break;
-    }
+    String_set(fileName,stringNode->string);
   }
 
   return fileName;
@@ -3285,6 +3184,7 @@ Errors updateConfig(void)
   uint              i;
   StringNode        *nextStringNode;
   ConfigValueFormat configValueFormat;
+  SemaphoreLock     semaphoreLock;
   ServerNode        *serverNode;
 
   // init variables
@@ -3331,111 +3231,123 @@ Errors updateConfig(void)
 
   // update storage servers
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"file-server");
-  LIST_ITERATE(&globalOptions.serverList,serverNode)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    if (serverNode->server.type == SERVER_TYPE_FILE)
+    LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
-      // insert new schedule sections
-      String_format(String_clear(line),"[file-server %'S]",serverNode->server.name);
-      StringList_insert(&configLinesList,line,nextStringNode);
-
-      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"file-server",i)
+      if (serverNode->server.type == SERVER_TYPE_FILE)
       {
-        ConfigValue_formatInit(&configValueFormat,
-                               &CONFIG_VALUES[i],
-                               CONFIG_VALUE_FORMAT_MODE_LINE,
-                               &serverNode->server
-                              );
-        while (ConfigValue_format(&configValueFormat,line))
-        {
-          StringList_insert(&configLinesList,line,nextStringNode);
-        }
-        ConfigValue_formatDone(&configValueFormat);
-      }
+        // insert new schedule sections
+        String_format(String_clear(line),"[file-server %'S]",serverNode->server.name);
+        StringList_insert(&configLinesList,line,nextStringNode);
 
-      StringList_insertCString(&configLinesList,"[end]",nextStringNode);
-      StringList_insertCString(&configLinesList,"",nextStringNode);
+        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"file-server",i)
+        {
+          ConfigValue_formatInit(&configValueFormat,
+                                 &CONFIG_VALUES[i],
+                                 CONFIG_VALUE_FORMAT_MODE_LINE,
+                                 &serverNode->server
+                                );
+          while (ConfigValue_format(&configValueFormat,line))
+          {
+            StringList_insert(&configLinesList,line,nextStringNode);
+          }
+          ConfigValue_formatDone(&configValueFormat);
+        }
+
+        StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+        StringList_insertCString(&configLinesList,"",nextStringNode);
+      }
     }
   }
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"ftp-server");
-  LIST_ITERATE(&globalOptions.serverList,serverNode)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    if (serverNode->server.type == SERVER_TYPE_FTP)
+    LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
-      // insert new schedule sections
-      String_format(String_clear(line),"[ftp-server %'S]",serverNode->server.name);
-      StringList_insert(&configLinesList,line,nextStringNode);
-
-      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"ftp-server",i)
+      if (serverNode->server.type == SERVER_TYPE_FTP)
       {
-        ConfigValue_formatInit(&configValueFormat,
-                               &CONFIG_VALUES[i],
-                               CONFIG_VALUE_FORMAT_MODE_LINE,
-                               &serverNode->server
-                              );
-        while (ConfigValue_format(&configValueFormat,line))
-        {
-          StringList_insert(&configLinesList,line,nextStringNode);
-        }
-        ConfigValue_formatDone(&configValueFormat);
-      }
+        // insert new schedule sections
+        String_format(String_clear(line),"[ftp-server %'S]",serverNode->server.name);
+        StringList_insert(&configLinesList,line,nextStringNode);
 
-      StringList_insertCString(&configLinesList,"[end]",nextStringNode);
-      StringList_insertCString(&configLinesList,"",nextStringNode);
+        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"ftp-server",i)
+        {
+          ConfigValue_formatInit(&configValueFormat,
+                                 &CONFIG_VALUES[i],
+                                 CONFIG_VALUE_FORMAT_MODE_LINE,
+                                 &serverNode->server
+                                );
+          while (ConfigValue_format(&configValueFormat,line))
+          {
+            StringList_insert(&configLinesList,line,nextStringNode);
+          }
+          ConfigValue_formatDone(&configValueFormat);
+        }
+
+        StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+        StringList_insertCString(&configLinesList,"",nextStringNode);
+      }
     }
   }
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"ssh-server");
-  LIST_ITERATE(&globalOptions.serverList,serverNode)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    if (serverNode->server.type == SERVER_TYPE_SSH)
+    LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
-      // insert new schedule sections
-      String_format(String_clear(line),"[ssh-server %'S]",serverNode->server.name);
-      StringList_insert(&configLinesList,line,nextStringNode);
-
-      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"ssh-server",i)
+      if (serverNode->server.type == SERVER_TYPE_SSH)
       {
-        ConfigValue_formatInit(&configValueFormat,
-                               &CONFIG_VALUES[i],
-                               CONFIG_VALUE_FORMAT_MODE_LINE,
-                               &serverNode->server
-                              );
-        while (ConfigValue_format(&configValueFormat,line))
-        {
-          StringList_insert(&configLinesList,line,nextStringNode);
-        }
-        ConfigValue_formatDone(&configValueFormat);
-      }
+        // insert new schedule sections
+        String_format(String_clear(line),"[ssh-server %'S]",serverNode->server.name);
+        StringList_insert(&configLinesList,line,nextStringNode);
 
-      StringList_insertCString(&configLinesList,"[end]",nextStringNode);
-      StringList_insertCString(&configLinesList,"",nextStringNode);
+        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"ssh-server",i)
+        {
+          ConfigValue_formatInit(&configValueFormat,
+                                 &CONFIG_VALUES[i],
+                                 CONFIG_VALUE_FORMAT_MODE_LINE,
+                                 &serverNode->server
+                                );
+          while (ConfigValue_format(&configValueFormat,line))
+          {
+            StringList_insert(&configLinesList,line,nextStringNode);
+          }
+          ConfigValue_formatDone(&configValueFormat);
+        }
+
+        StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+        StringList_insertCString(&configLinesList,"",nextStringNode);
+      }
     }
   }
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"webdav-server");
-  LIST_ITERATE(&globalOptions.serverList,serverNode)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    if (serverNode->server.type == SERVER_TYPE_WEBDAV)
+    LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
-      // insert new schedule sections
-      String_format(String_clear(line),"[webdav-server %'S]",serverNode->server.name);
-      StringList_insert(&configLinesList,line,nextStringNode);
-
-      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"webdav-server",i)
+      if (serverNode->server.type == SERVER_TYPE_WEBDAV)
       {
-        ConfigValue_formatInit(&configValueFormat,
-                               &CONFIG_VALUES[i],
-                               CONFIG_VALUE_FORMAT_MODE_LINE,
-                               &serverNode->server
-                              );
-        while (ConfigValue_format(&configValueFormat,line))
-        {
-          StringList_insert(&configLinesList,line,nextStringNode);
-        }
-        ConfigValue_formatDone(&configValueFormat);
-      }
+        // insert new schedule sections
+        String_format(String_clear(line),"[webdav-server %'S]",serverNode->server.name);
+        StringList_insert(&configLinesList,line,nextStringNode);
 
-      StringList_insertCString(&configLinesList,"[end]",nextStringNode);
-      StringList_insertCString(&configLinesList,"",nextStringNode);
+        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"webdav-server",i)
+        {
+          ConfigValue_formatInit(&configValueFormat,
+                                 &CONFIG_VALUES[i],
+                                 CONFIG_VALUE_FORMAT_MODE_LINE,
+                                 &serverNode->server
+                                );
+          while (ConfigValue_format(&configValueFormat,line))
+          {
+            StringList_insert(&configLinesList,line,nextStringNode);
+          }
+          ConfigValue_formatDone(&configValueFormat);
+        }
+
+        StringList_insertCString(&configLinesList,"[end]",nextStringNode);
+        StringList_insertCString(&configLinesList,"",nextStringNode);
+      }
     }
   }
 
@@ -4616,6 +4528,81 @@ Errors readKeyFile(Key *key, const char *fileName)
   return ERROR_NONE;
 }
 
+void initServer(Server *server, ConstString name, ServerTypes serverType)
+{
+  assert(server != NULL);
+
+  if (!Semaphore_init(&server->lock))
+  {
+    HALT_FATAL_ERROR("cannot initialize server lock semaphore");
+  }
+  server->name                                = (name != NULL) ? String_duplicate(name) : String_new();
+  server->type                                = serverType;
+  switch (serverType)
+  {
+    case SERVER_TYPE_FILE:
+      break;
+    case SERVER_TYPE_FTP:
+      server->ftpServer.loginName             = NULL;
+      server->ftpServer.password              = NULL;
+      break;
+    case SERVER_TYPE_SSH:
+      server->sshServer.port                  = 22;
+      server->sshServer.loginName             = NULL;
+      server->sshServer.password              = NULL;
+      initKey(&server->sshServer.publicKey);
+      initKey(&server->sshServer.privateKey);
+      break;
+    case SERVER_TYPE_WEBDAV:
+      server->webDAVServer.loginName          = NULL;
+      server->webDAVServer.password           = NULL;
+      initKey(&server->webDAVServer.publicKey);
+      initKey(&server->webDAVServer.privateKey);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; // not reached
+    #endif /* NDEBUG */
+  }
+  server->maxConnectionCount                  = 0;
+  server->maxStorageSize                      = 0;
+}
+
+void doneServer(Server *server)
+{
+  assert(server != NULL);
+
+  switch (server->type)
+  {
+    case SERVER_TYPE_FILE:
+      break;
+    case SERVER_TYPE_FTP:
+      if (server->ftpServer.password != NULL) Password_delete(server->ftpServer.password);
+      if (server->ftpServer.loginName != NULL) String_delete(server->ftpServer.loginName);
+      break;
+    case SERVER_TYPE_SSH:
+      if (isKeyAvailable(&server->sshServer.privateKey)) doneKey(&server->sshServer.privateKey);
+      if (isKeyAvailable(&server->sshServer.publicKey)) doneKey(&server->sshServer.publicKey);
+      if (server->sshServer.password != NULL) Password_delete(server->sshServer.password);
+      if (server->sshServer.loginName != NULL) String_delete(server->sshServer.loginName);
+      break;
+    case SERVER_TYPE_WEBDAV:
+      if (isKeyAvailable(&server->webDAVServer.privateKey)) doneKey(&server->webDAVServer.privateKey);
+      if (isKeyAvailable(&server->webDAVServer.publicKey)) doneKey(&server->webDAVServer.publicKey);
+      if (server->webDAVServer.password != NULL) Password_delete(server->webDAVServer.password);
+      if (server->webDAVServer.loginName != NULL) String_delete(server->webDAVServer.loginName);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; // not reached
+    #endif /* NDEBUG */
+  }
+  String_delete(server->name);
+  Semaphore_done(&server->lock);
+}
+
 ServerNode *newServerNode(ConstString name, ServerTypes serverType)
 {
   SemaphoreLock semaphoreLock;
@@ -4639,8 +4626,11 @@ ServerNode *newServerNode(ConstString name, ServerTypes serverType)
     HALT_INSUFFICIENT_MEMORY();
   }
   initServer(&serverNode->server,name,serverType);
-  serverNode->id   = id;
+  serverNode->id                                  = id;
 //  serverNode->name = String_duplicate(name);
+  serverNode->connection.lowPriorityRequestCount  = 0;
+  serverNode->connection.highPriorityRequestCount = 0;
+  serverNode->connection.count                    = 0;
 
   return serverNode;
 }
@@ -4660,6 +4650,129 @@ void freeServerNode(ServerNode *serverNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   doneServer(&serverNode->server);
+}
+
+uint getServerSettings(const StorageSpecifier *storageSpecifier,
+                       const JobOptions       *jobOptions,
+                       Server                 *server
+                      )
+{
+  uint          serverId;
+  SemaphoreLock semaphoreLock;
+  ServerNode    *serverNode;
+
+  assert(storageSpecifier != NULL);
+  assert(server != NULL);
+
+  // get default settings
+  serverId                   = 0;
+  server->maxConnectionCount = 0;
+  server->maxStorageSize     = (jobOptions != NULL) ? jobOptions->maxStorageSize : 0LL;
+
+  // get server specific settings
+  switch (storageSpecifier->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        // find file server
+        serverNode = LIST_FIND(&globalOptions.serverList,
+                               serverNode,
+                                  (serverNode->server.type == SERVER_TYPE_FILE)
+                               && String_startsWith(serverNode->server.name,storageSpecifier->archiveName)
+                              );
+
+        if (serverNode != NULL)
+        {
+          // get file server settings
+          serverId = serverNode->id;
+          initServer(server,serverNode->server.name,SERVER_TYPE_FILE);
+        }
+      }
+      break;
+    case STORAGE_TYPE_FTP:
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        // find file server
+        serverNode = LIST_FIND(&globalOptions.serverList,
+                               serverNode,
+                                  (serverNode->server.type == SERVER_TYPE_FTP)
+                               && String_equals(serverNode->server.name,storageSpecifier->hostName)
+                              );
+
+        if (serverNode != NULL)
+        {
+          // get FTP server settings
+          serverId  = serverNode->id;
+          initServer(server,serverNode->server.name,SERVER_TYPE_FTP);
+          server->ftpServer.loginName = String_duplicate(serverNode->server.ftpServer.loginName);
+          server->ftpServer.password  = Password_duplicate(serverNode->server.ftpServer.password);
+        }
+      }
+      break;
+    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_SCP:
+    case STORAGE_TYPE_SFTP:
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        // find SSH server
+        serverNode = LIST_FIND(&globalOptions.serverList,
+                               serverNode,
+                                  (serverNode->server.type == SERVER_TYPE_SSH)
+                               && String_equals(serverNode->server.name,storageSpecifier->hostName)
+                              );
+
+        if (serverNode != NULL)
+        {
+          // get file server settings
+          serverId  = serverNode->id;
+          initServer(server,serverNode->server.name,SERVER_TYPE_SSH);
+          server->sshServer.loginName = String_duplicate(serverNode->server.sshServer.loginName);
+          server->sshServer.port      = serverNode->server.sshServer.port;
+          server->sshServer.password  = Password_duplicate(serverNode->server.sshServer.password);
+          duplicateKey(&server->sshServer.publicKey,&serverNode->server.sshServer.publicKey);
+          duplicateKey(&server->sshServer.privateKey,&serverNode->server.sshServer.privateKey);
+        }
+      }
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        // find file server
+        serverNode = LIST_FIND(&globalOptions.serverList,
+                               serverNode,
+                                  (serverNode->server.type == SERVER_TYPE_WEBDAV)
+                               && String_equals(serverNode->server.name,storageSpecifier->hostName)
+                              );
+
+        if (serverNode != NULL)
+        {
+          // get WebDAV server settings
+          serverId = serverNode->id;
+          initServer(server,serverNode->server.name,SERVER_TYPE_WEBDAV);
+          server->webDAVServer.loginName = String_duplicate(serverNode->server.webDAVServer.loginName);
+          server->webDAVServer.password  = Password_duplicate(serverNode->server.webDAVServer.password);
+          duplicateKey(&server->webDAVServer.publicKey,&serverNode->server.webDAVServer.publicKey);
+          duplicateKey(&server->webDAVServer.privateKey,&serverNode->server.webDAVServer.privateKey);
+        }
+      }
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+    case STORAGE_TYPE_DEVICE:
+      // nothing to do
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; // not reached
+    #endif /* NDEBUG */
+  }
+  uint        maxConnectionCount;                             // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint64      maxStorageSize;                                 // max. number of bytes to store on server
+
+  return serverId;
 }
 
 uint getFileServerSettings(ConstString      directory,
@@ -4945,14 +5058,14 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
     {
       case SERVER_CONNECTION_PRIORITY_LOW:
         if (   (maxConnectionCount != 0)
-            && (serverNode->server.connection.count >= maxConnectionCount)
+            && (serverNode->connection.count >= maxConnectionCount)
            )
         {
           // request low priority connection
-          serverNode->server.connection.lowPriorityRequestCount++;
+          serverNode->connection.lowPriorityRequestCount++;
 
           // wait for free connection
-          while (serverNode->server.connection.count >= maxConnectionCount)
+          while (serverNode->connection.count >= maxConnectionCount)
           {
             if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
             {
@@ -4962,20 +5075,20 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
           }
 
           // low priority request done
-          assert(serverNode->server.connection.lowPriorityRequestCount > 0);
-          serverNode->server.connection.lowPriorityRequestCount--;
+          assert(serverNode->connection.lowPriorityRequestCount > 0);
+          serverNode->connection.lowPriorityRequestCount--;
         }
         break;
       case SERVER_CONNECTION_PRIORITY_HIGH:
         if (   (maxConnectionCount != 0)
-            && (serverNode->server.connection.count >= maxConnectionCount)
+            && (serverNode->connection.count >= maxConnectionCount)
            )
         {
           // request high priority connection
-          serverNode->server.connection.highPriorityRequestCount++;
+          serverNode->connection.highPriorityRequestCount++;
 
           // wait for free connection
-          while (serverNode->server.connection.count >= maxConnectionCount)
+          while (serverNode->connection.count >= maxConnectionCount)
           {
             if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
             {
@@ -4985,8 +5098,8 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
           }
 
           // high priority request done
-          assert(serverNode->server.connection.highPriorityRequestCount > 0);
-          serverNode->server.connection.highPriorityRequestCount--;
+          assert(serverNode->connection.highPriorityRequestCount > 0);
+          serverNode->connection.highPriorityRequestCount--;
         }
         break;
       #ifndef NDEBUG
@@ -4997,7 +5110,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
     }
 
     // allocated connection
-    serverNode->server.connection.count++;
+    serverNode->connection.count++;
   }
 
   return TRUE;
@@ -5016,10 +5129,10 @@ void freeServer(uint serverId)
     serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
     if (serverNode != NULL)
     {
-      assert(serverNode->server.connection.count > 0);
+      assert(serverNode->connection.count > 0);
 
       // free connection
-      serverNode->server.connection.count--;
+      serverNode->connection.count--;
     }
   }
 }
@@ -5039,7 +5152,7 @@ bool isServerAllocationPending(uint serverId)
     serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
     if (serverNode != NULL)
     {
-      pendingFlag = (serverNode->server.connection.highPriorityRequestCount > 0);
+      pendingFlag = (serverNode->connection.highPriorityRequestCount > 0);
     }
   }
 
