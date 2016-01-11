@@ -138,6 +138,8 @@ typedef struct MountNode
 typedef struct
 {
   LIST_HEADER(MountNode);
+
+  uint id;
 } MountList;
 
 // job type
@@ -690,6 +692,81 @@ LOCAL bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
   {
     return FALSE;
   }
+}
+
+/***********************************************************************\
+* Name   : freeMountNode
+* Purpose: free mount node
+* Input  : mountNode - mount node
+*          userData  - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeMountNode(MountNode *mountNode, void *userData)
+{
+  assert(mountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(mountNode->name);
+}
+
+/***********************************************************************\
+* Name   : newMountNode
+* Purpose: new mount node
+* Input  : name          - name
+*          alwaysUnmount - TRUE for always unmount
+* Output : -
+* Return : mount node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL MountNode *newMountNode(JobNode *jobNode, ConstString name, bool alwaysUnmount)
+{
+  SemaphoreLock semaphoreLock;
+  uint          id;
+  MountNode     *mountNode;
+
+  assert(name != NULL);
+
+  // get new id
+  id = 0;
+//  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobNode->mountList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    jobNode->mountList.id++;
+    id = jobNode->mountList.id;
+  }
+
+  // allocate mount node
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+//  initServer(&serverNode->server,name,serverType);
+  mountNode->id                                  = id;
+  mountNode->name = String_duplicate(name);
+
+  return mountNode;
+}
+
+/***********************************************************************\
+* Name   : deleteMountNode
+* Purpose: delete mount node
+* Input  : mountNode - mount node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteMountNode(MountNode *mountNode)
+{
+  assert(mountNode != NULL);
+
+  freeMountNode(mountNode,NULL);
+  LIST_DELETE_NODE(mountNode);
 }
 
 /***********************************************************************\
@@ -9699,9 +9776,8 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const String
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
-*            entryType=<type>
-*            pattern=<text>
-*            [patternType=<type>]
+*            name=<name>
+*            alwaysUnmount=yes|no
 *          Result:
 *            id=<n>
 \***********************************************************************/
@@ -9709,35 +9785,35 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const String
 LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  EntryTypes    entryType;
-  PatternTypes  patternType;
-  String        patternString;
+  String        name;
+  bool          alwaysUnmount;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
-  uint          entryId;
+  MountNode     *mountNode;
+  uint          mountId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job UUID, entry type, pattern type, pattern
+  // get jobUUID, name, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
-  patternString = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  if (!StringMap_getBool(argumentMap,"alwaysUnmount",&alwaysUnmount,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
-    String_delete(patternString);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected alwaysUnmount=yes|no");
+    String_delete(name);
     return;
   }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -9747,22 +9823,25 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const Str
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
-      String_delete(patternString);
+      String_delete(name);
       return;
     }
 
-    // add to include list
-    EntryList_append(&jobNode->includeEntryList,entryType,patternString,patternType,&entryId);
+    // add to mount list
+    mountNode = newMountNode(jobNode,name,alwaysUnmount);
+    assert(mountNode != NULL);
+    mountId = mountNode->id;
+    List_append(&jobNode->mountList,mountNode);
     jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",entryId);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",mountId);
 
   // free resources
-  String_delete(patternString);
+  String_delete(name);
 }
 
 /***********************************************************************\
