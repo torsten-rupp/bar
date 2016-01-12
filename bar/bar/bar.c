@@ -899,6 +899,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL           ("include-image",                &includeEntryList,-1,                                          configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL           ("exclude",                      &excludePatternList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
+//TODO
+//  CONFIG_VALUE_SPECIAL           ("mount",                        &mountList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
 
   CONFIG_VALUE_SPECIAL           ("delta-source",                 &deltaSourceList,-1,                                           configValueParseDeltaSource,NULL,NULL,NULL,&jobOptions.patternType),
 

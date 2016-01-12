@@ -490,6 +490,11 @@ typedef struct
   StringMap             argumentMap;
 } CommandMsg;
 
+LOCAL bool configValueParseMount(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueFormatInitMount(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueFormatDoneMount(void **formatUserData, void *userData);
+LOCAL bool configValueFormatMount(void **formatUserData, void *userData, String line);
+
 LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
 LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
@@ -552,7 +557,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountList,                              configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
@@ -790,6 +795,69 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
   String_delete(scheduleNode->customText);
   String_delete(scheduleNode->parentUUID);
   String_delete(scheduleNode->uuid);
+}
+
+bool configValueParseMount(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  // append to delta source list
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+//  mountNode->storageName = String_newCString(value);
+//  mountNode->patternType = patternType;
+  List_append((MountList*)variable,mountNode);
+
+  return TRUE;
+}
+
+void configValueFormatInitMount(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = ((PatternList*)variable)->head;
+}
+
+void configValueFormatDoneMount(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatMount(void **formatUserData, void *userData, String line)
+{
+  MountNode *mountNode;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  mountNode = (DeltaSourceNode*)(*formatUserData);
+  if (mountNode != NULL)
+  {
+    String_format(line,"%'S",mountNode->name);
+
+    (*formatUserData) = mountNode->next;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 /***********************************************************************\
