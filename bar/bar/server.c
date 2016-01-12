@@ -161,9 +161,9 @@ typedef struct JobNode
   String          archiveName;                          // archive name
   EntryList       includeEntryList;                     // included entries
   PatternList     excludePatternList;                   // excluded entry patterns
+  MountList       mountList;                            // mount list
   PatternList     compressExcludePatternList;           // excluded compression patterns
   DeltaSourceList deltaSourceList;                      // delta sources
-  MountList       mountList;                            // mount list
   ScheduleList    scheduleList;                         // schedule list
   JobOptions      jobOptions;                           // options for job
 
@@ -418,9 +418,9 @@ bool abortFlag;
 
   EntryList           includeEntryList;
   PatternList         excludePatternList;
+  MountList           mountList;
   PatternList         compressExcludePatternList;
   DeltaSourceList     deltaSourceList;
-  MountList           mountList;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
 
@@ -736,6 +736,37 @@ LOCAL MountNode *newMountNode(JobNode *jobNode, ConstString name, bool alwaysUnm
 }
 
 /***********************************************************************\
+* Name   : duplicateMountNode
+* Purpose: duplicate schedule node
+* Input  : fromMountNode - from mount node
+*          userData      - user data (not used)
+* Output : -
+* Return : duplicated mount node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL MountNode *duplicateMountNode(MountNode *fromMountNode,
+                                    void      *userData
+                                   )
+{
+  MountNode *mountNode;
+
+  assert(fromMountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  mountNode->name          = String_duplicate(fromMountNode->name);
+  mountNode->alwaysUnmount = fromMountNode->alwaysUnmount;
+
+  return mountNode;
+}
+
+/***********************************************************************\
 * Name   : deleteMountNode
 * Purpose: delete mount node
 * Input  : mountNode - mount node
@@ -817,6 +848,7 @@ LOCAL ScheduleNode *newScheduleNode(void)
 * Name   : duplicateScheduleNode
 * Purpose: duplicate schedule node
 * Input  : fromScheduleNode - from schedule node
+*          userData      - user data (not used)
 * Output : -
 * Return : duplicated schedule node
 * Notes  : -
@@ -1757,6 +1789,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&jobNode->deltaSourceList);
   PatternList_done(&jobNode->compressExcludePatternList);
+  List_done(&jobNode->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_done(&jobNode->excludePatternList);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
@@ -1808,6 +1841,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   EntryList_init(&jobNode->includeEntryList);
   PatternList_init(&jobNode->excludePatternList);
   PatternList_init(&jobNode->compressExcludePatternList);
+  List_init(&jobNode->mountList);
   DeltaSourceList_init(&jobNode->deltaSourceList);
   List_init(&jobNode->scheduleList);
   initDuplicateJobOptions(&jobNode->jobOptions,serverDefaultJobOptions);
@@ -1882,6 +1916,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
   EntryList_initDuplicate(&newJobNode->includeEntryList,&jobNode->includeEntryList,NULL,NULL);
   PatternList_initDuplicate(&newJobNode->excludePatternList,&jobNode->excludePatternList,NULL,NULL);
+  List_initDuplicate(&newJobNode->mountList,&jobNode->mountList,NULL,NULL,(ListNodeDuplicateFunction)duplicateMountNode,NULL);
   PatternList_initDuplicate(&newJobNode->compressExcludePatternList,&jobNode->compressExcludePatternList,NULL,NULL);
   DeltaSourceList_initDuplicate(&newJobNode->deltaSourceList,&jobNode->deltaSourceList,NULL,NULL);
   List_initDuplicate(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,(ListNodeDuplicateFunction)duplicateScheduleNode,NULL);
@@ -9738,7 +9773,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const String
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
 //TODO
-                       "id=%u mount=%'S alwaysUnmount=no",
+                       "id=%u name=%'S alwaysUnmount=no",
                        mountNode->id,
                        mountNode->name
                       );
