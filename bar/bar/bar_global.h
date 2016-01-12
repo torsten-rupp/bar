@@ -217,7 +217,7 @@ typedef struct
 {
 //TODO
   Semaphore lock;
-  String      name;                                           // server name
+  String      name;                                           // server file name or URL
   ServerTypes type;                                           // server type
   union
   {
@@ -228,12 +228,6 @@ typedef struct
   };
   uint        maxConnectionCount;                             // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
   uint64      maxStorageSize;                                 // max. number of bytes to store on server
-  struct
-  {
-    uint      lowPriorityRequestCount;                        // number of waiting low priority connection requests
-    uint      highPriorityRequestCount;                       // number of waiting high priority connection requests
-    uint      count;                                          // number of current connections
-  }           connection;
 } Server;
 
 // server node
@@ -241,8 +235,14 @@ typedef struct ServerNode
 {
   LIST_NODE_HEADER(struct ServerNode);
 
-  uint      id;
+  uint      id;                                               // unique server id
   Server    server;
+  struct
+  {
+    uint      lowPriorityRequestCount;                        // number of waiting low priority connection requests
+    uint      highPriorityRequestCount;                       // number of waiting high priority connection requests
+    uint      count;                                          // number of current connections
+  }           connection;
 } ServerNode;
 
 // server list
