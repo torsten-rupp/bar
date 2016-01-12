@@ -908,6 +908,52 @@ public class TabJobs
     }
   }
 
+  /** mount data
+   */
+  class MountData implements Cloneable
+  {
+    int     id;
+    String  name;
+    boolean alwaysUnmount;
+
+    /** create mount entry
+     * @param id unique id
+     * @param name mount name
+     * @param alwaysUnmount TRUE to always unmount
+     */
+    MountData(int id, String name, boolean alwaysUnmount)
+    {
+      this.id            = id;
+      this.name          = name;
+      this.alwaysUnmount = alwaysUnmount;
+    }
+
+    /** create mount entry
+     * @param name mount name
+     * @param alwaysUnmount TRUE to always unmount
+     */
+    MountData(String name, boolean alwaysUnmount)
+    {
+      this(0,name,alwaysUnmount);
+    }
+
+    /** clone mount entry
+     * @return clone of object
+     */
+    public MountData clone()
+    {
+      return new MountData(name,alwaysUnmount);
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "Mount {"+id+", "+name+", "+alwaysUnmount+"}";
+    }
+  }
+
   /** schedule data
    */
   class ScheduleData implements Cloneable
@@ -3360,8 +3406,7 @@ Dprintf.dprintf("");
           widgetMountTable = Widgets.newTable(subTab);
           widgetMountTable.setToolTipText(BARControl.tr("List of devices to mount, right-click for context menu."));
           widgetMountTable.setHeaderVisible(false);
-          Widgets.addTableColumn(widgetMountTable,0,SWT.LEFT,20);
-          Widgets.addTableColumn(widgetMountTable,1,SWT.LEFT,1024,true);
+          Widgets.addTableColumn(widgetMountTable,0,SWT.LEFT,600,true);
           Widgets.addTableColumn(widgetMountTable,1,SWT.LEFT,20,false);
   //????
   // automatic column width calculation?
@@ -3371,7 +3416,7 @@ Dprintf.dprintf("");
           {
             public void mouseDoubleClick(final MouseEvent mouseEvent)
             {
-              includeListEdit();
+              mountListEdit();
             }
             public void mouseDown(final MouseEvent mouseEvent)
             {
@@ -3487,7 +3532,7 @@ Dprintf.dprintf("");
                 if (selectedJobData != null)
                 {
   Dprintf.dprintf("");
-  //                includeListAdd();
+                  mountListAdd();
                 }
               }
             });
@@ -3506,7 +3551,7 @@ Dprintf.dprintf("");
                 if (selectedJobData != null)
                 {
   Dprintf.dprintf("");
-  //                includeListEdit();
+                  mountListEdit();
                 }
               }
             });
@@ -3525,7 +3570,7 @@ Dprintf.dprintf("");
                 if (selectedJobData != null)
                 {
   Dprintf.dprintf("");
-  //                includeListClone();
+                  mountListClone();
                 }
               }
             });
@@ -3543,7 +3588,7 @@ Dprintf.dprintf("");
                 if (selectedJobData != null)
                 {
   Dprintf.dprintf("");
-  //                includeListRemove();
+                  mountListRemove();
                 }
               }
             });
@@ -8212,6 +8257,7 @@ throw new Error("NYI");
       updateDeviceImages();
       updateIncludeList();
       updateExcludeList();
+      updateMountList();
       updateSourceList();
       updateCompressExcludeList();
       updateScheduleTable();
@@ -8830,16 +8876,56 @@ throw new Error("NYI");
 
   /** find index for insert of entry in sorted table
    * @param table table
-   * @param pattern pattern to insert
+   * @param entryData entry data to insert
    * @return index in table
    */
-  private int findTableIndex(Table table, String pattern)
+  private int findTableIndex(Table table, EntryData entryData)
   {
     TableItem tableItems[] = table.getItems();
 
     int index = 0;
     while (   (index < tableItems.length)
-           && (pattern.compareTo(((EntryData)tableItems[index].getData()).pattern) > 0)
+           && (entryData.pattern.compareTo(((EntryData)tableItems[index].getData()).pattern) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** find index for insert of mount in sorted table
+   * @param table table
+   * @param mountData mount data to insert
+   * @return index in table
+   */
+  private int findTableIndex(Table table, MountData mountData)
+  {
+    TableItem tableItems[] = table.getItems();
+
+    int index = 0;
+    while (   (index < tableItems.length)
+           && (mountData.name.compareTo(((MountData)tableItems[index].getData()).name) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
+  }
+
+  /** find index for insert of entry in sorted table
+   * @param table table
+   * @param string string to insert
+   * @return index in table
+   */
+  private int findTableIndex(Table table, String string)
+  {
+    TableItem tableItems[] = table.getItems();
+
+    int index = 0;
+    while (   (index < tableItems.length)
+           && (string.compareTo((String)tableItems[index].getData()) > 0)
           )
     {
       index++;
@@ -8850,16 +8936,16 @@ throw new Error("NYI");
 
   /** find index for insert of pattern in sorted pattern list
    * @param list list
-   * @param pattern pattern to insert
+   * @param entryData entry data to insert
    * @return index in list
    */
-  private int findListIndex(List list, String pattern)
+  private int findListIndex(List list, String string)
   {
-    String patterns[] = list.getItems();
+    String strings[] = list.getItems();
 
     int index = 0;
-    while (   (index < patterns.length)
-           && (pattern.compareTo(patterns[index]) > 0)
+    while (   (index < strings.length)
+           && (string.compareTo(strings[index]) > 0)
           )
     {
       index++;
@@ -8907,7 +8993,7 @@ throw new Error("NYI");
 
           includeHashMap.put(pattern,entryData);
           Widgets.insertTableItem(widgetIncludeTable,
-                                  findTableIndex(widgetIncludeTable,pattern),
+                                  findTableIndex(widgetIncludeTable,entryData),
                                   (Object)entryData,
                                   entryData.getImage(),
                                   entryData.pattern
@@ -8963,6 +9049,58 @@ throw new Error("NYI");
                                  (Object)pattern,
                                  pattern
                                 );
+        }
+      }
+      catch (IllegalArgumentException exception)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          System.err.println("ERROR: "+exception.getMessage());
+        }
+      }
+    }
+  }
+
+  /** update mount list
+   */
+  private void updateMountList()
+  {
+    assert selectedJobData != null;
+
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
+                                                             selectedJobData.uuid
+                                                            ),
+                                         0,
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
+
+    Widgets.removeAllTableItems(widgetMountTable);
+    for (ValueMap resultMap : resultMapList)
+    {
+      try
+      {
+        // get data
+        int     id            = resultMap.getInt    ("id"           );
+        String  name          = resultMap.getString ("name"         );
+        boolean alwaysUnmount = resultMap.getBoolean("alwaysUnmount");
+
+        if (!name.equals(""))
+        {
+          MountData mountData = new MountData(id,name,alwaysUnmount);
+
+          Widgets.insertTableItem(widgetMountTable,
+                                  findTableIndex(widgetMountTable,mountData),
+                                  (Object)mountData,
+                                  mountData.name,
+                                  mountData.alwaysUnmount ? "\u2713" : "-"
+                                 );
         }
       }
       catch (IllegalArgumentException exception)
@@ -9269,7 +9407,7 @@ throw new Error("NYI");
 
     // update table widget
     Widgets.insertTableItem(widgetIncludeTable,
-                            findTableIndex(widgetIncludeTable,entryData.pattern),
+                            findTableIndex(widgetIncludeTable,entryData),
                             (Object)entryData,
                             entryData.getImage(),
                             entryData.pattern
@@ -9280,7 +9418,7 @@ throw new Error("NYI");
     updateDeviceImages();
   }
 
-  /** remove include entry
+  /** remove include patterns
    * @param patterns patterns to remove from include/exclude list
    */
   private void includeListRemove(String[] patterns)
@@ -9315,7 +9453,7 @@ throw new Error("NYI");
     for (EntryData entryData : includeHashMap.values())
     {
       Widgets.insertTableItem(widgetIncludeTable,
-                              findTableIndex(widgetIncludeTable,entryData.pattern),
+                              findTableIndex(widgetIncludeTable,entryData),
                               (Object)entryData,
                               entryData.getImage(),
                               entryData.pattern
@@ -9327,7 +9465,7 @@ throw new Error("NYI");
     updateDeviceImages();
   }
 
-  /** remove include entry
+  /** remove include patterns
    * @param pattern pattern to remove from include/exclude list
    */
   private void includeListRemove(String pattern)
@@ -9348,7 +9486,7 @@ throw new Error("NYI");
     }
   }
 
-  /** edit include entry
+  /** edit currently selected include entry
    */
   private void includeListEdit()
   {
@@ -9373,7 +9511,7 @@ throw new Error("NYI");
     }
   }
 
-  /** clone include entry
+  /** clone currently selected include entry
    */
   private void includeListClone()
   {
@@ -9397,7 +9535,7 @@ throw new Error("NYI");
     }
   }
 
-  /** remove selected include pattern
+  /** remove currently selected include entry
    */
   private void includeListRemove()
   {
@@ -9415,6 +9553,373 @@ throw new Error("NYI");
         for (EntryData entryData : entryDataList)
         {
           includeListRemove(entryData.pattern);
+        }
+      }
+    }
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** edit mount entry
+   * @param mountData mount data
+   * @param title dialog title
+   * @param buttonText add button text
+   */
+  private boolean mountEdit(final MountData mountData, String title, String buttonText)
+  {
+    Composite composite,subComposite;
+    Label     label;
+    Button    button;
+
+    assert selectedJobData != null;
+
+    // create dialog
+    final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Text   widgetName;
+    final Button widgetAlwaysUnmount;
+    final Button widgetAdd;
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
+      Widgets.layout(label,0,0,TableLayoutData.NW);
+
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+      {
+        widgetName = Widgets.newText(subComposite);
+        widgetName.setToolTipText(BARControl.tr("Mount name."));
+        if (mountData.name != null) widgetName.setText(mountData.name);
+        Widgets.layout(widgetName,0,0,TableLayoutData.WE);
+
+        button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+        button.setToolTipText(BARControl.tr("Select remote path. CTRL+click to select local path."));
+        Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String fileName;
+
+            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+            {
+              fileName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.OPEN,
+                                      BARControl.tr("Select name"),
+                                      widgetName.getText(),
+                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      remoteListDirectory
+                                     );
+            }
+            else
+            {
+              fileName = Dialogs.fileOpen(shell,
+                                          BARControl.tr("Select name"),
+                                          widgetName.getText(),
+                                          new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                      }
+                                         );
+            }
+            if (fileName != null)
+            {
+              widgetName.setText(fileName.trim());
+            }
+          }
+        });
+      }
+
+      widgetAlwaysUnmount = Widgets.newCheckbox(subComposite,BARControl.tr("always unmount"));
+      widgetAlwaysUnmount.setSelection(mountData.alwaysUnmount);
+      Widgets.layout(widgetAlwaysUnmount,1,0,TableLayoutData.W);
+      widgetAlwaysUnmount.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          mountData.alwaysUnmount = widget.getSelection();
+        }
+      });
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    {
+      widgetAdd = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      widgetAdd.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          mountData.name          = widgetName.getText().trim();
+          mountData.alwaysUnmount = widgetAlwaysUnmount.getSelection();
+          Dialogs.close(dialog,true);
+        }
+      });
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetName.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetAdd.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+
+    return (Boolean)Dialogs.run(dialog,false) && !mountData.name.equals("");
+  }
+
+  /** add mount entry
+   * @param entryData entry data
+   */
+  private void mountListAdd(MountData mountData)
+  {
+    assert selectedJobData != null;
+
+    // add to mount list
+    String[] resultErrorMessage = new String[1];
+    ValueMap resultMap          = new ValueMap();
+    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S alwaysUnmount=%y",
+                                                             selectedJobData.uuid,
+                                                             mountData.name,
+                                                             mountData.alwaysUnmount
+                                                            ),
+                                         0,
+                                         resultErrorMessage,
+                                         resultMap
+                                        );
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot add mount entry:\n\n{0}",resultErrorMessage[0]));
+      return;
+    }
+
+    // get id
+    mountData.id = resultMap.getInt("id");
+
+    // update table widget
+    Widgets.insertTableItem(widgetMountTable,
+                            findTableIndex(widgetMountTable,mountData),
+                            (Object)mountData,
+                            mountData.name,
+                            mountData.alwaysUnmount ? "\u2713" : "-"
+                           );
+  }
+
+  /** update mount entry
+   * @param entryData entry data
+   */
+  private void mountListUpdate(MountData mountData)
+  {
+    assert selectedJobData != null;
+
+    // add to mount list
+    String[] resultErrorMessage = new String[1];
+    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S alwaysUnmount=%y",
+                                                             selectedJobData.uuid,
+                                                             mountData.id,
+                                                             mountData.name,
+                                                             mountData.alwaysUnmount
+                                                            ),
+                                         0,
+                                         resultErrorMessage
+                                        );
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot update mount entry:\n\n{0}",resultErrorMessage[0]));
+      return;
+    }
+
+    // update table widget
+    Widgets.updateTableItem(widgetMountTable,
+                            findTableIndex(widgetMountTable,mountData),
+                            (Object)mountData,
+                            mountData.name,
+                            mountData.alwaysUnmount ? "\u2713" : "-"
+                           );
+  }
+
+  /** remove mount entry
+   * @param entryData entry data
+   */
+  private void mountListRemove(MountData mountData)
+  {
+    assert selectedJobData != null;
+
+    // add to mount list
+    String[] resultErrorMessage = new String[1];
+    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_REMOVE jobUUID=%s id=%d",
+                                                             selectedJobData.uuid,
+                                                             mountData.id
+                                                            ),
+                                         0,
+                                         resultErrorMessage
+                                        );
+    if (error != Errors.NONE)
+    {
+      Dialogs.error(shell,BARControl.tr("Cannot remove mount entry:\n\n{0}",resultErrorMessage[0]));
+      return;
+    }
+
+    // update table widget
+    Widgets.removeTableItem(widgetMountTable,
+                            (Object)mountData
+                           );
+  }
+
+  /** remove mount entry
+   * @param names names to remove from mount list
+   */
+  private void mountListRemove(String[] names)
+  {
+    assert selectedJobData != null;
+
+    // remove mounts from list
+    String[] resultErrorMessage = new String[1];
+//TODO return value?
+    BARServer.executeCommand(StringParser.format("MOUNT_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
+    for (EntryData entryData : includeHashMap.values())
+    {
+      BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S alwaysUnmount=%y",
+                                                   selectedJobData.uuid,
+                                                   entryData.entryType.toString(),
+                                                   "GLOB",
+                                                   entryData.pattern
+                                                  ),
+                               0,
+                               resultErrorMessage
+                              );
+    }
+
+    // update table widget
+/*
+    Widgets.removeAllTableItems(widgetMountTable);
+    for (MountData mountData : includeHashMap.values())
+    {
+      Widgets.insertTableItem(widgetIncludeTable,
+                              findTableIndex(widgetIncludeTable,mountData),
+                              (Object)mountData,
+                              mountData.name,
+                              mountData.alwaysUnmount ? "" : "-"
+                             );
+    }*/
+  }
+
+  /** remove include entry
+   * @param pattern pattern to remove from include/exclude list
+   */
+  private void mountListRemove(String name)
+  {
+    mountListRemove(new String[]{name});
+  }
+
+  /** add new mount entry
+   */
+  private void mountListAdd()
+  {
+    assert selectedJobData != null;
+
+    MountData mountData = new MountData("",false);
+    if (mountEdit(mountData,"Add new mount","Add"))
+    {
+      mountListAdd(mountData);
+    }
+  }
+
+  /** edit currently selected mount entry
+   */
+  private void mountListEdit()
+  {
+    assert selectedJobData != null;
+
+    TableItem[] tableItems = widgetMountTable.getSelection();
+    if (tableItems.length > 0)
+    {
+      MountData oldMountData = (MountData)tableItems[0].getData();
+      MountData newMountData = oldMountData.clone();
+
+      if (mountEdit(newMountData,BARControl.tr("Edit mount"),BARControl.tr("Save")))
+      {
+        // update mount list
+        mountListRemove(oldMountData);
+        mountListRemove(newMountData);
+        mountListAdd(newMountData);
+      }
+    }
+  }
+
+  /** clone currently selected mount entry
+   */
+  private void mountListClone()
+  {
+    assert selectedJobData != null;
+
+    TableItem[] tableItems = widgetMountTable.getSelection();
+    if (tableItems.length > 0)
+    {
+      MountData mountData = ((MountData)tableItems[0].getData()).clone();
+
+      if (mountEdit(mountData,"Clone mount","Add"))
+      {
+        // update include list
+        mountListRemove(mountData.name);
+        mountListAdd(mountData);
+      }
+    }
+  }
+
+  /** remove currently selected mount entry
+   */
+  private void mountListRemove()
+  {
+    assert selectedJobData != null;
+
+    ArrayList<MountData> mountDataList = new ArrayList<MountData>();
+    for (TableItem tableItem : widgetMountTable.getSelection())
+    {
+      mountDataList.add((MountData)tableItem.getData());
+    }
+    if (mountDataList.size() > 0)
+    {
+      if ((mountDataList.size() == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#mounts|1#mount|1<mounts}?",mountDataList.size())))
+      {
+        for (MountData mountData : mountDataList)
+        {
+          mountListRemove(mountData.name);
         }
       }
     }
@@ -9577,7 +10082,7 @@ throw new Error("NYI");
     updateDeviceImages();
   }
 
-  /** remove exclude pattern
+  /** remove exclude patterns
    * @param patterns pattern to remove from exclude list
    */
   private void excludeListRemove(String[] patterns)
@@ -9643,7 +10148,7 @@ throw new Error("NYI");
     }
   }
 
-  /** edit exclude pattern
+  /** edit currently selected exclude pattern
    */
   private void excludeListEdit()
   {
@@ -9667,7 +10172,7 @@ throw new Error("NYI");
     }
   }
 
-  /** clone exclude pattern
+  /** clone currently selected exclude pattern
    */
   private void excludeListClone()
   {
@@ -9690,7 +10195,7 @@ throw new Error("NYI");
     }
   }
 
-  /** remove selected exclude pattern
+  /** remove currently selected exclude pattern
    */
   private void excludeListRemove()
   {
@@ -9705,6 +10210,8 @@ throw new Error("NYI");
       }
     }
   }
+
+  //-----------------------------------------------------------------------
 
   /** set/clear .nobackup file for directory
    * @param name directory name
