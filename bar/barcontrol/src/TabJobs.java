@@ -9773,7 +9773,7 @@ throw new Error("NYI");
                            );
 
     // remove duplicate names
-    MountData mountData_ = Widgets.getTableItems(widgetMountTable);
+//    MountData mountData_ = Widgets.getTableItems(widgetMountTable);
 //TODO
   }
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-12 17:00+0100\n"
+"POT-Creation-Date: 2016-01-12 17:06+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -283,7 +283,7 @@ msgid "Open"
 msgstr ""
 
 #: src/Dialogs.java:3275 src/Dialogs.java:4216 src/ServerSettings.java:639
-#: src/ServerSettings.java:1952 src/TabJobs.java:9501 src/TabJobs.java:9854
+#: src/ServerSettings.java:1952 src/TabJobs.java:9501 src/TabJobs.java:9858
 #: src/TabJobs.java:10140 src/TabJobs.java:10572 src/TabJobs.java:11625
 #: src/TabJobs.java:12339
 msgid "Save"
@@ -2074,7 +2074,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:9794
+#: src/TabJobs.java:9798
 #, java-format
 msgid ""
 "Cannot remove mount entry:\n"
@@ -2082,7 +2082,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:9854
+#: src/TabJobs.java:9858
 msgid "Edit mount"
 msgstr ""
 
