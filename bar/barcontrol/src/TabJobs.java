@@ -1607,6 +1607,8 @@ public class TabJobs
   private Button       widgetExclude;
   private Button       widgetNone;
   private Tree         widgetDeviceTree;
+  private Table        widgetMountTable;
+  private Button       widgetMountTableInsert,widgetMountTableEdit,widgetMountTableRemove;
   private Table        widgetIncludeTable;
   private Button       widgetIncludeTableInsert,widgetIncludeTableEdit,widgetIncludeTableRemove;
   private List         widgetExcludeList;
@@ -1940,7 +1942,8 @@ Dprintf.dprintf("");
    */
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
-    Composite   tab;
+    TabFolder   tabFolder;
+    Composite   tab,subTab;
     Menu        menu;
     MenuItem    menuItem;
     Group       group;
@@ -2961,426 +2964,639 @@ Dprintf.dprintf("");
       }
 
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Filters"));
-      tab.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
+      tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
+        tabFolder = Widgets.newTabFolder(tab);
+        Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
+
         // included table
-        label = Widgets.newLabel(tab,BARControl.tr("Included")+":");
-        Widgets.layout(label,0,0,TableLayoutData.NS);
-        widgetIncludeTable = Widgets.newTable(tab);
-        widgetIncludeTable.setToolTipText(BARControl.tr("List of include patterns, right-click for context menu."));
-        widgetIncludeTable.setHeaderVisible(false);
-        Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
-        Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,1024,true);
-//????
-// automatic column width calculation?
-//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
-        Widgets.layout(widgetIncludeTable,0,1,TableLayoutData.NSWE);
-        widgetIncludeTable.addMouseListener(new MouseListener()
+        subTab = Widgets.addTab(tabFolder,BARControl.tr("Included"));
+        subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+        Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
         {
-          public void mouseDoubleClick(final MouseEvent mouseEvent)
+          widgetIncludeTable = Widgets.newTable(subTab);
+          widgetIncludeTable.setToolTipText(BARControl.tr("List of include patterns, right-click for context menu."));
+          widgetIncludeTable.setHeaderVisible(false);
+          Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
+          Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,1024,true);
+  //????
+  // automatic column width calculation?
+  //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
+          Widgets.layout(widgetIncludeTable,0,0,TableLayoutData.NSWE);
+          widgetIncludeTable.addMouseListener(new MouseListener()
           {
-            includeListEdit();
+            public void mouseDoubleClick(final MouseEvent mouseEvent)
+            {
+              includeListEdit();
+            }
+            public void mouseDown(final MouseEvent mouseEvent)
+            {
+            }
+            public void mouseUp(final MouseEvent mouseEvent)
+            {
+            }
+          });
+          widgetIncludeTable.addKeyListener(new KeyListener()
+          {
+            public void keyPressed(KeyEvent keyEvent)
+            {
+            }
+            public void keyReleased(KeyEvent keyEvent)
+            {
+              if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+              {
+                Widgets.invoke(widgetIncludeTableInsert);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+              {
+                Widgets.invoke(widgetIncludeTableRemove);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+              {
+                Widgets.invoke(widgetIncludeTableEdit);
+              }
+            }
+          });
+
+          menu = Widgets.newPopupMenu(shell);
+          {
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListAdd();
+                }
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListEdit();
+                }
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListClone();
+                }
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                if (selectedJobData != null)
+                {
+                  includeListRemove();
+                }
+              }
+            });
           }
-          public void mouseDown(final MouseEvent mouseEvent)
+          widgetIncludeTable.setMenu(menu);
+
+          // buttons
+          composite = Widgets.newComposite(subTab,SWT.NONE,4);
+          Widgets.layout(composite,1,0,TableLayoutData.W);
           {
+            widgetIncludeTableInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
+            widgetIncludeTableInsert.setToolTipText(BARControl.tr("Add entry to included list."));
+            Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetIncludeTableInsert.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListAdd();
+                }
+              }
+            });
+
+            widgetIncludeTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
+            widgetIncludeTableEdit.setToolTipText(BARControl.tr("Edit entry in included list."));
+            Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetIncludeTableEdit.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListEdit();
+                }
+              }
+            });
+
+            button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+            button.setToolTipText(BARControl.tr("Clone entry in included list."));
+            Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListClone();
+                }
+              }
+            });
+
+            widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
+            widgetIncludeTableRemove.setToolTipText(BARControl.tr("Remove entry from included list."));
+            Widgets.layout(widgetIncludeTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                if (selectedJobData != null)
+                {
+                  includeListRemove();
+                }
+              }
+            });
           }
-          public void mouseUp(final MouseEvent mouseEvent)
-          {
-          }
-        });
-        widgetIncludeTable.addKeyListener(new KeyListener()
-        {
-          public void keyPressed(KeyEvent keyEvent)
-          {
-          }
-          public void keyReleased(KeyEvent keyEvent)
-          {
-            if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
-            {
-              Widgets.invoke(widgetIncludeTableInsert);
-            }
-            else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
-            {
-              Widgets.invoke(widgetIncludeTableRemove);
-            }
-            else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
-            {
-              Widgets.invoke(widgetIncludeTableEdit);
-            }
-          }
-        });
-
-        menu = Widgets.newPopupMenu(shell);
-        {
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobData != null)
-              {
-                includeListAdd();
-              }
-            }
-          });
-
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobData != null)
-              {
-                includeListEdit();
-              }
-            }
-          });
-
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobData != null)
-              {
-                includeListClone();
-              }
-            }
-          });
-
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              if (selectedJobData != null)
-              {
-                includeListRemove();
-              }
-            }
-          });
-        }
-        widgetIncludeTable.setMenu(menu);
-
-        // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE,4);
-        Widgets.layout(composite,1,1,TableLayoutData.W);
-        {
-          widgetIncludeTableInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
-          widgetIncludeTableInsert.setToolTipText(BARControl.tr("Add entry to included list."));
-          Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-          widgetIncludeTableInsert.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget = (Button)selectionEvent.widget;
-              if (selectedJobData != null)
-              {
-                includeListAdd();
-              }
-            }
-          });
-
-          widgetIncludeTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
-          widgetIncludeTableEdit.setToolTipText(BARControl.tr("Edit entry in included list."));
-          Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-          widgetIncludeTableEdit.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget = (Button)selectionEvent.widget;
-              if (selectedJobData != null)
-              {
-                includeListEdit();
-              }
-            }
-          });
-
-          button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
-          button.setToolTipText(BARControl.tr("Clone entry in included list."));
-          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget = (Button)selectionEvent.widget;
-              if (selectedJobData != null)
-              {
-                includeListClone();
-              }
-            }
-          });
-
-          widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
-          widgetIncludeTableRemove.setToolTipText(BARControl.tr("Remove entry from included list."));
-          Widgets.layout(widgetIncludeTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-          widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              if (selectedJobData != null)
-              {
-                includeListRemove();
-              }
-            }
-          });
         }
 
         // excluded list
-        label = Widgets.newLabel(tab,BARControl.tr("Excluded")+":");
-        Widgets.layout(label,2,0,TableLayoutData.NS);
-        widgetExcludeList = Widgets.newList(tab);
-        widgetExcludeList.setToolTipText(BARControl.tr("List of exclude patterns, right-click for context menu."));
-        Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
-        widgetExcludeList.addMouseListener(new MouseListener()
+        subTab = Widgets.addTab(tabFolder,BARControl.tr("Excluded"));
+        subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+        Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
         {
-          public void mouseDoubleClick(final MouseEvent mouseEvent)
+          widgetExcludeList = Widgets.newList(subTab);
+          widgetExcludeList.setToolTipText(BARControl.tr("List of exclude patterns, right-click for context menu."));
+          Widgets.layout(widgetExcludeList,0,0,TableLayoutData.NSWE);
+          widgetExcludeList.addMouseListener(new MouseListener()
           {
-            excludeListEdit();
-          }
-          public void mouseDown(final MouseEvent mouseEvent)
-          {
-          }
-          public void mouseUp(final MouseEvent mouseEvent)
-          {
-          }
-        });
-        widgetExcludeList.addKeyListener(new KeyListener()
-        {
-          public void keyPressed(KeyEvent keyEvent)
-          {
-          }
-          public void keyReleased(KeyEvent keyEvent)
-          {
-            if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+            public void mouseDoubleClick(final MouseEvent mouseEvent)
             {
-              Widgets.invoke(widgetExcludeListInsert);
+              excludeListEdit();
             }
-            else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
-            {
-              Widgets.invoke(widgetExcludeListRemove);
-            }
-            else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
-            {
-              Widgets.invoke(widgetExcludeListEdit);
-            }
-          }
-        });
-
-        menu = Widgets.newPopupMenu(shell);
-        {
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            public void mouseDown(final MouseEvent mouseEvent)
             {
             }
-            public void widgetSelected(SelectionEvent selectionEvent)
+            public void mouseUp(final MouseEvent mouseEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobData != null)
+            }
+          });
+          widgetExcludeList.addKeyListener(new KeyListener()
+          {
+            public void keyPressed(KeyEvent keyEvent)
+            {
+            }
+            public void keyReleased(KeyEvent keyEvent)
+            {
+              if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
               {
-                excludeListAdd();
+                Widgets.invoke(widgetExcludeListInsert);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+              {
+                Widgets.invoke(widgetExcludeListRemove);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+              {
+                Widgets.invoke(widgetExcludeListEdit);
               }
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
-          menuItem.addSelectionListener(new SelectionListener()
+          menu = Widgets.newPopupMenu(shell);
           {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobData != null)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                excludeListEdit();
               }
-            }
-          });
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  excludeListAdd();
+                }
+              }
+            });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobData != null)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                excludeListClone();
               }
-            }
-          });
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  excludeListEdit();
+                }
+              }
+            });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-              if (selectedJobData != null)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                excludeListRemove();
               }
-            }
-          });
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  excludeListClone();
+                }
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  excludeListRemove();
+                }
+              }
+            });
+          }
+          widgetExcludeList.setMenu(menu);
+
+          // buttons
+          composite = Widgets.newComposite(subTab,SWT.NONE,4);
+          Widgets.layout(composite,1,0,TableLayoutData.W);
+          {
+            widgetExcludeListInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
+            widgetExcludeListInsert.setToolTipText(BARControl.tr("Add entry to excluded list."));
+            Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetExcludeListInsert.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  excludeListAdd();
+                }
+              }
+            });
+
+            widgetExcludeListEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
+            widgetExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in excluded list."));
+            Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetExcludeListEdit.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  excludeListEdit();
+                }
+              }
+            });
+
+            button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+            button.setToolTipText(BARControl.tr("Clone entry in excluded list."));
+            Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  excludeListClone();
+                }
+              }
+            });
+
+            widgetExcludeListRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
+            widgetExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from excluded list."));
+            Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetExcludeListRemove.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  excludeListRemove();
+                }
+              }
+            });
+          }
         }
-        widgetExcludeList.setMenu(menu);
 
-        // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE,4);
-        Widgets.layout(composite,3,1,TableLayoutData.W);
+        // mount table
+        subTab = Widgets.addTab(tabFolder,BARControl.tr("Mounts"));
+        subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+        Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
         {
-          widgetExcludeListInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
-          widgetExcludeListInsert.setToolTipText(BARControl.tr("Add entry to excluded list."));
-          Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-          widgetExcludeListInsert.addSelectionListener(new SelectionListener()
+          widgetMountTable = Widgets.newTable(subTab);
+          widgetMountTable.setToolTipText(BARControl.tr("List of devices to mount, right-click for context menu."));
+          widgetMountTable.setHeaderVisible(false);
+          Widgets.addTableColumn(widgetMountTable,0,SWT.LEFT,20);
+          Widgets.addTableColumn(widgetMountTable,1,SWT.LEFT,1024,true);
+          Widgets.addTableColumn(widgetMountTable,1,SWT.LEFT,20,false);
+  //????
+  // automatic column width calculation?
+  //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
+          Widgets.layout(widgetMountTable,0,0,TableLayoutData.NSWE);
+          widgetMountTable.addMouseListener(new MouseListener()
           {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            public void mouseDoubleClick(final MouseEvent mouseEvent)
+            {
+              includeListEdit();
+            }
+            public void mouseDown(final MouseEvent mouseEvent)
             {
             }
-            public void widgetSelected(SelectionEvent selectionEvent)
+            public void mouseUp(final MouseEvent mouseEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
-              if (selectedJobData != null)
+            }
+          });
+          widgetMountTable.addKeyListener(new KeyListener()
+          {
+            public void keyPressed(KeyEvent keyEvent)
+            {
+            }
+            public void keyReleased(KeyEvent keyEvent)
+            {
+              if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
               {
-                excludeListAdd();
+                Widgets.invoke(widgetIncludeTableInsert);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+              {
+                Widgets.invoke(widgetIncludeTableRemove);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+              {
+                Widgets.invoke(widgetIncludeTableEdit);
               }
             }
           });
 
-          widgetExcludeListEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
-          widgetExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in excluded list."));
-          Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-          widgetExcludeListEdit.addSelectionListener(new SelectionListener()
+          menu = Widgets.newPopupMenu(shell);
           {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget = (Button)selectionEvent.widget;
-              if (selectedJobData != null)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                excludeListEdit();
               }
-            }
-          });
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListAdd();
+                }
+              }
+            });
 
-          button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
-          button.setToolTipText(BARControl.tr("Clone entry in excluded list."));
-          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget = (Button)selectionEvent.widget;
-              if (selectedJobData != null)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                excludeListClone();
               }
-            }
-          });
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListEdit();
+                }
+              }
+            });
 
-          widgetExcludeListRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
-          widgetExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from excluded list."));
-          Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
-          widgetExcludeListRemove.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button widget = (Button)selectionEvent.widget;
-              if (selectedJobData != null)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                excludeListRemove();
               }
-            }
-          });
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+                  includeListClone();
+                }
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                if (selectedJobData != null)
+                {
+                  includeListRemove();
+                }
+              }
+            });
+          }
+          widgetMountTable.setMenu(menu);
+
+          // buttons
+          composite = Widgets.newComposite(subTab,SWT.NONE,4);
+          Widgets.layout(composite,1,0,TableLayoutData.W);
+          {
+            widgetMountTableInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
+            widgetMountTableInsert.setToolTipText(BARControl.tr("Add entry to mount list."));
+            Widgets.layout(widgetMountTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetMountTableInsert.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+  Dprintf.dprintf("");
+  //                includeListAdd();
+                }
+              }
+            });
+
+            widgetMountTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
+            widgetMountTableEdit.setToolTipText(BARControl.tr("Edit entry in mount list."));
+            Widgets.layout(widgetMountTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetMountTableEdit.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+  Dprintf.dprintf("");
+  //                includeListEdit();
+                }
+              }
+            });
+
+            button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+            button.setToolTipText(BARControl.tr("Clone entry in mount list."));
+            Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobData != null)
+                {
+  Dprintf.dprintf("");
+  //                includeListClone();
+                }
+              }
+            });
+
+            widgetMountTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
+            widgetMountTableRemove.setToolTipText(BARControl.tr("Remove entry from mount list."));
+            Widgets.layout(widgetMountTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
+            widgetMountTableRemove.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                if (selectedJobData != null)
+                {
+  Dprintf.dprintf("");
+  //                includeListRemove();
+                }
+              }
+            });
+          }
         }
 
         // options
-        label = Widgets.newLabel(tab,BARControl.tr("Options")+":");
-        Widgets.layout(label,4,0,TableLayoutData.N);
-        composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,4,1,TableLayoutData.WE);
+        composite = Widgets.newComposite(tab,SWT.NONE,4);
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,1,0,TableLayoutData.W);
         {
-          button = Widgets.newCheckbox(composite,BARControl.tr("skip unreadable entries"));
-          button.setToolTipText(BARControl.tr("If enabled then skip not readable entries (write information to log file).\nIf disabled stop job with an error."));
-          Widgets.layout(button,0,0,TableLayoutData.NW);
-          button.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button  widget      = (Button)selectionEvent.widget;
-              boolean checkedFlag = widget.getSelection();
-              skipUnreadable.set(checkedFlag);
-              BARServer.setJobOption(selectedJobData.uuid,"skip-unreadable",checkedFlag);
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
+          label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
+          Widgets.layout(label,0,0,TableLayoutData.N);
 
-          button = Widgets.newCheckbox(composite,BARControl.tr("raw images"));
-          button.setToolTipText(BARControl.tr("If enabled then store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image."));
-          Widgets.layout(button,1,0,TableLayoutData.NW);
-          button.addSelectionListener(new SelectionListener()
+          subComposite = Widgets.newComposite(composite);
+          Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            button = Widgets.newCheckbox(subComposite,BARControl.tr("skip unreadable entries"));
+            button.setToolTipText(BARControl.tr("If enabled then skip not readable entries (write information to log file).\nIf disabled stop job with an error."));
+            Widgets.layout(button,0,0,TableLayoutData.NW);
+            button.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+                skipUnreadable.set(checkedFlag);
+                BARServer.setJobOption(selectedJobData.uuid,"skip-unreadable",checkedFlag);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
+
+            button = Widgets.newCheckbox(subComposite,BARControl.tr("raw images"));
+            button.setToolTipText(BARControl.tr("If enabled then store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image."));
+            Widgets.layout(button,1,0,TableLayoutData.NW);
+            button.addSelectionListener(new SelectionListener()
             {
-              Button  widget      = (Button)selectionEvent.widget;
-              boolean checkedFlag = widget.getSelection();
-              rawImages.set(checkedFlag);
-              BARServer.setJobOption(selectedJobData.uuid,"raw-images",checkedFlag);
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(button,rawImages));
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+                rawImages.set(checkedFlag);
+                BARServer.setJobOption(selectedJobData.uuid,"raw-images",checkedFlag);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(button,rawImages));
+          }
         }
       }
 
