@@ -9855,50 +9855,42 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const Str
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
-*            id=<n>
-*            entryType=<type>
-*            pattern=<text>
-*            [patternType=<type>]
+*            name=<name>
+*            alwaysUnmount=yes|no
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          entryId;
-  EntryTypes    entryType;
-  PatternTypes  patternType;
-  String        patternString;
+  String        name;
+  bool          alwaysUnmount;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  MountNode     *mountNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job UUID, id, entry type, pattern type, pattern
+  // get jobUUID, name, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
+  if (!StringMap_getBool(argumentMap,"alwaysUnmount",&alwaysUnmount,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected alwaysUnmount=yes|no");
+    String_delete(name);
     return;
   }
-  patternString = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
-    String_delete(patternString);
-    return;
-  }
-  StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -9908,12 +9900,13 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const 
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
-      String_delete(patternString);
+      String_delete(name);
       return;
     }
 
-    // update include list
-    EntryList_update(&jobNode->includeEntryList,entryId,entryType,patternString,patternType);
+    // update mount list
+//TODO
+//    EntryList_update(&jobNode->includeEntryList,entryId,entryType,patternString,patternType);
     jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
@@ -9923,7 +9916,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(patternString);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -9974,13 +9967,15 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, uint id, const 
       return;
     }
 
-    // remove from include list
+    // remove from mount list
+#if 0
     if (!EntryList_remove(&jobNode->includeEntryList,entryId))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"entry with id #%u not found",entryId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"mount with id #%u not found",entryId);
       Semaphore_unlock(&jobList.lock);
       return;
     }
+#endif
     jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
