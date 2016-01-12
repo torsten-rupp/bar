@@ -9771,6 +9771,10 @@ throw new Error("NYI");
                             mountData.name,
                             mountData.alwaysUnmount ? "\u2713" : "-"
                            );
+
+    // remove duplicate names
+    MountData mountData_ = Widgets.getTableItems(widgetMountTable);
+//TODO
   }
 
   /** remove mount entry
@@ -9801,42 +9805,22 @@ throw new Error("NYI");
                            );
   }
 
-  /** remove mount entry
+  /** remove mount entries
    * @param names names to remove from mount list
    */
   private void mountListRemove(String[] names)
   {
     assert selectedJobData != null;
 
-    // remove mounts from list
-    String[] resultErrorMessage = new String[1];
-//TODO return value?
-    BARServer.executeCommand(StringParser.format("MOUNT_LIST_CLEAR jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
-    for (EntryData entryData : includeHashMap.values())
+    TableItem tableItems[] = widgetMountTable.getItems();
+    for (TableItem tableItem : tableItems)
     {
-      BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S alwaysUnmount=%y",
-                                                   selectedJobData.uuid,
-                                                   entryData.entryType.toString(),
-                                                   "GLOB",
-                                                   entryData.pattern
-                                                  ),
-                               0,
-                               resultErrorMessage
-                              );
+      MountData mountData = (MountData)tableItem.getData();
+      if (StringUtils.indexOf(names,mountData.name) >= 0)
+      {
+        mountListRemove(mountData);
+      }
     }
-
-    // update table widget
-/*
-    Widgets.removeAllTableItems(widgetMountTable);
-    for (MountData mountData : includeHashMap.values())
-    {
-      Widgets.insertTableItem(widgetIncludeTable,
-                              findTableIndex(widgetIncludeTable,mountData),
-                              (Object)mountData,
-                              mountData.name,
-                              mountData.alwaysUnmount ? "" : "-"
-                             );
-    }*/
   }
 
   /** remove include entry
@@ -9869,15 +9853,11 @@ throw new Error("NYI");
     TableItem[] tableItems = widgetMountTable.getSelection();
     if (tableItems.length > 0)
     {
-      MountData oldMountData = (MountData)tableItems[0].getData();
-      MountData newMountData = oldMountData.clone();
+      MountData mountData = (MountData)tableItems[0].getData();
 
-      if (mountEdit(newMountData,BARControl.tr("Edit mount"),BARControl.tr("Save")))
+      if (mountEdit(mountData,BARControl.tr("Edit mount"),BARControl.tr("Save")))
       {
-        // update mount list
-        mountListRemove(oldMountData);
-        mountListRemove(newMountData);
-        mountListAdd(newMountData);
+        mountListUpdate(mountData);
       }
     }
   }
@@ -9895,8 +9875,6 @@ throw new Error("NYI");
 
       if (mountEdit(mountData,"Clone mount","Add"))
       {
-        // update include list
-        mountListRemove(mountData.name);
         mountListAdd(mountData);
       }
     }
