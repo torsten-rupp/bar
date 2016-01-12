@@ -150,6 +150,23 @@ typedef struct
   uint length;                                                // length of key data
 } Key;
 
+// mount
+typedef struct MountNode
+{
+  LIST_NODE_HEADER(struct MountNode);
+
+  uint   id;
+  String name;
+  bool   alwaysUnmount;
+} MountNode;
+
+typedef struct
+{
+  LIST_HEADER(MountNode);
+
+  uint id;
+} MountList;
+
 // band width usage
 typedef struct BandWidthNode
 {

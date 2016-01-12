@@ -1147,6 +1147,61 @@ void configValueFormatDonePattern(void **formatUserData, void *userData);
 bool configValueFormatPattern(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
+* Name   : configValueParseMount
+* Purpose: config value option call back for parsing mounts
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseMount(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueFormatInitMount
+* Purpose: init format of config mount statements
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitMount(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneMount
+* Purpose: done format of config mount statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneMount(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatMount
+* Purpose: format next config mount statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatMount(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
 * Name   : configValueParseDeltaSource
 * Purpose: config value option call back for parsing delta source
 *          pattern

@@ -3162,7 +3162,6 @@ LOCAL void closeLog(void)
 String getConfigFileName(String fileName)
 {
   StringNode *stringNode;
-  String     configFileName;
 
   assert(fileName != NULL);
 
@@ -4771,8 +4770,6 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
         break; // not reached
     #endif /* NDEBUG */
   }
-  uint        maxConnectionCount;                             // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
-  uint64      maxStorageSize;                                 // max. number of bytes to store on server
 
   return serverId;
 }
@@ -5830,6 +5827,89 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
     }
 
     (*formatUserData) = patternNode->next;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool configValueParseMount(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  String    mountName;
+  bool      alwaysUnmount;
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  // init variables
+  mountName     = String_new();
+  alwaysUnmount = FALSE;
+
+  // get name, alwaysUnmount
+  if      (String_parseCString(value,"%S,%y",NULL,mountName,&alwaysUnmount))
+  {
+  }
+  else if (String_parseCString(value,"%S",NULL,mountName))
+  {
+    alwaysUnmount = FALSE;
+  }
+  else
+  {
+    String_delete(mountName);
+    return FALSE;
+  }
+
+  // append to mount list
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  mountNode->name          = mountName;
+  mountNode->alwaysUnmount = alwaysUnmount;
+  List_append((MountList*)variable,mountNode);
+
+  return TRUE;
+}
+
+void configValueFormatInitMount(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = ((PatternList*)variable)->head;
+}
+
+void configValueFormatDoneMount(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatMount(void **formatUserData, void *userData, String line)
+{
+  MountNode *mountNode;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  mountNode = (DeltaSourceNode*)(*formatUserData);
+  if (mountNode != NULL)
+  {
+    String_format(line,"%'S,%y",mountNode->name,mountNode->alwaysUnmount);
+
+    (*formatUserData) = mountNode->next;
 
     return TRUE;
   }
