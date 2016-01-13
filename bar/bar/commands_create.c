@@ -6453,7 +6453,7 @@ createThreadCode(&createInfo);
     logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));
   }
 
-  // mount devices
+  // unmount devices
   LIST_ITERATE(mountList,mountNode)
   {
     if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted))
@@ -6461,7 +6461,7 @@ createThreadCode(&createInfo);
       error = Device_umount(mountNode->name);
       if (error != ERROR_NONE)
       {
-        logMessage(logHandle,LOG_TYPE_ERROR,"Cannot unmount '%s' (error: %s)\n",String_cString(mountNode->name),Error_getText(error));
+        printWarning("Cannot unmount '%s' (error: %s)\n",String_cString(mountNode->name),Error_getText(error));
       }
     }
     AUTOFREE_REMOVE(&autoFreeList,mountNode);
