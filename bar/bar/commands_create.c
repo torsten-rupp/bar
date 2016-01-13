@@ -2069,7 +2069,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
     DatabaseId          databaseId;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // process entries from continous database
     error = Continuous_initList(&databaseQueryHandle,createInfo->jobUUID,createInfo->scheduleUUID);
     if (error == ERROR_NONE)
@@ -2078,7 +2077,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       while (Continuous_getNext(&databaseQueryHandle,&databaseId,name))
       {
-fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(name));
         // pause
         pauseCreate(createInfo);
 
