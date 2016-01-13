@@ -874,6 +874,13 @@ void Misc_udelay(uint64 time)
 
 /*---------------------------------------------------------------------*/
 
+uint Misc_getId(void)
+{
+  static uint id = 0;
+
+  return __sync_add_and_fetch(&id,1);
+}
+
 String Misc_getUUID(String string)
 {
   char buffer[64];

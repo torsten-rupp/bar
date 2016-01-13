@@ -379,6 +379,17 @@ void Misc_udelay(uint64 time);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Misc_getId
+* Purpose: get unique identifier
+* Input  : -
+* Output : -
+* Return : unique identifier (> 0)
+* Notes  : -
+\***********************************************************************/
+
+uint Misc_getId(void);
+
+/***********************************************************************\
 * Name   : Misc_getUUID, Misc_getUUIDCString
 * Purpose: get universally unique identifier (DCE 1.1)
 * Input  : string     - string variable
