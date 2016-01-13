@@ -3813,7 +3813,7 @@ e composite widget
     }
   }
 
-  /** get list item
+  /** get list item data
    * @param list list
    * @param index index
    * @return item data
@@ -3825,12 +3825,12 @@ e composite widget
     return listItems.get(index).data;
   }
 
-  /** get list entries
+  /** get list items data
    * @param list list
    * @param entries array
-   * @return entries array
+   * @return items data array
    */
-  public static <T> T[] getListEntries(List list, T[] array)
+  public static <T> T[] getListItems(List list, T[] array)
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
 
@@ -3847,12 +3847,12 @@ e composite widget
     return array;
   }
 
-  /** get list entries
+  /** get list items data
    * @param list list
    * @param clazz class of array elements
-   * @return entries array
+   * @return items data array
    */
-  public static <T> T[] getListEntries(List list, Class clazz)
+  public static <T> T[] getListItems(List list, Class clazz)
   {
     ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
 
@@ -5965,6 +5965,46 @@ e composite widget
         }
       });
     }
+  }
+
+  /** get table items data
+   * @param table table
+   * @param entries array
+   * @return items data array
+   */
+  public static <T> T[] getTableItems(Table table, T[] array)
+  {
+    TableItem tableItems[] = table.getItems();
+
+    if (array.length != tableItems.length)
+    {
+      array = Arrays.copyOf(array,tableItems.length);
+    }
+
+    for (int i = 0; i < tableItems.length; i++)
+    {
+      array[i] = (T)tableItems[i].getData();
+    }
+
+    return array;
+  }
+
+  /** get table items data
+   * @param table table
+   * @param clazz class of array elements
+   * @return items data array
+   */
+  public static <T> T[] getTableItems(Table table, Class clazz)
+  {
+    TableItem tableItems[] = table.getItems();
+
+    T[] array = (T[])Array.newInstance(clazz,tableItems.length);
+    for (int i = 0; i < tableItems.length; i++)
+    {
+      array[i] = (T)tableItems[i].getData();
+    }
+
+    return array;
   }
 
   /** get selected table item

@@ -3026,9 +3026,9 @@ Dprintf.dprintf("");
           widgetIncludeTable.setHeaderVisible(false);
           Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
           Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,1024,true);
-  //????
-  // automatic column width calculation?
-  //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
+//????
+// automatic column width calculation?
+//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
           Widgets.layout(widgetIncludeTable,0,0,TableLayoutData.NSWE);
           widgetIncludeTable.addMouseListener(new MouseListener()
           {
@@ -3405,12 +3405,9 @@ Dprintf.dprintf("");
         {
           widgetMountTable = Widgets.newTable(subTab);
           widgetMountTable.setToolTipText(BARControl.tr("List of devices to mount, right-click for context menu."));
-          widgetMountTable.setHeaderVisible(false);
-          Widgets.addTableColumn(widgetMountTable,0,SWT.LEFT,600,true);
-          Widgets.addTableColumn(widgetMountTable,1,SWT.LEFT,20,false);
-  //????
-  // automatic column width calculation?
-  //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
+//????
+// automatic column width calculation?
+//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
           Widgets.layout(widgetMountTable,0,0,TableLayoutData.NSWE);
           widgetMountTable.addMouseListener(new MouseListener()
           {
@@ -3446,6 +3443,10 @@ Dprintf.dprintf("");
               }
             }
           });
+          tableColumn = Widgets.addTableColumn(widgetMountTable,0,BARControl.tr("Name"),          SWT.LEFT,600,true );
+//          tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+          tableColumn = Widgets.addTableColumn(widgetMountTable,1,BARControl.tr("Always unmount"),SWT.LEFT,100,false);
+//          tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
 
           menu = Widgets.newPopupMenu(shell);
           {
@@ -7358,6 +7359,9 @@ Dprintf.dprintf("");
         // schedule table
         widgetScheduleTable = Widgets.newTable(tab,SWT.CHECK);
         Widgets.layout(widgetScheduleTable,0,0,TableLayoutData.NSWE);
+//????
+// automatic column width calculation?
+//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
         widgetScheduleTable.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -9094,6 +9098,7 @@ throw new Error("NYI");
         if (!name.equals(""))
         {
           MountData mountData = new MountData(id,name,alwaysUnmount);
+Dprintf.dprintf("mountData=%s",mountData);
 
           Widgets.insertTableItem(widgetMountTable,
                                   findTableIndex(widgetMountTable,mountData),
@@ -9730,14 +9735,26 @@ throw new Error("NYI");
 
     // get id
     mountData.id = resultMap.getInt("id");
+Dprintf.dprintf("mountData=%s",mountData);
 
-    // update table widget
+    // add table widget
     Widgets.insertTableItem(widgetMountTable,
                             findTableIndex(widgetMountTable,mountData),
                             (Object)mountData,
                             mountData.name,
                             mountData.alwaysUnmount ? "\u2713" : "-"
                            );
+
+    // remove duplicate names
+Dprintf.dprintf("mountData=%s",mountData);
+    for (MountData otherMountData : (MountData[])Widgets.getTableItems(widgetMountTable,MountData.class))
+    {
+Dprintf.dprintf("otherMountData=%s",otherMountData);
+      if ((otherMountData != mountData) && otherMountData.name.equals(mountData.name))
+      {
+        Widgets.removeTableItem(widgetMountTable,otherMountData);
+      }
+    }
   }
 
   /** update mount entry
@@ -9766,15 +9783,21 @@ throw new Error("NYI");
 
     // update table widget
     Widgets.updateTableItem(widgetMountTable,
-                            findTableIndex(widgetMountTable,mountData),
                             (Object)mountData,
                             mountData.name,
                             mountData.alwaysUnmount ? "\u2713" : "-"
                            );
 
     // remove duplicate names
-//    MountData mountData_ = Widgets.getTableItems(widgetMountTable);
-//TODO
+Dprintf.dprintf("mountData=%s",mountData);
+    for (MountData otherMountData : (MountData[])Widgets.getTableItems(widgetMountTable,MountData.class))
+    {
+Dprintf.dprintf("otherMountData=%s",otherMountData);
+      if ((otherMountData != mountData) && otherMountData.name.equals(mountData.name))
+      {
+        Widgets.removeTableItem(widgetMountTable,otherMountData);
+      }
+    }
   }
 
   /** remove mount entry
