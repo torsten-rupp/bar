@@ -730,7 +730,7 @@ public class TabStatus
 
     widgetJobTableBodyMenu = Widgets.newPopupMenu(shell);
     {
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Start\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Start")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -743,7 +743,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Abort\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Abort")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -797,7 +797,7 @@ public class TabStatus
 
       Widgets.addMenuSeparator(widgetJobTableBodyMenu);
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -809,7 +809,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Clone\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Clone")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -821,7 +821,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Rename\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Rename")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -833,7 +833,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Delete\u2026"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Delete")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1326,7 +1326,7 @@ public class TabStatus
     composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0}));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
-      widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start\u2026"));
+      widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start")+"\u2026");
       widgetButtonStart.setToolTipText(BARControl.tr("Start selected job."));
       Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonStart.setEnabled(false);
@@ -1342,7 +1342,7 @@ public class TabStatus
         }
       });
 
-      widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort\u2026"));
+      widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort")+"\u2026");
       widgetButtonAbort.setToolTipText(BARControl.tr("Abort selected job."));
       Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonAbort.setEnabled(false);

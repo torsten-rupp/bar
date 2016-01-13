@@ -2074,7 +2074,7 @@ Dprintf.dprintf("");
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("New\u2026"));
+      button = Widgets.newButton(composite,BARControl.tr("New")+"\u2026");
       button.setToolTipText(BARControl.tr("Create new job entry."));
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
@@ -2088,7 +2088,7 @@ Dprintf.dprintf("");
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+      button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
       button.setToolTipText(BARControl.tr("Clone an existing job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
@@ -2113,7 +2113,7 @@ Dprintf.dprintf("");
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("Rename\u2026"));
+      button = Widgets.newButton(composite,BARControl.tr("Rename")+"\u2026");
       button.setToolTipText(BARControl.tr("Rename a job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
@@ -2138,7 +2138,7 @@ Dprintf.dprintf("");
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("Delete\u2026"));
+      button = Widgets.newButton(composite,BARControl.tr("Delete")+"\u2026");
       button.setToolTipText(BARControl.tr("Delete a job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
@@ -2703,6 +2703,44 @@ Dprintf.dprintf("");
 
           Widgets.addMenuSeparator(menu);
 
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add mount")+"\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+
+              for (TreeItem treeItem : widgetFileTree.getSelection())
+              {
+                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                mountListAdd(fileTreeData.name);
+              }
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove mount"));
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+
+              for (TreeItem treeItem : widgetFileTree.getSelection())
+              {
+                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                mountListRemove(fileTreeData.name);
+              }
+            }
+          });
+
+          Widgets.addMenuSeparator(menu);
+
           menuItem = Widgets.addMenuItem(menu,BARControl.tr("Directory/File size"));
           menuItem.addSelectionListener(new SelectionListener()
           {
@@ -3009,7 +3047,7 @@ Dprintf.dprintf("");
         }
       }
 
-      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Filters"));
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Filters && Mounts"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
@@ -3067,7 +3105,7 @@ Dprintf.dprintf("");
 
           menu = Widgets.newPopupMenu(shell);
           {
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3083,7 +3121,7 @@ Dprintf.dprintf("");
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3099,7 +3137,7 @@ Dprintf.dprintf("");
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3115,7 +3153,7 @@ Dprintf.dprintf("");
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3136,7 +3174,7 @@ Dprintf.dprintf("");
           composite = Widgets.newComposite(subTab,SWT.NONE,4);
           Widgets.layout(composite,1,0,TableLayoutData.W);
           {
-            widgetIncludeTableInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
+            widgetIncludeTableInsert = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
             widgetIncludeTableInsert.setToolTipText(BARControl.tr("Add entry to included list."));
             Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetIncludeTableInsert.addSelectionListener(new SelectionListener()
@@ -3154,7 +3192,7 @@ Dprintf.dprintf("");
               }
             });
 
-            widgetIncludeTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
+            widgetIncludeTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
             widgetIncludeTableEdit.setToolTipText(BARControl.tr("Edit entry in included list."));
             Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetIncludeTableEdit.addSelectionListener(new SelectionListener()
@@ -3172,7 +3210,7 @@ Dprintf.dprintf("");
               }
             });
 
-            button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
             button.setToolTipText(BARControl.tr("Clone entry in included list."));
             Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
@@ -3190,7 +3228,7 @@ Dprintf.dprintf("");
               }
             });
 
-            widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
+            widgetIncludeTableRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
             widgetIncludeTableRemove.setToolTipText(BARControl.tr("Remove entry from included list."));
             Widgets.layout(widgetIncludeTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
@@ -3254,7 +3292,7 @@ Dprintf.dprintf("");
 
           menu = Widgets.newPopupMenu(shell);
           {
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3270,7 +3308,7 @@ Dprintf.dprintf("");
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3286,7 +3324,7 @@ Dprintf.dprintf("");
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3302,7 +3340,7 @@ Dprintf.dprintf("");
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3324,7 +3362,7 @@ Dprintf.dprintf("");
           composite = Widgets.newComposite(subTab,SWT.NONE,4);
           Widgets.layout(composite,1,0,TableLayoutData.W);
           {
-            widgetExcludeListInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
+            widgetExcludeListInsert = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
             widgetExcludeListInsert.setToolTipText(BARControl.tr("Add entry to excluded list."));
             Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetExcludeListInsert.addSelectionListener(new SelectionListener()
@@ -3342,7 +3380,7 @@ Dprintf.dprintf("");
               }
             });
 
-            widgetExcludeListEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
+            widgetExcludeListEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
             widgetExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in excluded list."));
             Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetExcludeListEdit.addSelectionListener(new SelectionListener()
@@ -3360,7 +3398,7 @@ Dprintf.dprintf("");
               }
             });
 
-            button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
             button.setToolTipText(BARControl.tr("Clone entry in excluded list."));
             Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
@@ -3378,7 +3416,7 @@ Dprintf.dprintf("");
               }
             });
 
-            widgetExcludeListRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
+            widgetExcludeListRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
             widgetExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from excluded list."));
             Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetExcludeListRemove.addSelectionListener(new SelectionListener()
@@ -3450,7 +3488,7 @@ Dprintf.dprintf("");
 
           menu = Widgets.newPopupMenu(shell);
           {
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3461,12 +3499,12 @@ Dprintf.dprintf("");
                 MenuItem widget = (MenuItem)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
-                  includeListAdd();
+                  mountListAdd();
                 }
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3477,12 +3515,12 @@ Dprintf.dprintf("");
                 MenuItem widget = (MenuItem)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
-                  includeListEdit();
+                  mountListEdit();
                 }
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3493,12 +3531,12 @@ Dprintf.dprintf("");
                 MenuItem widget = (MenuItem)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
-                  includeListClone();
+                  mountListClone();
                 }
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3508,7 +3546,7 @@ Dprintf.dprintf("");
               {
                 if (selectedJobData != null)
                 {
-                  includeListRemove();
+                  mountListRemove();
                 }
               }
             });
@@ -3519,7 +3557,7 @@ Dprintf.dprintf("");
           composite = Widgets.newComposite(subTab,SWT.NONE,4);
           Widgets.layout(composite,1,0,TableLayoutData.W);
           {
-            widgetMountTableInsert = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
+            widgetMountTableInsert = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
             widgetMountTableInsert.setToolTipText(BARControl.tr("Add entry to mount list."));
             Widgets.layout(widgetMountTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetMountTableInsert.addSelectionListener(new SelectionListener()
@@ -3538,7 +3576,7 @@ Dprintf.dprintf("");
               }
             });
 
-            widgetMountTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
+            widgetMountTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
             widgetMountTableEdit.setToolTipText(BARControl.tr("Edit entry in mount list."));
             Widgets.layout(widgetMountTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetMountTableEdit.addSelectionListener(new SelectionListener()
@@ -3557,7 +3595,7 @@ Dprintf.dprintf("");
               }
             });
 
-            button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
             button.setToolTipText(BARControl.tr("Clone entry in mount list."));
             Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
@@ -3576,7 +3614,7 @@ Dprintf.dprintf("");
               }
             });
 
-            widgetMountTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
+            widgetMountTableRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
             widgetMountTableRemove.setToolTipText(BARControl.tr("Remove entry from mount list."));
             Widgets.layout(widgetMountTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             widgetMountTableRemove.addSelectionListener(new SelectionListener()
@@ -4056,7 +4094,7 @@ Dprintf.dprintf("");
           });
           menu = Widgets.newPopupMenu(shell);
           {
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4148,7 +4186,7 @@ Dprintf.dprintf("");
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove")+"\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4170,7 +4208,7 @@ Dprintf.dprintf("");
           subComposite = Widgets.newComposite(composite,SWT.NONE,4);
           Widgets.layout(subComposite,1,0,TableLayoutData.W);
           {
-            widgetCompressExcludeListInsert = Widgets.newButton(subComposite,BARControl.tr("Add\u2026"));
+            widgetCompressExcludeListInsert = Widgets.newButton(subComposite,BARControl.tr("Add")+"\u2026");
             widgetCompressExcludeListInsert.setToolTipText(BARControl.tr("Add entry to compress exclude list."));
             Widgets.layout(widgetCompressExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListInsert,deltaCompressAlgorithm,byteCompressAlgorithm)
@@ -4195,7 +4233,7 @@ Dprintf.dprintf("");
               }
             });
 
-            widgetCompressExcludeListEdit = Widgets.newButton(subComposite,BARControl.tr("Edit\u2026"));
+            widgetCompressExcludeListEdit = Widgets.newButton(subComposite,BARControl.tr("Edit")+"\u2026");
             widgetCompressExcludeListEdit.setToolTipText(BARControl.tr("Edit entry in compress exclude list."));
             Widgets.layout(widgetCompressExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListEdit,deltaCompressAlgorithm,byteCompressAlgorithm)
@@ -4220,7 +4258,7 @@ Dprintf.dprintf("");
               }
             });
 
-            widgetCompressExcludeListRemove = Widgets.newButton(subComposite,BARControl.tr("Remove\u2026"));
+            widgetCompressExcludeListRemove = Widgets.newButton(subComposite,BARControl.tr("Remove")+"\u2026");
             widgetCompressExcludeListRemove.setToolTipText(BARControl.tr("Remove entry from compress exclude list."));
             Widgets.layout(widgetCompressExcludeListRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListRemove,deltaCompressAlgorithm,byteCompressAlgorithm)
@@ -7271,7 +7309,7 @@ Dprintf.dprintf("");
           });
           Widgets.addModifyListener(new WidgetModifyListener(styledText,preCommand));
 
-          button = Widgets.newButton(composite,BARControl.tr("Test\u2026"));
+          button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
           button.setToolTipText(BARControl.tr("Test script."));
           Widgets.layout(button,1,0,TableLayoutData.E);
           button.addSelectionListener(new SelectionListener()
@@ -7336,7 +7374,7 @@ Dprintf.dprintf("");
           });
           Widgets.addModifyListener(new WidgetModifyListener(styledText,postCommand));
 
-          button = Widgets.newButton(composite,BARControl.tr("Test\u2026"));
+          button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
           button.setToolTipText(BARControl.tr("Test script."));
           Widgets.layout(button,1,0,TableLayoutData.E);
           button.addSelectionListener(new SelectionListener()
@@ -7543,7 +7581,7 @@ Dprintf.dprintf("");
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add\u2026"));
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add")+"\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -7555,7 +7593,7 @@ Dprintf.dprintf("");
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit\u2026"));
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Edit")+"\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -7567,7 +7605,7 @@ Dprintf.dprintf("");
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone\u2026"));
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -7579,7 +7617,7 @@ Dprintf.dprintf("");
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove\u2026"));
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove")+"\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -7612,7 +7650,7 @@ Dprintf.dprintf("");
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          widgetScheduleTableAdd = Widgets.newButton(composite,BARControl.tr("Add\u2026"));
+          widgetScheduleTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
           widgetScheduleTableAdd.setToolTipText(BARControl.tr("Add new schedule entry."));
           Widgets.layout(widgetScheduleTableAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetScheduleTableAdd.addSelectionListener(new SelectionListener()
@@ -7626,7 +7664,7 @@ Dprintf.dprintf("");
             }
           });
 
-          widgetScheduleTableEdit = Widgets.newButton(composite,BARControl.tr("Edit\u2026"));
+          widgetScheduleTableEdit = Widgets.newButton(composite,BARControl.tr("Edit")+"\u2026");
           widgetScheduleTableEdit.setToolTipText(BARControl.tr("Edit schedule entry."));
           Widgets.layout(widgetScheduleTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetScheduleTableEdit.addSelectionListener(new SelectionListener()
@@ -7640,7 +7678,7 @@ Dprintf.dprintf("");
             }
           });
 
-          button = Widgets.newButton(composite,BARControl.tr("Clone\u2026"));
+          button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
           button.setToolTipText(BARControl.tr("Clone schedule entry."));
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
@@ -7654,7 +7692,7 @@ Dprintf.dprintf("");
             }
           });
 
-          widgetScheduleTableRemove = Widgets.newButton(composite,BARControl.tr("Remove\u2026"));
+          widgetScheduleTableRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
           widgetScheduleTableRemove.setToolTipText(BARControl.tr("Remove schedule entry."));
           Widgets.layout(widgetScheduleTableRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetScheduleTableRemove.addSelectionListener(new SelectionListener()
@@ -9098,7 +9136,6 @@ throw new Error("NYI");
         if (!name.equals(""))
         {
           MountData mountData = new MountData(id,name,alwaysUnmount);
-Dprintf.dprintf("mountData=%s",mountData);
 
           Widgets.insertTableItem(widgetMountTable,
                                   findTableIndex(widgetMountTable,mountData),
@@ -9709,7 +9746,7 @@ throw new Error("NYI");
   }
 
   /** add mount entry
-   * @param entryData entry data
+   * @param mountData mount data
    */
   private void mountListAdd(MountData mountData)
   {
@@ -9735,9 +9772,8 @@ throw new Error("NYI");
 
     // get id
     mountData.id = resultMap.getInt("id");
-Dprintf.dprintf("mountData=%s",mountData);
 
-    // add table widget
+    // insert into table
     Widgets.insertTableItem(widgetMountTable,
                             findTableIndex(widgetMountTable,mountData),
                             (Object)mountData,
@@ -9746,10 +9782,10 @@ Dprintf.dprintf("mountData=%s",mountData);
                            );
 
     // remove duplicate names
-Dprintf.dprintf("mountData=%s",mountData);
-    for (MountData otherMountData : (MountData[])Widgets.getTableItems(widgetMountTable,MountData.class))
+    TableItem tableItems[] = widgetMountTable.getItems();
+    for (TableItem tableItem : tableItems)
     {
-Dprintf.dprintf("otherMountData=%s",otherMountData);
+      MountData otherMountData = (MountData)tableItem.getData();
       if ((otherMountData != mountData) && otherMountData.name.equals(mountData.name))
       {
         Widgets.removeTableItem(widgetMountTable,otherMountData);
@@ -9781,7 +9817,7 @@ Dprintf.dprintf("otherMountData=%s",otherMountData);
       return;
     }
 
-    // update table widget
+    // update table item
     Widgets.updateTableItem(widgetMountTable,
                             (Object)mountData,
                             mountData.name,
@@ -9789,10 +9825,10 @@ Dprintf.dprintf("otherMountData=%s",otherMountData);
                            );
 
     // remove duplicate names
-Dprintf.dprintf("mountData=%s",mountData);
-    for (MountData otherMountData : (MountData[])Widgets.getTableItems(widgetMountTable,MountData.class))
+    TableItem tableItems[] = widgetMountTable.getItems();
+    for (TableItem tableItem : tableItems)
     {
-Dprintf.dprintf("otherMountData=%s",otherMountData);
+      MountData otherMountData = (MountData)tableItem.getData();
       if ((otherMountData != mountData) && otherMountData.name.equals(mountData.name))
       {
         Widgets.removeTableItem(widgetMountTable,otherMountData);
@@ -9822,13 +9858,13 @@ Dprintf.dprintf("otherMountData=%s",otherMountData);
       return;
     }
 
-    // update table widget
+    // remove from table
     Widgets.removeTableItem(widgetMountTable,
                             (Object)mountData
                            );
   }
 
-  /** remove mount entries
+  /** remove mount entries by names
    * @param names names to remove from mount list
    */
   private void mountListRemove(String[] names)
@@ -9846,12 +9882,26 @@ Dprintf.dprintf("otherMountData=%s",otherMountData);
     }
   }
 
-  /** remove include entry
-   * @param pattern pattern to remove from include/exclude list
+  /** remove mount entry by name
+   * @param name mount name to remove from mount list
    */
   private void mountListRemove(String name)
   {
     mountListRemove(new String[]{name});
+  }
+
+  /** add new mount entry
+   * @param name name
+   */
+  private void mountListAdd(String name)
+  {
+    assert selectedJobData != null;
+
+    MountData mountData = new MountData(name,false);
+    if (mountEdit(mountData,"Add new mount","Add"))
+    {
+      mountListAdd(mountData);
+    }
   }
 
   /** add new mount entry
@@ -9860,11 +9910,7 @@ Dprintf.dprintf("otherMountData=%s",otherMountData);
   {
     assert selectedJobData != null;
 
-    MountData mountData = new MountData("",false);
-    if (mountEdit(mountData,"Add new mount","Add"))
-    {
-      mountListAdd(mountData);
-    }
+    mountListAdd("");
   }
 
   /** edit currently selected mount entry
@@ -9894,11 +9940,11 @@ Dprintf.dprintf("otherMountData=%s",otherMountData);
     TableItem[] tableItems = widgetMountTable.getSelection();
     if (tableItems.length > 0)
     {
-      MountData mountData = ((MountData)tableItems[0].getData()).clone();
+      MountData cloneMountData = (MountData)tableItems[0].getData();
 
-      if (mountEdit(mountData,"Clone mount","Add"))
+      if (mountEdit(cloneMountData,"Clone mount","Add"))
       {
-        mountListAdd(mountData);
+        mountListAdd(cloneMountData);
       }
     }
   }
@@ -9909,18 +9955,14 @@ Dprintf.dprintf("otherMountData=%s",otherMountData);
   {
     assert selectedJobData != null;
 
-    ArrayList<MountData> mountDataList = new ArrayList<MountData>();
-    for (TableItem tableItem : widgetMountTable.getSelection())
+    TableItem[] tableItems = widgetMountTable.getSelection();
+    if (tableItems.length > 0)
     {
-      mountDataList.add((MountData)tableItem.getData());
-    }
-    if (mountDataList.size() > 0)
-    {
-      if ((mountDataList.size() == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#mounts|1#mount|1<mounts}?",mountDataList.size())))
+      if ((tableItems.length == 1) || Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#mounts|1#mount|1<mounts}?",tableItems.length)))
       {
-        for (MountData mountData : mountDataList)
+        for (TableItem tableItem : tableItems)
         {
-          mountListRemove(mountData.name);
+          mountListRemove((MountData)tableItem.getData());
         }
       }
     }

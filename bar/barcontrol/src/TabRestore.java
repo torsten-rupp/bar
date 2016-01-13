@@ -4134,7 +4134,7 @@ Dprintf.dprintf("");
 
       menu = Widgets.newPopupMenu(shell);
       {
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh index\u2026"));
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh index")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4147,7 +4147,7 @@ Dprintf.dprintf("");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh all indizes with error\u2026"));
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh all indizes with error")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4160,13 +4160,13 @@ Dprintf.dprintf("");
           }
         });
 
-        widgetStorageTreeAssignToMenu = Widgets.addMenu(menu,BARControl.tr("Assign to job\u2026"));
+        widgetStorageTreeAssignToMenu = Widgets.addMenu(menu,BARControl.tr("Assign to job")+"\u2026");
         {
         }
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add to index\u2026"));
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add to index")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4179,7 +4179,7 @@ Dprintf.dprintf("");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove from index\u2026"));
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove from index")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4192,7 +4192,7 @@ Dprintf.dprintf("");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove all indizes with error\u2026"));
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove all indizes with error")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -4261,7 +4261,7 @@ Dprintf.dprintf("");
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete\u2026"));
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6658,7 +6658,7 @@ boolean overwriteFiles = false;
             }
             else
             {
-              busyDialog.updateText(0,"%s",BARControl.tr("Aborting\u2026"));
+              busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
               command.abort();
             }
 
@@ -7351,7 +7351,7 @@ boolean overwriteFiles = false;
               }
               else
               {
-                busyDialog.updateText(0,"%s",BARControl.tr("Aborting\u2026"));
+                busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
                 command.abort();
                 break;
               }

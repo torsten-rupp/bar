@@ -6009,7 +6009,7 @@ e composite widget
 
   /** get selected table item
    * @param table table
-   * @return selected table item data
+   * @return selected table item data or null
    */
   public static <T> T getSelectedTableItem(final Table table)
   {
