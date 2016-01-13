@@ -678,110 +678,12 @@ LOCAL bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
 }
 
 /***********************************************************************\
-* Name   : freeMountNode
-* Purpose: free mount node
-* Input  : mountNode - mount node
-*          userData  - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeMountNode(MountNode *mountNode, void *userData)
-{
-  assert(mountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(mountNode->name);
-}
-
-/***********************************************************************\
-* Name   : newMountNode
-* Purpose: new mount node
-* Input  : name          - name
-*          alwaysUnmount - TRUE for always unmount
-* Output : -
-* Return : mount node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL MountNode *newMountNode(ConstString name, bool alwaysUnmount)
-{
-  MountNode *mountNode;
-
-  assert(name != NULL);
-
-  // allocate mount node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  mountNode->id            = Misc_getId();
-  mountNode->name          = String_duplicate(name);
-  mountNode->alwaysUnmount = alwaysUnmount;
-
-  return mountNode;
-}
-
-/***********************************************************************\
-* Name   : duplicateMountNode
-* Purpose: duplicate schedule node
-* Input  : fromMountNode - from mount node
-*          userData      - user data (not used)
-* Output : -
-* Return : duplicated mount node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL MountNode *duplicateMountNode(MountNode *fromMountNode,
-                                    void      *userData
-                                   )
-{
-  MountNode *mountNode;
-
-  assert(fromMountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  // allocate node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  mountNode->id            = Misc_getId();
-  mountNode->name          = String_duplicate(fromMountNode->name);
-  mountNode->alwaysUnmount = fromMountNode->alwaysUnmount;
-
-  return mountNode;
-}
-
-/***********************************************************************\
-* Name   : deleteMountNode
-* Purpose: delete mount node
-* Input  : mountNode - mount node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteMountNode(MountNode *mountNode)
-{
-  assert(mountNode != NULL);
-
-  freeMountNode(mountNode,NULL);
-  LIST_DELETE_NODE(mountNode);
-}
-
-/***********************************************************************\
 * Name   : freeScheduleNode
 * Purpose: free schedule node
 * Input  : scheduleNode - schedule node
 *          userData     - not used
 * Output : -
-* Return : -g
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
@@ -3167,6 +3069,7 @@ LOCAL void jobThreadCode(void)
   RemoteHost       remoteHost;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
+  MountList        mountList;
   PatternList      compressExcludePatternList;
   DeltaSourceList  deltaSourceList;
   JobOptions       jobOptions;
@@ -3187,6 +3090,7 @@ LOCAL void jobThreadCode(void)
   Remote_initHost(&remoteHost);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
+  List_init(&mountList);
   PatternList_init(&compressExcludePatternList);
   DeltaSourceList_init(&deltaSourceList);
   scheduleCustomText = String_new();
@@ -3222,10 +3126,11 @@ LOCAL void jobThreadCode(void)
     String_set(storageName,jobNode->archiveName);
     String_set(jobUUID,jobNode->uuid);
     Remote_copyHost(&remoteHost,&jobNode->remoteHost);
-    EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,NULL,NULL);
-    PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,NULL,NULL);
-    PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,NULL,NULL);
-    DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,NULL,NULL);
+    EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
+    PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
+    List_clear(&mountList,CALLBACK(freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK(duplicateMountNode,NULL));
+    PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
+    DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
     initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
     archiveType = jobNode->archiveType;
     jobOptions.dryRunFlag = jobNode->dryRun;
@@ -3379,6 +3284,7 @@ LOCAL void jobThreadCode(void)
                                                         storageName,
                                                         &includeEntryList,
                                                         &excludePatternList,
+                                                        &mountList,
                                                         &compressExcludePatternList,
                                                         &deltaSourceList,
                                                         &jobOptions,
@@ -3529,6 +3435,7 @@ NULL,//                                                        scheduleTitle,
     doneJobOptions(&jobOptions);
     DeltaSourceList_clear(&deltaSourceList);
     PatternList_clear(&compressExcludePatternList);
+    List_clear(&mountList,CALLBACK(freeMountNode,NULL));
     PatternList_clear(&excludePatternList);
     EntryList_clear(&includeEntryList);
 
@@ -3550,6 +3457,7 @@ NULL,//                                                        scheduleTitle,
   String_delete(scheduleCustomText);
   DeltaSourceList_done(&deltaSourceList);
   PatternList_done(&compressExcludePatternList);
+  List_done(&mountList,CALLBACK(freeMountNode,NULL));
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   Remote_doneHost(&remoteHost);
