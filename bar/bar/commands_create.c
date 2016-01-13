@@ -6193,7 +6193,6 @@ Errors Command_create(ConstString                     jobUUID,
   LIST_ITERATE(mountList,mountNode)
   {
     mountNode->mounted = FALSE;
-fprintf(stderr,"%s, %d: mount=%s\n",__FILE__,__LINE__,String_cString(mountNode->name));
     if (!Device_isMounted(mountNode->name))
     {
       error = Device_mount(mountNode->name);
@@ -6457,7 +6456,6 @@ createThreadCode(&createInfo);
   // mount devices
   LIST_ITERATE(mountList,mountNode)
   {
-fprintf(stderr,"%s, %d: unmount=%s\n",__FILE__,__LINE__,String_cString(mountNode->name));
     if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted))
     {
       error = Device_umount(mountNode->name);
