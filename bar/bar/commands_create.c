@@ -6203,8 +6203,8 @@ fprintf(stderr,"%s, %d: mount=%s\n",__FILE__,__LINE__,String_cString(mountNode->
         return error;
       }
       mountNode->mounted = TRUE;
-      AUTOFREE_ADD(&autoFreeList,mountNode,{ Device_umount(mountNode->name); });
     }
+    AUTOFREE_ADD(&autoFreeList,mountNode,{ if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted)) Device_umount(mountNode->name); });
   }
 
   // init storage
