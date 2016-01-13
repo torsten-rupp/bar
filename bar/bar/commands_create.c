@@ -6091,6 +6091,7 @@ Errors Command_create(ConstString                     jobUUID,
                       ConstString                     storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
+                      MountList                       *mountList,
                       const PatternList               *compressExcludePatternList,
                       DeltaSourceList                 *deltaSourceList,
                       JobOptions                      *jobOptions,
@@ -6110,6 +6111,9 @@ Errors Command_create(ConstString                     jobUUID,
                      )
 {
   AutoFreeList     autoFreeList;
+  String           incrementalListFileName;
+  bool             useIncrementalFileInfoFlag;
+  bool             incrementalFileInfoExistFlag;
   StorageSpecifier storageSpecifier;
   CreateInfo       createInfo;
   Thread           collectorSumThread;                 // files collector sum thread
@@ -6119,9 +6123,7 @@ Errors Command_create(ConstString                     jobUUID,
   uint             createThreadCount;
   uint             z;
   Errors           error;
-  String           incrementalListFileName;
-  bool             useIncrementalFileInfoFlag;
-  bool             incrementalFileInfoExistFlag;
+  MountNode        *mountNode;
 
   assert(storageName != NULL);
   assert(includeEntryList != NULL);
@@ -6186,6 +6188,24 @@ Errors Command_create(ConstString                     jobUUID,
   }
   AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
   AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
+
+  // mount devices
+  LIST_ITERATE(mountList,mountNode)
+  {
+    mountNode->mounted = FALSE;
+fprintf(stderr,"%s, %d: mount=%s\n",__FILE__,__LINE__,String_cString(mountNode->name));
+    if (!Device_isMounted(mountNode->name))
+    {
+      error = Device_mount(mountNode->name);
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      mountNode->mounted = TRUE;
+      AUTOFREE_ADD(&autoFreeList,mountNode,{ Device_umount(mountNode->name); });
+    }
+  }
 
   // init storage
   error = Storage_init(&createInfo.storageHandle,
@@ -6432,6 +6452,21 @@ createThreadCode(&createInfo);
 
     printInfo(1,"ok\n");
     logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));
+  }
+
+  // mount devices
+  LIST_ITERATE(mountList,mountNode)
+  {
+fprintf(stderr,"%s, %d: unmount=%s\n",__FILE__,__LINE__,String_cString(mountNode->name));
+    if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted))
+    {
+      error = Device_umount(mountNode->name);
+      if (error != ERROR_NONE)
+      {
+        logMessage(logHandle,LOG_TYPE_ERROR,"Cannot unmount '%s' (error: %s)\n",String_cString(mountNode->name),Error_getText(error));
+      }
+    }
+    AUTOFREE_REMOVE(&autoFreeList,mountNode);
   }
 
   // output statics

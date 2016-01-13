@@ -640,6 +640,55 @@ void deleteServerNode(ServerNode *serverNode);
 void freeServerNode(ServerNode *serverNode, void *userData);
 
 /***********************************************************************\
+* Name   : freeMountNode
+* Purpose: free mount node
+* Input  : mountNode - mount node
+*          userData  - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeMountNode(MountNode *mountNode, void *userData);
+
+/***********************************************************************\
+* Name   : newMountNode
+* Purpose: new mount node
+* Input  : name          - name
+*          alwaysUnmount - TRUE for always unmount
+* Output : -
+* Return : mount node
+* Notes  : -
+\***********************************************************************/
+
+MountNode *newMountNode(ConstString name, bool alwaysUnmount);
+
+/***********************************************************************\
+* Name   : duplicateMountNode
+* Purpose: duplicate schedule node
+* Input  : fromMountNode - from mount node
+*          userData      - user data (not used)
+* Output : -
+* Return : duplicated mount node
+* Notes  : -
+\***********************************************************************/
+
+MountNode *duplicateMountNode(MountNode *fromMountNode,
+                              void      *userData
+                             );
+
+/***********************************************************************\
+* Name   : deleteMountNode
+* Purpose: delete mount node
+* Input  : mountNode - mount node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void deleteMountNode(MountNode *mountNode);
+
+/***********************************************************************\
 * Name   : getServerSettings
 * Purpose: get server settings
 * Input  : storageName - storage name

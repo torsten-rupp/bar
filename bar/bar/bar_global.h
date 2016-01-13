@@ -158,6 +158,7 @@ typedef struct MountNode
   uint   id;
   String name;
   bool   alwaysUnmount;
+  bool   mounted;
 } MountNode;
 
 typedef struct

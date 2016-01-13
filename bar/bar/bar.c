@@ -192,6 +192,7 @@ LOCAL String          uuid;
 LOCAL String          storageName;
 LOCAL EntryList       includeEntryList;
 LOCAL PatternList     excludePatternList;
+LOCAL MountList       mountList;
 LOCAL PatternList     compressExcludePatternList;
 LOCAL DeltaSourceList deltaSourceList;
 LOCAL Server          defaultFTPServer;
@@ -254,6 +255,7 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -462,6 +464,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SPECIAL      ("include",                      '#',0,3,&includeEntryList,                               cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,3,&excludePatternList,                             cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      cmdOptionParseMount,NULL,                              "mount device","mount point"                                               ),
 
   CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                cmdOptionParseDeltaSource,NULL,                        "source pattern","pattern"                                                 ),
 
@@ -899,8 +902,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL           ("include-image",                &includeEntryList,-1,                                          configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL           ("exclude",                      &excludePatternList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
-//TODO
-//  CONFIG_VALUE_SPECIAL           ("mount",                        &mountList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL           ("mount",                        &mountList,-1,                                                 configValueParseMount,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_SPECIAL           ("delta-source",                 &deltaSourceList,-1,                                           configValueParseDeltaSource,NULL,NULL,NULL,&jobOptions.patternType),
 
@@ -1972,6 +1974,62 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParsePattern
+* Purpose: command line option call back for parsing patterns
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  String    mountName;
+  bool      alwaysUnmount;
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  // init variables
+  mountName     = String_new();
+  alwaysUnmount = FALSE;
+
+  // get name, alwaysUnmount
+  if      (String_parseCString(value,"%S,%y",NULL,mountName,&alwaysUnmount))
+  {
+  }
+  else if (String_parseCString(value,"%S",NULL,mountName))
+  {
+    alwaysUnmount = FALSE;
+  }
+  else
+  {
+    String_delete(mountName);
+    return FALSE;
+  }
+
+  // append to mount list
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  mountNode->id            = Misc_getId();
+  mountNode->name          = mountName;
+  mountNode->alwaysUnmount = alwaysUnmount;
+  mountNode->mounted       = FALSE;
+  List_append((MountList*)variable,mountNode);
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionParseDeltaSource
 * Purpose: command line option call back for parsing delta patterns
 * Input  : -
@@ -2667,7 +2725,7 @@ LOCAL void initGlobalOptions(void)
 
 LOCAL void doneGlobalOptions(void)
 {
-  List_done(&globalOptions.indexDatabaseMaxBandWidthList,(ListNodeFreeFunction)freeBandWidthNode,NULL);
+  List_done(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   String_delete(globalOptions.bd.writeImageCommand);
   String_delete(globalOptions.bd.writeCommand);
   String_delete(globalOptions.bd.writePostProcessCommand);
@@ -2728,11 +2786,11 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.remoteBARExecutable);
 
   Semaphore_done(&globalOptions.deviceList.lock);
-  List_done(&globalOptions.deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
+  List_done(&globalOptions.deviceList,CALLBACK((ListNodeFreeFunction)freeDeviceNode,NULL));
   Semaphore_done(&globalOptions.serverList.lock);
-  List_done(&globalOptions.serverList,(ListNodeFreeFunction)freeServerNode,NULL);
+  List_done(&globalOptions.serverList,CALLBACK((ListNodeFreeFunction)freeServerNode,NULL));
 
-  List_done(&globalOptions.maxBandWidthList,(ListNodeFreeFunction)freeBandWidthNode,NULL);
+  List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   String_delete(globalOptions.tmpDirectory);
 }
 
@@ -2926,6 +2984,7 @@ LOCAL Errors initAll(void)
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&compressExcludePatternList);
+  List_init(&mountList);
   DeltaSourceList_init(&deltaSourceList);
   initServer(&defaultFTPServer,NULL,SERVER_TYPE_FTP);
   initServer(&defaultSSHServer,NULL,SERVER_TYPE_SSH);
@@ -3031,6 +3090,7 @@ LOCAL void doneAll(void)
   doneServer(&defaultSSHServer);
   doneServer(&defaultFTPServer);
   DeltaSourceList_done(&deltaSourceList);
+  List_done(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
@@ -5120,6 +5180,67 @@ void freeServer(uint serverId)
   }
 }
 
+void freeMountNode(MountNode *mountNode, void *userData)
+{
+  assert(mountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(mountNode->name);
+}
+
+MountNode *newMountNode(ConstString name, bool alwaysUnmount)
+{
+  MountNode *mountNode;
+
+  assert(name != NULL);
+
+  // allocate mount node
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  mountNode->id            = Misc_getId();
+  mountNode->name          = String_duplicate(name);
+  mountNode->alwaysUnmount = alwaysUnmount;
+  mountNode->mounted       = FALSE;
+
+  return mountNode;
+}
+
+MountNode *duplicateMountNode(MountNode *fromMountNode,
+                              void      *userData
+                             )
+{
+  MountNode *mountNode;
+
+  assert(fromMountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  // allocate node
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  mountNode->id            = Misc_getId();
+  mountNode->name          = String_duplicate(fromMountNode->name);
+  mountNode->alwaysUnmount = fromMountNode->alwaysUnmount;
+  mountNode->mounted       = FALSE;
+
+  return mountNode;
+}
+
+void deleteMountNode(MountNode *mountNode)
+{
+  assert(mountNode != NULL);
+
+  freeMountNode(mountNode,NULL);
+  LIST_DELETE_NODE(mountNode);
+}
+
 bool isServerAllocationPending(uint serverId)
 {
   bool          pendingFlag;
@@ -5861,6 +5982,7 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   mountNode->id            = Misc_getId();
   mountNode->name          = mountName;
   mountNode->alwaysUnmount = alwaysUnmount;
+  mountNode->mounted       = FALSE;
   List_append((MountList*)variable,mountNode);
 
   return TRUE;
@@ -6930,6 +7052,7 @@ exit(1);
                            storageName,
                            &includeEntryList,
                            &excludePatternList,
+                           &mountList,
                            &compressExcludePatternList,
                            &deltaSourceList,
                            &jobOptions,
@@ -6998,6 +7121,7 @@ exit(1);
                                   storageName,
                                   &includeEntryList,
                                   &excludePatternList,
+                                  &mountList,
                                   &compressExcludePatternList,
                                   &deltaSourceList,
                                   &jobOptions,

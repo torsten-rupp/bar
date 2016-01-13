@@ -55,6 +55,7 @@
 *          storageName                      - storage name
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
+*          mountList                        - mount list or NULL
 *          compressExcludePatternList       - exclude compression pattern
 *                                             list
 *          deltaSourceList                  - delta soruce list
@@ -90,6 +91,7 @@ Errors Command_create(ConstString                     jobUUID,
                       ConstString                     storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
+                      MountList                       *mountList,
                       const PatternList               *compressExcludePatternList,
                       DeltaSourceList                 *deltaSourceList,
                       JobOptions                      *jobOptions,
