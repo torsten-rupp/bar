@@ -706,21 +706,11 @@ LOCAL void freeMountNode(MountNode *mountNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL MountNode *newMountNode(JobNode *jobNode, ConstString name, bool alwaysUnmount)
+LOCAL MountNode *newMountNode(ConstString name, bool alwaysUnmount)
 {
-  SemaphoreLock semaphoreLock;
-  uint          id;
-  MountNode     *mountNode;
+  MountNode *mountNode;
 
   assert(name != NULL);
-
-  // get new id
-  id = 0;
-//  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobNode->mountList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    jobNode->mountList.id++;
-    id = jobNode->mountList.id;
-  }
 
   // allocate mount node
   mountNode = LIST_NEW_NODE(MountNode);
@@ -728,9 +718,9 @@ LOCAL MountNode *newMountNode(JobNode *jobNode, ConstString name, bool alwaysUnm
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-//  initServer(&serverNode->server,name,serverType);
-  mountNode->id                                  = id;
-  mountNode->name = String_duplicate(name);
+  mountNode->id            = Misc_getId();
+  mountNode->name          = String_duplicate(name);
+  mountNode->alwaysUnmount = alwaysUnmount;
 
   return mountNode;
 }
@@ -755,11 +745,13 @@ LOCAL MountNode *duplicateMountNode(MountNode *fromMountNode,
 
   UNUSED_VARIABLE(userData);
 
+  // allocate node
   mountNode = LIST_NEW_NODE(MountNode);
   if (mountNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  mountNode->id            = Misc_getId();
   mountNode->name          = String_duplicate(fromMountNode->name);
   mountNode->alwaysUnmount = fromMountNode->alwaysUnmount;
 
@@ -1914,12 +1906,32 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->name                           = File_getFileBaseName(String_new(),fileName);
   Remote_duplicateHost(&newJobNode->remoteHost,&jobNode->remoteHost);
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
-  EntryList_initDuplicate(&newJobNode->includeEntryList,&jobNode->includeEntryList,NULL,NULL);
-  PatternList_initDuplicate(&newJobNode->excludePatternList,&jobNode->excludePatternList,NULL,NULL);
-  List_initDuplicate(&newJobNode->mountList,&jobNode->mountList,NULL,NULL,(ListNodeDuplicateFunction)duplicateMountNode,NULL);
-  PatternList_initDuplicate(&newJobNode->compressExcludePatternList,&jobNode->compressExcludePatternList,NULL,NULL);
-  DeltaSourceList_initDuplicate(&newJobNode->deltaSourceList,&jobNode->deltaSourceList,NULL,NULL);
-  List_initDuplicate(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,(ListNodeDuplicateFunction)duplicateScheduleNode,NULL);
+  EntryList_initDuplicate(&newJobNode->includeEntryList,
+                          &jobNode->includeEntryList,
+                          CALLBACK(NULL,NULL)
+                         );
+  PatternList_initDuplicate(&newJobNode->excludePatternList,
+                            &jobNode->excludePatternList,
+                            CALLBACK(NULL,NULL)
+                           );
+  List_initDuplicate(&newJobNode->mountList,
+                     &jobNode->mountList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,&newJobNode->mountList)
+                    );
+  PatternList_initDuplicate(&newJobNode->compressExcludePatternList,
+                            &jobNode->compressExcludePatternList,
+                            CALLBACK(NULL,NULL)
+                           );
+  DeltaSourceList_initDuplicate(&newJobNode->deltaSourceList,
+                                &jobNode->deltaSourceList,
+                                CALLBACK(NULL,NULL)
+                               );
+  List_initDuplicate(&newJobNode->scheduleList,
+                     &jobNode->scheduleList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
+                    );
   initDuplicateJobOptions(&newJobNode->jobOptions,&jobNode->jobOptions);
   newJobNode->modifiedFlag                   = TRUE;
   newJobNode->scheduleModifiedFlag           = TRUE;
@@ -8236,8 +8248,10 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
                          )
        )
     {
-      jobNode->modifiedFlag = TRUE;
       sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+      // set modified
+      jobNode->modifiedFlag = TRUE;
     }
     else
     {
@@ -9171,12 +9185,15 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 
     // clear include list
     EntryList_clear(&jobNode->includeEntryList);
-    jobNode->modifiedFlag = TRUE;
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -9244,10 +9261,12 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 
     // add to include list
     EntryList_append(&jobNode->includeEntryList,entryType,patternString,patternType,&entryId);
-    jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",entryId);
@@ -9326,10 +9345,12 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, uint id, cons
 
     // update include list
     EntryList_update(&jobNode->includeEntryList,entryId,entryType,patternString,patternType);
-    jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -9393,10 +9414,12 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, uint id, cons
       Semaphore_unlock(&jobList.lock);
       return;
     }
-    jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -9504,10 +9527,12 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 
     // clear exclude list
     PatternList_clear(&jobNode->excludePatternList);
-    jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -9571,10 +9596,12 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 
     // add to exclude list
     PatternList_append(&jobNode->excludePatternList,patternString,patternType,&patternId);
-    jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",patternId);
@@ -9646,10 +9673,12 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, uint id, cons
 
     // update exclude list
     PatternList_update(&jobNode->excludePatternList,patternId,patternString,patternType);
-    jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -9713,10 +9742,12 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, uint id, cons
       Semaphore_unlock(&jobList.lock);
       return;
     }
-    jobNode->modifiedFlag = TRUE;
 
     // notify about changed lists
     jobIncludeExcludeChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -9772,10 +9803,10 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const String
     LIST_ITERATE(&jobNode->mountList,mountNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-//TODO
-                       "id=%u name=%'S alwaysUnmount=no",
+                       "id=%u name=%'S alwaysUnmount=%y",
                        mountNode->id,
-                       mountNode->name
+                       mountNode->name,
+                       mountNode->alwaysUnmount
                       );
     }
   }
@@ -9846,14 +9877,15 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const Str
     }
 
     // add to mount list
-    mountNode = newMountNode(jobNode,name,alwaysUnmount);
+    mountNode = newMountNode(name,alwaysUnmount);
     assert(mountNode != NULL);
-    mountId = mountNode->id;
     List_append(&jobNode->mountList,mountNode);
-    jobNode->modifiedFlag = TRUE;
 
-    // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    // get id
+    mountId = mountNode->id;
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",mountId);
@@ -9881,6 +9913,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const Str
 LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint          mountId;
   String        name;
   bool          alwaysUnmount;
   SemaphoreLock semaphoreLock;
@@ -9890,10 +9923,15 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get jobUUID, name, alwaysUnmount
+  // get jobUUID, mount id, name, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"id",&mountId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
   name = String_new();
@@ -9922,13 +9960,22 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const 
       return;
     }
 
-    // update mount list
-//TODO
-//    EntryList_update(&jobNode->includeEntryList,entryId,entryType,patternString,patternType);
-    jobNode->modifiedFlag = TRUE;
+    // get mount
+    mountNode = LIST_FIND(&jobNode->mountList,mountNode,mountNode->id == mountId);
+    if (mountNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"mount %S not found",name);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(name);
+      return;
+    }
 
-    // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    // update mount list
+    String_set(mountNode->name,name);
+    mountNode->alwaysUnmount = alwaysUnmount;
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -9955,20 +10002,21 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const 
 LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          entryId;
+  uint          mountId;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  MountNode     *mountNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job UUID, id
+  // get job UUID, mount id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
+  if (!StringMap_getUInt(argumentMap,"id",&mountId,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
@@ -9985,19 +10033,20 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, uint id, const 
       return;
     }
 
-    // remove from mount list
-#if 0
-    if (!EntryList_remove(&jobNode->includeEntryList,entryId))
+    // get mount
+    mountNode = LIST_FIND(&jobNode->mountList,mountNode,mountNode->id == mountId);
+    if (mountNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"mount with id #%u not found",entryId);
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"mount with id #%u not found",mountId);
       Semaphore_unlock(&jobList.lock);
       return;
     }
-#endif
-    jobNode->modifiedFlag = TRUE;
 
-    // notify about changed lists
-    jobIncludeExcludeChanged(jobNode);
+    // remove from mount list
+    List_remove(&jobNode->mountList,mountNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -10106,6 +10155,8 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 
     // clear source list
     DeltaSourceList_clear(&jobNode->deltaSourceList);
+
+    // set modified
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -10170,6 +10221,8 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 
     // add to source list
     DeltaSourceList_append(&jobNode->deltaSourceList,patternString,patternType,&deltaSourceId);
+
+    // set modified
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -10242,6 +10295,8 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, uint id, const
 
     // update source list
     DeltaSourceList_update(&jobNode->deltaSourceList,deltaSourceId,patternString,patternType);
+
+    // set modified
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -10306,6 +10361,8 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, uint id, const
       Semaphore_unlock(&jobList.lock);
       return;
     }
+
+    // set modified
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -10415,6 +10472,8 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 
     // clear exclude list
     PatternList_clear(&jobNode->compressExcludePatternList);
+
+    // set modified
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -10479,6 +10538,8 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 
     // add to exclude list
     PatternList_append(&jobNode->compressExcludePatternList,patternString,patternType,&patternId);
+
+    // set modified
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -10551,6 +10612,8 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, uint 
 
     // update exclude list
     PatternList_update(&jobNode->compressExcludePatternList,patternId,patternString,patternType);
+
+    // set modified
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -10616,6 +10679,8 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, uint 
       Semaphore_unlock(&jobList.lock);
       return;
     }
+
+    // set modified
     jobNode->modifiedFlag = TRUE;
   }
 

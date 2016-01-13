@@ -163,8 +163,6 @@ typedef struct MountNode
 typedef struct
 {
   LIST_HEADER(MountNode);
-
-  uint id;
 } MountList;
 
 // band width usage
@@ -223,6 +221,8 @@ typedef struct
 // server types
 typedef enum
 {
+  SERVER_TYPE_NONE,
+
   SERVER_TYPE_FILE,
   SERVER_TYPE_FTP,
   SERVER_TYPE_SSH,
@@ -267,7 +267,6 @@ typedef struct
 {
   LIST_HEADER(ServerNode);
 
-  uint      id;
   Semaphore lock;
 } ServerList;
 
@@ -361,7 +360,6 @@ typedef struct
   LIST_HEADER(DeviceNode);
 
   Semaphore lock;
-  uint      id;
 } DeviceList;
 
 // global options

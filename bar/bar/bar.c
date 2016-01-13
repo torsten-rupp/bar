@@ -1328,16 +1328,7 @@ LOCAL void initDevice(Device *device)
 LOCAL DeviceNode *newDeviceNode(ConstString name)
 {
   SemaphoreLock semaphoreLock;
-  uint          id;
   DeviceNode    *deviceNode;
-
-  // get new id
-  id = 0;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    globalOptions.deviceList.id++;
-    id = globalOptions.deviceList.id;
-  }
 
   // allocate new device node
   deviceNode = LIST_NEW_NODE(DeviceNode);
@@ -1346,7 +1337,7 @@ LOCAL DeviceNode *newDeviceNode(ConstString name)
     HALT_INSUFFICIENT_MEMORY();
   }
   initDevice(&deviceNode->device);
-  deviceNode->id          = id;
+  deviceNode->id          = Misc_getId();
   deviceNode->name        = String_duplicate(name);
   deviceNode->device.name = String_duplicate(name);
 
@@ -4541,6 +4532,8 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
   server->type                                = serverType;
   switch (serverType)
   {
+    case SERVER_TYPE_NONE:
+      break;
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
@@ -4576,6 +4569,8 @@ void doneServer(Server *server)
 
   switch (server->type)
   {
+    case SERVER_TYPE_NONE:
+      break;
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
@@ -4606,19 +4601,9 @@ void doneServer(Server *server)
 
 ServerNode *newServerNode(ConstString name, ServerTypes serverType)
 {
-  SemaphoreLock semaphoreLock;
-  uint          id;
-  ServerNode    *serverNode;
+  ServerNode *serverNode;
 
   assert(name != NULL);
-
-  // get new id
-  id = 0;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-  {
-    globalOptions.serverList.id++;
-    id = globalOptions.serverList.id;
-  }
 
   // allocate server node
   serverNode = LIST_NEW_NODE(ServerNode);
@@ -4627,7 +4612,7 @@ ServerNode *newServerNode(ConstString name, ServerTypes serverType)
     HALT_INSUFFICIENT_MEMORY();
   }
   initServer(&serverNode->server,name,serverType);
-  serverNode->id                                  = id;
+  serverNode->id                                  = Misc_getId();
 //  serverNode->name = String_duplicate(name);
   serverNode->connection.lowPriorityRequestCount  = 0;
   serverNode->connection.highPriorityRequestCount = 0;
@@ -4667,6 +4652,8 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
 
   // get default settings
   serverId                   = 0;
+  server->type               = SERVER_TYPE_NONE;
+  server->name               = NULL;
   server->maxConnectionCount = 0;
   server->maxStorageSize     = (jobOptions != NULL) ? jobOptions->maxStorageSize : 0LL;
 
@@ -5874,6 +5861,7 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  mountNode->id            = Misc_getId();
   mountNode->name          = mountName;
   mountNode->alwaysUnmount = alwaysUnmount;
   List_append((MountList*)variable,mountNode);
