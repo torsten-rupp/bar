@@ -3730,7 +3730,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            "
 #else
                            "SELECT entities1.jobUUID, \
-                                   STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities1.id ORDER BY created DESC LIMIT 0,1)), \
+                                   STRFTIME('%%s',(SELECT MAX(created) FROM storage WHERE storage.entityId=entities1.id)), \
                                    ( \
                                       (SELECT COUNT(id) FROM files WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
