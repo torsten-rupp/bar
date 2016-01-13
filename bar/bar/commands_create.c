@@ -3846,10 +3846,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                              : 0LL,
                            createInfo->logHandle
                           );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       doneServer(&server);
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // open file to store
     #ifndef NDEBUG
@@ -3872,7 +3870,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
     AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
     DEBUG_TESTCODE("storageThreadCode4") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // write data to storage
     retryCount  = 0;
@@ -3996,7 +3993,6 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // close file to store
     File_close(&fileHandle);
@@ -4013,7 +4009,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // done
     printInfo(1,"ok\n");
     logMessage(createInfo->logHandle,LOG_TYPE_STORAGE,"Stored '%s'\n",String_cString(printableStorageName));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // update index database and set state
     if (storageMsg.storageId != DATABASE_ID_NONE)
@@ -4167,7 +4162,6 @@ fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
 
         storageId = storageMsg.storageId;
       }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       // update index database archive name and size
       error = Index_storageUpdate(indexHandle,
@@ -4187,7 +4181,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         continue;
       }
       DEBUG_TESTCODE("storageThreadCode9") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       // set index database state and time stamp
       error = Index_setState(indexHandle,
@@ -4211,7 +4204,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       DEBUG_TESTCODE("storageThreadCode10") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // post-process
     error = Storage_postProcess(&createInfo->storageHandle,storageMsg.archiveName,createInfo->startTime,FALSE);
@@ -4227,7 +4219,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       continue;
     }
     DEBUG_TESTCODE("storageThreadCode11") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // delete temporary storage file
     error = File_delete(storageMsg.fileName,FALSE);
@@ -4249,7 +4240,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     freeStorageMsg(&storageMsg,NULL);
     AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // final storage post-processing
   if (   !isAborted(createInfo)
@@ -4323,12 +4313,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       String_delete(pattern);
     }
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // free resoures
   free(buffer);
   AutoFree_done(&autoFreeList);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   createInfo->storageThreadExitFlag = TRUE;
 }
