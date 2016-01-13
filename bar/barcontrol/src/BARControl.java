@@ -2381,15 +2381,15 @@ public class BARControl
             System.exit(1);
           }
           String type = resultMap.getString("type");
-          if      (type.equals("running"))
+          if      (type.equalsIgnoreCase("running"))
           {
             serverState = null;
           }
-          else if (type.equals("pause"))
+          else if (type.equalsIgnoreCase("pause"))
           {
             serverState = "pause";
           }
-          else if (type.equals("suspended"))
+          else if (type.equalsIgnoreCase("suspended"))
           {
             serverState = "suspended";
           }

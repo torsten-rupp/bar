@@ -5721,25 +5721,25 @@ LOCAL const char *getJobStateText(const JobOptions *jobOptions, JobStates jobSta
   switch (jobState)
   {
     case JOB_STATE_NONE:
-      stateText = "NONE";
+      stateText = "none";
       break;
     case JOB_STATE_WAITING:
-      stateText = "WAITING";
+      stateText = "waiting";
       break;
     case JOB_STATE_RUNNING:
-      stateText = (jobOptions->dryRunFlag) ? "DRY_RUNNING" : "RUNNING";
+      stateText = (jobOptions->dryRunFlag) ? "dry_running" : "running";
       break;
     case JOB_STATE_REQUEST_VOLUME:
-      stateText = "REQUEST_VOLUME";
+      stateText = "request_volume";
       break;
     case JOB_STATE_DONE:
-      stateText = "DONE";
+      stateText = "done";
       break;
     case JOB_STATE_ERROR:
-      stateText = "ERROR";
+      stateText = "error";
       break;
     case JOB_STATE_ABORTED:
-      stateText = "ABORTED";
+      stateText = "aborted";
       break;
     #ifndef NDEBUG
       default:
@@ -13233,7 +13233,7 @@ restoreCommandInfo.clientInfo->abortFlag = FALSE;
 *          Result:
 *            jobUUID=<uuid> \
 *            name=<name> \
-*            lastDateTime=<created date/time> \
+*            lastDateTime=<created date/time [s]> \
 *            totalEntries=<n> \
 *            totalSize=<n> \
 *            lastErrorMessage=<text> \
@@ -13411,7 +13411,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
       }
 
       // clear uuid data
-      uuidDataNode->lastCreatedDateTime = 0;
+      uuidDataNode->lastCreatedDateTime = 0LL;
       uuidDataNode->totalEntries        = 0LL;
       uuidDataNode->totalSize           = 0LL;
       String_clear(uuidDataNode->lastErrorMessage);
