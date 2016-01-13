@@ -1478,6 +1478,7 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l bd://test*.bar $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t bd://test*.bar $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d bd://test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c /media/ramdisk/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --mount=/media/ramdisk $(if $(QUIET),1>/dev/null))
 	#
 	# templates
 	# 
