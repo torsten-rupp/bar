@@ -232,8 +232,6 @@ typedef enum
 // server
 typedef struct
 {
-//TODO
-  Semaphore lock;
   String      name;                                           // server file name or URL
   ServerTypes type;                                           // server type
   union

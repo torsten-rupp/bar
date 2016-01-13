@@ -4524,10 +4524,6 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
 {
   assert(server != NULL);
 
-  if (!Semaphore_init(&server->lock))
-  {
-    HALT_FATAL_ERROR("cannot initialize server lock semaphore");
-  }
   server->name                                = (name != NULL) ? String_duplicate(name) : String_new();
   server->type                                = serverType;
   switch (serverType)
@@ -4596,7 +4592,6 @@ void doneServer(Server *server)
     #endif /* NDEBUG */
   }
   String_delete(server->name);
-  Semaphore_done(&server->lock);
 }
 
 ServerNode *newServerNode(ConstString name, ServerTypes serverType)
@@ -4660,6 +4655,8 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
   // get server specific settings
   switch (storageSpecifier->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
