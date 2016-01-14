@@ -195,6 +195,7 @@ LOCAL PatternList     excludePatternList;
 LOCAL MountList       mountList;
 LOCAL PatternList     compressExcludePatternList;
 LOCAL DeltaSourceList deltaSourceList;
+LOCAL Server          defaultFileServer;
 LOCAL Server          defaultFTPServer;
 LOCAL Server          defaultSSHServer;
 LOCAL Server          defaultWebDAVServer;
@@ -513,6 +514,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                           "crypt password (use with care!)","password"                               ),
   CMD_OPTION_STRING       ("crypt-public-key",             0,  0,2,jobOptions.cryptPublicKeyFileName,                                                                      "public key for encryption","file name"                                    ),
   CMD_OPTION_STRING       ("crypt-private-key",            0,  0,2,jobOptions.cryptPrivateKeyFileName,                                                                     "private key for decryption","file name"                                   ),
+
+//TODO
+//  CMD_OPTION_INTEGER64    ("file-max-storage-size",         0,  0,2,defaultFileServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on file server","unlimited"                  ),
 
   CMD_OPTION_STRING       ("ftp-login-name",               0,  0,2,defaultFTPServer.ftpServer.loginName,                                                                   "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,2,&defaultFTPServer.ftpServer.password,            cmdOptionParsePassword,NULL,                           "ftp password (use with care!)","password"                                 ),
@@ -1005,9 +1009,11 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("bd-write-command",             &globalOptions.bd.writeCommand,-1                              ),
   CONFIG_VALUE_STRING            ("bd-write-image-command",       &globalOptions.bd.writeImageCommand,-1                         ),
 
-//  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",        &defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
+//  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",        &defaultFileServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
   CONFIG_VALUE_BEGIN_SECTION     ("file-server",-1),
     CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",        Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
+    CONFIG_STRUCT_VALUE_STRING   ("file-write-pre-command",       Server,writePreProcessCommand                                  ),
+    CONFIG_STRUCT_VALUE_STRING   ("file-write-post-command",      Server,writePostProcessCommand                                 ),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_STRING            ("ftp-login-name",               &defaultFTPServer.ftpServer.loginName,-1                       ),
@@ -1019,6 +1025,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                 Server,ftpServer.password,                                     configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",          Server,maxConnectionCount,                                     0,MAX_INT,NULL),
     CONFIG_STRUCT_VALUE_INTEGER64("ftp-max-storage-size",         Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
+    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-pre-command",        Server,writePreProcessCommand                                  ),
+    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-post-command",       Server,writePostProcessCommand                                 ),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_INTEGER           ("ssh-port",                     &defaultSSHServer.sshServer.port,-1,                           0,65535,NULL),
@@ -1036,6 +1044,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",              Server,sshServer.privateKey,                                   configValueParseKey,configValueFormatInitKey,configValueFormatDoneKey,configValueFormatKey,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",          Server,maxConnectionCount,                                     0,MAX_INT,NULL),
     CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",         Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
+    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-pre-command",        Server,writePreProcessCommand                                  ),
+    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-post-command",       Server,writePostProcessCommand                                 ),
   CONFIG_VALUE_END_SECTION(),
 
 //  CONFIG_VALUE_INTEGER           ("webdav-port",                  &defaultWebDAVServer.webDAVServer.port,-1,                     0,65535,NULL),
@@ -1048,6 +1058,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",              Server,webDAVServer.password,                                  configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",       Server,maxConnectionCount,                                     0,MAX_INT,NULL),
     CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",      Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
+    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-pre-command",     Server,writePreProcessCommand                                  ),
+    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-post-command",    Server,writePostProcessCommand                                 ),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_STRING            ("device",                       &defaultDevice.name,-1                                         ),
@@ -2619,6 +2631,8 @@ LOCAL void initGlobalOptions(void)
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
   globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
   globalOptions.cryptPassword                                   = NULL;
+  globalOptions.fileServer                                      = &defaultFileServer;
+  globalOptions.defaultFileServer                               = &defaultFileServer;
   globalOptions.ftpServer                                       = &defaultFTPServer;
   globalOptions.defaultFTPServer                                = &defaultFTPServer;
   globalOptions.sshServer                                       = &defaultSSHServer;
@@ -2986,6 +3000,7 @@ LOCAL Errors initAll(void)
   PatternList_init(&compressExcludePatternList);
   List_init(&mountList);
   DeltaSourceList_init(&deltaSourceList);
+  initServer(&defaultFileServer,NULL,SERVER_TYPE_FILE);
   initServer(&defaultFTPServer,NULL,SERVER_TYPE_FTP);
   initServer(&defaultSSHServer,NULL,SERVER_TYPE_SSH);
   initServer(&defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
@@ -3089,6 +3104,7 @@ LOCAL void doneAll(void)
   doneServer(&defaultWebDAVServer);
   doneServer(&defaultSSHServer);
   doneServer(&defaultFTPServer);
+  doneServer(&defaultFileServer);
   DeltaSourceList_done(&deltaSourceList);
   List_done(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_done(&compressExcludePatternList);
@@ -4651,6 +4667,8 @@ void doneServer(Server *server)
         break; // not reached
     #endif /* NDEBUG */
   }
+  String_delete(server->writePostProcessCommand);
+  String_delete(server->writePreProcessCommand);
   String_delete(server->name);
 }
 
@@ -4706,11 +4724,13 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
   assert(server != NULL);
 
   // get default settings
-  serverId                   = 0;
-  server->type               = SERVER_TYPE_NONE;
-  server->name               = NULL;
-  server->maxConnectionCount = 0;
-  server->maxStorageSize     = (jobOptions != NULL) ? jobOptions->maxStorageSize : 0LL;
+  serverId                        = 0;
+  server->type                    = SERVER_TYPE_NONE;
+  server->name                    = NULL;
+  server->maxConnectionCount      = 0;
+  server->maxStorageSize          = (jobOptions != NULL) ? jobOptions->maxStorageSize : 0LL;
+  server->writePreProcessCommand  = NULL;
+  server->writePostProcessCommand = NULL;
 
   // get server specific settings
   switch (storageSpecifier->type)
@@ -4732,6 +4752,8 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           // get file server settings
           serverId = serverNode->id;
           initServer(server,serverNode->server.name,SERVER_TYPE_FILE);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.file.writePreProcessCommand );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.file.writePostProcessCommand);
         }
       }
       break;
@@ -4752,11 +4774,37 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           initServer(server,serverNode->server.name,SERVER_TYPE_FTP);
           server->ftpServer.loginName = String_duplicate(serverNode->server.ftpServer.loginName);
           server->ftpServer.password  = Password_duplicate(serverNode->server.ftpServer.password);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.ftp.writePreProcessCommand );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.ftp.writePostProcessCommand);
         }
       }
       break;
     case STORAGE_TYPE_SSH:
     case STORAGE_TYPE_SCP:
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      {
+        // find SSH server
+        serverNode = LIST_FIND(&globalOptions.serverList,
+                               serverNode,
+                                  (serverNode->server.type == SERVER_TYPE_SSH)
+                               && String_equals(serverNode->server.name,storageSpecifier->hostName)
+                              );
+
+        if (serverNode != NULL)
+        {
+          // get file server settings
+          serverId  = serverNode->id;
+          initServer(server,serverNode->server.name,SERVER_TYPE_SSH);
+          server->sshServer.loginName = String_duplicate(serverNode->server.sshServer.loginName);
+          server->sshServer.port      = serverNode->server.sshServer.port;
+          server->sshServer.password  = Password_duplicate(serverNode->server.sshServer.password);
+          duplicateKey(&server->sshServer.publicKey,&serverNode->server.sshServer.publicKey);
+          duplicateKey(&server->sshServer.privateKey,&serverNode->server.sshServer.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.scp.writePreProcessCommand );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.scp.writePostProcessCommand);
+        }
+      }
+      break;
     case STORAGE_TYPE_SFTP:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
       {
@@ -4777,6 +4825,8 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           server->sshServer.password  = Password_duplicate(serverNode->server.sshServer.password);
           duplicateKey(&server->sshServer.publicKey,&serverNode->server.sshServer.publicKey);
           duplicateKey(&server->sshServer.privateKey,&serverNode->server.sshServer.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.sftp.writePreProcessCommand );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.sftp.writePostProcessCommand);
         }
       }
       break;
@@ -4799,6 +4849,8 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
           server->webDAVServer.password  = Password_duplicate(serverNode->server.webDAVServer.password);
           duplicateKey(&server->webDAVServer.publicKey,&serverNode->server.webDAVServer.publicKey);
           duplicateKey(&server->webDAVServer.privateKey,&serverNode->server.webDAVServer.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(serverNode->server.writePreProcessCommand ) ? serverNode->server.writePreProcessCommand  : globalOptions.webdav.writePreProcessCommand );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(serverNode->server.writePostProcessCommand) ? serverNode->server.writePostProcessCommand : globalOptions.webdav.writePostProcessCommand);
         }
       }
       break;
@@ -4841,9 +4893,7 @@ uint getFileServerSettings(ConstString      directory,
                            && String_startsWith(serverNode->server.name,directory)
                           );
 
-  // get file server settings
-//  fileServer->loginName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName) ) ? jobOptions->ftpServer.loginName : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName : globalOptions.defaultFTPServer->ftpServer.loginName);
-//  fileServer->password  = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
+    // get file server settings
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;
@@ -4871,8 +4921,8 @@ uint getFTPServerSettings(ConstString      hostName,
                           );
 
     // get FTP server settings
-    ftpServer->loginName = ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName) ) ? jobOptions->ftpServer.loginName : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName : globalOptions.defaultFTPServer->ftpServer.loginName);
-    ftpServer->password  = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)) ? jobOptions->ftpServer.password  : ((serverNode != NULL) ? serverNode->server.ftpServer.password  : globalOptions.defaultFTPServer->ftpServer.password );
+    ftpServer->loginName               = ((jobOptions != NULL) && !String_isEmpty(jobOptions->ftpServer.loginName)           ) ? jobOptions->ftpServer.loginName               : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName               : globalOptions.defaultFTPServer->ftpServer.loginName              );
+    ftpServer->password                = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->ftpServer.password)          ) ? jobOptions->ftpServer.password                : ((serverNode != NULL) ? serverNode->server.ftpServer.password                : globalOptions.defaultFTPServer->ftpServer.password               );
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;
@@ -4900,11 +4950,11 @@ uint getSSHServerSettings(ConstString      hostName,
                           );
 
     // get SSH server settings
-    sshServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                ) ? jobOptions->sshServer.port       : ((serverNode != NULL) ? serverNode->server.sshServer.port       : globalOptions.defaultSSHServer->sshServer.port      );
-    sshServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName) ) ? jobOptions->sshServer.loginName  : ((serverNode != NULL) ? serverNode->server.sshServer.loginName  : globalOptions.defaultSSHServer->sshServer.loginName );
-    sshServer->password   = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)) ? jobOptions->sshServer.password   : ((serverNode != NULL) ? serverNode->server.sshServer.password   : globalOptions.defaultSSHServer->sshServer.password  );
-    sshServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey) ) ? jobOptions->sshServer.publicKey  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKey  : globalOptions.defaultSSHServer->sshServer.publicKey );
-    sshServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey)) ? jobOptions->sshServer.privateKey : ((serverNode != NULL) ? serverNode->server.sshServer.privateKey : globalOptions.defaultSSHServer->sshServer.privateKey);
+    sshServer->port                    = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                             ) ? jobOptions->sshServer.port                    : ((serverNode != NULL) ? serverNode->server.sshServer.port                    : globalOptions.defaultSSHServer->sshServer.port                   );
+    sshServer->loginName               = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName)              ) ? jobOptions->sshServer.loginName               : ((serverNode != NULL) ? serverNode->server.sshServer.loginName               : globalOptions.defaultSSHServer->sshServer.loginName              );
+    sshServer->password                = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->sshServer.password)             ) ? jobOptions->sshServer.password                : ((serverNode != NULL) ? serverNode->server.sshServer.password                : globalOptions.defaultSSHServer->sshServer.password               );
+    sshServer->publicKey               = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey)              ) ? jobOptions->sshServer.publicKey               : ((serverNode != NULL) ? serverNode->server.sshServer.publicKey               : globalOptions.defaultSSHServer->sshServer.publicKey              );
+    sshServer->privateKey              = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey)             ) ? jobOptions->sshServer.privateKey              : ((serverNode != NULL) ? serverNode->server.sshServer.privateKey              : globalOptions.defaultSSHServer->sshServer.privateKey             );
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;
@@ -4932,11 +4982,11 @@ uint getWebDAVServerSettings(ConstString      hostName,
                           );
 
     // get WebDAV server settings
-//    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
-    webDAVServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName) ) ? jobOptions->webDAVServer.loginName  : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName  : globalOptions.defaultWebDAVServer->webDAVServer.loginName );
-    webDAVServer->password   = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->webDAVServer.password)) ? jobOptions->webDAVServer.password   : ((serverNode != NULL) ? serverNode->server.webDAVServer.password   : globalOptions.defaultWebDAVServer->webDAVServer.password  );
-    webDAVServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey) ) ? jobOptions->webDAVServer.publicKey  : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKey  : globalOptions.defaultWebDAVServer->webDAVServer.publicKey );
-    webDAVServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey)) ? jobOptions->webDAVServer.privateKey : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKey : globalOptions.defaultWebDAVServer->webDAVServer.privateKey);
+//    webDAVServer->port                    = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
+    webDAVServer->loginName               = ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName)              ) ? jobOptions->webDAVServer.loginName               : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName               : globalOptions.defaultWebDAVServer->webDAVServer.loginName              );
+    webDAVServer->password                = ((jobOptions != NULL) && !Password_isEmpty(jobOptions->webDAVServer.password)             ) ? jobOptions->webDAVServer.password                : ((serverNode != NULL) ? serverNode->server.webDAVServer.password                : globalOptions.defaultWebDAVServer->webDAVServer.password               );
+    webDAVServer->publicKey               = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey)              ) ? jobOptions->webDAVServer.publicKey               : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKey               : globalOptions.defaultWebDAVServer->webDAVServer.publicKey              );
+    webDAVServer->privateKey              = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey)             ) ? jobOptions->webDAVServer.privateKey              : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKey              : globalOptions.defaultWebDAVServer->webDAVServer.privateKey             );
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;

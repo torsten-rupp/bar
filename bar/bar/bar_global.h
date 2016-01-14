@@ -244,6 +244,8 @@ typedef struct
   };
   uint        maxConnectionCount;                             // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
   uint64      maxStorageSize;                                 // max. number of bytes to store on server
+  String      writePreProcessCommand;                         // command to execute before writing
+  String      writePostProcessCommand;                        // command to execute after writing
 } Server;
 
 // server node
@@ -349,7 +351,7 @@ typedef struct DeviceNode
 {
   LIST_NODE_HEADER(struct DeviceNode);
 
-  uint   id;
+  uint   id;                                                  // unique device id
   String name;                                                // device name
   Device device;
 } DeviceNode;
@@ -379,6 +381,9 @@ typedef struct
   ulong                  compressMinFileSize;                 // min. size of file for using compression
 
   Password               *cryptPassword;                      // default password for encryption/decryption
+
+  Server                 *fileServer;                         // current selected file server
+  Server                 *defaultFileServer;                  // default file server
 
   Server                 *ftpServer;                          // current selected FTP server
   Server                 *defaultFTPServer;                   // default FTP server
@@ -477,7 +482,9 @@ struct JobOptions
   String                       preProcessScript;              // script to execute before start of job
   String                       postProcessScript;             // script to execute after after termination of job
 
+//TODO: obsolete
   String                       mountDeviceName;               // device to mount/unmount
+  FileServer                   fileServer;                    // job specific file server settings
   FTPServer                    ftpServer;                     // job specific FTP server settings
   SSHServer                    sshServer;                     // job specific SSH server settings
   WebDAVServer                 webDAVServer;                  // job specific WebDAV server settings
