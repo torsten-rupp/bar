@@ -191,7 +191,9 @@ LOCAL JobOptions      jobOptions;
 LOCAL String          uuid;
 LOCAL String          storageName;
 LOCAL EntryList       includeEntryList;
+LOCAL const char      *includeCommand;
 LOCAL PatternList     excludePatternList;
+LOCAL const char      *excludeCommand;
 LOCAL MountList       mountList;
 LOCAL PatternList     compressExcludePatternList;
 LOCAL DeltaSourceList deltaSourceList;
@@ -464,7 +466,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("pattern-type",                 0,  1,2,jobOptions.patternType,                          COMMAND_LINE_OPTIONS_PATTERN_TYPES,                    "select pattern type"                                                      ),
 
   CMD_OPTION_SPECIAL      ("include",                      '#',0,3,&includeEntryList,                               cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
+  CMD_OPTION_CSTRING      ("include-command",              0,  1,3,includeCommand,                                                                                         "include command","command"                                                ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,3,&excludePatternList,                             cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
+  CMD_OPTION_CSTRING      ("exclude-command",              0,  1,3,excludeCommand,                                                                                         "exclude command","command"                                                ),
   CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      cmdOptionParseMount,NULL,                              "mount device","mount point"                                               ),
 
   CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                cmdOptionParseDeltaSource,NULL,                        "source pattern","pattern"                                                 ),
@@ -2989,14 +2993,16 @@ LOCAL Errors initAll(void)
   // initialize variables
   initGlobalOptions();
 
-  command                               = COMMAND_LIST;
-  jobName                               = NULL;
-  uuid                                  = NULL;
-  storageName                           = NULL;
+  command                                = COMMAND_LIST;
+  jobName                                = NULL;
+  uuid                                   = NULL;
+  storageName                            = NULL;
   initJobOptions(&jobOptions);
 
   EntryList_init(&includeEntryList);
+  includeCommand                         = NULL;
   PatternList_init(&excludePatternList);
+  excludeCommand                         = NULL;
   PatternList_init(&compressExcludePatternList);
   List_init(&mountList);
   DeltaSourceList_init(&deltaSourceList);
@@ -6588,6 +6594,24 @@ bool isNoBackup(ConstString pathName)
 
 // ----------------------------------------------------------------------
 
+LOCAL Errors executeIncludeCommand(EntryList *includeEntryList, const char *command)
+{
+  assert(includeEntryList != NULL);
+  assert(command != NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  return ERROR_NONE;
+}
+
+LOCAL Errors executeExcludeCommand(PatternList *excludePatternList, const char *command)
+{
+  assert(excludePatternList != NULL);
+  assert(command != NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  return ERROR_NONE;
+}
+
 /***********************************************************************\
 * Name   : readFromJob
 * Purpose: read options from job file
@@ -6775,6 +6799,454 @@ LOCAL int errorToExitcode(Errors error)
 }
 
 /***********************************************************************\
+* Name   : runDaemon
+* Purpose: run as daemon
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors runDaemon(void)
+{
+  Errors error;
+
+  // create pid file
+  error = createPIDFile();
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // init continuous
+  error = Continuous_init(continuousDatabaseFileName);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialise continuous (error: %s)!\n",
+               Error_getText(error)
+              );
+    deletePIDFile();
+    return error;
+  }
+
+  // open log file
+  openLog();
+
+  if (!stringIsEmpty(indexDatabaseFileName))
+  {
+    // open index database
+    printInfo(1,"Opening index database '%s'...",indexDatabaseFileName);
+    error = Index_init(&__indexHandle,indexDatabaseFileName);
+    if (error != ERROR_NONE)
+    {
+      printInfo(1,"FAIL!\n");
+      printError("Cannot open index database '%s' (error: %s)!\n",
+                 indexDatabaseFileName,
+                 Error_getText(error)
+                );
+      closeLog();
+      Continuous_done();
+      deletePIDFile();
+      return error;
+    }
+    indexHandle = &__indexHandle;
+    printInfo(1,"ok\n");
+  }
+
+  // daemon mode -> run server with network
+  globalOptions.runMode = RUN_MODE_SERVER;
+
+  // run server (not detached)
+  error = Server_run(serverPort,
+                     serverTLSPort,
+                     serverCAFileName,
+                     serverCertFileName,
+                     serverKeyFileName,
+                     serverPassword,
+                     serverJobsDirectory,
+                     &jobOptions
+                    );
+  if (error != ERROR_NONE)
+  {
+    if (indexHandle != NULL) Index_done(indexHandle);
+    closeLog();
+    Continuous_done();
+    deletePIDFile();
+    return error;
+  }
+
+  // close index database
+  if (indexHandle != NULL) Index_done(indexHandle);
+
+  // close log file
+  closeLog();
+
+  // done continouous
+  Continuous_done();
+
+  // delete pid file
+  deletePIDFile();
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : runBatch
+* Purpose: run batch mode
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors runBatch(void)
+{
+  Errors error;
+
+  // batch mode
+  globalOptions.runMode = RUN_MODE_BATCH;
+
+  // batch mode -> run server with standard i/o
+  error = Server_batch(STDIN_FILENO,
+                       STDOUT_FILENO
+                      );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : runJob
+* Purpose: run job
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL runJob(void)
+{
+  Errors error;
+
+  // start job execution
+  globalOptions.runMode = RUN_MODE_INTERACTIVE;
+
+  // create archive
+  error = Command_create(NULL, // job UUID
+                         NULL, // schedule UUID
+                         storageName,
+                         &includeEntryList,
+                         &excludePatternList,
+                         &mountList,
+                         &compressExcludePatternList,
+                         &deltaSourceList,
+                         &jobOptions,
+                         ARCHIVE_TYPE_NORMAL,
+                         NULL, // scheduleTitle
+                         NULL, // scheduleCustomText
+                         CALLBACK(inputCryptPassword,NULL),
+                         CALLBACK(NULL,NULL), // createStatusInfoFunction
+                         CALLBACK(NULL,NULL), // storageRequestVolumeFunction
+                         NULL, // pauseCreateFlag
+                         NULL, // pauseStorageFlag
+                         NULL,  // requestedAbortFlag,
+                         NULL  // logHandle
+                        );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : runInteractive
+* Purpose: run interactive
+* Input  : argc - number of arguments
+*          argv - arguments
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors runInteractive(int argc, const char *argv[])
+{
+  Errors error;
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  // execute include command (if any)
+  if (includeCommand != NULL)
+  {
+    error = executeIncludeCommand(&includeEntryList,includeCommand);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  // execute exclude command (if any)
+  if (excludeCommand != NULL)
+  {
+    error = executeExcludeCommand(&excludePatternList,excludeCommand);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  // interactive mode
+  globalOptions.runMode = RUN_MODE_INTERACTIVE;
+
+  error = ERROR_NONE;
+  switch (command)
+  {
+    case COMMAND_CREATE_FILES:
+    case COMMAND_CREATE_IMAGES:
+      {
+        String     storageName;
+        EntryTypes entryType;
+        int        z;
+
+        // get storage name
+        storageName = String_new();
+        if (argc > 1)
+        {
+          String_setCString(storageName,argv[1]);
+        }
+        else
+        {
+          printError("No archive file name given!\n");
+          error = ERROR_INVALID_ARGUMENT;
+        }
+
+        // get include patterns
+        if (error == ERROR_NONE)
+        {
+          switch (command)
+          {
+            case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
+            case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
+            default:                    entryType = ENTRY_TYPE_FILE;  break;
+          }
+          for (z = 2; z < argc; z++)
+          {
+            error = EntryList_appendCString(&includeEntryList,entryType,argv[z],jobOptions.patternType,NULL);
+            if (error != ERROR_NONE)
+            {
+              break;
+            }
+          }
+        }
+
+        if (error == ERROR_NONE)
+        {
+          // create archive
+          error = Command_create(NULL, // job UUID
+                                NULL, // schedule UUID
+                                storageName,
+                                &includeEntryList,
+                                &excludePatternList,
+                                &mountList,
+                                &compressExcludePatternList,
+                                &deltaSourceList,
+                                &jobOptions,
+                                ARCHIVE_TYPE_NORMAL,
+                                NULL, // scheduleTitle
+                                NULL, // scheduleCustomText
+                                CALLBACK(inputCryptPassword,NULL),
+                                CALLBACK(NULL,NULL), // createStatusInfoFunction
+                                CALLBACK(NULL,NULL), // storageRequestVolumeFunction
+                                NULL, // pauseCreateFlag
+                                NULL, // pauseStorageFlag
+                                NULL,  // requestedAbortFlag,
+                                NULL  // logHandle
+                                );
+        }
+
+        // free resources
+        String_delete(storageName);
+      }
+      break;
+    case COMMAND_LIST:
+    case COMMAND_TEST:
+    case COMMAND_COMPARE:
+    case COMMAND_RESTORE:
+      {
+        StringList fileNameList;
+        int        z;
+
+        // get archive files
+        StringList_init(&fileNameList);
+        for (z = 1; z < argc; z++)
+        {
+          StringList_appendCString(&fileNameList,argv[z]);
+        }
+
+        switch (command)
+        {
+          case COMMAND_LIST:
+            error = Command_list(&fileNameList,
+                                 &includeEntryList,
+                                 &excludePatternList,
+                                 &jobOptions,
+                                 CALLBACK(inputCryptPassword,NULL),
+                                 NULL  // logHandle
+                                );
+            break;
+          case COMMAND_TEST:
+            error = Command_test(&fileNameList,
+                                 &includeEntryList,
+                                 &excludePatternList,
+                                 &deltaSourceList,
+                                 &jobOptions,
+                                 CALLBACK(inputCryptPassword,NULL),
+                                 NULL  // logHandle
+                                );
+            break;
+          case COMMAND_COMPARE:
+            error = Command_compare(&fileNameList,
+                                    &includeEntryList,
+                                    &excludePatternList,
+                                    &deltaSourceList,
+                                    &jobOptions,
+                                    CALLBACK(inputCryptPassword,NULL),
+                                    NULL  // logHandle
+                                   );
+            break;
+          case COMMAND_RESTORE:
+            error = Command_restore(&fileNameList,
+                                    &includeEntryList,
+                                    &excludePatternList,
+                                    &deltaSourceList,
+                                    &jobOptions,
+                                    CALLBACK(inputCryptPassword,NULL),
+                                    CALLBACK(NULL,NULL),  // restoreStatusInfoUserData callback
+                                    NULL,  // pauseRestoreFlag
+                                    NULL,  // requestedAbortFlag,
+                                    NULL  // logHandle
+                                   );
+            break;
+          default:
+            break;
+        }
+
+        // free resources
+        StringList_done(&fileNameList);
+      }
+      break;
+    case COMMAND_GENERATE_KEYS:
+      {
+        // generate new key pair
+        const char *keyFileName;
+        Password   cryptPassword;
+        CryptKey   publicKey,privateKey;
+        String     publicKeyFileName,privateKeyFileName;
+
+        // get key file name
+        if (argc <= 1)
+        {
+          printError("No key file name given!\n");
+          printUsage(argv[0],0);
+          error = ERROR_INVALID_ARGUMENT;
+          break;
+        }
+        keyFileName = argv[1];
+
+        // initialize variables
+        publicKeyFileName  = String_new();
+        privateKeyFileName = String_new();
+
+        // get file names of keys
+        File_setFileNameCString(publicKeyFileName,keyFileName);
+        String_appendCString(publicKeyFileName,".public");
+        File_setFileNameCString(privateKeyFileName,keyFileName);
+        String_appendCString(privateKeyFileName,".private");
+
+        // check if key files already exists
+        if (File_exists(publicKeyFileName))
+        {
+          printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
+          break;
+        }
+        if (File_exists(privateKeyFileName))
+        {
+          printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
+          break;
+        }
+
+        // input crypt password for private key encryption
+        Password_init(&cryptPassword);
+        error = inputCryptPassword(NULL,&cryptPassword,privateKeyFileName,TRUE,FALSE);
+        if (error != ERROR_NONE)
+        {
+          printError("No password given for private key!\n");
+          Password_done(&cryptPassword);
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
+          break;
+        }
+
+        // generate new keys pair
+        error = Crypt_createKeys(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot create key pair (error: %s)!\n",Error_getText(error));
+          Crypt_doneKey(&privateKey);
+          Crypt_doneKey(&publicKey);
+          Password_done(&cryptPassword);
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
+          break;
+        }
+        error = Crypt_writeKeyFile(&publicKey,publicKeyFileName,NULL);
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot write public key file!\n");
+          Crypt_doneKey(&privateKey);
+          Crypt_doneKey(&publicKey);
+          Password_done(&cryptPassword);
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
+          break;
+        }
+        error = Crypt_writeKeyFile(&privateKey,privateKeyFileName,&cryptPassword);
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot write private key file!\n");
+          Crypt_doneKey(&privateKey);
+          Crypt_doneKey(&publicKey);
+          Password_done(&cryptPassword);
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
+          break;
+        }
+        // free resources
+        Crypt_doneKey(&privateKey);
+        Crypt_doneKey(&publicKey);
+        Password_done(&cryptPassword);
+        String_delete(privateKeyFileName);
+        String_delete(publicKeyFileName);
+      }
+      break;
+    default:
+      printError("No command given!\n");
+      error = ERROR_INVALID_ARGUMENT;
+      break;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : bar
 * Purpose: BAR main program
 * Input  : argc - number of arguments
@@ -6867,8 +7339,10 @@ exit(1);
     String_delete(fileName);
   }
 
-  // read all configuration files
+  // if daemon then print info
   printInfoFlag = daemonFlag;
+
+  // read all configuration files
   STRINGLIST_ITERATE(&configFileNameList,stringNode,fileName)
   {
     if (!readConfigFile(fileName,printInfoFlag))
@@ -6974,7 +7448,10 @@ exit(1);
   error = File_getTmpDirectoryNameCString(tmpDirectory,"bar-XXXXXX",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
-    printError("Cannot create temporary directory in '%s' (error: %s)!\n",String_cString(globalOptions.tmpDirectory),Error_getText(error));
+    printError("Cannot create temporary directory in '%s' (error: %s)!\n",
+               String_cString(globalOptions.tmpDirectory),
+               Error_getText(error)
+              );
     doneAll();
     #ifndef NDEBUG
       debugResourceDone();
@@ -6986,382 +7463,23 @@ exit(1);
     return errorToExitcode(error);
   }
 
+  // run
   error = ERROR_NONE;
   if      (daemonFlag)
   {
-    // create pid file
-    error = createPIDFile();
-    if (error != ERROR_NONE)
-    {
-      doneAll();
-      #ifndef NDEBUG
-        debugResourceDone();
-        File_debugDone();
-        Array_debugDone();
-        String_debugDone();
-        List_debugDone();
-      #endif /* not NDEBUG */
-      return errorToExitcode(error);
-    }
-
-    // init continuous
-    error = Continuous_init(continuousDatabaseFileName);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot initialise continuous (error: %s)!\n",
-                 Error_getText(error)
-                );
-      doneAll();
-      #ifndef NDEBUG
-        debugResourceDone();
-        File_debugDone();
-        Array_debugDone();
-        String_debugDone();
-        List_debugDone();
-      #endif /* not NDEBUG */
-      return errorToExitcode(error);
-    }
-
-    // open log file
-    openLog();
-
-    if (!stringIsEmpty(indexDatabaseFileName))
-    {
-      // open index database
-      printInfo(1,"Opening index database '%s'...",indexDatabaseFileName);
-      error = Index_init(&__indexHandle,indexDatabaseFileName);
-      if (error != ERROR_NONE)
-      {
-        if (printInfoFlag) printf("FAIL!\n");
-        printError("Cannot open index database '%s' (error: %s)!\n",
-                   indexDatabaseFileName,
-                   Error_getText(error)
-                  );
-        // close log file
-        closeLog();
-        Continuous_done();
-        deletePIDFile();
-        doneAll();
-        #ifndef NDEBUG
-          debugResourceDone();
-          File_debugDone();
-          Array_debugDone();
-          String_debugDone();
-          List_debugDone();
-        #endif /* not NDEBUG */
-        return errorToExitcode(error);
-      }
-      indexHandle = &__indexHandle;
-      printInfo(1,"ok\n");
-    }
-
-    // daemon mode -> run server with network
-    globalOptions.runMode = RUN_MODE_SERVER;
-
-    // run server (not detached)
-    error = Server_run(serverPort,
-                       serverTLSPort,
-                       serverCAFileName,
-                       serverCertFileName,
-                       serverKeyFileName,
-                       serverPassword,
-                       serverJobsDirectory,
-                       &jobOptions
-                      );
-
-    // close index database
-    if (indexHandle != NULL) Index_done(indexHandle);
-
-    // close log file
-    closeLog();
-
-    // done continouous
-    Continuous_done();
-
-    // delete pid file
-    deletePIDFile();
+    error = runDaemon();
   }
   else if (batchFlag)
   {
-    // batch mode
-    globalOptions.runMode = RUN_MODE_BATCH;
-
-    // batch mode -> run server with standard i/o
-    error = Server_batch(STDIN_FILENO,
-                         STDOUT_FILENO
-                        );
+    error = runBatch();
   }
   else if (jobName != NULL)
   {
-    // start job execution
-    globalOptions.runMode = RUN_MODE_INTERACTIVE;
-
-    // create archive
-    error = Command_create(NULL, // job UUID
-                           NULL, // schedule UUID
-                           storageName,
-                           &includeEntryList,
-                           &excludePatternList,
-                           &mountList,
-                           &compressExcludePatternList,
-                           &deltaSourceList,
-                           &jobOptions,
-                           ARCHIVE_TYPE_NORMAL,
-                           NULL, // scheduleTitle
-                           NULL, // scheduleCustomText
-                           CALLBACK(inputCryptPassword,NULL),
-                           CALLBACK(NULL,NULL), // createStatusInfoFunction
-                           CALLBACK(NULL,NULL), // storageRequestVolumeFunction
-                           NULL, // pauseCreateFlag
-                           NULL, // pauseStorageFlag
-                           NULL,  // requestedAbortFlag,
-                           NULL  // logHandle
-                          );
+    error = runJob();
   }
   else
   {
-    // interactive mode
-    globalOptions.runMode = RUN_MODE_INTERACTIVE;
-
-    switch (command)
-    {
-      case COMMAND_CREATE_FILES:
-      case COMMAND_CREATE_IMAGES:
-        {
-          String     storageName;
-          EntryTypes entryType;
-          int        z;
-
-          // get storage name
-          storageName = String_new();
-          if (argc > 1)
-          {
-            String_setCString(storageName,argv[1]);
-          }
-          else
-          {
-            printError("No archive file name given!\n");
-            error = ERROR_INVALID_ARGUMENT;
-          }
-
-          // get include patterns
-          if (error == ERROR_NONE)
-          {
-            switch (command)
-            {
-              case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
-              case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
-              default:                    entryType = ENTRY_TYPE_FILE;  break;
-            }
-            for (z = 2; z < argc; z++)
-            {
-              error = EntryList_appendCString(&includeEntryList,entryType,argv[z],jobOptions.patternType,NULL);
-              if (error != ERROR_NONE)
-              {
-                break;
-              }
-            }
-          }
-
-          if (error == ERROR_NONE)
-          {
-            // create archive
-            error = Command_create(NULL, // job UUID
-                                  NULL, // schedule UUID
-                                  storageName,
-                                  &includeEntryList,
-                                  &excludePatternList,
-                                  &mountList,
-                                  &compressExcludePatternList,
-                                  &deltaSourceList,
-                                  &jobOptions,
-                                  ARCHIVE_TYPE_NORMAL,
-                                  NULL, // scheduleTitle
-                                  NULL, // scheduleCustomText
-                                  CALLBACK(inputCryptPassword,NULL),
-                                  CALLBACK(NULL,NULL), // createStatusInfoFunction
-                                  CALLBACK(NULL,NULL), // storageRequestVolumeFunction
-                                  NULL, // pauseCreateFlag
-                                  NULL, // pauseStorageFlag
-                                  NULL,  // requestedAbortFlag,
-                                  NULL  // logHandle
-                                  );
-          }
-
-          // free resources
-          String_delete(storageName);
-        }
-        break;
-      case COMMAND_LIST:
-      case COMMAND_TEST:
-      case COMMAND_COMPARE:
-      case COMMAND_RESTORE:
-        {
-          StringList fileNameList;
-          int        z;
-
-          // get archive files
-          StringList_init(&fileNameList);
-          for (z = 1; z < argc; z++)
-          {
-            StringList_appendCString(&fileNameList,argv[z]);
-          }
-
-          switch (command)
-          {
-            case COMMAND_LIST:
-              error = Command_list(&fileNameList,
-                                   &includeEntryList,
-                                   &excludePatternList,
-                                   &jobOptions,
-                                   CALLBACK(inputCryptPassword,NULL),
-                                   NULL  // logHandle
-                                  );
-              break;
-            case COMMAND_TEST:
-              error = Command_test(&fileNameList,
-                                   &includeEntryList,
-                                   &excludePatternList,
-                                   &deltaSourceList,
-                                   &jobOptions,
-                                   CALLBACK(inputCryptPassword,NULL),
-                                   NULL  // logHandle
-                                  );
-              break;
-            case COMMAND_COMPARE:
-              error = Command_compare(&fileNameList,
-                                      &includeEntryList,
-                                      &excludePatternList,
-                                      &deltaSourceList,
-                                      &jobOptions,
-                                      CALLBACK(inputCryptPassword,NULL),
-                                      NULL  // logHandle
-                                     );
-              break;
-            case COMMAND_RESTORE:
-              error = Command_restore(&fileNameList,
-                                      &includeEntryList,
-                                      &excludePatternList,
-                                      &deltaSourceList,
-                                      &jobOptions,
-                                      CALLBACK(inputCryptPassword,NULL),
-                                      CALLBACK(NULL,NULL),  // restoreStatusInfoUserData callback
-                                      NULL,  // pauseRestoreFlag
-                                      NULL,  // requestedAbortFlag,
-                                      NULL  // logHandle
-                                     );
-              break;
-            default:
-              break;
-          }
-
-          // free resources
-          StringList_done(&fileNameList);
-        }
-        break;
-      case COMMAND_GENERATE_KEYS:
-        {
-          // generate new key pair
-          const char *keyFileName;
-          Password   cryptPassword;
-          CryptKey   publicKey,privateKey;
-          String     publicKeyFileName,privateKeyFileName;
-
-          // get key file name
-          if (argc <= 1)
-          {
-            printError("No key file name given!\n");
-            printUsage(argv[0],0);
-            error = ERROR_INVALID_ARGUMENT;
-            break;
-          }
-          keyFileName = argv[1];
-
-          // initialize variables
-          publicKeyFileName  = String_new();
-          privateKeyFileName = String_new();
-
-          // get file names of keys
-          File_setFileNameCString(publicKeyFileName,keyFileName);
-          String_appendCString(publicKeyFileName,".public");
-          File_setFileNameCString(privateKeyFileName,keyFileName);
-          String_appendCString(privateKeyFileName,".private");
-
-          // check if key files already exists
-          if (File_exists(publicKeyFileName))
-          {
-            printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
-            String_delete(privateKeyFileName);
-            String_delete(publicKeyFileName);
-            break;
-          }
-          if (File_exists(privateKeyFileName))
-          {
-            printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
-            String_delete(privateKeyFileName);
-            String_delete(publicKeyFileName);
-            break;
-          }
-
-          // input crypt password for private key encryption
-          Password_init(&cryptPassword);
-          error = inputCryptPassword(NULL,&cryptPassword,privateKeyFileName,TRUE,FALSE);
-          if (error != ERROR_NONE)
-          {
-            printError("No password given for private key!\n");
-            Password_done(&cryptPassword);
-            String_delete(privateKeyFileName);
-            String_delete(publicKeyFileName);
-            break;
-          }
-
-          // generate new keys pair
-          error = Crypt_createKeys(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot create key pair (error: %s)!\n",Error_getText(error));
-            Crypt_doneKey(&privateKey);
-            Crypt_doneKey(&publicKey);
-            Password_done(&cryptPassword);
-            String_delete(privateKeyFileName);
-            String_delete(publicKeyFileName);
-            break;
-          }
-          error = Crypt_writeKeyFile(&publicKey,publicKeyFileName,NULL);
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot write public key file!\n");
-            Crypt_doneKey(&privateKey);
-            Crypt_doneKey(&publicKey);
-            Password_done(&cryptPassword);
-            String_delete(privateKeyFileName);
-            String_delete(publicKeyFileName);
-            break;
-          }
-          error = Crypt_writeKeyFile(&privateKey,privateKeyFileName,&cryptPassword);
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot write private key file!\n");
-            Crypt_doneKey(&privateKey);
-            Crypt_doneKey(&publicKey);
-            Password_done(&cryptPassword);
-            String_delete(privateKeyFileName);
-            String_delete(publicKeyFileName);
-            break;
-          }
-          // free resources
-          Crypt_doneKey(&privateKey);
-          Crypt_doneKey(&publicKey);
-          Password_done(&cryptPassword);
-          String_delete(privateKeyFileName);
-          String_delete(publicKeyFileName);
-        }
-        break;
-      default:
-        printError("No command given!\n");
-        error = ERROR_INVALID_ARGUMENT;
-        break;
-    }
+    error = runInteractive(argc,argv);
   }
 
   // delete temporary directory
@@ -7385,6 +7503,8 @@ exit(1);
 int main(int argc, const char *argv[])
 {
   Errors error;
+
+  assert(argc >= 0);
 
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
