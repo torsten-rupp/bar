@@ -6594,9 +6594,19 @@ bool isNoBackup(ConstString pathName)
 
 // ----------------------------------------------------------------------
 
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors executeIncludeCommand(EntryList *includeEntryList, const char *template)
 {
-  String    script;
+  String     script;
+  EntryTypes entryType;
 //  TextMacro textMacros[5];
 
   Errors error;
@@ -6606,6 +6616,28 @@ LOCAL Errors executeIncludeCommand(EntryList *includeEntryList, const char *temp
 
   // init variables
   script = String_new();
+
+  // get entry type
+  entryType = ENTRY_TYPE_FILE;
+  switch (command)
+  {
+    case COMMAND_CREATE_FILES:
+    case COMMAND_LIST:
+    case COMMAND_TEST:
+    case COMMAND_COMPARE:
+    case COMMAND_RESTORE:
+    case COMMAND_GENERATE_KEYS:
+    case COMMAND_NEW_KEY_PASSWORD:
+      entryType = ENTRY_TYPE_FILE;
+      break;
+    case COMMAND_CREATE_IMAGES:
+      entryType = ENTRY_TYPE_IMAGE;
+      break;
+    default:
+      HALT_INTERNAL_ERROR("no valid command set");
+      break; // not reached
+  }
+
 
   // expand template
 //  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
@@ -6625,7 +6657,7 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
                              {
                                UNUSED_VARIABLE(userData);
 
-                               EntryList_append(includeEntryList,ENTRY_TYPE_FILE,line,PATTERN_TYPE_GLOB,NULL);
+                               EntryList_append(includeEntryList,entryType,line,PATTERN_TYPE_GLOB,NULL);
                              },NULL),
                              CALLBACK(NULL,NULL)
                             );
