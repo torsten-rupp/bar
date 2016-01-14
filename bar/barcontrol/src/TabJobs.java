@@ -357,15 +357,18 @@ public class TabJobs
 
   /** file data comparator
    */
-  class FileTreeDataComparator implements Comparator<FileTreeData>
+  static class FileTreeDataComparator implements Comparator<FileTreeData>
   {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME     = 0;
-    private final static int SORTMODE_TYPE     = 1;
-    private final static int SORTMODE_SIZE     = 2;
-    private final static int SORTMODE_DATETIME = 3;
+    // sort modes
+    enum SortModes
+    {
+      NAME,
+      TYPE,
+      SIZE,
+      DATETIME
+    };
 
-    private int sortMode;
+    private SortModes sortMode;
 
     /** create file data comparator
      * @param tree file tree
@@ -373,11 +376,11 @@ public class TabJobs
      */
     FileTreeDataComparator(Tree tree, TreeColumn sortColumn)
     {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_TYPE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (tree.getColumn(3) == sortColumn) sortMode = SORTMODE_DATETIME;
-      else                                      sortMode = SORTMODE_NAME;
+      if      (tree.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
+      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.TYPE;
+      else if (tree.getColumn(2) == sortColumn) sortMode = SortModes.SIZE;
+      else if (tree.getColumn(3) == sortColumn) sortMode = SortModes.DATETIME;
+      else                                      sortMode = SortModes.NAME;
     }
 
     /** create file data comparator
@@ -398,15 +401,15 @@ public class TabJobs
     {
       switch (sortMode)
       {
-        case SORTMODE_NAME:
+        case NAME:
           return fileTreeData1.title.compareTo(fileTreeData2.title);
-        case SORTMODE_TYPE:
+        case TYPE:
           return fileTreeData1.fileType.compareTo(fileTreeData2.fileType);
-        case SORTMODE_SIZE:
+        case SIZE:
           if      (fileTreeData1.size < fileTreeData2.size) return -1;
           else if (fileTreeData1.size > fileTreeData2.size) return  1;
           else                                              return  0;
-        case SORTMODE_DATETIME:
+        case DATETIME:
           if      (fileTreeData1.dateTime < fileTreeData2.dateTime) return -1;
           else if (fileTreeData1.dateTime > fileTreeData2.dateTime) return  1;
           else                                                      return  0;
@@ -533,13 +536,16 @@ public class TabJobs
 
   /** device data comparator
    */
-  class DeviceTreeDataComparator implements Comparator<DeviceTreeData>
+  static class DeviceTreeDataComparator implements Comparator<DeviceTreeData>
   {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME = 0;
-    private final static int SORTMODE_SIZE = 1;
+    // tree sort modes
+    enum SortModes
+    {
+      NAME,
+      SIZE
+    };
 
-    private int sortMode;
+    private SortModes sortMode;
 
     /** create device data comparator
      * @param tree device tree
@@ -547,9 +553,9 @@ public class TabJobs
      */
     DeviceTreeDataComparator(Tree tree, TreeColumn sortColumn)
     {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else                                      sortMode = SORTMODE_NAME;
+      if      (tree.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
+      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
+      else                                      sortMode = SortModes.NAME;
     }
 
     /** create device data comparator
@@ -570,9 +576,9 @@ public class TabJobs
     {
       switch (sortMode)
       {
-        case SORTMODE_NAME:
+        case NAME:
           return deviceTreeData1.name.compareTo(deviceTreeData2.name);
-        case SORTMODE_SIZE:
+        case SIZE:
           if      (deviceTreeData1.size < deviceTreeData2.size) return -1;
           else if (deviceTreeData1.size > deviceTreeData2.size) return  1;
           else                                                  return  0;
@@ -1507,17 +1513,20 @@ public class TabJobs
 
   /** schedule data comparator
    */
-  class ScheduleDataComparator implements Comparator<ScheduleData>
+  static class ScheduleDataComparator implements Comparator<ScheduleData>
   {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_DATE         = 0;
-    private final static int SORTMODE_WEEKDAY      = 1;
-    private final static int SORTMODE_TIME         = 2;
-    private final static int SORTMODE_ARCHIVE_TYPE = 3;
-    private final static int SORTMODE_CUSTOM_TEXT  = 4;
-    private final static int SORTMODE_ENABLED      = 5;
+    // sort modes
+    enum SortModes
+    {
+      DATE,
+      WEEKDAY,
+      TIME,
+      ARCHIVE_TYPE,
+      CUSTOM_TEXT,
+      ENABLED
+    };
 
-    private int sortMode;
+    private SortModes sortMode;
 
     private final String[] weekDays = new String[]{"mon","tue","wed","thu","fri","sat","sun"};
 
@@ -1527,13 +1536,13 @@ public class TabJobs
      */
     ScheduleDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ARCHIVE_TYPE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_CUSTOM_TEXT;
-      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_ENABLED;
-      else                                       sortMode = SORTMODE_DATE;
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.DATE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.WEEKDAY;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TIME;
+      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SortModes.CUSTOM_TEXT;
+      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.ENABLED;
+      else                                       sortMode = SortModes.DATE;
     }
 
     /** create schedule data comparator
@@ -1543,13 +1552,13 @@ public class TabJobs
     {
       TableColumn sortColumn = table.getSortColumn();
 
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ARCHIVE_TYPE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_CUSTOM_TEXT;
-      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_ENABLED;
-      else                                       sortMode = SORTMODE_DATE;
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.DATE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.WEEKDAY;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TIME;
+      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.ARCHIVE_TYPE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SortModes.CUSTOM_TEXT;
+      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.ENABLED;
+      else                                       sortMode = SortModes.DATE;
     }
     /** compare schedule data
      * @param scheduleData1, scheduleData2 file tree data to compare
@@ -1561,25 +1570,25 @@ public class TabJobs
     {
       switch (sortMode)
       {
-        case SORTMODE_DATE:
+        case DATE:
           String date1 = scheduleData1.year+"-"+scheduleData1.month+"-"+scheduleData1.day;
           String date2 = scheduleData2.year+"-"+scheduleData2.month+"-"+scheduleData2.day;
 
           return date1.compareTo(date2);
-        case SORTMODE_WEEKDAY:
+        case WEEKDAY:
           if      (scheduleData1.weekDays < scheduleData2.weekDays) return -1;
           else if (scheduleData1.weekDays > scheduleData2.weekDays) return  1;
           else                      return  0;
-        case SORTMODE_TIME:
+        case TIME:
           String time1 = scheduleData1.hour+":"+scheduleData1.minute;
           String time2 = scheduleData2.hour+":"+scheduleData2.minute;
 
           return time1.compareTo(time2);
-        case SORTMODE_ARCHIVE_TYPE:
+        case ARCHIVE_TYPE:
           return scheduleData1.archiveType.compareTo(scheduleData2.archiveType);
-        case SORTMODE_CUSTOM_TEXT:
+        case CUSTOM_TEXT:
           return scheduleData1.customText.compareTo(scheduleData2.customText);
-        case SORTMODE_ENABLED:
+        case ENABLED:
           if      (scheduleData1.enabled && !scheduleData2.enabled) return -1;
           else if (!scheduleData1.enabled && scheduleData2.enabled) return  1;
           else                                                      return  0;

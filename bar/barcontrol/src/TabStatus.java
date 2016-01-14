@@ -228,7 +228,8 @@ class JobData
  */
 class JobDataComparator implements Comparator<JobData>
 {
-  static enum SortModes
+  // sort modes
+  enum SortModes
   {
     NAME,
     STATE,
@@ -239,17 +240,8 @@ class JobDataComparator implements Comparator<JobData>
     LAST_EXECUTED_DATETIME,
     ESTIMATED_TIME
   };
-  // Note: enum in inner classes are not possible in Java, thus use the old way...
-  private final static int SORTMODE_NAME                   = 0;
-  private final static int SORTMODE_STATE                  = 1;
-  private final static int SORTMODE_TYPE                   = 2;
-  private final static int SORTMODE_PARTSIZE               = 3;
-  private final static int SORTMODE_COMPRESS               = 4;
-  private final static int SORTMODE_CRYPT                  = 5;
-  private final static int SORTMODE_LAST_EXECUTED_DATETIME = 6;
-  private final static int SORTMODE_ESTIMATED_TIME         = 7;
 
-  private int sortMode;
+  private SortModes sortMode;
 
   /** create job data comparator
    * @param table job table
@@ -257,15 +249,15 @@ class JobDataComparator implements Comparator<JobData>
    */
   JobDataComparator(Table table, TableColumn sortColumn)
   {
-    if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-    else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_STATE;
-    else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
-    else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_PARTSIZE;
-    else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_COMPRESS;
-    else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_CRYPT;
-    else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
-    else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
-    else                                       sortMode = SORTMODE_NAME;
+    if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
+    else if (table.getColumn(1) == sortColumn) sortMode = SortModes.STATE;
+    else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TYPE;
+    else if (table.getColumn(3) == sortColumn) sortMode = SortModes.PARTSIZE;
+    else if (table.getColumn(4) == sortColumn) sortMode = SortModes.COMPRESS;
+    else if (table.getColumn(5) == sortColumn) sortMode = SortModes.CRYPT;
+    else if (table.getColumn(6) == sortColumn) sortMode = SortModes.LAST_EXECUTED_DATETIME;
+    else if (table.getColumn(7) == sortColumn) sortMode = SortModes.ESTIMATED_TIME;
+    else                                       sortMode = SortModes.NAME;
   }
 
   /** create job data comparator
@@ -275,15 +267,15 @@ class JobDataComparator implements Comparator<JobData>
   {
     TableColumn sortColumn = table.getSortColumn();
 
-    if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-    else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_STATE;
-    else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
-    else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_PARTSIZE;
-    else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_COMPRESS;
-    else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_CRYPT;
-    else if (table.getColumn(6) == sortColumn) sortMode = SORTMODE_LAST_EXECUTED_DATETIME;
-    else if (table.getColumn(7) == sortColumn) sortMode = SORTMODE_ESTIMATED_TIME;
-    else                                       sortMode = SORTMODE_NAME;
+    if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
+    else if (table.getColumn(1) == sortColumn) sortMode = SortModes.STATE;
+    else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TYPE;
+    else if (table.getColumn(3) == sortColumn) sortMode = SortModes.PARTSIZE;
+    else if (table.getColumn(4) == sortColumn) sortMode = SortModes.COMPRESS;
+    else if (table.getColumn(5) == sortColumn) sortMode = SortModes.CRYPT;
+    else if (table.getColumn(6) == sortColumn) sortMode = SortModes.LAST_EXECUTED_DATETIME;
+    else if (table.getColumn(7) == sortColumn) sortMode = SortModes.ESTIMATED_TIME;
+    else                                       sortMode = SortModes.NAME;
   }
 
   /** compare job data
@@ -296,29 +288,29 @@ class JobDataComparator implements Comparator<JobData>
   {
     switch (sortMode)
     {
-      case SORTMODE_NAME:
+      case NAME:
         return jobData1.name.compareTo(jobData2.name);
-      case SORTMODE_STATE:
+      case STATE:
         return jobData1.state.compareTo(jobData2.state);
-      case SORTMODE_TYPE:
+      case TYPE:
         return jobData1.archiveType.compareTo(jobData2.archiveType);
-      case SORTMODE_PARTSIZE:
+      case PARTSIZE:
         if      (jobData1.archivePartSize < jobData2.archivePartSize) return -1;
         else if (jobData1.archivePartSize > jobData2.archivePartSize) return  1;
         else                                                          return  0;
-      case SORTMODE_COMPRESS:
+      case COMPRESS:
         int result = jobData1.deltaCompressAlgorithm.compareTo(jobData2.deltaCompressAlgorithm);
         if (result == 0) result = jobData1.byteCompressAlgorithm.compareTo(jobData2.byteCompressAlgorithm);
-      case SORTMODE_CRYPT:
+      case CRYPT:
         String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC") ?"*" : "");
         String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC") ?"*" : "");
 
         return crypt1.compareTo(crypt2);
-      case SORTMODE_LAST_EXECUTED_DATETIME:
+      case LAST_EXECUTED_DATETIME:
         if      (jobData1.lastExecutedDateTime < jobData2.lastExecutedDateTime) return -1;
         else if (jobData1.lastExecutedDateTime > jobData2.lastExecutedDateTime) return  1;
         else                                                                    return  0;
-      case SORTMODE_ESTIMATED_TIME:
+      case ESTIMATED_TIME:
         if      (jobData1.estimatedRestTime < jobData2.estimatedRestTime) return -1;
         else if (jobData1.estimatedRestTime > jobData2.estimatedRestTime) return  1;
         else                                                              return  0;

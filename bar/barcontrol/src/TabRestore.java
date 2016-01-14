@@ -488,15 +488,18 @@ public class TabRestore
 
   /** index data comparator
    */
-  class IndexDataComparator implements Comparator<IndexData>
+  static class IndexDataComparator implements Comparator<IndexData>
   {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME             = 0;
-    private final static int SORTMODE_SIZE             = 1;
-    private final static int SORTMODE_CREATED_DATETIME = 2;
-    private final static int SORTMODE_STATE            = 3;
+    // sort modes
+    enum SortModes
+    {
+      NAME,
+      SIZE,
+      CREATED_DATETIME,
+      STATE
+    }
 
-    private int sortMode;
+    private SortModes sortMode;
 
     /** create storage data comparator
      * @param tree storage tree
@@ -504,11 +507,11 @@ public class TabRestore
      */
     IndexDataComparator(Tree tree, TreeColumn sortColumn)
     {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
-      else if (tree.getColumn(3) == sortColumn) sortMode = SORTMODE_STATE;
-      else                                      sortMode = SORTMODE_NAME;
+      if      (tree.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
+      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
+      else if (tree.getColumn(2) == sortColumn) sortMode = SortModes.CREATED_DATETIME;
+      else if (tree.getColumn(3) == sortColumn) sortMode = SortModes.STATE;
+      else                                      sortMode = SortModes.NAME;
     }
 
     /** create storage data comparator
@@ -517,11 +520,11 @@ public class TabRestore
      */
     IndexDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_STATE;
-      else                                       sortMode = SORTMODE_NAME;
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.CREATED_DATETIME;
+      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.STATE;
+      else                                       sortMode = SortModes.NAME;
     }
 
     /** create storage data comparator
@@ -550,17 +553,17 @@ public class TabRestore
     {
       switch (sortMode)
       {
-        case SORTMODE_NAME:
+        case NAME:
           return indexData1.compareTo(indexData2);
-        case SORTMODE_SIZE:
+        case SIZE:
           if      (indexData1.size < indexData2.size) return -1;
           else if (indexData1.size > indexData2.size) return  1;
           else                                        return  0;
-        case SORTMODE_CREATED_DATETIME:
+        case CREATED_DATETIME:
           if      (indexData1.dateTime < indexData2.dateTime) return -1;
           else if (indexData1.dateTime > indexData2.dateTime) return  1;
           else                                                return  0;
-        case SORTMODE_STATE:
+        case STATE:
           return indexData1.indexState.compareTo(indexData2.indexState);
         default:
           return 0;
@@ -2663,16 +2666,19 @@ assert storagePattern != null;
 
   /** entry data comparator
    */
-  class EntryDataComparator implements Comparator<EntryData>
+  static class EntryDataComparator implements Comparator<EntryData>
   {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_ARCHIVE = 0;
-    private final static int SORTMODE_NAME    = 1;
-    private final static int SORTMODE_TYPE    = 2;
-    private final static int SORTMODE_SIZE    = 3;
-    private final static int SORTMODE_DATE    = 4;
+    // sort modes
+    enum SortModes
+    {
+      ARCHIVE,
+      NAME,
+      TYPE,
+      SIZE,
+      DATE
+    };
 
-    private int sortMode;
+    private SortModes sortMode;
 
     /** create entry data comparator
      * @param table entry table
@@ -2680,12 +2686,12 @@ assert storagePattern != null;
      */
     EntryDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_ARCHIVE;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_DATE;
-      else                                       sortMode = SORTMODE_NAME;
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.ARCHIVE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.NAME;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TYPE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.SIZE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SortModes.DATE;
+      else                                       sortMode = SortModes.NAME;
     }
 
     /** create entry data comparator
@@ -2706,17 +2712,17 @@ assert storagePattern != null;
     {
       switch (sortMode)
       {
-        case SORTMODE_ARCHIVE:
+        case ARCHIVE:
           return entryData1.storageName.compareTo(entryData2.storageName);
-        case SORTMODE_NAME:
+        case NAME:
           return entryData1.name.compareTo(entryData2.name);
-        case SORTMODE_TYPE:
+        case TYPE:
           return entryData1.entryType.compareTo(entryData2.entryType);
-        case SORTMODE_SIZE:
+        case SIZE:
           if      (entryData1.size < entryData2.size) return -1;
           else if (entryData1.size > entryData2.size) return  1;
           else                                        return  0;
-        case SORTMODE_DATE:
+        case DATE:
           if      (entryData1.dateTime < entryData2.dateTime) return -1;
           else if (entryData1.dateTime > entryData2.dateTime) return  1;
           else                                                return  0;
