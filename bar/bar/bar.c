@@ -1345,8 +1345,7 @@ LOCAL void initDevice(Device *device)
 
 LOCAL DeviceNode *newDeviceNode(ConstString name)
 {
-  SemaphoreLock semaphoreLock;
-  DeviceNode    *deviceNode;
+  DeviceNode *deviceNode;
 
   // allocate new device node
   deviceNode = LIST_NEW_NODE(DeviceNode);
@@ -2009,6 +2008,7 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
@@ -6067,7 +6067,7 @@ bool configValueFormatMount(void **formatUserData, void *userData, String line)
 
   UNUSED_VARIABLE(userData);
 
-  mountNode = (DeltaSourceNode*)(*formatUserData);
+  mountNode = (MountNode*)(*formatUserData);
   if (mountNode != NULL)
   {
     String_format(line,"%'S,%y",mountNode->name,mountNode->alwaysUnmount);
@@ -6594,22 +6594,88 @@ bool isNoBackup(ConstString pathName)
 
 // ----------------------------------------------------------------------
 
-LOCAL Errors executeIncludeCommand(EntryList *includeEntryList, const char *command)
+LOCAL Errors executeIncludeCommand(EntryList *includeEntryList, const char *template)
 {
-  assert(includeEntryList != NULL);
-  assert(command != NULL);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  String    script;
+//  TextMacro textMacros[5];
 
-  return ERROR_NONE;
+  Errors error;
+
+  assert(includeEntryList != NULL);
+  assert(template != NULL);
+
+  // init variables
+  script = String_new();
+
+  // expand template
+//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType),     TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType),".");
+//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
+  Misc_expandMacros(script,
+                    template,
+                    EXPAND_MACRO_MODE_STRING,
+NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
+                    TRUE
+                   );
+
+  // execute script and collect output
+  error = Misc_executeScript(String_cString(script),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             {
+                               UNUSED_VARIABLE(userData);
+
+                               EntryList_append(includeEntryList,ENTRY_TYPE_FILE,line,PATTERN_TYPE_GLOB,NULL);
+                             },NULL),
+                             CALLBACK(NULL,NULL)
+                            );
+
+  // free resources
+  String_delete(script);
+
+  return error;
 }
 
-LOCAL Errors executeExcludeCommand(PatternList *excludePatternList, const char *command)
+LOCAL Errors executeExcludeCommand(PatternList *excludePatternList, const char *template)
 {
-  assert(excludePatternList != NULL);
-  assert(command != NULL);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  String    script;
+//  TextMacro textMacros[5];
 
-  return ERROR_NONE;
+  Errors error;
+
+  assert(excludePatternList != NULL);
+  assert(template != NULL);
+
+  // init variables
+  script = String_new();
+
+  // expand template
+//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType),     TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType),".");
+//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
+  Misc_expandMacros(script,
+                    template,
+                    EXPAND_MACRO_MODE_STRING,
+NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
+                    TRUE
+                   );
+
+  // execute script and collect output
+  error = Misc_executeScript(String_cString(script),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             {
+                               UNUSED_VARIABLE(userData);
+
+                               PatternList_append(excludePatternList,line,PATTERN_TYPE_GLOB,NULL);
+                             },NULL),
+                             CALLBACK(NULL,NULL)
+                            );
+
+  // free resources
+  String_delete(script);
+
+  return error;
 }
 
 /***********************************************************************\
@@ -6927,7 +6993,7 @@ LOCAL Errors runBatch(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL runJob(void)
+LOCAL Errors runJob(void)
 {
   Errors error;
 
