@@ -237,10 +237,10 @@ typedef struct
   ServerTypes type;                                           // server type
   union
   {
-    FileServer   fileServer;
-    FTPServer    ftpServer;
-    SSHServer    sshServer;
-    WebDAVServer webDAVServer;
+    FileServer   file;
+    FTPServer    ftp;
+    SSHServer    ssh;
+    WebDAVServer webDAV;
   };
   uint        maxConnectionCount;                             // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
   uint64      maxStorageSize;                                 // max. number of bytes to store on server

@@ -6322,7 +6322,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const Strin
                            serverNode->id,
                            serverNode->server.name,
                            "FTP",
-                           serverNode->server.ftpServer.loginName,
+                           serverNode->server.ftp.loginName,
                            serverNode->server.maxConnectionCount,
                            serverNode->server.maxStorageSize
                           );
@@ -6333,8 +6333,8 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const Strin
                            serverNode->id,
                            serverNode->server.name,
                            "SSH",
-                           serverNode->server.sshServer.port,
-                           serverNode->server.sshServer.loginName,
+                           serverNode->server.ssh.port,
+                           serverNode->server.ssh.loginName,
                            serverNode->server.maxConnectionCount,
                            serverNode->server.maxStorageSize
                           );
@@ -6345,7 +6345,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const Strin
                            serverNode->id,
                            serverNode->server.name,
                            "WEBDAV",
-                           serverNode->server.webDAVServer.loginName,
+                           serverNode->server.webDAV.loginName,
                            serverNode->server.maxConnectionCount,
                            serverNode->server.maxStorageSize
                           );
@@ -6491,51 +6491,51 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
-      String_set(serverNode->server.ftpServer.loginName,loginName);
+      String_set(serverNode->server.ftp.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        if (serverNode->server.ftpServer.password == NULL)
+        if (serverNode->server.ftp.password == NULL)
         {
-          serverNode->server.ftpServer.password = Password_newString(password);
+          serverNode->server.ftp.password = Password_newString(password);
         }
         else
         {
-          Password_setString(serverNode->server.ftpServer.password,password);
+          Password_setString(serverNode->server.ftp.password,password);
         }
       }
       break;
     case SERVER_TYPE_SSH:
-      serverNode->server.sshServer.port               = port;
-      String_set(serverNode->server.sshServer.loginName,loginName);
+      serverNode->server.ssh.port = port;
+      String_set(serverNode->server.ssh.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        if (serverNode->server.sshServer.password == NULL)
+        if (serverNode->server.ssh.password == NULL)
         {
-          serverNode->server.sshServer.password = Password_newString(password);
+          serverNode->server.ssh.password = Password_newString(password);
         }
         else
         {
-          Password_setString(serverNode->server.sshServer.password,password);
+          Password_setString(serverNode->server.ssh.password,password);
         }
       }
-      setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
-      setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
+      setKeyString(&serverNode->server.ssh.publicKey,publicKey);
+      setKeyString(&serverNode->server.ssh.privateKey,privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
-      String_set(serverNode->server.webDAVServer.loginName,loginName);
+      String_set(serverNode->server.webDAV.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        if (serverNode->server.webDAVServer.password == NULL)
+        if (serverNode->server.webDAV.password == NULL)
         {
-          serverNode->server.webDAVServer.password = Password_newString(password);
+          serverNode->server.webDAV.password = Password_newString(password);
         }
         else
         {
-          Password_setString(serverNode->server.webDAVServer.password,password);
+          Password_setString(serverNode->server.webDAV.password,password);
         }
       }
-      setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
-      setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
+      setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
+      setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
       break;
   }
   serverNode->server.maxConnectionCount = maxConnectionCount;
@@ -6719,51 +6719,51 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
       case SERVER_TYPE_FILE:
         break;
       case SERVER_TYPE_FTP:
-        String_set(serverNode->server.ftpServer.loginName,loginName);
+        String_set(serverNode->server.ftp.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          if (serverNode->server.ftpServer.password == NULL)
+          if (serverNode->server.ftp.password == NULL)
           {
-            serverNode->server.ftpServer.password = Password_newString(password);
+            serverNode->server.ftp.password = Password_newString(password);
           }
           else
           {
-            Password_setString(serverNode->server.ftpServer.password,password);
+            Password_setString(serverNode->server.ftp.password,password);
           }
         }
         break;
       case SERVER_TYPE_SSH:
-        serverNode->server.sshServer.port               = port;
-        String_set(serverNode->server.sshServer.loginName,loginName);
+        serverNode->server.ssh.port = port;
+        String_set(serverNode->server.ssh.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          if (serverNode->server.sshServer.password == NULL)
+          if (serverNode->server.ssh.password == NULL)
           {
-            serverNode->server.sshServer.password = Password_newString(password);
+            serverNode->server.ssh.password = Password_newString(password);
           }
           else
           {
-            Password_setString(serverNode->server.sshServer.password,password);
+            Password_setString(serverNode->server.ssh.password,password);
           }
         }
-        setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
-        setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
+        setKeyString(&serverNode->server.ssh.publicKey,publicKey);
+        setKeyString(&serverNode->server.ssh.privateKey,privateKey);
         break;
       case SERVER_TYPE_WEBDAV:
-        String_set(serverNode->server.webDAVServer.loginName,loginName);
+        String_set(serverNode->server.webDAV.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          if (serverNode->server.webDAVServer.password == NULL)
+          if (serverNode->server.webDAV.password == NULL)
           {
-            serverNode->server.webDAVServer.password = Password_newString(password);
+            serverNode->server.webDAV.password = Password_newString(password);
           }
           else
           {
-            Password_setString(serverNode->server.webDAVServer.password,password);
+            Password_setString(serverNode->server.webDAV.password,password);
           }
         }
-        setKeyString(&serverNode->server.sshServer.publicKey,publicKey);
-        setKeyString(&serverNode->server.sshServer.privateKey,privateKey);
+        setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
+        setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
         break;
     }
     serverNode->server.maxConnectionCount = maxConnectionCount;
