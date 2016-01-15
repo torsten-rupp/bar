@@ -1683,6 +1683,9 @@ public class TabJobs
   private WidgetVariable  hostName                = new WidgetVariable<String>("");
   private WidgetVariable  hostPort                = new WidgetVariable<Long>(0);
   private WidgetVariable  hostForceSSL            = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  includeFileCommand      = new WidgetVariable<String>("");
+  private WidgetVariable  includeImageCommand     = new WidgetVariable<String>("");
+  private WidgetVariable  excludeCommand          = new WidgetVariable<String>("");
   private WidgetVariable  archiveType             = new WidgetVariable<String>("normal",new String[]{"normal","full","incremental","differential"});
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable<Boolean>(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable<Long>(0);
@@ -3063,7 +3066,7 @@ Dprintf.dprintf("");
         tabFolder = Widgets.newTabFolder(tab);
         Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
 
-        // included table
+        // included tab
         subTab = Widgets.addTab(tabFolder,BARControl.tr("Included"));
         subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
         Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
@@ -3256,7 +3259,7 @@ Dprintf.dprintf("");
           }
         }
 
-        // excluded list
+        // excluded tab
         subTab = Widgets.addTab(tabFolder,BARControl.tr("Excluded"));
         subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
         Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
@@ -3445,7 +3448,133 @@ Dprintf.dprintf("");
           }
         }
 
-        // mount table
+        // included command tab
+        subTab = Widgets.addTab(tabFolder,BARControl.tr("Included command"));
+        subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+        Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
+        {
+          styledText = Widgets.newStyledText(subTab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+          styledText.setToolTipText(BARControl.tr("Command or script to execute to get a list of include patterns."));
+          Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
+          styledText.addModifyListener(new ModifyListener()
+          {
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              StyledText widget = (StyledText)modifyEvent.widget;
+              Color      color  = COLOR_MODIFIED;
+              String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              if (includeFileCommand.equals(string)) color = null;
+              widget.setBackground(color);
+            }
+          });
+          styledText.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              StyledText widget = (StyledText)selectionEvent.widget;
+              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              BARServer.setJobOption(selectedJobData.uuid,"include-file-command",text);
+              widget.setBackground(null);
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          styledText.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              StyledText widget = (StyledText)focusEvent.widget;
+              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              BARServer.setJobOption(selectedJobData.uuid,"include-file-command",text);
+              widget.setBackground(null);
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(styledText,includeFileCommand));
+
+          // buttons
+          button = Widgets.newButton(subTab,BARControl.tr("Test")+"\u2026");
+          button.setToolTipText(BARControl.tr("Test script."));
+          Widgets.layout(button,1,0,TableLayoutData.E);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              testScript(includeFileCommand.getString());
+            }
+          });
+        }
+
+        // excluded command tab
+        subTab = Widgets.addTab(tabFolder,BARControl.tr("Excluded command"));
+        subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+        Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
+        {
+          styledText = Widgets.newStyledText(subTab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+          styledText.setToolTipText(BARControl.tr("Command or script to execute to get a list of include patterns."));
+          Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
+          styledText.addModifyListener(new ModifyListener()
+          {
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              StyledText widget = (StyledText)modifyEvent.widget;
+              Color      color  = COLOR_MODIFIED;
+              String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              if (excludeCommand.equals(string)) color = null;
+              widget.setBackground(color);
+            }
+          });
+          styledText.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              StyledText widget = (StyledText)selectionEvent.widget;
+              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              BARServer.setJobOption(selectedJobData.uuid,"exclude-command",text);
+              widget.setBackground(null);
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          styledText.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              StyledText widget = (StyledText)focusEvent.widget;
+              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              BARServer.setJobOption(selectedJobData.uuid,"exclude-command",text);
+              widget.setBackground(null);
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(styledText,excludeCommand));
+
+          // buttons
+          button = Widgets.newButton(subTab,BARControl.tr("Test")+"\u2026");
+          button.setToolTipText(BARControl.tr("Test script."));
+          Widgets.layout(button,1,0,TableLayoutData.E);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              testScript(excludeCommand.getString());
+            }
+          });
+        }
+
+        // mount tab
         subTab = Widgets.addTab(tabFolder,BARControl.tr("Mounts"));
         subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
         Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
