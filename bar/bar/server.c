@@ -160,7 +160,10 @@ typedef struct JobNode
   RemoteHost      remoteHost;                           // remote host
   String          archiveName;                          // archive name
   EntryList       includeEntryList;                     // included entries
+  String          includeFileCommand;                   // include file command
+  String          includeImageCommand;                  // include image command
   PatternList     excludePatternList;                   // excluded entry patterns
+  String          excludeCommand;                       // exclude entries command
   MountList       mountList;                            // mount list
   PatternList     compressExcludePatternList;           // excluded compression patterns
   DeltaSourceList deltaSourceList;                      // delta sources
@@ -532,11 +535,11 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 //  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file-command",    JobNode,includeEntryList,                       configValueParseFileEntryPatternCommand,configValueFormatInitEntryPatternCommand,configValueFormatDoneEntryPatternCommand,configValueFormatEntryPatternCommand,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file-command",    JobNode,includeFileCommand,                     configValueParseFileEntryPatternCommand,configValueFormatInitEntryPatternCommand,configValueFormatDoneEntryPatternCommand,configValueFormatEntryPatternCommand,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image-command",   JobNode,includeEntryList,                       configValueParseImageEntryPatternCommand,configValueFormatInitEntryPatternCommand,configValueFormatDoneEntryPatternCommand,configValueFormatEntryPatternCommand,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image-command",   JobNode,includeImageCommand,                    configValueParseImageEntryPatternCommand,configValueFormatInitEntryPatternCommand,configValueFormatDoneEntryPatternCommand,configValueFormatEntryPatternCommand,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude-command",         JobNode,excludePatternList,                     configValueParsePatternCommand,configValueFormatInitPatternCommand,configValueFormatDonePatternCommand,configValueFormatPatternCommand,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude-command",         JobNode,excludeCommand,                         configValueParsePatternCommand,configValueFormatInitPatternCommand,configValueFormatDonePatternCommand,configValueFormatPatternCommand,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
@@ -1688,6 +1691,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   PatternList_done(&jobNode->compressExcludePatternList);
   List_done(&jobNode->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_done(&jobNode->excludePatternList);
+  String_delete(jobNode->includeImageCommand);
+  String_delete(jobNode->includeFileCommand);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
   Remote_doneHost(&jobNode->remoteHost);
@@ -1736,6 +1741,8 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   Remote_initHost(&jobNode->remoteHost);
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
+  jobNode->includeFileCommand             = String_new();
+  jobNode->includeImageCommand            = String_new();
   PatternList_init(&jobNode->excludePatternList);
   PatternList_init(&jobNode->compressExcludePatternList);
   List_init(&jobNode->mountList);
@@ -1815,6 +1822,8 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
                           &jobNode->includeEntryList,
                           CALLBACK(NULL,NULL)
                          );
+  newJobNode->includeFileCommand             = String_duplicate(jobNode->includeFileCommand);
+  newJobNode->includeImageCommand            = String_duplicate(jobNode->includeImageCommand);
   PatternList_initDuplicate(&newJobNode->excludePatternList,
                             &jobNode->excludePatternList,
                             CALLBACK(NULL,NULL)
