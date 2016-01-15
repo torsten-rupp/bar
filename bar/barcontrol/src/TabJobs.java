@@ -1692,14 +1692,14 @@ public class TabJobs
   private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String>("none",new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
   private WidgetVariable  deltaSource             = new WidgetVariable<String>("");
   private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable<String>("none",
-                                                                             new String[]{"none",
-                                                                                          "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
-                                                                                          "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
-                                                                                          "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
-                                                                                          "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                                                                          "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
-                                                                                         }
-                                                                            );
+                                                                               new String[]{"none",
+                                                                                            "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
+                                                                                            "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
+                                                                                            "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
+                                                                                            "lzo1","lzo2","lzo3","lzo4","lzo5",
+                                                                                            "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
+                                                                                           }
+                                                                              );
   private WidgetVariable  compressMinSize         = new WidgetVariable<Long>(0);
   private WidgetVariable  cryptAlgorithm          = new WidgetVariable<Enum>(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
   private WidgetVariable  cryptType               = new WidgetVariable<Enum>(new String[]{"none","symmetric","asymmetric"});
@@ -1708,16 +1708,17 @@ public class TabJobs
   private WidgetVariable  cryptPassword           = new WidgetVariable<String>("");
   private WidgetVariable  incrementalListFileName = new WidgetVariable<String>("");
   private WidgetVariable  storageType             = new WidgetVariable<String>("filesystem",
-                                                                             new String[]{"filesystem",
-                                                                                          "ftp",
-                                                                                          "scp",
-                                                                                          "sftp",
-                                                                                          "webdav",
-                                                                                          "cd",
-                                                                                          "dvd",
-                                                                                          "bd",
-                                                                                          "device"}
-                                                                                         );
+                                                                               new String[]{"filesystem",
+                                                                                            "ftp",
+                                                                                            "scp",
+                                                                                            "sftp",
+                                                                                            "webdav",
+                                                                                            "cd",
+                                                                                            "dvd",
+                                                                                            "bd",
+                                                                                            "device"
+                                                                                           }
+                                                                              );
   private WidgetVariable  storageHostName         = new WidgetVariable<String>("");
   private WidgetVariable  storageHostPort         = new WidgetVariable<Long>(0);
   private WidgetVariable  storageLoginName        = new WidgetVariable<String>("");
