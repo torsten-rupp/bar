@@ -1680,9 +1680,9 @@ public class TabJobs
   private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
 
   // BAR variables
-  private WidgetVariable  hostName                = new WidgetVariable<String>("");
-  private WidgetVariable  hostPort                = new WidgetVariable<Long>(0);
-  private WidgetVariable  hostForceSSL            = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  remoteHostName          = new WidgetVariable<String>("");
+  private WidgetVariable  remoteHostPort          = new WidgetVariable<Long>(0);
+  private WidgetVariable  remoteHostForceSSL      = new WidgetVariable<Boolean>(false);
   private WidgetVariable  includeFileCommand      = new WidgetVariable<String>("");
   private WidgetVariable  includeImageCommand     = new WidgetVariable<String>("");
   private WidgetVariable  excludeCommand          = new WidgetVariable<String>("");
@@ -2202,7 +2202,7 @@ Dprintf.dprintf("");
           Text  widget = (Text)modifyEvent.widget;
           Color color  = COLOR_MODIFIED;
           String s = widget.getText();
-          if (hostName.getString().equals(s)) color = null;
+          if (remoteHostName.getString().equals(s)) color = null;
           widget.setBackground(color);
         }
       });
@@ -2212,7 +2212,7 @@ Dprintf.dprintf("");
         {
           Text   widget = (Text)selectionEvent.widget;
           String string = widget.getText();
-          hostName.set(string);
+          remoteHostName.set(string);
           BARServer.setJobOption(selectedJobData.uuid,"remote-host-name",string);
           widget.setBackground(null);
         }
@@ -2229,12 +2229,12 @@ Dprintf.dprintf("");
         {
           Text   widget = (Text)focusEvent.widget;
           String string = widget.getText();
-          hostName.set(string);
+          remoteHostName.set(string);
           BARServer.setJobOption(selectedJobData.uuid,"remote-host-name",string);
           widget.setBackground(null);
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(text,hostName));
+      Widgets.addModifyListener(new WidgetModifyListener(text,remoteHostName));
 
       label = Widgets.newLabel(composite,BARControl.tr("Port")+":");
       Widgets.layout(label,0,2,TableLayoutData.W);
@@ -2260,7 +2260,7 @@ Dprintf.dprintf("");
           Color   color  = COLOR_MODIFIED;
           int     n      = widget.getSelection();
 
-          if (hostPort.getLong() == n) color = null;
+          if (remoteHostPort.getLong() == n) color = null;
 
           widget.setBackground(color);
           widget.setData("showedErrorDialog",false);
@@ -2273,7 +2273,7 @@ Dprintf.dprintf("");
           Spinner widget = (Spinner)selectionEvent.widget;
           int     n      = widget.getSelection();
 
-          hostPort.set(n);
+          remoteHostPort.set(n);
           BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
           widget.setBackground(null);
         }
@@ -2282,7 +2282,7 @@ Dprintf.dprintf("");
           Spinner widget = (Spinner)selectionEvent.widget;
           int     n      = widget.getSelection();
 
-          hostPort.set(n);
+          remoteHostPort.set(n);
           BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
           widget.setBackground(null);
         }
@@ -2299,12 +2299,12 @@ Dprintf.dprintf("");
           Spinner widget = (Spinner)focusEvent.widget;
           int     n      = widget.getSelection();
 
-          hostPort.set(n);
+          remoteHostPort.set(n);
           BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
           widget.setBackground(null);
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(spinner,hostPort));
+      Widgets.addModifyListener(new WidgetModifyListener(spinner,remoteHostPort));
 
       button = Widgets.newCheckbox(composite,BARControl.tr("SSL"));
       button.setToolTipText(BARControl.tr("Enable to force SSL connection."));
@@ -2328,7 +2328,7 @@ Dprintf.dprintf("");
           BARServer.setJobOption(selectedJobData.uuid,"remote-host-force-ssl",widget.getSelection());
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(button,hostForceSSL));
+      Widgets.addModifyListener(new WidgetModifyListener(button,remoteHostForceSSL));
     }
 
     // create sub-tabs
@@ -8400,9 +8400,12 @@ throw new Error("NYI");
     if (selectedJobData != null)
     {
       // get job data
-      hostName.set(BARServer.getStringJobOption(selectedJobData.uuid,"remote-host-name"));
-      hostPort.set(BARServer.getLongJobOption(selectedJobData.uuid,"remote-host-port"));
-      hostForceSSL.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"remote-host-force-ssl"));
+      remoteHostName.set(BARServer.getStringJobOption(selectedJobData.uuid,"remote-host-name"));
+      remoteHostPort.set(BARServer.getLongJobOption(selectedJobData.uuid,"remote-host-port"));
+      remoteHostForceSSL.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"remote-host-force-ssl"));
+      includeFileCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"include-file-command"));
+      includeImageCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"include-image-command"));
+      excludeCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"exclude-command"));
       parseArchiveName(BARServer.getStringJobOption(selectedJobData.uuid,"archive-name"));
       archiveType.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-type"));
       archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"archive-part-size"),0));
