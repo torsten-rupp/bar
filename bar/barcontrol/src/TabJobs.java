@@ -1680,66 +1680,66 @@ public class TabJobs
   private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
 
   // BAR variables
-  private WidgetVariable  remoteHostName          = new WidgetVariable<String>("");
-  private WidgetVariable  remoteHostPort          = new WidgetVariable<Long>(0);
-  private WidgetVariable  remoteHostForceSSL      = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  includeFileCommand      = new WidgetVariable<String>("");
-  private WidgetVariable  includeImageCommand     = new WidgetVariable<String>("");
-  private WidgetVariable  excludeCommand          = new WidgetVariable<String>("");
-  private WidgetVariable  archiveType             = new WidgetVariable<String>("normal",new String[]{"normal","full","incremental","differential"});
+  private WidgetVariable  remoteHostName          = new WidgetVariable<String> ("",   "remote-host-name");
+  private WidgetVariable  remoteHostPort          = new WidgetVariable<Long>   (0,    "remote-host-port");
+  private WidgetVariable  remoteHostForceSSL      = new WidgetVariable<Boolean>(false,"remote-host-force-ssl");
+  private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("",   "include-file-command");
+  private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("",   "include-image-command");
+  private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("",   "exclude-command");
+  private WidgetVariable  archiveType             = new WidgetVariable<String> ("normal",new String[]{"normal","full","incremental","differential"});
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  archivePartSize         = new WidgetVariable<Long>(0);
-  private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String>("none",new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
-  private WidgetVariable  deltaSource             = new WidgetVariable<String>("");
-  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable<String>("none",
-                                                                               new String[]{"none",
-                                                                                            "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
-                                                                                            "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
-                                                                                            "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
-                                                                                            "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                                                                            "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
-                                                                                           }
-                                                                              );
-  private WidgetVariable  compressMinSize         = new WidgetVariable<Long>(0);
-  private WidgetVariable  cryptAlgorithm          = new WidgetVariable<Enum>(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
-  private WidgetVariable  cryptType               = new WidgetVariable<Enum>(new String[]{"none","symmetric","asymmetric"});
-  private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable<String>("");
-  private WidgetVariable  cryptPasswordMode       = new WidgetVariable<String>("default",new String[]{"default","ask","config"});
-  private WidgetVariable  cryptPassword           = new WidgetVariable<String>("");
-  private WidgetVariable  incrementalListFileName = new WidgetVariable<String>("");
-  private WidgetVariable  storageType             = new WidgetVariable<String>("filesystem",
-                                                                               new String[]{"filesystem",
-                                                                                            "ftp",
-                                                                                            "scp",
-                                                                                            "sftp",
-                                                                                            "webdav",
-                                                                                            "cd",
-                                                                                            "dvd",
-                                                                                            "bd",
-                                                                                            "device"
-                                                                                           }
-                                                                              );
-  private WidgetVariable  storageHostName         = new WidgetVariable<String>("");
-  private WidgetVariable  storageHostPort         = new WidgetVariable<Long>(0);
-  private WidgetVariable  storageLoginName        = new WidgetVariable<String>("");
-  private WidgetVariable  storageLoginPassword    = new WidgetVariable<String>("");
-  private WidgetVariable  storageDeviceName       = new WidgetVariable<String>("");
-  private WidgetVariable  storageFileName         = new WidgetVariable<String>("");
-  private WidgetVariable  mountDeviceName         = new WidgetVariable<String>("");
-  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>(0);
-  private WidgetVariable  archiveFileMode         = new WidgetVariable<String>("stop",new String[]{"stop","overwrite","append"});
-  private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String>("");
-  private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable<String>("");
+  private WidgetVariable  archivePartSize         = new WidgetVariable<Long>   (0);
+  private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String> ("none",new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
+  private WidgetVariable  deltaSource             = new WidgetVariable<String> ("");
+  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable<String> ("none",
+                                                                                new String[]{"none",
+                                                                                             "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
+                                                                                             "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
+                                                                                             "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
+                                                                                             "lzo1","lzo2","lzo3","lzo4","lzo5",
+                                                                                             "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
+                                                                                            }
+                                                                               );
+  private WidgetVariable  compressMinSize         = new WidgetVariable<Long>   (0);
+  private WidgetVariable  cryptAlgorithm          = new WidgetVariable<Enum>   (new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
+  private WidgetVariable  cryptType               = new WidgetVariable<Enum>   (new String[]{"none","symmetric","asymmetric"});
+  private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable<String> ("", "crypt-public-key");
+  private WidgetVariable  cryptPasswordMode       = new WidgetVariable<String> ("default",new String[]{"default","ask","config"});
+  private WidgetVariable  cryptPassword           = new WidgetVariable<String> ("", "crypt-password");
+  private WidgetVariable  incrementalListFileName = new WidgetVariable<String> ("", "incremental-list-file");
+  private WidgetVariable  storageType             = new WidgetVariable<String> ("filesystem",
+                                                                                new String[]{"filesystem",
+                                                                                             "ftp",
+                                                                                             "scp",
+                                                                                             "sftp",
+                                                                                             "webdav",
+                                                                                             "cd",
+                                                                                             "dvd",
+                                                                                             "bd",
+                                                                                             "device"
+                                                                                            }
+                                                                               );
+  private WidgetVariable  storageHostName         = new WidgetVariable<String> ("");
+  private WidgetVariable  storageHostPort         = new WidgetVariable<Long>   (0);
+  private WidgetVariable  storageLoginName        = new WidgetVariable<String> ("");
+  private WidgetVariable  storageLoginPassword    = new WidgetVariable<String> ("");
+  private WidgetVariable  storageDeviceName       = new WidgetVariable<String> ("");
+  private WidgetVariable  storageFileName         = new WidgetVariable<String> ("");
+  private WidgetVariable  mountDeviceName         = new WidgetVariable<String> ("");
+  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   (0);
+  private WidgetVariable  archiveFileMode         = new WidgetVariable<String> ("stop",new String[]{"stop","overwrite","append"});
+  private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String> ("","ssh-public-key");
+  private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable<String> ("","ssh-private-key");
   private WidgetVariable  maxBandWidthFlag        = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>(0);
-  private WidgetVariable  volumeSize              = new WidgetVariable<Long>(0);
-  private WidgetVariable  ecc                     = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  skipUnreadable          = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  rawImages               = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  overwriteFiles          = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  preCommand              = new WidgetVariable<String>("");
-  private WidgetVariable  postCommand             = new WidgetVariable<String>("");
+  private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>   (0);
+  private WidgetVariable  volumeSize              = new WidgetVariable<Long>   (0);
+  private WidgetVariable  ecc                     = new WidgetVariable<Boolean>(false,"ecc");
+  private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>(false,"wait-first-volume");
+  private WidgetVariable  skipUnreadable          = new WidgetVariable<Boolean>(false,"skip-unreadable");
+  private WidgetVariable  rawImages               = new WidgetVariable<Boolean>(false,"raw-images");
+  private WidgetVariable  overwriteFiles          = new WidgetVariable<Boolean>(false,"overwrite-files");
+  private WidgetVariable  preCommand              = new WidgetVariable<String> ("","pre-command");
+  private WidgetVariable  postCommand             = new WidgetVariable<String> ("","post-command");
 
   // variables
   private DirectoryInfoThread          directoryInfoThread;
@@ -2199,10 +2199,12 @@ Dprintf.dprintf("");
       {
         public void modifyText(ModifyEvent modifyEvent)
         {
-          Text  widget = (Text)modifyEvent.widget;
-          Color color  = COLOR_MODIFIED;
-          String s = widget.getText();
-          if (remoteHostName.getString().equals(s)) color = null;
+          Text   widget = (Text)modifyEvent.widget;
+          String string = widget.getText().trim();
+          Color  color  = COLOR_MODIFIED;
+
+          if (remoteHostName.getString().equals(string)) color = null;
+
           widget.setBackground(color);
         }
       });
@@ -2211,9 +2213,10 @@ Dprintf.dprintf("");
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           Text   widget = (Text)selectionEvent.widget;
-          String string = widget.getText();
+          String string = widget.getText().trim();
+
           remoteHostName.set(string);
-          BARServer.setJobOption(selectedJobData.uuid,"remote-host-name",string);
+          BARServer.setJobOption(selectedJobData.uuid,remoteHostName);
           widget.setBackground(null);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -2228,9 +2231,10 @@ Dprintf.dprintf("");
         public void focusLost(FocusEvent focusEvent)
         {
           Text   widget = (Text)focusEvent.widget;
-          String string = widget.getText();
+          String string = widget.getText().trim();
+
           remoteHostName.set(string);
-          BARServer.setJobOption(selectedJobData.uuid,"remote-host-name",string);
+          BARServer.setJobOption(selectedJobData.uuid,remoteHostName);
           widget.setBackground(null);
         }
       });
@@ -2257,8 +2261,8 @@ Dprintf.dprintf("");
         public void modifyText(ModifyEvent modifyEvent)
         {
           Spinner widget = (Spinner)modifyEvent.widget;
-          Color   color  = COLOR_MODIFIED;
           int     n      = widget.getSelection();
+          Color   color  = COLOR_MODIFIED;
 
           if (remoteHostPort.getLong() == n) color = null;
 
@@ -2274,7 +2278,7 @@ Dprintf.dprintf("");
           int     n      = widget.getSelection();
 
           remoteHostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
+          BARServer.setJobOption(selectedJobData.uuid,remoteHostPort);
           widget.setBackground(null);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -2283,7 +2287,7 @@ Dprintf.dprintf("");
           int     n      = widget.getSelection();
 
           remoteHostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
+          BARServer.setJobOption(selectedJobData.uuid,remoteHostPort);
           widget.setBackground(null);
         }
       });
@@ -2300,7 +2304,7 @@ Dprintf.dprintf("");
           int     n      = widget.getSelection();
 
           remoteHostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,"remote-host-port",n);
+          BARServer.setJobOption(selectedJobData.uuid,remoteHostPort);
           widget.setBackground(null);
         }
       });
@@ -2325,7 +2329,8 @@ Dprintf.dprintf("");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-          BARServer.setJobOption(selectedJobData.uuid,"remote-host-force-ssl",widget.getSelection());
+          remoteHostForceSSL.set(widget.getSelection());
+          BARServer.setJobOption(selectedJobData.uuid,remoteHostForceSSL);
         }
       });
       Widgets.addModifyListener(new WidgetModifyListener(button,remoteHostForceSSL));
@@ -3462,9 +3467,11 @@ Dprintf.dprintf("");
             public void modifyText(ModifyEvent modifyEvent)
             {
               StyledText widget = (StyledText)modifyEvent.widget;
-              Color      color  = COLOR_MODIFIED;
               String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              Color      color  = COLOR_MODIFIED;
+
               if (includeFileCommand.equals(string)) color = null;
+
               widget.setBackground(color);
             }
           });
@@ -3473,8 +3480,10 @@ Dprintf.dprintf("");
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
               StyledText widget = (StyledText)selectionEvent.widget;
-              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              BARServer.setJobOption(selectedJobData.uuid,"include-file-command",text);
+              String     text   = widget.getText();
+
+              includeFileCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,includeFileCommand);
               widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3489,8 +3498,10 @@ Dprintf.dprintf("");
             public void focusLost(FocusEvent focusEvent)
             {
               StyledText widget = (StyledText)focusEvent.widget;
-              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              BARServer.setJobOption(selectedJobData.uuid,"include-file-command",text);
+              String     text   = widget.getText();
+
+              includeFileCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,includeFileCommand);
               widget.setBackground(null);
             }
           });
@@ -3525,9 +3536,10 @@ Dprintf.dprintf("");
             public void modifyText(ModifyEvent modifyEvent)
             {
               StyledText widget = (StyledText)modifyEvent.widget;
+              String     text   = widget.getText();
               Color      color  = COLOR_MODIFIED;
-              String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              if (excludeCommand.equals(string)) color = null;
+
+              if (excludeCommand.equals(text.replace(widget.getLineDelimiter(),"\n"))) color = null;
               widget.setBackground(color);
             }
           });
@@ -3536,8 +3548,10 @@ Dprintf.dprintf("");
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
               StyledText widget = (StyledText)selectionEvent.widget;
-              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              BARServer.setJobOption(selectedJobData.uuid,"exclude-command",text);
+              String     text   = widget.getText();
+
+              excludeCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,excludeCommand);
               widget.setBackground(null);
             }
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -3552,8 +3566,10 @@ Dprintf.dprintf("");
             public void focusLost(FocusEvent focusEvent)
             {
               StyledText widget = (StyledText)focusEvent.widget;
-              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              BARServer.setJobOption(selectedJobData.uuid,"exclude-command",text);
+              String     text   = widget.getText();
+
+              excludeCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,excludeCommand);
               widget.setBackground(null);
             }
           });
@@ -8400,12 +8416,12 @@ throw new Error("NYI");
     if (selectedJobData != null)
     {
       // get job data
-      remoteHostName.set(BARServer.getStringJobOption(selectedJobData.uuid,"remote-host-name"));
-      remoteHostPort.set(BARServer.getLongJobOption(selectedJobData.uuid,"remote-host-port"));
-      remoteHostForceSSL.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"remote-host-force-ssl"));
-      includeFileCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"include-file-command"));
-      includeImageCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"include-image-command"));
-      excludeCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"exclude-command"));
+      BARServer.getJobOption(selectedJobData.uuid,remoteHostName);
+      BARServer.getJobOption(selectedJobData.uuid,remoteHostPort);
+      BARServer.getJobOption(selectedJobData.uuid,remoteHostForceSSL);
+      BARServer.getJobOption(selectedJobData.uuid,includeFileCommand);
+      BARServer.getJobOption(selectedJobData.uuid,includeImageCommand);
+      BARServer.getJobOption(selectedJobData.uuid,excludeCommand);
       parseArchiveName(BARServer.getStringJobOption(selectedJobData.uuid,"archive-name"));
       archiveType.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-type"));
       archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"archive-part-size"),0));
@@ -8416,24 +8432,25 @@ throw new Error("NYI");
       byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
       cryptAlgorithm.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-algorithm"));
       cryptType.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-type"));
-      cryptPublicKeyFileName.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-public-key"));
+      BARServer.getJobOption(selectedJobData.uuid,cryptPublicKeyFileName);
       cryptPasswordMode.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-password-mode"));
-      cryptPassword.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-password"));
-      incrementalListFileName.set(BARServer.getStringJobOption(selectedJobData.uuid,"incremental-list-file"));
+      BARServer.getJobOption(selectedJobData.uuid,cryptPassword);
+      BARServer.getJobOption(selectedJobData.uuid,incrementalListFileName);
       archiveFileMode.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-file-mode"));
-      sshPublicKeyFileName.set(BARServer.getStringJobOption(selectedJobData.uuid,"ssh-public-key"));
-      sshPrivateKeyFileName.set(BARServer.getStringJobOption(selectedJobData.uuid,"ssh-private-key"));
+      BARServer.getJobOption(selectedJobData.uuid,sshPublicKeyFileName);
+      BARServer.getJobOption(selectedJobData.uuid,sshPrivateKeyFileName);
 /* NYI ???
       maxBandWidth.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-band-width")));
       maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
 */
       volumeSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"volume-size"),0));
-      ecc.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"ecc"));
-      waitFirstVolume.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"wait-first-volume"));
-      skipUnreadable.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"skip-unreadable"));
-      overwriteFiles.set(BARServer.getBooleanJobOption(selectedJobData.uuid,"overwrite-files"));
-      preCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"pre-command"));
-      postCommand.set(BARServer.getStringJobOption(selectedJobData.uuid,"post-command"));
+      BARServer.getJobOption(selectedJobData.uuid,ecc);
+      BARServer.getJobOption(selectedJobData.uuid,waitFirstVolume);
+      BARServer.getJobOption(selectedJobData.uuid,skipUnreadable);
+      BARServer.getJobOption(selectedJobData.uuid,rawImages);
+      BARServer.getJobOption(selectedJobData.uuid,overwriteFiles);
+      BARServer.getJobOption(selectedJobData.uuid,preCommand);
+      BARServer.getJobOption(selectedJobData.uuid,postCommand);
       mountDeviceName.set(BARServer.getStringJobOption(selectedJobData.uuid,"mount-device"));
       maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0));
 
