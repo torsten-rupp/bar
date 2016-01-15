@@ -191,7 +191,10 @@ LOCAL JobOptions      jobOptions;
 LOCAL String          uuid;
 LOCAL String          storageName;
 LOCAL EntryList       includeEntryList;
+LOCAL const char      *includeFileCommand;
+LOCAL const char      *includeImageCommand;
 LOCAL PatternList     excludePatternList;
+LOCAL const char      *excludeCommand;
 LOCAL MountList       mountList;
 LOCAL PatternList     compressExcludePatternList;
 LOCAL DeltaSourceList deltaSourceList;
@@ -908,11 +911,14 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                         ),
 
   CONFIG_VALUE_SPECIAL           ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntryPattern,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL           ("include-file-command",         &includeEntryList,-1,                                          configValueParseFileEntryPatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
+//  CONFIG_VALUE_SPECIAL           ("include-file-command",         &includeEntryList,-1,                                          configValueParseFileEntryPatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_CSTRING           ("include-file-command",         &includeFileCommand,-1                                         ),
   CONFIG_VALUE_SPECIAL           ("include-image",                &includeEntryList,-1,                                          configValueParseImageEntryPattern,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL           ("include-image-command",        &includeEntryList,-1,                                          configValueParseImageEntryPatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
+//  CONFIG_VALUE_SPECIAL           ("include-image-command",        &includeEntryList,-1,                                          configValueParseImageEntryPatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_CSTRING           ("include-image-command",        &includeImageCommand,-1                                        ),
   CONFIG_VALUE_SPECIAL           ("exclude",                      &excludePatternList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL           ("exclude-command",              &excludePatternList,-1,                                        configValueParsePatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
+//  CONFIG_VALUE_SPECIAL           ("exclude-command",              &excludePatternList,-1,                                        configValueParsePatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_CSTRING           ("exclude-command",              &excludeCommand,-1                                             ),
   CONFIG_VALUE_SPECIAL           ("mount",                        &mountList,-1,                                                 configValueParseMount,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_SPECIAL           ("delta-source",                 &deltaSourceList,-1,                                           configValueParseDeltaSource,NULL,NULL,NULL,&jobOptions.patternType),
@@ -3122,7 +3128,10 @@ LOCAL Errors initAll(void)
   initJobOptions(&jobOptions);
 
   EntryList_init(&includeEntryList);
+  includeFileCommand                     = NULL;
+  includeImageCommand                    = NULL;
   PatternList_init(&excludePatternList);
+  excludeCommand                         = NULL;
   PatternList_init(&compressExcludePatternList);
   List_init(&mountList);
   DeltaSourceList_init(&deltaSourceList);
@@ -6102,6 +6111,8 @@ void configValueFormatInitEntryPatternCommand(void **formatUserData, void *userD
 
   UNUSED_VARIABLE(userData);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
   (*formatUserData) = ((String)variable);
 }
 
@@ -6116,13 +6127,20 @@ bool configValueFormatEntryPatternCommand(void **formatUserData, void *userData,
   const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
   const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
 
-  String    command;
+  String command;
 
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  command = String_mapCString(String_duplicate((String)(*formatUserData)),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+  command = String_mapCString(String_duplicate((String)(*formatUserData)),
+                              STRING_BEGIN,
+                              FILENAME_MAP_FROM,
+                              FILENAME_MAP_TO,
+                              SIZE_OF_ARRAY(FILENAME_MAP_FROM)
+                             );
   String_format(line,"%'S",command);
 
   return TRUE;
