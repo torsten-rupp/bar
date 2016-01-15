@@ -1750,6 +1750,150 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     return setJobOption(jobUUID,name,value,(String[])null);
   }
 
+  /** get string value from BAR server
+   * @param jobUUID job UUID
+   * @param widgetVariable widget variable
+   * @param errorMessage error message or ""
+   * @return value
+   */
+  public static int getJobOption(String jobUUID, WidgetVariable widgetVariable, String errorMessage[])
+  {
+    ValueMap resultMap = new ValueMap();
+    int error = executeCommand(StringParser.format("JOB_OPTION_GET jobUUID=%s name=%S",jobUUID,widgetVariable.getName()),
+                               0,
+                               errorMessage,
+                               resultMap
+                              );
+    if (error !=- Errors.NONE)
+    {
+      return error;
+    }
+
+    if      (widgetVariable.getType() == Boolean.class)
+    {
+      widgetVariable.set(resultMap.getBoolean("value"));
+    }
+    else if (widgetVariable.getType() == Long.class)
+    {
+      widgetVariable.set(resultMap.getLong("value"));
+    }
+    else if (widgetVariable.getType() == Double.class)
+    {
+      widgetVariable.set(resultMap.getDouble("value"));
+    }
+    else if (widgetVariable.getType() == String.class)
+    {
+      widgetVariable.set(resultMap.getString("value"));
+    }
+    else if (widgetVariable.getType() == Enum.class)
+    {
+//        widgetVariable.set(resultMap.getString("value"));
+throw new Error("NYI");
+    }
+    else
+    {
+      throw new Error("Type not supported");
+    }
+
+    return error;
+  }
+
+  /** get string value from BAR server
+   * @param jobUUID job UUID
+   * @param widgetVariable widget variable
+   * @return value
+   */
+  public static int getJobOption(String jobUUID, WidgetVariable widgetVariable)
+  {
+    return getJobOption(jobUUID,widgetVariable,(String[])null);
+  }
+
+  /** set job option value on BAR server
+   * @param jobUUID job UUID
+   * @param widgetVariable widget variable
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int setJobOption(String jobUUID, WidgetVariable widgetVariable, String errorMessage[])
+  {
+    int error = Errors.UNKNOWN;
+
+    if      (widgetVariable.getType() == Boolean.class)
+    {
+      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                                 jobUUID,
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getBoolean() ? "yes" : "no"
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == Long.class)
+    {
+      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
+                                                 jobUUID,
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getLong()
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == Double.class)
+    {
+      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%f",
+                                                 jobUUID,
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getDouble()
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == String.class)
+    {
+      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%'S",
+                                                 jobUUID,
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getString()
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == Enum.class)
+    {
+/*
+        error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%s",
+                                                   jobUUID,
+                                                   widgetVariable.getName(),
+                                                   widgetVariable.getLong()
+                                                  ),
+                               0,
+                               errorMessage
+                              );
+        break;*/
+        throw new Error("NYI");
+    }
+    else
+    {
+      throw new Error("Type not supported");
+    }
+
+    return error;
+  }
+
+  /** set job option value on BAR server
+   * @param jobUUID job UUID
+   * @param widgetVariable widget variable
+   * @return Errors.NONE or error code
+   */
+  public static int setJobOption(String jobUUID, WidgetVariable widgetVariable)
+  {
+    return setJobOption(jobUUID,widgetVariable,(String[])null);
+  }
+
   /** get schedule option value from BAR server
    * @param jobUUID job UUID
    * @param scheduleUUID schedule UUID
