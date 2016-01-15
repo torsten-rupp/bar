@@ -1084,7 +1084,8 @@ void configValueFormatDoneOwner(void **formatUserData, void *userData);
 bool configValueFormatOwner(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseFileEntry, configValueParseImageEntry
+* Name   : configValueParseFileEntryPattern,
+*          configValueParseImageEntryPattern
 * Purpose: config value option call back for parsing file/image entry
 *          patterns
 * Input  : userData              - user data
@@ -1098,11 +1099,11 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseFileEntry(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-bool configValueParseImageEntry(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+bool configValueParseFileEntryPattern(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+bool configValueParseImageEntryPattern(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
-* Name   : configValueFormatInitEntry
+* Name   : configValueFormatInitEntryPattern
 * Purpose: init format of config include statements
 * Input  : userData - user data
 *          variable - config variable
@@ -1111,10 +1112,10 @@ bool configValueParseImageEntry(void *userData, void *variable, const char *name
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitEntry(void **formatUserData, void *userData, void *variable);
+void configValueFormatInitEntryPattern(void **formatUserData, void *userData, void *variable);
 
 /***********************************************************************\
-* Name   : configValueFormatDoneEntry
+* Name   : configValueFormatDoneEntryPattern
 * Purpose: done format of config include statements
 * Input  : formatUserData - format user data
 *          userData       - user data
@@ -1123,10 +1124,11 @@ void configValueFormatInitEntry(void **formatUserData, void *userData, void *var
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneEntry(void **formatUserData, void *userData);
+void configValueFormatDoneEntryPattern(void **formatUserData, void *userData);
 
 /***********************************************************************\
-* Name   : configValueFormatFileEntry, configValueFormatImageEntry
+* Name   : configValueFormatFileEntryPattern,
+*          configValueFormatImageEntryPattern
 * Purpose: format next config include statement
 * Input  : formatUserData - format user data
 *          userData       - user data
@@ -1137,8 +1139,65 @@ void configValueFormatDoneEntry(void **formatUserData, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatFileEntry(void **formatUserData, void *userData, String line);
-bool configValueFormatImageEntry(void **formatUserData, void *userData, String line);
+bool configValueFormatFileEntryPattern(void **formatUserData, void *userData, String line);
+bool configValueFormatImageEntryPattern(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseFileEntryPatternCommand,
+*          configValueParseImageEntryPatternCommand
+* Purpose: config value option call back for parsing file/image
+*          include command
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseFileEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueParseImageEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueFormatInitEntryPatternCommand
+* Purpose: init format of config include command statements
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitEntryPatternCommand(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneEntryPatternCommand
+* Purpose: done format of config include command statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneEntryPatternCommand(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatEntryPatternCommand
+* Purpose: format next config include command statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatEntryPatternCommand(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParsePattern
@@ -1194,6 +1253,61 @@ void configValueFormatDonePattern(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatPattern(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParsePatternCommand
+* Purpose: config value option call back for parsing pattern command
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParsePatternCommand(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+
+/***********************************************************************\
+* Name   : configValueFormatInitPatternCommand
+* Purpose: init format of config pattern command statements
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitPatternCommand(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDonePatternCommand
+* Purpose: done format of config pattern command statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDonePatternCommand(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatPatternCommand
+* Purpose: format next config pattern command statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatPatternCommand(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseMount

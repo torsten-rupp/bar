@@ -531,12 +531,12 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
 //  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file-command",    JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image-command",   JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file-command",    JobNode,includeEntryList,                       configValueParseFileEntryPatternCommand,configValueFormatInitEntryPatternCommand,configValueFormatDoneEntryPatternCommand,configValueFormatEntryPatternCommand,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image-command",   JobNode,includeEntryList,                       configValueParseImageEntryPatternCommand,configValueFormatInitEntryPatternCommand,configValueFormatDoneEntryPatternCommand,configValueFormatEntryPatternCommand,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude-command",         JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude-command",         JobNode,excludePatternList,                     configValueParsePatternCommand,configValueFormatInitPatternCommand,configValueFormatDonePatternCommand,configValueFormatPatternCommand,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
@@ -3131,7 +3131,7 @@ LOCAL void jobThreadCode(void)
     Remote_copyHost(&remoteHost,&jobNode->remoteHost);
     EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
-    List_clear(&mountList,CALLBACK(freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK(duplicateMountNode,NULL));
+    List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
     DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
     initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
@@ -3438,7 +3438,7 @@ NULL,//                                                        scheduleTitle,
     doneJobOptions(&jobOptions);
     DeltaSourceList_clear(&deltaSourceList);
     PatternList_clear(&compressExcludePatternList);
-    List_clear(&mountList,CALLBACK(freeMountNode,NULL));
+    List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
     PatternList_clear(&excludePatternList);
     EntryList_clear(&includeEntryList);
 
@@ -3460,7 +3460,7 @@ NULL,//                                                        scheduleTitle,
   String_delete(scheduleCustomText);
   DeltaSourceList_done(&deltaSourceList);
   PatternList_done(&compressExcludePatternList);
-  List_done(&mountList,CALLBACK(freeMountNode,NULL));
+  List_done(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   Remote_doneHost(&remoteHost);
