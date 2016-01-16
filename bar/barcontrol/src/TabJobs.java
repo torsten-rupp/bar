@@ -2204,7 +2204,6 @@ Dprintf.dprintf("");
           Color  color  = COLOR_MODIFIED;
 
           if (remoteHostName.getString().equals(string)) color = null;
-
           widget.setBackground(color);
         }
       });
@@ -2265,7 +2264,6 @@ Dprintf.dprintf("");
           Color   color  = COLOR_MODIFIED;
 
           if (remoteHostPort.getLong() == n) color = null;
-
           widget.setBackground(color);
           widget.setData("showedErrorDialog",false);
         }
@@ -3454,77 +3452,148 @@ Dprintf.dprintf("");
           }
         }
 
-        // included command tab
-        subTab = Widgets.addTab(tabFolder,BARControl.tr("Included command"));
-        subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+        // include command tab
+        subTab = Widgets.addTab(tabFolder,BARControl.tr("Include command"));
+//        subTab.setLayout(new TableLayout(1.0,1.0));
         Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
         {
-          styledText = Widgets.newStyledText(subTab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-          styledText.setToolTipText(BARControl.tr("Command or script to execute to get a list of include patterns."));
-          Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
-          styledText.addModifyListener(new ModifyListener()
+          subComposite = Widgets.newComposite(subTab);
+          subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+          Widgets.layout(subComposite,0,0,TableLayoutData.NSWE);
           {
-            public void modifyText(ModifyEvent modifyEvent)
+            styledText = Widgets.newStyledText(subComposite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+            styledText.setToolTipText(BARControl.tr("Command or script to execute to get a list of include entries."));
+            Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
+            styledText.addModifyListener(new ModifyListener()
             {
-              StyledText widget = (StyledText)modifyEvent.widget;
-              String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              Color      color  = COLOR_MODIFIED;
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                StyledText widget = (StyledText)modifyEvent.widget;
+                String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+                Color      color  = COLOR_MODIFIED;
 
-              if (includeFileCommand.equals(string)) color = null;
+                if (includeFileCommand.equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
+            styledText.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                StyledText widget = (StyledText)selectionEvent.widget;
+                String     text   = widget.getText();
 
-              widget.setBackground(color);
-            }
-          });
-          styledText.addSelectionListener(new SelectionListener()
+                includeFileCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+                BARServer.setJobOption(selectedJobData.uuid,includeFileCommand);
+                widget.setBackground(null);
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            styledText.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                StyledText widget = (StyledText)focusEvent.widget;
+                String     text   = widget.getText();
+
+                includeFileCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+                BARServer.setJobOption(selectedJobData.uuid,includeFileCommand);
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(styledText,includeFileCommand));
+
+            // buttons
+            button = Widgets.newButton(subComposite,BARControl.tr("Test")+"\u2026");
+            button.setToolTipText(BARControl.tr("Test script."));
+            Widgets.layout(button,1,0,TableLayoutData.E);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                testScript(includeImageCommand.getString());
+              }
+            });
+          }
+
+          subComposite = Widgets.newComposite(subTab);
+          subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+          Widgets.layout(subComposite,1,0,TableLayoutData.NSWE);
           {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            styledText = Widgets.newStyledText(subComposite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+            styledText.setToolTipText(BARControl.tr("Command or script to execute to get a list of include images."));
+            Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
+            styledText.addModifyListener(new ModifyListener()
             {
-              StyledText widget = (StyledText)selectionEvent.widget;
-              String     text   = widget.getText();
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                StyledText widget = (StyledText)modifyEvent.widget;
+                String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+                Color      color  = COLOR_MODIFIED;
 
-              includeFileCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
-              BARServer.setJobOption(selectedJobData.uuid,includeFileCommand);
-              widget.setBackground(null);
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
+                if (includeImageCommand.equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
+            styledText.addSelectionListener(new SelectionListener()
             {
-            }
-          });
-          styledText.addFocusListener(new FocusListener()
-          {
-            public void focusGained(FocusEvent focusEvent)
-            {
-            }
-            public void focusLost(FocusEvent focusEvent)
-            {
-              StyledText widget = (StyledText)focusEvent.widget;
-              String     text   = widget.getText();
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                StyledText widget = (StyledText)selectionEvent.widget;
+                String     text   = widget.getText();
 
-              includeFileCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
-              BARServer.setJobOption(selectedJobData.uuid,includeFileCommand);
-              widget.setBackground(null);
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(styledText,includeFileCommand));
+                includeImageCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+                BARServer.setJobOption(selectedJobData.uuid,includeImageCommand);
+                widget.setBackground(null);
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            styledText.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                StyledText widget = (StyledText)focusEvent.widget;
+                String     text   = widget.getText();
 
-          // buttons
-          button = Widgets.newButton(subTab,BARControl.tr("Test")+"\u2026");
-          button.setToolTipText(BARControl.tr("Test script."));
-          Widgets.layout(button,1,0,TableLayoutData.E);
-          button.addSelectionListener(new SelectionListener()
-          {
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                includeImageCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+                BARServer.setJobOption(selectedJobData.uuid,includeImageCommand);
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(styledText,includeImageCommand));
+
+            // buttons
+            button = Widgets.newButton(subComposite,BARControl.tr("Test")+"\u2026");
+            button.setToolTipText(BARControl.tr("Test script."));
+            Widgets.layout(button,1,0,TableLayoutData.E);
+            button.addSelectionListener(new SelectionListener()
             {
-            }
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              testScript(includeFileCommand.getString());
-            }
-          });
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                testScript(includeImageCommand.getString());
+              }
+            });
+          }
         }
 
         // excluded command tab
-        subTab = Widgets.addTab(tabFolder,BARControl.tr("Excluded command"));
+        subTab = Widgets.addTab(tabFolder,BARControl.tr("Exclude command"));
         subTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
         Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
         {
@@ -3924,6 +3993,7 @@ Dprintf.dprintf("");
             {
               Combo widget = (Combo)modifyEvent.widget;
               Color color  = COLOR_MODIFIED;
+
               try
               {
                 long n = Units.parseByteSize(widget.getText());
@@ -4105,10 +4175,11 @@ Dprintf.dprintf("");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (deltaSource.getString().equals(s)) color = null;
+              Text   widget = (Text)modifyEvent.widget;
+              String string = widget.getText();
+              Color  color  = COLOR_MODIFIED;
+
+              if (deltaSource.getString().equals(string)) color = null;
               widget.setBackground(color);
             }
           });
@@ -4557,10 +4628,11 @@ Dprintf.dprintf("");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (cryptPublicKeyFileName.getString().equals(s)) color = null;
+              Text   widget = (Text)modifyEvent.widget;
+              String string = widget.getText();
+              Color  color  = COLOR_MODIFIED;
+
+              if (cryptPublicKeyFileName.getString().equals(string)) color = null;
               widget.setBackground(color);
             }
           });
@@ -4775,10 +4847,11 @@ Dprintf.dprintf("");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (cryptPassword.getString().equals(s)) color = null;
+              Text   widget = (Text)modifyEvent.widget;
+              String string = widget.getText();
+              Color  color  = COLOR_MODIFIED;
+
+              if (cryptPassword.getString().equals(string)) color = null;
               widget.setBackground(color);
             }
           });
@@ -4841,10 +4914,11 @@ Dprintf.dprintf("");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (cryptPassword.getString().equals(s)) color = null;
+              Text   widget = (Text)modifyEvent.widget;
+              String string = widget.getText();
+              Color  color  = COLOR_MODIFIED;
+
+              if (cryptPassword.getString().equals(string)) color = null;
               widget.setBackground(color);
             }
           });
@@ -5005,10 +5079,11 @@ Dprintf.dprintf("");
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (storageFileName.getString().equals(s)) color = null;
+              Text   widget = (Text)modifyEvent.widget;
+              String string = widget.getText();
+              Color  color  = COLOR_MODIFIED;
+
+              if (storageFileName.getString().equals(string)) color = null;
               widget.setBackground(color);
             }
           });
@@ -5120,8 +5195,9 @@ Dprintf.dprintf("");
             public void modifyText(ModifyEvent modifyEvent)
             {
               Text   widget = (Text)modifyEvent.widget;
-              Color  color  = COLOR_MODIFIED;
               String string = widget.getText();
+              Color  color  = COLOR_MODIFIED;
+
               if (incrementalListFileName.getString().equals(string)) color = null;
               widget.setBackground(color);
             }
@@ -5518,8 +5594,9 @@ Dprintf.dprintf("");
                 public void modifyText(ModifyEvent modifyEvent)
                 {
                   Text   widget = (Text)modifyEvent.widget;
-                  Color  color  = COLOR_MODIFIED;
                   String string = widget.getText();
+                  Color  color  = COLOR_MODIFIED;
+
                   if (mountDeviceName.getString().equals(string)) color = null;
                   widget.setBackground(color);
                 }
@@ -5609,6 +5686,7 @@ Dprintf.dprintf("");
                 {
                   Combo widget = (Combo)modifyEvent.widget;
                   Color color  = COLOR_MODIFIED;
+
                   try
                   {
                     long n = Units.parseByteSize(widget.getText());
@@ -5777,8 +5855,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageLoginName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -5822,8 +5901,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageHostName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -5867,8 +5947,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageLoginPassword.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -5991,8 +6072,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageLoginName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -6036,8 +6118,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageHostName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -6082,8 +6165,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 try
                 {
                   long n = !string.equals("") ? Long.parseLong(string) : 0;
@@ -6193,8 +6277,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (sshPublicKeyFileName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -6287,8 +6372,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (sshPrivateKeyFileName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -6456,8 +6542,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageLoginName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -6501,8 +6588,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageHostName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -6547,8 +6635,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 try
                 {
                   long n = !string.equals("") ? Long.parseLong(string) : 0;
@@ -6658,8 +6747,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (sshPublicKeyFileName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -6752,8 +6842,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (sshPrivateKeyFileName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -6918,8 +7009,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageDeviceName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -7010,6 +7102,7 @@ Dprintf.dprintf("");
               {
                 Combo widget = (Combo)modifyEvent.widget;
                 Color color  = COLOR_MODIFIED;
+
                 try
                 {
                   long n = Units.parseByteSize(widget.getText());
@@ -7218,8 +7311,9 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 Text   widget = (Text)modifyEvent.widget;
-                Color  color  = COLOR_MODIFIED;
                 String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
                 if (storageDeviceName.getString().equals(string)) color = null;
                 widget.setBackground(color);
               }
@@ -7310,6 +7404,7 @@ Dprintf.dprintf("");
               {
                 Combo widget = (Combo)modifyEvent.widget;
                 Color color  = COLOR_MODIFIED;
+
                 try
                 {
                   long n = Units.parseByteSize(widget.getText());
@@ -7430,8 +7525,9 @@ Dprintf.dprintf("");
             public void modifyText(ModifyEvent modifyEvent)
             {
               StyledText widget = (StyledText)modifyEvent.widget;
-              Color      color  = COLOR_MODIFIED;
               String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              Color      color  = COLOR_MODIFIED;
+
               if (preCommand.equals(string)) color = null;
               widget.setBackground(color);
             }
@@ -7495,8 +7591,9 @@ Dprintf.dprintf("");
             public void modifyText(ModifyEvent modifyEvent)
             {
               StyledText widget = (StyledText)modifyEvent.widget;
-              Color      color  = COLOR_MODIFIED;
               String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              Color      color  = COLOR_MODIFIED;
+
               if (postCommand.equals(string)) color = null;
               widget.setBackground(color);
             }
