@@ -535,14 +535,11 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 //  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file-command",    JobNode,includeFileCommand,                     configValueParseFileEntryPatternCommand,configValueFormatInitEntryPatternCommand,configValueFormatDoneEntryPatternCommand,configValueFormatEntryPatternCommand,NULL),
-  CONFIG_STRUCT_VALUE_STRING  ("include-file-command",     JobNode,includeFileCommand                      ),
+  CONFIG_STRUCT_VALUE_STRING   ("include-file-command",    JobNode,includeFileCommand                      ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image-command",   JobNode,includeImageCommand,                    configValueParseImageEntryPatternCommand,configValueFormatInitEntryPatternCommand,configValueFormatDoneEntryPatternCommand,configValueFormatEntryPatternCommand,NULL),
-  CONFIG_STRUCT_VALUE_STRING  ("include-image-command",    JobNode,includeImageCommand                     ),
+  CONFIG_STRUCT_VALUE_STRING   ("include-image-command",   JobNode,includeImageCommand                     ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude-command",         JobNode,excludeCommand,                         configValueParsePatternCommand,configValueFormatInitPatternCommand,configValueFormatDonePatternCommand,configValueFormatPatternCommand,NULL),
-  CONFIG_STRUCT_VALUE_STRING  ("exclude-command",          JobNode,excludeCommand                          ),
+  CONFIG_STRUCT_VALUE_STRING   ("exclude-command",         JobNode,excludeCommand                          ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
@@ -3184,6 +3181,29 @@ LOCAL void jobThreadCode(void)
                    Storage_getPrintableNameCString(&storageSpecifier,NULL),
                    Error_getText(jobNode->runningInfo.error)
                   );
+      }
+    }
+
+    // get include/excluded entries from commands
+    if (!String_isEmpty(jobNode->includeFileCommand))
+    {
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->includeFileCommand));
+      }
+    }
+    if (!String_isEmpty(jobNode->includeImageCommand))
+    {
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->includeImageCommand));
+      }
+    }
+    if (!String_isEmpty(jobNode->excludeCommand))
+    {
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
       }
     }
 

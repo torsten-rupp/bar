@@ -163,6 +163,8 @@ String getConfigFileName(String fileName);
 
 Errors updateConfig(void);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : getArchiveTypeName
 * Purpose: get archive type name
@@ -184,6 +186,8 @@ const char *getArchiveTypeName(ArchiveTypes archiveType);
 \***********************************************************************/
 
 const char *getArchiveTypeShortName(ArchiveTypes archiveType);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : isPrintInfo
@@ -336,6 +340,8 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, ...);
 void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : templateInit
 * Purpose: init template
@@ -407,6 +413,8 @@ String expandTemplate(const char       *templateString,
                       uint             textMacroCount
                      );
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : logPostProcess
 * Purpose: log post processing
@@ -427,6 +435,8 @@ void logPostProcess(LogHandle        *logHandle,
                     ConstString      scheduleCustomText
                    );
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : executeIOOutput
 * Purpose: process exec output
@@ -441,6 +451,8 @@ void logPostProcess(LogHandle        *logHandle,
 void executeIOOutput(ConstString line,
                      void        *userData
                     );
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : initJobOptions
@@ -476,6 +488,8 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
 
 void doneJobOptions(JobOptions *jobOptions);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : getBandWidth
 * Purpose: get band width from value or external file
@@ -486,6 +500,8 @@ void doneJobOptions(JobOptions *jobOptions);
 \***********************************************************************/
 
 ulong getBandWidth(BandWidthList *bandWidthList);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : initKey
@@ -580,6 +596,8 @@ bool setKeyString(Key *key, ConstString string);
 
 Errors readKeyFile(Key *key, const char *fileName);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : initServer
 * Purpose: init server
@@ -639,6 +657,8 @@ void deleteServerNode(ServerNode *serverNode);
 
 void freeServerNode(ServerNode *serverNode, void *userData);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : freeMountNode
 * Purpose: free mount node
@@ -687,6 +707,8 @@ MountNode *duplicateMountNode(MountNode *fromMountNode,
 \***********************************************************************/
 
 void deleteMountNode(MountNode *mountNode);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : getServerSettings
@@ -823,6 +845,8 @@ void getDeviceSettings(ConstString      name,
                        Device           *device
                       );
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : allocateServer
 * Purpose: allocate server
@@ -860,6 +884,8 @@ void freeServer(uint serverId);
 
 bool isServerAllocationPending(uint serverId);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : inputCryptPassword
 * Purpose: input crypt password
@@ -881,6 +907,8 @@ Errors inputCryptPassword(void        *userData,
                           bool        validateFlag,
                           bool        weakCheckFlag
                          );
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : parseWeekDaySet
@@ -914,6 +942,8 @@ bool parseDateTimeNumber(ConstString s, int *n);
 \***********************************************************************/
 
 bool parseDateMonth(ConstString s, int *month);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : configValueParsePassword
@@ -1143,63 +1173,6 @@ bool configValueFormatFileEntryPattern(void **formatUserData, void *userData, St
 bool configValueFormatImageEntryPattern(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseFileEntryPatternCommand,
-*          configValueParseImageEntryPatternCommand
-* Purpose: config value option call back for parsing file/image
-*          include command
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseFileEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-bool configValueParseImageEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
-* Name   : configValueFormatInitEntryPatternCommand
-* Purpose: init format of config include command statements
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitEntryPatternCommand(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneEntryPatternCommand
-* Purpose: done format of config include command statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneEntryPatternCommand(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatEntryPatternCommand
-* Purpose: format next config include command statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatEntryPatternCommand(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
 * Name   : configValueParsePattern
 * Purpose: config value option call back for parsing pattern
 * Input  : userData              - user data
@@ -1253,61 +1226,6 @@ void configValueFormatDonePattern(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatPattern(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
-* Name   : configValueParsePatternCommand
-* Purpose: config value option call back for parsing pattern command
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParsePatternCommand(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitPatternCommand
-* Purpose: init format of config pattern command statements
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitPatternCommand(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDonePatternCommand
-* Purpose: done format of config pattern command statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDonePatternCommand(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatPatternCommand
-* Purpose: format next config pattern command statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatPatternCommand(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseMount
@@ -1691,6 +1609,33 @@ bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const
 \***********************************************************************/
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : addIncludeListCommand
+* Purpose: add output of command to include entry list
+* Input  : entryType       - entry type
+*          entryList       - entry list
+*          commandTemplate - command/script template
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors addIncludeListCommand(EntryTypes entryType, EntryList *entryList, const char *commandTemplate);
+
+/***********************************************************************\
+* Name   : addExcludeListCommand
+* Purpose: add output of command to exclude pattern list
+* Input  : patternList     - pattern list
+*          commandTemplate - command/script template
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors addExcludeListCommand(PatternList *patternList, const char *commandTemplate);
 
 /***********************************************************************\
 * Name   : isIncluded

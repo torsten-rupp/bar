@@ -260,7 +260,6 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParsePatternCommand(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -469,9 +468,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("pattern-type",                 0,  1,2,jobOptions.patternType,                          COMMAND_LINE_OPTIONS_PATTERN_TYPES,                    "select pattern type"                                                      ),
 
   CMD_OPTION_SPECIAL      ("include",                      '#',0,3,&includeEntryList,                               cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
-  CMD_OPTION_SPECIAL      ("include-command",              0,  1,3,&includeEntryList,                               cmdOptionParseEntryPatternCommand,NULL,                "include pattern","pattern"                                                ),
+  CMD_OPTION_CSTRING      ("include-file-command",         0,  1,3,includeFileCommand,                                                                                     "include file pattern command","command"                                   ),
+  CMD_OPTION_CSTRING      ("include-image-command",        0,  1,3,includeImageCommand,                                                                                    "include image pattern command","command"                                  ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,3,&excludePatternList,                             cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
-  CMD_OPTION_SPECIAL      ("exclude-command",              0,  1,3,&excludePatternList,                             cmdOptionParsePatternCommand,NULL,                     "exclude pattern","pattern"                                                ),
+  CMD_OPTION_CSTRING      ("exclude-command",              0,  1,3,excludeCommand,                                                                                         "exclude pattern command","command"                                        ),
   CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      cmdOptionParseMount,NULL,                              "mount device","mount point"                                               ),
 
   CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                cmdOptionParseDeltaSource,NULL,                        "source pattern","pattern"                                                 ),
@@ -911,13 +911,10 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                         ),
 
   CONFIG_VALUE_SPECIAL           ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntryPattern,NULL,NULL,NULL,&jobOptions.patternType),
-//  CONFIG_VALUE_SPECIAL           ("include-file-command",         &includeEntryList,-1,                                          configValueParseFileEntryPatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_CSTRING           ("include-file-command",         &includeFileCommand,-1                                         ),
   CONFIG_VALUE_SPECIAL           ("include-image",                &includeEntryList,-1,                                          configValueParseImageEntryPattern,NULL,NULL,NULL,&jobOptions.patternType),
-//  CONFIG_VALUE_SPECIAL           ("include-image-command",        &includeEntryList,-1,                                          configValueParseImageEntryPatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_CSTRING           ("include-image-command",        &includeImageCommand,-1                                        ),
   CONFIG_VALUE_SPECIAL           ("exclude",                      &excludePatternList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
-//  CONFIG_VALUE_SPECIAL           ("exclude-command",              &excludePatternList,-1,                                        configValueParsePatternCommand,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_CSTRING           ("exclude-command",              &excludeCommand,-1                                             ),
   CONFIG_VALUE_SPECIAL           ("mount",                        &mountList,-1,                                                 configValueParseMount,NULL,NULL,NULL,NULL),
 
@@ -2031,7 +2028,9 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
                             );
   if (error != ERROR_NONE)
   {
-    printWarning("Execute command for '%s' failed: %s\n",name,Error_getText(error));
+    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
+    String_delete(script);
+    return FALSE;
   }
 
   // free resources
@@ -2050,44 +2049,6 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
 \***********************************************************************/
 
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
-{
-  PatternTypes patternType;
-  Errors       error;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(defaultValue);
-
-  // detect pattern type, get pattern
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
-
-  // append to list
-  error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
-  if (error != ERROR_NONE)
-  {
-    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : cmdOptionParsePatternCommand
-* Purpose: command line option call back for parsing patterns command
-* Input  : -
-* Output : -
-* Return : TRUE iff parsed, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool cmdOptionParsePatternCommand(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes patternType;
   Errors       error;
@@ -6047,105 +6008,6 @@ bool configValueFormatImageEntryPattern(void **formatUserData, void *userData, S
   }
 }
 
-LOCAL bool configValueParseEntryPatternCommand(EntryTypes entryType, void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  String     script;
-//  TextMacro textMacros[5];
-  Errors error;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // init variables
-  script = String_new();
-
-  // expand template
-//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType),     TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType),".");
-//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
-  Misc_expandMacros(script,
-                    value,
-                    EXPAND_MACRO_MODE_STRING,
-NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
-                    TRUE
-                   );
-
-  // execute script and collect output
-  error = Misc_executeScript(String_cString(script),
-                             CALLBACK_INLINE(void,(ConstString line, void *userData),
-                             {
-                               UNUSED_VARIABLE(userData);
-
-                               EntryList_append((EntryList*)variable,entryType,line,PATTERN_TYPE_GLOB,NULL);
-                             },NULL),
-                             CALLBACK(NULL,NULL)
-                            );
-  if (error != ERROR_NONE)
-  {
-    printWarning("Execute command for '%s' failed: %s\n",name,Error_getText(error));
-  }
-
-  // free resources
-  String_delete(script);
-
-  return TRUE;
-}
-
-bool configValueParseFileEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  return configValueParseEntryPatternCommand(ENTRY_TYPE_FILE,userData,variable,name,value,errorMessage,errorMessageSize);
-}
-
-bool configValueParseImageEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  return configValueParseEntryPatternCommand(ENTRY_TYPE_IMAGE,userData,variable,name,value,errorMessage,errorMessageSize);
-}
-
-void configValueFormatInitEntryPatternCommand(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
-  (*formatUserData) = ((String)variable);
-}
-
-void configValueFormatDoneEntryPatternCommand(void **formatUserData, void *userData)
-{
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatEntryPatternCommand(void **formatUserData, void *userData, String line)
-{
-  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
-  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
-
-  String command;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
-  command = String_mapCString(String_duplicate((String)(*formatUserData)),
-                              STRING_BEGIN,
-                              FILENAME_MAP_FROM,
-                              FILENAME_MAP_TO,
-                              SIZE_OF_ARRAY(FILENAME_MAP_FROM)
-                             );
-  String_format(line,"%'S",command);
-
-  return TRUE;
-}
-
 bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes patternType;
@@ -6190,81 +6052,6 @@ void configValueFormatDonePattern(void **formatUserData, void *userData)
 }
 
 bool configValueFormatPattern(void **formatUserData, void *userData, String line)
-{
-  PatternNode *patternNode;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  patternNode = (PatternNode*)(*formatUserData);
-  if (patternNode != NULL)
-  {
-    switch (patternNode->pattern.type)
-    {
-      case PATTERN_TYPE_GLOB:
-        String_format(line,"%'S",patternNode->string);
-        break;
-      case PATTERN_TYPE_REGEX:
-        String_format(line,"r:%'S",patternNode->string);
-        break;
-      case PATTERN_TYPE_EXTENDED_REGEX:
-        String_format(line,"x:%'S",patternNode->string);
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-
-    (*formatUserData) = patternNode->next;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-bool configValueParsePatternCommand(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  Errors error;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // append to list
-  error = PatternList_appendCString((PatternList*)variable,value,PATTERN_TYPE_GLOB,NULL);
-  if (error != ERROR_NONE)
-  {
-    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-void configValueFormatInitPatternCommand(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = ((String)variable);
-}
-
-void configValueFormatDonePatternCommand(void **formatUserData, void *userData)
-{
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatPatternCommand(void **formatUserData, void *userData, String line)
 {
   PatternNode *patternNode;
 
@@ -6839,6 +6626,100 @@ Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patt
   return error;
 }
 
+Errors addIncludeListCommand(EntryTypes entryType, EntryList *entryList, const char *template)
+{
+  String     script;
+//  TextMacro textMacros[5];
+  Errors error;
+
+  assert(entryList != NULL);
+  assert(template != NULL);
+
+  // init variables
+  script = String_new();
+
+  // expand template
+//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType),     TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType),".");
+//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
+  Misc_expandMacros(script,
+                    template,
+                    EXPAND_MACRO_MODE_STRING,
+NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
+                    TRUE
+                   );
+
+  // execute script and collect output
+  error = Misc_executeScript(String_cString(script),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             {
+                               UNUSED_VARIABLE(userData);
+
+                               EntryList_append(entryList,entryType,line,PATTERN_TYPE_GLOB,NULL);
+                             },NULL),
+                             CALLBACK(NULL,NULL)
+                            );
+  if (error != ERROR_NONE)
+  {
+    printWarning("Execute command for '%s' failed: %s\n",template,Error_getText(error));
+    String_delete(script);
+    return error;
+  }
+
+  // free resources
+  String_delete(script);
+
+  return ERROR_NONE;
+}
+
+Errors addExcludeListCommand(PatternList *patternList, const char *template)
+{
+  String     script;
+//  TextMacro textMacros[5];
+  Errors error;
+
+  assert(patternList != NULL);
+  assert(template != NULL);
+
+  // init variables
+  script = String_new();
+
+  // expand template
+//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType),     TEXT_MACRO_PATTERN_STRING);
+//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType),".");
+//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
+  Misc_expandMacros(script,
+                    template,
+                    EXPAND_MACRO_MODE_STRING,
+NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
+                    TRUE
+                   );
+
+  // execute script and collect output
+  error = Misc_executeScript(String_cString(script),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             {
+                               UNUSED_VARIABLE(userData);
+
+                               PatternList_append(patternList,line,PATTERN_TYPE_GLOB,NULL);
+                             },NULL),
+                             CALLBACK(NULL,NULL)
+                            );
+  if (error != ERROR_NONE)
+  {
+    printWarning("Execute command for '%s' failed: %s\n",template,Error_getText(error));
+    String_delete(script);
+    return error;
+  }
+
+  // free resources
+  String_delete(script);
+
+  return ERROR_NONE;
+}
+
 bool isIncluded(const EntryNode *includeEntryNode,
                 ConstString     name
                )
@@ -7219,6 +7100,32 @@ LOCAL Errors runJob(void)
 {
   Errors error;
 
+  // get include/excluded entries from commands
+  if (includeFileCommand != NULL)
+  {
+    error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,includeFileCommand);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (includeImageCommand != NULL)
+  {
+    error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,includeImageCommand);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (excludeCommand != NULL)
+  {
+    error = addExcludeListCommand(&excludePatternList,excludeCommand);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
   // start job execution
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
@@ -7264,6 +7171,32 @@ LOCAL Errors runJob(void)
 LOCAL Errors runInteractive(int argc, const char *argv[])
 {
   Errors error;
+
+  // get include/excluded entries from commands
+  if (includeFileCommand != NULL)
+  {
+    error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,includeFileCommand);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (includeImageCommand != NULL)
+  {
+    error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,includeImageCommand);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  if (excludeCommand != NULL)
+  {
+    error = addExcludeListCommand(&excludePatternList,excludeCommand);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
 
   // interactive mode
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
