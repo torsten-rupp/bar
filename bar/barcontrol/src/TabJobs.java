@@ -3519,7 +3519,7 @@ Dprintf.dprintf("");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                testScript(includeImageCommand.getString());
+                testScript(includeFileCommand.getString());
               }
             });
           }
