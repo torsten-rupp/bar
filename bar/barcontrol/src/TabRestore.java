@@ -1714,9 +1714,12 @@ assert storagePattern != null;
         {
           for (TreeItem treeItem : removeUUIDTreeItemSet)
           {
-            IndexData indexData = (IndexData)treeItem.getData();
-            Widgets.removeTreeItem(widgetStorageTree,treeItem);
-            indexData.clearTreeItem();
+            if (!treeItem.isDisposed())
+            {
+              IndexData indexData = (IndexData)treeItem.getData();
+              Widgets.removeTreeItem(widgetStorageTree,treeItem);
+              indexData.clearTreeItem();
+            }
           }
         }
       });
@@ -2741,6 +2744,7 @@ assert storagePattern != null;
 
     private int     entryMaxCount      = 100;
     private String  entryPattern       = "";
+    private String  type               = "*";
     private boolean newestEntriesOnly  = false;
 
     /** create update entry list thread
@@ -2826,19 +2830,22 @@ assert storagePattern != null;
 
     /** trigger update of entry list
      * @param entryPattern new entry pattern or null
+     * @param type type or *
      * @param newestEntriesOnly flag for newest entries only or null
      * @param entryMaxCount max. entries in list or null
      */
-    public void triggerUpdate(String entryPattern, boolean newestEntriesOnly, int entryMaxCount)
+    public void triggerUpdate(String entryPattern, String type, boolean newestEntriesOnly, int entryMaxCount)
     {
       synchronized(trigger)
       {
         if (   (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
+            || (this.type == null) || (type == null) || !this.type.equals(type)
             || (this.newestEntriesOnly != newestEntriesOnly)
             || (this.entryMaxCount != entryMaxCount)
            )
         {
           this.entryPattern       = entryPattern;
+          this.type               = type;
           this.newestEntriesOnly  = newestEntriesOnly;
           this.entryMaxCount      = entryMaxCount;
 
@@ -2857,7 +2864,7 @@ assert storagePattern != null;
 
       synchronized(trigger)
       {
-        if (!this.entryPattern.equals(entryPattern))
+        if ((this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern))
         {
           this.entryPattern = entryPattern;
 
@@ -2866,6 +2873,26 @@ assert storagePattern != null;
         }
       }
     }
+
+    /** trigger update of entry list
+     * @param type type
+     */
+    public void triggerUpdateEntryType(String type)
+    {
+      assert type != null;
+
+      synchronized(trigger)
+      {
+        if ((this.type == null) || (type == null) || !this.type.equals(type))
+        {
+          this.type = type;
+
+          triggeredFlag = true;
+          trigger.notify();
+        }
+      }
+    }
+
 
     /** trigger update of entry list
      * @param newestEntriesOnly flag for newest entries only or null
@@ -2938,10 +2965,11 @@ assert storagePattern != null;
 
       // update table
       assert entryPattern != null;
-      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S entryMaxCount=%d newestEntriesOnly=%y",
+      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S type='%S newestEntriesOnly=%y entryMaxCount=%d",
                                                                  entryPattern,
-                                                                 entryMaxCount,
-                                                                 newestEntriesOnly
+                                                                 type,
+                                                                 newestEntriesOnly,
+                                                                 entryMaxCount
                                                                 ),
                                              0
                                             );
@@ -4241,7 +4269,7 @@ Dprintf.dprintf("");
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore"));
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore")+"\u2026");
         Widgets.addEventListener(new WidgetEventListener(menuItem,checkedStorageEvent)
         {
           public void trigger(MenuItem menuItem)
@@ -4457,7 +4485,7 @@ Dprintf.dprintf("");
         });
         updateStorageThread.triggerUpdateStorageMaxCount(100);
 
-        button = Widgets.newButton(composite,BARControl.tr("Restore"));
+        button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
         Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
@@ -4652,7 +4680,7 @@ Dprintf.dprintf("");
 
         Widgets.addMenuSeparator(menu);
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore"));
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore")+"\u2026");
         menuItem.setEnabled(false);
         Widgets.addEventListener(new WidgetEventListener(menuItem,checkedEntryEvent)
         {
@@ -4696,7 +4724,7 @@ Dprintf.dprintf("");
 
       // entry list filters
       composite = Widgets.newComposite(group);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0}));
+      composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(composite,2,0,TableLayoutData.WE);
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
@@ -4785,9 +4813,28 @@ Dprintf.dprintf("");
           }
         });
 
-        button = Widgets.newCheckbox(composite,BARControl.tr("newest entries only"));
+        combo = Widgets.newOptionMenu(composite);
+        combo.setToolTipText(BARControl.tr("Entry type."));
+        combo.setItems(new String[]{"*","files","directories","links","hardlinks","special"});
+        combo.setText("*"); if (button.getText().equals("")) button.setText("*");
+        Widgets.layout(combo,0,3,TableLayoutData.W);
+        combo.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Combo widget = (Combo)selectionEvent.widget;
+            String type = widget.getText();
+Dprintf.dprintf("");
+//            updateEntryListThread.triggerUpdateNewestEntriesOnly(newestEntriesOnly);
+          }
+        });
+
+        button = Widgets.newCheckbox(composite,BARControl.tr("newest only"));
         button.setToolTipText(BARControl.tr("When this checkbox is enabled, only show newest entry instances and hide all older entry instances."));
-        Widgets.layout(button,0,3,TableLayoutData.W);
+        Widgets.layout(button,0,4,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4802,13 +4849,13 @@ Dprintf.dprintf("");
         });
 
         label = Widgets.newLabel(composite,BARControl.tr("Max")+":");
-        Widgets.layout(label,0,4,TableLayoutData.W);
+        Widgets.layout(label,0,5,TableLayoutData.W);
 
         combo = Widgets.newOptionMenu(composite);
         combo.setToolTipText(BARControl.tr("Max. number of entries in list."));
         combo.setItems(new String[]{"10","50","100","500","1000"});
         combo.setText("100");
-        Widgets.layout(combo,0,5,TableLayoutData.W);
+        Widgets.layout(combo,0,6,TableLayoutData.W);
         combo.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4830,10 +4877,10 @@ Dprintf.dprintf("");
         });
         updateEntryListThread.triggerUpdateEntryMaxCount(100);
 
-        button = Widgets.newButton(composite,BARControl.tr("Restore"));
+        button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
-        Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
+        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           public void trigger(Control control)
