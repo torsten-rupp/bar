@@ -14744,9 +14744,10 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            entryMaxCount=<n>|0
-*            isNewestEntriesOnly=0|1
 *            entryPattern=<text>
+*            type=<text>
+*            isNewestEntriesOnly=0|1
+*            entryMaxCount=<n>|0
 *          Result:
 *            entryType=FILE entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
@@ -15082,8 +15083,9 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   }
 
   String           entryPatternString;
-  uint             entryMaxCount;
+  String           type;
   bool             newestEntriesOnly;
+  uint             entryMaxCount;
   uint             entryCount;
   IndexList        indexList;
   IndexNode        *indexNode;
@@ -15109,6 +15111,8 @@ uint64 t[100];
   assert(argumentMap != NULL);
 
   // entry pattern, get max. count, new entries only
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
   entryPatternString = String_new();
   if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
   {
@@ -15116,15 +15120,25 @@ uint64 t[100];
     String_delete(entryPatternString);
     return;
   }
-  if (!StringMap_getUInt(argumentMap,"entryMaxCount",&entryMaxCount,0))
+  type = String_new();
+  if (!StringMap_getString(argumentMap,"type",type,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryMaxCount=<n>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=<text>");
+    String_delete(type);
     String_delete(entryPatternString);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestEntriesOnly",&newestEntriesOnly,FALSE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestEntriesOnly=yes|no");
+    String_delete(type);
+    String_delete(entryPatternString);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"entryMaxCount",&entryMaxCount,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryMaxCount=<n>");
+    String_delete(type);
     String_delete(entryPatternString);
     return;
   }
@@ -15133,6 +15147,7 @@ uint64 t[100];
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(type);
     String_delete(entryPatternString);
     return;
   }
@@ -15178,6 +15193,7 @@ t[0] = Misc_getTimestamp();
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(type);
       String_delete(entryPatternString);
       return;
     }
@@ -15265,6 +15281,7 @@ t[1] = Misc_getTimestamp();
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(type);
       String_delete(entryPatternString);
       return;
     }
@@ -15347,6 +15364,7 @@ t[2] = Misc_getTimestamp();
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(type);
       String_delete(entryPatternString);
       return;
     }
@@ -15428,6 +15446,7 @@ t[3] = Misc_getTimestamp();
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(type);
       String_delete(entryPatternString);
       return;
     }
@@ -15513,6 +15532,7 @@ t[4] = Misc_getTimestamp();
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(type);
       String_delete(entryPatternString);
       return;
     }
@@ -15602,6 +15622,7 @@ t[5] = Misc_getTimestamp();
       String_delete(storageName);
       String_delete(regexpString);
       List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+      String_delete(type);
       String_delete(entryPatternString);
       return;
     }
@@ -15763,6 +15784,7 @@ t[6]-t[5]
   String_delete(storageName);
   String_delete(regexpString);
   List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+  String_delete(type);
   String_delete(entryPatternString);
 }
 
