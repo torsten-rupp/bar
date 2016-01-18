@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-17 18:06+0100\n"
+"POT-Creation-Date: 2016-01-18 12:37+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -53,8 +53,8 @@ msgstr "サーバ"
 
 #: src/BARControl.java:1387 src/Dialogs.java:2560 src/ServerSettings.java:537
 #: src/ServerSettings.java:2371 src/TabJobs.java:5939 src/TabRestore.java:6651
-#: src/TabRestore.java:7241 src/TabRestore.java:7275 src/TabRestore.java:7309
-#: src/TabRestore.java:7343
+#: src/TabRestore.java:7246 src/TabRestore.java:7280 src/TabRestore.java:7314
+#: src/TabRestore.java:7348
 msgid "Password"
 msgstr "パスワード"
 
@@ -71,7 +71,7 @@ msgstr "ログイン"
 #: src/TabJobs.java:8087 src/TabJobs.java:8200 src/TabJobs.java:8325
 #: src/TabJobs.java:9649 src/TabJobs.java:9974 src/TabJobs.java:10315
 #: src/TabJobs.java:10748 src/TabJobs.java:11949 src/TabJobs.java:12529
-#: src/TabRestore.java:5876 src/TabRestore.java:6521 src/TabRestore.java:7097
+#: src/TabRestore.java:5876 src/TabRestore.java:6521 src/TabRestore.java:7102
 #: src/TabStatus.java:1847 src/TabStatus.java:2047
 msgid "Cancel"
 msgstr "キャンセル"
@@ -95,7 +95,7 @@ msgid "Start"
 msgstr "スタート"
 
 #: src/BARControl.java:1662 src/BusyDialog.java:263 src/Dialogs.java:153
-#: src/TabRestore.java:6292 src/TabRestore.java:6693 src/TabRestore.java:7386
+#: src/TabRestore.java:6292 src/TabRestore.java:6693 src/TabRestore.java:7391
 #: src/TabStatus.java:738 src/TabStatus.java:1337 src/TabStatus.java:1932
 msgid "Abort"
 msgstr "中止"
@@ -206,7 +206,7 @@ msgstr ""
 #: src/TabJobs.java:9567 src/TabJobs.java:9578 src/TabJobs.java:10276
 #: src/TabJobs.java:10284 src/TabJobs.java:10720 src/TabJobs.java:10728
 #: src/TabRestore.java:4978 src/TabRestore.java:4986 src/TabRestore.java:6486
-#: src/TabRestore.java:6494 src/TabRestore.java:7062 src/TabRestore.java:7070
+#: src/TabRestore.java:6494 src/TabRestore.java:7067 src/TabRestore.java:7075
 msgid "Select path"
 msgstr "パスを選択"
 
@@ -254,7 +254,7 @@ msgid "No"
 msgstr "いいえ"
 
 #: src/Dialogs.java:2056 src/TabRestore.java:6290 src/TabRestore.java:6689
-#: src/TabRestore.java:7380 src/TabStatus.java:1840
+#: src/TabRestore.java:7385 src/TabStatus.java:1840
 msgid "Confirmation"
 msgstr "確定"
 
@@ -2874,11 +2874,11 @@ msgstr ""
 msgid "Start restoring selected entries."
 msgstr "選択エントリ復元開始。"
 
-#: src/TabRestore.java:4914 src/TabRestore.java:6422 src/TabRestore.java:6998
+#: src/TabRestore.java:4914 src/TabRestore.java:6422 src/TabRestore.java:7003
 msgid "to"
 msgstr "先"
 
-#: src/TabRestore.java:4915 src/TabRestore.java:6423 src/TabRestore.java:6999
+#: src/TabRestore.java:4915 src/TabRestore.java:6423 src/TabRestore.java:7004
 msgid ""
 "Enable this checkbox and select a directory to restore entries to different "
 "location."
@@ -2890,7 +2890,7 @@ msgstr ""
 msgid "overwrite existing entries"
 msgstr "現存エントリの上書き"
 
-#: src/TabRestore.java:5000 src/TabRestore.java:6509 src/TabRestore.java:7085
+#: src/TabRestore.java:5000 src/TabRestore.java:6509 src/TabRestore.java:7090
 msgid ""
 "Enable this checkbox when existing entries in destination should be "
 "overwritten."
@@ -3131,7 +3131,7 @@ msgstr ""
 msgid "Restore archives"
 msgstr "復元作業"
 
-#: src/TabRestore.java:6410 src/TabRestore.java:6986
+#: src/TabRestore.java:6410 src/TabRestore.java:6991
 #, fuzzy, java-format
 msgid ""
 "Restore {0} {0,choice,0#entries|1#entry|1<entries} with {1} ({2} "
@@ -3139,12 +3139,12 @@ msgid ""
 msgstr ""
 "{0}{0,choice,0#entries|1#entry|1<entries}のインデックスを更新しますか？"
 
-#: src/TabRestore.java:6508 src/TabRestore.java:7084
+#: src/TabRestore.java:6508 src/TabRestore.java:7089
 #, fuzzy
 msgid "Overwrite existing entries"
 msgstr "現存エントリの上書き"
 
-#: src/TabRestore.java:6518 src/TabRestore.java:7094
+#: src/TabRestore.java:6518 src/TabRestore.java:7099
 #, fuzzy
 msgid "Start restore"
 msgstr "復元"
@@ -3154,12 +3154,12 @@ msgstr "復元"
 msgid "Restore archives to: {0}"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:6566 src/TabRestore.java:7142
+#: src/TabRestore.java:6566 src/TabRestore.java:7147
 #, fuzzy
 msgid "Failed entries:"
 msgstr "エントリ合計"
 
-#: src/TabRestore.java:6650 src/TabRestore.java:7341
+#: src/TabRestore.java:6650 src/TabRestore.java:7346
 msgid "Decrypt password"
 msgstr "復号化パスワード"
 
@@ -3176,17 +3176,17 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:6693 src/TabRestore.java:7386
+#: src/TabRestore.java:6693 src/TabRestore.java:7391
 #, fuzzy
 msgid "Skip"
 msgstr "スキップ"
 
-#: src/TabRestore.java:6693 src/TabRestore.java:7386
+#: src/TabRestore.java:6693 src/TabRestore.java:7391
 #, fuzzy
 msgid "Skip all"
 msgstr "すべてマークアップする"
 
-#: src/TabRestore.java:6714 src/TabRestore.java:7407
+#: src/TabRestore.java:6714 src/TabRestore.java:7412
 #, fuzzy
 msgid "Aborting"
 msgstr "中止"
@@ -3202,49 +3202,49 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabRestore.java:6975 src/TabRestore.java:7136
+#: src/TabRestore.java:6980 src/TabRestore.java:7141
 #, fuzzy
 msgid "Restore entries"
 msgstr "復元作業"
 
-#: src/TabRestore.java:7136
+#: src/TabRestore.java:7141
 #, fuzzy, java-format
 msgid "Restore entries to: {0}"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:7239
+#: src/TabRestore.java:7244
 msgid "FTP login password"
 msgstr "FTPログインパスワード"
 
-#: src/TabRestore.java:7240
+#: src/TabRestore.java:7245
 #, java-format
 msgid "Please enter FTP login password for: {0}."
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/TabRestore.java:7273
+#: src/TabRestore.java:7278
 msgid "SSH (TLS) login password"
 msgstr "SSH (TLS)ログインパスワード"
 
-#: src/TabRestore.java:7274
+#: src/TabRestore.java:7279
 #, java-format
 msgid "Please enter SSH (TLS) login password for: {0}."
 msgstr "次の項目のSSH (TLS)ログインパスワードを入力してください: {0}。"
 
-#: src/TabRestore.java:7307
+#: src/TabRestore.java:7312
 msgid "Webdav login password"
 msgstr "WebDAVログインパスワード"
 
-#: src/TabRestore.java:7308
+#: src/TabRestore.java:7313
 #, java-format
 msgid "Please enter Webdav login password for: {0}."
 msgstr "次の項目のWebDAVログインパスワードを入力してください: {0}。"
 
-#: src/TabRestore.java:7342
+#: src/TabRestore.java:7347
 #, java-format
 msgid "Please enter decrypt password for: {0}."
 msgstr "次の項目の復号化パスワードを入力してください: {0}。"
 
-#: src/TabRestore.java:7381
+#: src/TabRestore.java:7386
 #, java-format
 msgid ""
 "Cannot restore entry\n"
@@ -3267,7 +3267,7 @@ msgstr ""
 "\n"
 "から復元できません(エラー: {2})"
 
-#: src/TabRestore.java:7441
+#: src/TabRestore.java:7446
 #, java-format
 msgid ""
 "Error while restoring entries:\n"

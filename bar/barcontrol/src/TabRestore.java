@@ -2470,7 +2470,9 @@ assert storagePattern != null;
     HARDLINK,
     SPECIAL,
     DEVICE,
-    SOCKET
+    SOCKET,
+
+    ANY
   };
 
   /** entry restore states
@@ -2742,10 +2744,10 @@ assert storagePattern != null;
     private Object  trigger            = new Object();   // trigger update object
     private boolean triggeredFlag      = false;
 
-    private int     entryMaxCount      = 100;
-    private String  entryPattern       = "";
-    private String  type               = "*";
-    private boolean newestEntriesOnly  = false;
+    private int        entryMaxCount      = 100;
+    private String     entryPattern       = "";
+    private EntryTypes entryType          = EntryTypes.ANY;
+    private boolean    newestEntriesOnly  = false;
 
     /** create update entry list thread
      */
@@ -2839,13 +2841,13 @@ assert storagePattern != null;
       synchronized(trigger)
       {
         if (   (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
-            || (this.type == null) || (type == null) || !this.type.equals(type)
+            || (entryType != this.entryType)
             || (this.newestEntriesOnly != newestEntriesOnly)
             || (this.entryMaxCount != entryMaxCount)
            )
         {
           this.entryPattern       = entryPattern;
-          this.type               = type;
+          this.entryType          = entryType;
           this.newestEntriesOnly  = newestEntriesOnly;
           this.entryMaxCount      = entryMaxCount;
 
@@ -2875,17 +2877,15 @@ assert storagePattern != null;
     }
 
     /** trigger update of entry list
-     * @param type type
+     * @param entryType entry type
      */
-    public void triggerUpdateEntryType(String type)
+    public void triggerUpdateEntryType(EntryTypes entryType)
     {
-      assert type != null;
-
       synchronized(trigger)
       {
-        if ((this.type == null) || (type == null) || !this.type.equals(type))
+        if (entryType != this.entryType)
         {
-          this.type = type;
+          this.entryType = entryType;
 
           triggeredFlag = true;
           trigger.notify();
@@ -2965,9 +2965,9 @@ assert storagePattern != null;
 
       // update table
       assert entryPattern != null;
-      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S type='%S newestEntriesOnly=%y entryMaxCount=%d",
+      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S archiveEntryType=%s newestEntriesOnly=%y entryMaxCount=%d",
                                                                  entryPattern,
-                                                                 type,
+                                                                 entryType,
                                                                  newestEntriesOnly,
                                                                  entryMaxCount
                                                                 ),
@@ -4828,7 +4828,7 @@ Dprintf.dprintf("");
             Combo widget = (Combo)selectionEvent.widget;
             String type = widget.getText();
 Dprintf.dprintf("");
-//            updateEntryListThread.triggerUpdateNewestEntriesOnly(newestEntriesOnly);
+//            updateEntryListThread.triggerUpdateEntryType(newestEntriesOnly);
           }
         });
 
@@ -6769,7 +6769,12 @@ boolean overwriteFiles = false;
       EntryData entryData = (EntryData)tableItem.getData();
       if (entryData.isChecked())
       {
-        BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD archiveEntryType=%s entryId=%d",entryData.entryType,entryData.databaseId),0);
+        BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD archiveEntryType=%s entryId=%d",
+                                                     entryData.entryType,
+                                                     entryData.databaseId
+                                                    ),
+                                 0
+                                );
       }
     }
   }
