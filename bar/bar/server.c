@@ -15086,7 +15086,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   bool              archiveEntryTypeAny;
   ArchiveEntryTypes archiveEntryType;
   bool              newestEntriesOnly;
-  uint              entryMaxCount;
+  ulong             entryCountOffset;
+  uint              entryCountLimit;
   uint              entryCount;
   IndexList         indexList;
   IndexNode         *indexNode;
@@ -15139,9 +15140,15 @@ uint64 t[100];
     String_delete(entryPatternString);
     return;
   }
-  if (!StringMap_getUInt(argumentMap,"entryMaxCount",&entryMaxCount,0))
+  if (!StringMap_getULong(argumentMap,"entryCountOffset",&entryCountOffset,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryMaxCount=<n>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryCountOffset=<n>");
+    String_delete(entryPatternString);
+    return;
+  }
+  if (!StringMap_getULong(argumentMap,"entryCountLimit",&entryCountLimit,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryCountLimit=<n>");
     String_delete(entryPatternString);
     return;
   }
@@ -15164,7 +15171,7 @@ uint64 t[100];
   // collect index data
 memset(t,0,sizeof(t));
 t[0] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_FILE)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_FILE)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15198,7 +15205,7 @@ t[0] = Misc_getTimestamp();
       String_delete(entryPatternString);
       return;
     }
-    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextFile(&indexQueryHandle,
                                 &databaseId,
@@ -15251,7 +15258,7 @@ t[0] = Misc_getTimestamp();
   }
 
 t[1] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_IMAGE)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_IMAGE)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15285,7 +15292,7 @@ t[1] = Misc_getTimestamp();
       String_delete(entryPatternString);
       return;
     }
-    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextImage(&indexQueryHandle,
                                  &databaseId,
@@ -15333,7 +15340,7 @@ t[1] = Misc_getTimestamp();
   }
 
 t[2] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_DIRECTORY)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_DIRECTORY)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15367,7 +15374,7 @@ t[2] = Misc_getTimestamp();
       String_delete(entryPatternString);
       return;
     }
-    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextDirectory(&indexQueryHandle,
                                      &databaseId,
@@ -15414,7 +15421,7 @@ t[2] = Misc_getTimestamp();
   }
 
 t[3] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_LINK)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_LINK)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15449,7 +15456,7 @@ t[3] = Misc_getTimestamp();
       return;
     }
     destinationName = String_new();
-    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextLink(&indexQueryHandle,
                                 &databaseId,
@@ -15499,7 +15506,7 @@ t[3] = Misc_getTimestamp();
   }
 
 t[4] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_HARDLINK)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_HARDLINK)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15534,7 +15541,7 @@ t[4] = Misc_getTimestamp();
       return;
     }
     destinationName = String_new();
-    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextHardLink(&indexQueryHandle,
                                     &databaseId,
@@ -15588,7 +15595,7 @@ t[4] = Misc_getTimestamp();
   }
 
 t[5] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_SPECIAL)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_SPECIAL)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15622,7 +15629,7 @@ t[5] = Misc_getTimestamp();
       String_delete(entryPatternString);
       return;
     }
-    while (   ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextSpecial(&indexQueryHandle,
                                    &databaseId,
