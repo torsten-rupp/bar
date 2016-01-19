@@ -2472,7 +2472,24 @@ assert storagePattern != null;
     DEVICE,
     SOCKET,
 
-    ANY
+    ANY;
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      switch (this)
+      {
+        case FILE:      return "FILE";
+        case IMAGE:     return "IMAGE";
+        case DIRECTORY: return "DIRECTORY";
+        case LINK:      return "LINK";
+        case HARDLINK:  return "HARDLINK";
+        case SPECIAL:   return "SPECIAL";
+        default:        return "*";
+      }
+    }
   };
 
   /** entry restore states
@@ -2967,7 +2984,7 @@ assert storagePattern != null;
       assert entryPattern != null;
       Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S archiveEntryType=%s newestEntriesOnly=%y entryMaxCount=%d",
                                                                  entryPattern,
-                                                                 entryType,
+                                                                 entryType.toString(),
                                                                  newestEntriesOnly,
                                                                  entryMaxCount
                                                                 ),
@@ -4816,7 +4833,16 @@ Dprintf.dprintf("");
         combo = Widgets.newOptionMenu(composite);
         combo.setToolTipText(BARControl.tr("Entry type."));
         combo.setItems(new String[]{"*","files","directories","links","hardlinks","special"});
-        combo.setText("*"); if (button.getText().equals("")) button.setText("*");
+        Widgets.setOptionMenuItems(combo,new Object[]{"*",          EntryTypes.ANY,
+                                                      "files",      EntryTypes.FILE,
+                                                      "images",     EntryTypes.IMAGE,
+                                                      "directories",EntryTypes.DIRECTORY,
+                                                      "links",      EntryTypes.LINK,
+                                                      "hardlinks",  EntryTypes.HARDLINK,
+                                                      "special",    EntryTypes.SPECIAL
+                                                     }
+                                  );
+        Widgets.setSelectedOptionMenuItem(combo,EntryTypes.ANY);
         Widgets.layout(combo,0,3,TableLayoutData.W);
         combo.addSelectionListener(new SelectionListener()
         {
@@ -4825,10 +4851,9 @@ Dprintf.dprintf("");
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            Combo widget = (Combo)selectionEvent.widget;
-            String type = widget.getText();
-Dprintf.dprintf("");
-//            updateEntryListThread.triggerUpdateEntryType(newestEntriesOnly);
+            Combo      widget    = (Combo)selectionEvent.widget;
+            EntryTypes entryType = Widgets.getSelectedOptionMenuItem(widget,EntryTypes.ANY);
+            updateEntryListThread.triggerUpdateEntryType(entryType);
           }
         });
 

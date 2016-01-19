@@ -15083,6 +15083,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   }
 
   String            entryPatternString;
+  bool              archiveEntryTypeAny;
   ArchiveEntryTypes archiveEntryType;
   bool              newestEntriesOnly;
   uint              entryMaxCount;
@@ -15118,11 +15119,17 @@ uint64 t[100];
     String_delete(entryPatternString);
     return;
   }
-//  type = String_new();
-  if (!StringMap_getEnum(argumentMap,"archiveEntryType",&archiveEntryType,(StringMapParseEnumFunction)Archive_parseArchiveEntryType,ARCHIVE_ENTRY_TYPE_UNKNOWN))
-//  if (!StringMap_getString(argumentMap,"type",type,NULL))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"archiveEntryType","*"),"*"))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=<text>");
+    archiveEntryTypeAny = TRUE;
+  }
+  else if (StringMap_getEnum(argumentMap,"archiveEntryType",&archiveEntryType,(StringMapParseEnumFunction)Archive_parseArchiveEntryType,ARCHIVE_ENTRY_TYPE_UNKNOWN))
+  {
+    archiveEntryTypeAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveEntryType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
     String_delete(entryPatternString);
     return;
   }
@@ -15157,7 +15164,7 @@ uint64 t[100];
   // collect index data
 memset(t,0,sizeof(t));
 t[0] = Misc_getTimestamp();
-  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_FILE)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15244,7 +15251,7 @@ t[0] = Misc_getTimestamp();
   }
 
 t[1] = Misc_getTimestamp();
-  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_IMAGE)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15326,7 +15333,7 @@ t[1] = Misc_getTimestamp();
   }
 
 t[2] = Misc_getTimestamp();
-  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_DIRECTORY)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15407,7 +15414,7 @@ t[2] = Misc_getTimestamp();
   }
 
 t[3] = Misc_getTimestamp();
-  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_LINK)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15492,7 +15499,7 @@ t[3] = Misc_getTimestamp();
   }
 
 t[4] = Misc_getTimestamp();
-  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_HARDLINK)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15581,7 +15588,7 @@ t[4] = Misc_getTimestamp();
   }
 
 t[5] = Misc_getTimestamp();
-  if ((entryMaxCount == 0) || (entryCount < entryMaxCount))
+  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_SPECIAL)) && ((entryMaxCount == 0) || (entryCount < entryMaxCount)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
