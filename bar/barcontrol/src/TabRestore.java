@@ -95,6 +95,7 @@ abstract class BackgroundTask
 
     thread = new Thread(new Runnable()
     {
+      @Override
       public void run()
       {
         backgroundTask.run(busyDialog,userData);
@@ -2982,10 +2983,11 @@ assert storagePattern != null;
 
       // update table
       assert entryPattern != null;
-      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S archiveEntryType=%s newestEntriesOnly=%y entryMaxCount=%d",
+      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S archiveEntryType=%s newestEntriesOnly=%y entryCountOffset=%d entryCountLimit=%d",
                                                                  entryPattern,
                                                                  entryType.toString(),
                                                                  newestEntriesOnly,
+                                                                 0, // entryCountOffset
                                                                  entryMaxCount
                                                                 ),
                                              0
@@ -3833,6 +3835,7 @@ assert storagePattern != null;
       });
       widgetStorageTree.addListener(SWT.Expand,new Listener()
       {
+        @Override
         public void handleEvent(final Event event)
         {
           TreeItem treeItem = (TreeItem)event.item;
@@ -3843,6 +3846,7 @@ assert storagePattern != null;
       });
       widgetStorageTree.addListener(SWT.Collapse,new Listener()
       {
+        @Override
         public void handleEvent(final Event event)
         {
           final TreeItem treeItem = (TreeItem)event.item;
@@ -3853,6 +3857,7 @@ assert storagePattern != null;
       });
       widgetStorageTree.addListener(SWT.MouseDoubleClick,new Listener()
       {
+        @Override
         public void handleEvent(final Event event)
         {
           TreeItem treeItem = widgetStorageTree.getItem(new Point(event.x,event.y));
@@ -3887,9 +3892,11 @@ assert storagePattern != null;
       });
       widgetStorageTree.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TreeItem treeItem = (TreeItem)selectionEvent.item;
@@ -3946,10 +3953,11 @@ assert storagePattern != null;
       });
       widgetStorageTree.addMouseTrackListener(new MouseTrackListener()
       {
+        @Override
         public void mouseEnter(MouseEvent mouseEvent)
         {
         }
-
+        @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
           if (widgetStorageTreeToolTip != null)
@@ -3996,9 +4004,11 @@ assert storagePattern != null;
       });
       widgetStorageTree.addKeyListener(new KeyListener()
       {
+        @Override
         public void keyPressed(KeyEvent keyEvent)
         {
         }
+        @Override
         public void keyReleased(KeyEvent keyEvent)
         {
           if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
@@ -4048,14 +4058,16 @@ assert storagePattern != null;
       tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
 
-      widgetStorageTable = Widgets.newTable(tab,SWT.CHECK);
+      widgetStorageTable = Widgets.newTable(tab,SWT.CHECK|SWT.VIRTUAL);
       widgetStorageTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0}));
       Widgets.layout(widgetStorageTable,1,0,TableLayoutData.NSWE);
       SelectionListener storageTableColumnSelectionListener = new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
@@ -4078,8 +4090,16 @@ assert storagePattern != null;
       tableColumn = Widgets.addTableColumn(widgetStorageTable,3,"State",   SWT.LEFT,  60,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
+      widgetStorageTable.addListener(SWT.SetData,new Listener()
+      {
+        @Override
+        public void handleEvent(final Event event)
+        {
+        }
+      });
       widgetStorageTable.addListener(SWT.MouseDoubleClick,new Listener()
       {
+        @Override
         public void handleEvent(final Event event)
         {
           TableItem tabletem = widgetStorageTable.getItem(new Point(event.x,event.y));
@@ -4094,9 +4114,11 @@ assert storagePattern != null;
       });
       widgetStorageTable.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
 Dprintf.dprintf("");
@@ -4116,10 +4138,11 @@ Dprintf.dprintf("");
       });
       widgetStorageTable.addMouseTrackListener(new MouseTrackListener()
       {
+        @Override
         public void mouseEnter(MouseEvent mouseEvent)
         {
         }
-
+        @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
           if (widgetStorageTableToolTip != null)
@@ -4128,7 +4151,7 @@ Dprintf.dprintf("");
             widgetStorageTableToolTip = null;
           }
         }
-
+        @Override
         public void mouseHover(MouseEvent mouseEvent)
         {
           Table     table     = (Table)mouseEvent.widget;
@@ -4152,9 +4175,11 @@ Dprintf.dprintf("");
       });
       widgetStorageTable.addKeyListener(new KeyListener()
       {
+        @Override
         public void keyPressed(KeyEvent keyEvent)
         {
         }
+        @Override
         public void keyReleased(KeyEvent keyEvent)
         {
 Dprintf.dprintf("");
@@ -4188,9 +4213,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh index")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4201,9 +4228,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh all indizes with error")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4220,9 +4249,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add to index")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4233,9 +4264,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove from index")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4246,11 +4279,13 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove all indizes with error")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             removeAllWithErrorStorageIndex();
           }
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
@@ -4261,9 +4296,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Mark all"));
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4274,9 +4311,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Unmark all"));
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4289,6 +4328,7 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore")+"\u2026");
         Widgets.addEventListener(new WidgetEventListener(menuItem,checkedStorageEvent)
         {
+          @Override
           public void trigger(MenuItem menuItem)
           {
             menuItem.setEnabled(isStorageChecked());
@@ -4296,9 +4336,11 @@ Dprintf.dprintf("");
         });
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
@@ -4315,9 +4357,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Delete")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             deleteStorage();
@@ -4326,6 +4370,7 @@ Dprintf.dprintf("");
       }
       menu.addMenuListener(new MenuListener()
       {
+        @Override
         public void menuShown(MenuEvent menuEvent)
         {
           if (widgetStorageTreeToolTip != null)
@@ -4339,6 +4384,7 @@ Dprintf.dprintf("");
             widgetStorageTableToolTip = null;
           }
         }
+        @Override
         public void menuHidden(MenuEvent menuEvent)
         {
         }
@@ -4355,6 +4401,7 @@ Dprintf.dprintf("");
         Widgets.layout(button,0,0,TableLayoutData.W);
         Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
         {
+          @Override
           public void trigger(Control control)
           {
             Button button = (Button)control;
@@ -4372,9 +4419,11 @@ Dprintf.dprintf("");
         });
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
@@ -4402,11 +4451,13 @@ Dprintf.dprintf("");
         Widgets.layout(widgetStoragePattern,0,2,TableLayoutData.WE);
         widgetStoragePattern.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
             updateStorageThread.triggerUpdateStoragePattern(widget.getText());
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
@@ -4415,9 +4466,11 @@ Dprintf.dprintf("");
         });
         widgetStoragePattern.addKeyListener(new KeyListener()
         {
+          @Override
           public void keyPressed(KeyEvent keyEvent)
           {
           }
+          @Override
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
@@ -4427,9 +4480,11 @@ Dprintf.dprintf("");
 //???
         widgetStoragePattern.addFocusListener(new FocusListener()
         {
+          @Override
           public void focusGained(FocusEvent focusEvent)
           {
           }
+          @Override
           public void focusLost(FocusEvent focusEvent)
           {
 //            Text widget = (Text)focusEvent.widget;
@@ -4447,9 +4502,11 @@ Dprintf.dprintf("");
         Widgets.layout(widgetStorageState,0,4,TableLayoutData.W);
         widgetStorageState.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
@@ -4483,9 +4540,11 @@ Dprintf.dprintf("");
         Widgets.layout(widgetStorageMaxCount,0,6,TableLayoutData.W);
         widgetStorageMaxCount.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
@@ -4508,6 +4567,7 @@ Dprintf.dprintf("");
         Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
         {
+          @Override
           public void trigger(Control control)
           {
             control.setEnabled(isStorageChecked());
@@ -4515,9 +4575,11 @@ Dprintf.dprintf("");
         });
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
@@ -4549,9 +4611,11 @@ Dprintf.dprintf("");
       Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE);
       SelectionListener entryListColumnSelectionListener = new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
@@ -4589,6 +4653,7 @@ Dprintf.dprintf("");
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       widgetEntryTable.addListener(SWT.MouseDoubleClick,new Listener()
       {
+        @Override
         public void handleEvent(final Event event)
         {
           TableItem tableItem = widgetEntryTable.getItem(new Point(event.x,event.y));
@@ -4605,9 +4670,11 @@ Dprintf.dprintf("");
       });
       widgetEntryTable.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableItem tableItem = (TableItem)selectionEvent.item;
@@ -4626,10 +4693,11 @@ Dprintf.dprintf("");
       });
       widgetEntryTable.addMouseTrackListener(new MouseTrackListener()
       {
+        @Override
         public void mouseEnter(MouseEvent mouseEvent)
         {
         }
-
+        @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
           if (widgetEntryTableToolTip != null)
@@ -4638,7 +4706,7 @@ Dprintf.dprintf("");
             widgetEntryTableToolTip = null;
           }
         }
-
+        @Override
         public void mouseHover(MouseEvent mouseEvent)
         {
           Table     table     = (Table)mouseEvent.widget;
@@ -4661,6 +4729,7 @@ Dprintf.dprintf("");
       });
       Widgets.addEventListener(new WidgetEventListener(widgetEntryTable,checkedStorageEvent)
       {
+        @Override
         public void trigger(Control control)
         {
           updateEntryListThread.triggerUpdate();
@@ -4672,9 +4741,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Mark all"));
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4685,9 +4756,11 @@ Dprintf.dprintf("");
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Unmark all"));
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4701,6 +4774,7 @@ Dprintf.dprintf("");
         menuItem.setEnabled(false);
         Widgets.addEventListener(new WidgetEventListener(menuItem,checkedEntryEvent)
         {
+          @Override
           public void trigger(MenuItem menuItem)
           {
             menuItem.setEnabled(isSomeEntryChecked());
@@ -4708,9 +4782,11 @@ Dprintf.dprintf("");
         });
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -4720,6 +4796,7 @@ Dprintf.dprintf("");
       }
       menu.addMenuListener(new MenuListener()
       {
+        @Override
         public void menuShown(MenuEvent menuEvent)
         {
           if (widgetStorageTreeToolTip != null)
@@ -4733,6 +4810,7 @@ Dprintf.dprintf("");
             widgetEntryTableToolTip = null;
           }
         }
+        @Override
         public void menuHidden(MenuEvent menuEvent)
         {
         }
@@ -4748,6 +4826,7 @@ Dprintf.dprintf("");
         Widgets.layout(button,0,0,TableLayoutData.E);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
+          @Override
           public void trigger(Control control)
           {
             Button button = (Button)control;
@@ -4765,9 +4844,11 @@ Dprintf.dprintf("");
         });
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
@@ -4795,11 +4876,13 @@ Dprintf.dprintf("");
         Widgets.layout(text,0,2,TableLayoutData.WE);
         text.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Text  widget = (Text)selectionEvent.widget;
             updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
@@ -4808,9 +4891,11 @@ Dprintf.dprintf("");
         });
         text.addKeyListener(new KeyListener()
         {
+          @Override
           public void keyPressed(KeyEvent keyEvent)
           {
           }
+          @Override
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
@@ -4820,9 +4905,11 @@ Dprintf.dprintf("");
 //???
         text.addFocusListener(new FocusListener()
         {
+          @Override
           public void focusGained(FocusEvent focusEvent)
           {
           }
+          @Override
           public void focusLost(FocusEvent focusEvent)
           {
 //            Text widget = (Text)focusEvent.widget;
@@ -4846,9 +4933,11 @@ Dprintf.dprintf("");
         Widgets.layout(combo,0,3,TableLayoutData.W);
         combo.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo      widget    = (Combo)selectionEvent.widget;
@@ -4862,9 +4951,11 @@ Dprintf.dprintf("");
         Widgets.layout(button,0,4,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
@@ -4883,9 +4974,11 @@ Dprintf.dprintf("");
         Widgets.layout(combo,0,6,TableLayoutData.W);
         combo.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
@@ -4908,6 +5001,7 @@ Dprintf.dprintf("");
         Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
+          @Override
           public void trigger(Control control)
           {
             control.setEnabled(isSomeEntryChecked());
@@ -4915,9 +5009,11 @@ Dprintf.dprintf("");
         });
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
@@ -4941,9 +5037,11 @@ Dprintf.dprintf("");
       Widgets.layout(widgetRestoreTo,1,0,TableLayoutData.W);
       widgetRestoreTo.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button  widget      = (Button)selectionEvent.widget;
@@ -4958,6 +5056,7 @@ Dprintf.dprintf("");
       Widgets.layout(widgetRestoreToDirectory,1,1,TableLayoutData.WE);
       Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
       {
+        @Override
         public void trigger(Control control)
         {
           control.setEnabled(widgetRestoreTo.getSelection());
@@ -4965,10 +5064,11 @@ Dprintf.dprintf("");
       });
       group.addMouseListener(new MouseListener()
       {
+        @Override
         public void mouseDoubleClick(final MouseEvent mouseEvent)
         {
         }
-
+        @Override
         public void mouseDown(final MouseEvent mouseEvent)
         {
           Rectangle bounds = widgetRestoreToDirectory.getBounds();
@@ -4980,7 +5080,7 @@ Dprintf.dprintf("");
             Widgets.setFocus(widgetRestoreToDirectory);
           }
         }
-
+        @Override
         public void mouseUp(final MouseEvent mouseEvent)
         {
         }
@@ -4990,9 +5090,11 @@ Dprintf.dprintf("");
       Widgets.layout(button,1,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String pathName;
@@ -5353,6 +5455,7 @@ Dprintf.dprintf("");
           final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
           display.syncExec(new Runnable()
           {
+            @Override
             public void run()
             {
               for (TreeItem entityTreeItem : treeItem.getItems())
@@ -5401,6 +5504,7 @@ Dprintf.dprintf("");
               // insert/update tree item
               display.syncExec(new Runnable()
               {
+                @Override
                 public void run()
                 {
                   TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
@@ -5439,6 +5543,7 @@ Dprintf.dprintf("");
           // remove not existing entries
           display.syncExec(new Runnable()
           {
+            @Override
             public void run()
             {
               for (TreeItem treeItem : removeEntityTreeItemSet)
@@ -5456,6 +5561,7 @@ Dprintf.dprintf("");
           final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
           display.syncExec(new Runnable()
           {
+            @Override
             public void run()
             {
               for (TreeItem storageTreeItem : treeItem.getItems())
@@ -5520,6 +5626,7 @@ assert storagePattern != null;
               // insert/update tree item
               display.syncExec(new Runnable()
               {
+                @Override
                 public void run()
                 {
                   TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
@@ -5556,6 +5663,7 @@ assert storagePattern != null;
           // remove not existing entries
           display.syncExec(new Runnable()
           {
+            @Override
             public void run()
             {
               for (TreeItem treeItem : removeStorageTreeItemSet)
@@ -5869,9 +5977,11 @@ assert storagePattern != null;
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget   = (Button)selectionEvent.widget;
@@ -5902,9 +6012,11 @@ assert storagePattern != null;
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -5916,9 +6028,11 @@ assert storagePattern != null;
     // add selection listeners
     widgetAdd.addSelectionListener(new SelectionListener()
     {
+      @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
       }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
@@ -5965,6 +6079,7 @@ assert storagePattern != null;
 
         new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
         {
+          @Override
           public void run(final BusyDialog busyDialog, Object userData)
           {
             HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
@@ -6020,6 +6135,7 @@ assert storagePattern != null;
                 {
                   display.syncExec(new Runnable()
                   {
+                    @Override
                     public void run()
                     {
                       Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
@@ -6038,6 +6154,7 @@ assert storagePattern != null;
               // close busy dialog
               display.syncExec(new Runnable()
               {
+                @Override
                 public void run()
                 {
                   busyDialog.close();
@@ -6051,6 +6168,7 @@ assert storagePattern != null;
               final String errorMessage = error.getMessage();
               display.syncExec(new Runnable()
               {
+                @Override
                 public void run()
                 {
                   busyDialog.close();
@@ -6089,6 +6207,7 @@ assert storagePattern != null;
       {
         display.syncExec(new Runnable()
         {
+          @Override
           public void run()
           {
             Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state (error: {0})",errorMessage[0]));
@@ -6107,6 +6226,7 @@ assert storagePattern != null;
 
           new BackgroundTask(busyDialog)
           {
+            @Override
             public void run(final BusyDialog busyDialog, Object userData)
             {
               try
@@ -6148,6 +6268,7 @@ assert storagePattern != null;
                 {
                   display.syncExec(new Runnable()
                   {
+                    @Override
                     public void run()
                     {
                       busyDialog.close();
@@ -6167,6 +6288,7 @@ assert storagePattern != null;
                 // close busy dialog
                 display.syncExec(new Runnable()
                 {
+                  @Override
                   public void run()
                   {
                     busyDialog.close();
@@ -6180,6 +6302,7 @@ assert storagePattern != null;
                 final String errorMessage = error.getMessage();
                 display.syncExec(new Runnable()
                 {
+                  @Override
                   public void run()
                   {
                     busyDialog.close();
@@ -6245,6 +6368,7 @@ assert storagePattern != null;
 
         new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
         {
+          @Override
           public void run(final BusyDialog busyDialog, Object userData)
           {
             HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
@@ -6309,6 +6433,7 @@ assert storagePattern != null;
                     {
                       display.syncExec(new Runnable()
                       {
+                        @Override
                         public void run()
                         {
                           selection[0] = Dialogs.select(shell,
@@ -6324,6 +6449,7 @@ assert storagePattern != null;
                     {
                       display.syncExec(new Runnable()
                       {
+                        @Override
                         public void run()
                         {
                           Dialogs.error(shell,
@@ -6359,6 +6485,7 @@ assert storagePattern != null;
               // close busy dialog
               display.syncExec(new Runnable()
               {
+                @Override
                 public void run()
                 {
                   busyDialog.close();
@@ -6372,6 +6499,7 @@ assert storagePattern != null;
               final String errorMessage = error.getMessage();
               display.syncExec(new Runnable()
               {
+                @Override
                 public void run()
                 {
                   busyDialog.close();
@@ -6449,9 +6577,11 @@ assert storagePattern != null;
         Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
         widgetRestoreTo.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button  widget      = (Button)selectionEvent.widget;
@@ -6466,6 +6596,7 @@ assert storagePattern != null;
         Widgets.layout(widgetRestoreToDirectory,0,1,TableLayoutData.WE);
         Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
         {
+          @Override
           public void trigger(Control control)
           {
             control.setEnabled(widgetRestoreTo.getSelection());
@@ -6473,10 +6604,11 @@ assert storagePattern != null;
         });
         subComposite.addMouseListener(new MouseListener()
         {
+          @Override
           public void mouseDoubleClick(final MouseEvent mouseEvent)
           {
           }
-
+          @Override
           public void mouseDown(final MouseEvent mouseEvent)
           {
             Rectangle bounds = widgetRestoreToDirectory.getBounds();
@@ -6488,7 +6620,7 @@ assert storagePattern != null;
               Widgets.setFocus(widgetRestoreToDirectory);
             }
           }
-
+          @Override
           public void mouseUp(final MouseEvent mouseEvent)
           {
           }
@@ -6498,9 +6630,11 @@ assert storagePattern != null;
         Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String pathName;
@@ -6547,9 +6681,11 @@ assert storagePattern != null;
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -6562,9 +6698,11 @@ assert storagePattern != null;
 /*
     widgetRestore.addSelectionListener(new SelectionListener()
     {
+      @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
       }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
@@ -6592,6 +6730,7 @@ boolean overwriteFiles = false;
 
       new BackgroundTask(busyDialog,new Object[]{directory,overwriteFiles})
       {
+        @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
           final String  directory      = (String )((Object[])userData)[0];
@@ -6669,6 +6808,7 @@ boolean overwriteFiles = false;
                 // get crypt password
                 display.syncExec(new Runnable()
                 {
+                  @Override
                   public void run()
                   {
                     String password = Dialogs.password(shell,
@@ -6708,6 +6848,7 @@ boolean overwriteFiles = false;
                 {
                   display.syncExec(new Runnable()
                   {
+                    @Override
                     public void run()
                     {
                       switch (Dialogs.select(shell,
@@ -6751,6 +6892,7 @@ boolean overwriteFiles = false;
             }
             display.syncExec(new Runnable()
             {
+              @Override
               public void run()
               {
                 BARControl.resetCursor();
@@ -6762,6 +6904,7 @@ boolean overwriteFiles = false;
             final String errorMessage = error.getMessage();
             display.syncExec(new Runnable()
             {
+              @Override
               public void run()
               {
                 busyDialog.close();
@@ -7030,9 +7173,11 @@ boolean overwriteFiles = false;
         Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
         widgetRestoreTo.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button  widget      = (Button)selectionEvent.widget;
@@ -7047,6 +7192,7 @@ boolean overwriteFiles = false;
         Widgets.layout(widgetRestoreToDirectory,0,1,TableLayoutData.WE);
         Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
         {
+          @Override
           public void trigger(Control control)
           {
             control.setEnabled(widgetRestoreTo.getSelection());
@@ -7054,10 +7200,11 @@ boolean overwriteFiles = false;
         });
         subComposite.addMouseListener(new MouseListener()
         {
+          @Override
           public void mouseDoubleClick(final MouseEvent mouseEvent)
           {
           }
-
+          @Override
           public void mouseDown(final MouseEvent mouseEvent)
           {
             Rectangle bounds = widgetRestoreToDirectory.getBounds();
@@ -7069,7 +7216,7 @@ boolean overwriteFiles = false;
               Widgets.setFocus(widgetRestoreToDirectory);
             }
           }
-
+          @Override
           public void mouseUp(final MouseEvent mouseEvent)
           {
           }
@@ -7079,9 +7226,11 @@ boolean overwriteFiles = false;
         Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String pathName;
@@ -7128,9 +7277,11 @@ boolean overwriteFiles = false;
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -7143,9 +7294,11 @@ boolean overwriteFiles = false;
 /*
     widgetRestore.addSelectionListener(new SelectionListener()
     {
+      @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
       }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
@@ -7173,6 +7326,7 @@ boolean overwriteFiles = false;
 
       new BackgroundTask(busyDialog,new Object[]{entryData,directory,overwriteFiles})
       {
+        @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
           final EntryData[] entryData_     = (EntryData[])((Object[])userData)[0];
@@ -7263,6 +7417,7 @@ boolean overwriteFiles = false;
                   // get ftp password
                   display.syncExec(new Runnable()
                   {
+                    @Override
                     public void run()
                     {
                       String password = Dialogs.password(shell,
@@ -7297,6 +7452,7 @@ boolean overwriteFiles = false;
                   // get ssh password
                   display.syncExec(new Runnable()
                   {
+                    @Override
                     public void run()
                     {
                       String password = Dialogs.password(shell,
@@ -7331,6 +7487,7 @@ boolean overwriteFiles = false;
                   // get webdav password
                   display.syncExec(new Runnable()
                   {
+                    @Override
                     public void run()
                     {
                       String password = Dialogs.password(shell,
@@ -7365,6 +7522,7 @@ boolean overwriteFiles = false;
                   // get crypt password
                   display.syncExec(new Runnable()
                   {
+                    @Override
                     public void run()
                     {
                       String password = Dialogs.password(shell,
@@ -7404,6 +7562,7 @@ boolean overwriteFiles = false;
                     final String errorText = command.getErrorText();
                     display.syncExec(new Runnable()
                     {
+                      @Override
                       public void run()
                       {
                         switch (Dialogs.select(shell,
@@ -7453,6 +7612,7 @@ boolean overwriteFiles = false;
             }
             display.syncExec(new Runnable()
             {
+              @Override
               public void run()
               {
                 BARControl.resetCursor();
@@ -7464,6 +7624,7 @@ boolean overwriteFiles = false;
             final String errorMessage = error.getMessage();
             display.syncExec(new Runnable()
             {
+              @Override
               public void run()
               {
                 busyDialog.close();
