@@ -2091,6 +2091,7 @@ assert storagePattern != null;
                                                                                         errorMessage_
                                                                                        );
 
+/*
           // insert/update table item
           display.syncExec(new Runnable()
           {
@@ -2115,7 +2116,7 @@ assert storagePattern != null;
               // update view
               storageIndexData.update();
             }
-          });
+          });*/
         }
         catch (IllegalArgumentException exception)
         {
@@ -2583,18 +2584,6 @@ assert storagePattern != null;
       return "Entry {"+storageName+", "+name+", "+entryType+", dateTime="+dateTime+", "+size+" bytes, checked="+checked+", state="+restoreState+"}";
     }
   };
-
-//TODO
-  class EntryDataMap2 extends HashMap<Integer,EntryData>
-  {
-    int i0,i1;
-
-    EntryDataMap2()
-    {
-      i0 = 0;
-      i1 = 0;
-    }
-  }
 
   /** entry data map
    */
@@ -3694,7 +3683,6 @@ Dprintf.dprintf("count=%d",count);
 
   UpdateEntryListThread       updateEntryListThread = new UpdateEntryListThread();
   private EntryDataMap        entryDataMap          = new EntryDataMap();
-  private EntryDataMap2       entryDataMap2         = new EntryDataMap2();
 
   // ------------------------ native functions ----------------------------
 
@@ -5138,7 +5126,7 @@ Dprintf.dprintf("");
 
       // entry list filters
       composite = Widgets.newComposite(group);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0}));
+      composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(composite,2,0,TableLayoutData.WE);
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
@@ -5283,41 +5271,10 @@ Dprintf.dprintf("");
           }
         });
 
-        label = Widgets.newLabel(composite,BARControl.tr("Max")+":");
-        Widgets.layout(label,0,5,TableLayoutData.W);
-
-        combo = Widgets.newOptionMenu(composite);
-        combo.setToolTipText(BARControl.tr("Max. number of entries in list."));
-        combo.setItems(new String[]{"10","50","100","500","1000"});
-        combo.setText("100");
-        Widgets.layout(combo,0,6,TableLayoutData.W);
-        combo.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Combo widget = (Combo)selectionEvent.widget;
-            try
-            {
-              int entryMaxCount = Integer.parseInt(widget.getText());
-              updateEntryListThread.triggerUpdateEntryMaxCount(entryMaxCount);
-            }
-            catch (NumberFormatException exception)
-            {
-              // ignored
-            }
-          }
-        });
-        updateEntryListThread.triggerUpdateEntryMaxCount(100);
-
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
-        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
+        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           @Override
