@@ -61,6 +61,20 @@ LOCAL const struct
   { "*",      INDEX_MODE_ALL    }
 };
 
+LOCAL const struct
+{
+  const char *name;
+  IndexTypes indexType;
+} INDEX_TYPES[] =
+{
+  { "FILE",      INDEX_TYPE_FILE      },
+  { "IMAGE",     INDEX_TYPE_IMAGE     },
+  { "DIRECTORY", INDEX_TYPE_DIRECTORY },
+  { "LINK",      INDEX_TYPE_LINK      },
+  { "HARDLINK",  INDEX_TYPE_HARDLINK  },
+  { "SPECIAL",   INDEX_TYPE_SPECIAL   },
+};
+
 // entry table names
 const char *ENTRY_TABLE_NAMES[] =
 {
@@ -2602,6 +2616,77 @@ LOCAL String getREGEXPString(String string, const char *columnName, ConstString 
 
   return string;
 }
+LOCAL String getREGEXPString2(String string, const char *columnName, ConstString patternText)
+{
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  ulong           i;
+  char            ch;
+
+  if (!String_isEmpty(patternText))
+  {
+    String_clear(string);
+    String_initTokenizer(&stringTokenizer,
+                         patternText,
+                         STRING_BEGIN,
+                         STRING_WHITE_SPACES,
+                         STRING_QUOTES,
+                         TRUE
+                        );
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      String_appendChar(string,'\'');
+      i = 0;
+      while (i < String_length(token))
+      {
+        ch = String_index(token,i);
+        switch (ch)
+        {
+          case '.':
+          case '[':
+          case ']':
+          case '(':
+          case ')':
+          case '{':
+          case '}':
+          case '+':
+          case '|':
+          case '^':
+          case '$':
+          case '\\':
+            String_appendChar(string,'\\');
+            String_appendChar(string,ch);
+            i++;
+            break;
+          case '*':
+            String_appendCString(string,".*");
+            i++;
+            break;
+          case '?':
+            String_appendChar(string,'.');
+            i++;
+            break;
+          case '\'':
+            String_appendCString(string,"''");
+            i++;
+            break;
+          default:
+            String_appendChar(string,ch);
+            i++;
+            break;
+        }
+      }
+      String_appendChar(string,'\'');
+    }
+    String_doneTokenizer(&stringTokenizer);
+  }
+  else
+  {
+    String_setCString(string,"''");
+  }
+
+  return string;
+}
 
 /***********************************************************************\
 * Name   : getFTSString
@@ -2663,6 +2748,63 @@ LOCAL String getFTSString(String string, const char *tableName, ConstString patt
     }
     String_doneTokenizer(&stringTokenizer);
     String_appendCString(string,"')");
+  }
+
+  return string;
+}
+LOCAL String getFTSString2(String string, const char *tableName, ConstString patternText)
+{
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  bool            addedPatternFlag;
+  ulong           i;
+  char            ch;
+
+  if (!String_isEmpty(patternText))
+  {
+    String_clear(string);
+    String_appendChar(string,'\'');
+    String_initTokenizer(&stringTokenizer,
+                         patternText,
+                         STRING_BEGIN,
+                         STRING_WHITE_SPACES,
+                         STRING_QUOTES,
+                         TRUE
+                        );
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      addedPatternFlag = FALSE;
+      i                = 0;
+      while (i < String_length(token))
+      {
+        ch = String_index(token,i);
+        if (isalnum(ch))
+        {
+          if (addedPatternFlag)
+          {
+            String_appendChar(string,' ');
+            addedPatternFlag = FALSE;
+          }
+          String_appendChar(string,ch);
+        }
+        else
+        {
+          if (!addedPatternFlag)
+          {
+            String_appendChar(string,'*');
+            addedPatternFlag = TRUE;
+          }
+        }
+        i++;
+      }
+      if (!String_isEmpty(string) && !addedPatternFlag) String_appendChar(string,'*');
+    }
+    String_doneTokenizer(&stringTokenizer);
+    String_appendChar(string,'\'');
+  }
+  else
+  {
+    String_setCString(string,"''");
   }
 
   return string;
@@ -3066,19 +3208,19 @@ void Index_doneAll(void)
 
 const char *Index_stateToString(IndexStates indexState, const char *defaultValue)
 {
-  uint       z;
+  uint       i;
   const char *name;
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(INDEX_STATES))
-         && (INDEX_STATES[z].indexState != indexState)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(INDEX_STATES))
+         && (INDEX_STATES[i].indexState != indexState)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(INDEX_STATES))
+  if (i < SIZE_OF_ARRAY(INDEX_STATES))
   {
-    name = INDEX_STATES[z].name;
+    name = INDEX_STATES[i].name;
   }
   else
   {
@@ -3090,21 +3232,21 @@ const char *Index_stateToString(IndexStates indexState, const char *defaultValue
 
 bool Index_parseState(const char *name, IndexStates *indexState)
 {
-  uint z;
+  uint i;
 
   assert(name != NULL);
   assert(indexState != NULL);
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(INDEX_STATES))
-         && !stringEqualsIgnoreCase(INDEX_STATES[z].name,name)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(INDEX_STATES))
+         && !stringEqualsIgnoreCase(INDEX_STATES[i].name,name)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(INDEX_STATES))
+  if (i < SIZE_OF_ARRAY(INDEX_STATES))
   {
-    (*indexState) = INDEX_STATES[z].indexState;
+    (*indexState) = INDEX_STATES[i].indexState;
     return TRUE;
   }
   else
@@ -3115,19 +3257,19 @@ bool Index_parseState(const char *name, IndexStates *indexState)
 
 const char *Index_modeToString(IndexModes indexMode, const char *defaultValue)
 {
-  uint       z;
+  uint       i;
   const char *name;
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(INDEX_MODES))
-         && (INDEX_MODES[z].indexMode != indexMode)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(INDEX_MODES))
+         && (INDEX_MODES[i].indexMode != indexMode)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(INDEX_MODES))
+  if (i < SIZE_OF_ARRAY(INDEX_MODES))
   {
-    name = INDEX_MODES[z].name;
+    name = INDEX_MODES[i].name;
   }
   else
   {
@@ -3139,21 +3281,46 @@ const char *Index_modeToString(IndexModes indexMode, const char *defaultValue)
 
 bool Index_parseMode(const char *name, IndexModes *indexMode)
 {
-  uint z;
+  uint i;
 
   assert(name != NULL);
   assert(indexMode != NULL);
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(INDEX_MODES))
-         && !stringEqualsIgnoreCase(INDEX_MODES[z].name,name)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(INDEX_MODES))
+         && !stringEqualsIgnoreCase(INDEX_MODES[i].name,name)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(INDEX_MODES))
+  if (i < SIZE_OF_ARRAY(INDEX_MODES))
   {
-    (*indexMode) = INDEX_MODES[z].indexMode;
+    (*indexMode) = INDEX_MODES[i].indexMode;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool Index_parseType(const char *name, IndexTypes *indexType)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(indexType != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(INDEX_TYPES))
+         && !stringEqualsIgnoreCase(INDEX_TYPES[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(INDEX_TYPES))
+  {
+    (*indexType) = INDEX_TYPES[i].indexType;
     return TRUE;
   }
   else
@@ -4778,6 +4945,494 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   }
 
   return ERROR_NONE;
+}
+
+Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
+                            const DatabaseId storageIds[],
+                            uint             storageIdCount,
+                            const DatabaseId entryIds[],
+                            uint             entryIdCount,
+                            IndexTypeSet     indexTypeSet,
+                            String           pattern,
+                            uint             *entryCount
+                           )
+{
+  DatabaseQueryHandle databaseQueryHandle;
+  Errors error;
+  String regexpString;
+  String ftsString;
+  String storageIdsString;
+  String entryIdsString;
+  uint   i;
+  uint   n;
+
+  assert(indexHandle != NULL);
+  assert((storageIdCount == 0) || (storageIds != NULL));
+  assert((entryIdCount == 0) || (entryIds != NULL));
+  assert(entryCount != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  regexpString = getREGEXPString2(String_new(),"files.name",pattern);
+  ftsString    = getFTSString2   (String_new(),"FTS_files",pattern);
+
+  storageIdsString = String_new();
+  if (storageIds != NULL)
+  {
+    for (i = 0; i < storageIdCount; i++)
+    {
+      if (i > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[i]);
+    }
+  }
+  else
+  {
+    String_appendCString(storageIdsString,"0");
+  }
+
+  entryIdsString = String_new();
+  if (entryIds != NULL)
+  {
+    for (i = 0; i < entryIdCount; i++)
+    {
+      if (i > 0) String_appendChar(entryIdsString,',');
+      String_format(entryIdsString,"%d",entryIds[i]);
+    }
+  }
+  else
+  {
+    String_appendCString(entryIdsString,"0");
+  }
+
+  (*entryCount) = 0;
+
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT " \
+                           "(SELECT COUNT(files.id) \
+                             FROM files \
+                               LEFT JOIN storage ON storage.id=files.storageId \
+                             WHERE     %d \
+                                   AND (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
+                                   AND (%d OR REGEXP(%S,0,files.name)) \
+                                   AND (%d OR (files.storageId IN (%S))) \
+                                   AND (%d OR (files.id IN (%S))) \
+                            )+ \
+                           "
+                           "(SELECT COUNT(images.id) \
+                             FROM images \
+                               LEFT JOIN storage ON storage.id=images.storageId \
+                             WHERE     %d \
+                                   AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
+                                   AND (%d OR REGEXP(%S,0,images.name)) \
+                                   AND (%d OR (images.storageId IN (%S))) \
+                                   AND (%d OR (images.id IN (%S))) \
+                            )+ \
+                           "
+                           "(SELECT COUNT(directories.id) \
+                             FROM directories \
+                               LEFT JOIN storage ON storage.id=directories.storageId \
+                             WHERE     %d \
+                                   AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
+                                   AND (%d OR REGEXP(%S,0,directories.name)) \
+                                   AND (%d OR (directories.storageId IN (%S))) \
+                                   AND (%d OR (directories.id IN (%S))) \
+                            )+ \
+                           "
+                           "(SELECT COUNT(links.id) \
+                             FROM links \
+                               LEFT JOIN storage ON storage.id=links.storageId \
+                             WHERE     %d \
+                                   AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
+                                   AND (%d OR REGEXP(%S,0,links.name)) \
+                                   AND (%d OR (links.storageId IN (%S))) \
+                                   AND (%d OR (links.id IN (%S))) \
+                            )+ \
+                           "
+                           "(SELECT COUNT(hardlinks.id) \
+                             FROM hardlinks \
+                               LEFT JOIN storage ON storage.id=hardlinks.storageId \
+                             WHERE     %d \
+                                   AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
+                                   AND (%d OR REGEXP(%S,0,hardlinks.name)) \
+                                   AND (%d OR (hardlinks.storageId IN (%S))) \
+                                   AND (%d OR (hardlinks.id IN (%S))) \
+                            )+ \
+                           "
+                           "(SELECT COUNT(special.id) \
+                             FROM special \
+                               LEFT JOIN storage ON storage.id=special.storageId \
+                             WHERE     %d \
+                                   AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
+                                   AND (%d OR REGEXP(%S,0,special.name)) \
+                                   AND (%d OR (special.storageId IN (%S))) \
+                                   AND (%d OR (special.id IN (%S))) \
+                            ) \
+                           ",
+                           IN_SET(indexTypeSet,INDEX_TYPE_FILE),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_IMAGE),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_LINK),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString
+                          );
+  String_delete(entryIdsString);
+  String_delete(storageIdsString);
+  String_delete(ftsString);
+  String_delete(regexpString);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  (void)Database_getNextRow(&databaseQueryHandle,
+                            "%u",
+                            entryCount
+                           );
+  Database_finalize(&databaseQueryHandle);
+
+  return ERROR_NONE;
+}
+
+Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
+                             IndexHandle      *indexHandle,
+                             const DatabaseId storageIds[],
+                             uint             storageIdCount,
+                             const DatabaseId entryIds[],
+                             uint             entryIdCount,
+                             IndexTypeSet     indexTypeSet,
+                             String           pattern,
+                             uint             offset,
+                             uint             limit
+                            )
+{
+  Errors error;
+  String regexpString;
+  String ftsString;
+  String storageIdsString;
+  String entryIdsString;
+  uint   i;
+
+  assert(indexQueryHandle != NULL);
+  assert((storageIdCount == 0) || (storageIds != NULL));
+  assert((entryIdCount == 0) || (entryIds != NULL));
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
+
+  regexpString = getREGEXPString2(String_new(),"files.name",pattern);
+  ftsString    = getFTSString2   (String_new(),"FTS_files",pattern);
+
+  storageIdsString = String_new();
+  if (storageIds != NULL)
+  {
+    for (i = 0; i < storageIdCount; i++)
+    {
+      if (i > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[i]);
+    }
+  }
+  else
+  {
+    String_appendCString(storageIdsString,"0");
+  }
+
+  entryIdsString = String_new();
+  if (entryIds != NULL)
+  {
+    for (i = 0; i < entryIdCount; i++)
+    {
+      if (i > 0) String_appendChar(entryIdsString,',');
+      String_format(entryIdsString,"%d",entryIds[i]);
+    }
+  }
+  else
+  {
+    String_appendCString(entryIdsString,"0");
+  }
+
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "  SELECT files.id, \
+                                     storage.name, \
+                                     STRFTIME('%%s',storage.created), \
+                                     %d, \
+                                     files.name, \
+                                     '', \
+                                     0, \
+                                     files.size, \
+                                     files.timeModified, \
+                                     files.userId, \
+                                     files.groupId, \
+                                     files.permission, \
+                                     files.fragmentOffset, \
+                                     files.fragmentSize \
+                              FROM files \
+                                LEFT JOIN storage ON storage.id=files.storageId \
+                              WHERE     %d \
+                                    AND (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,files.name)) \
+                                    AND (%d OR (files.storageId IN (%S))) \
+                                    AND (%d OR (files.id IN (%S))) \
+                           "
+                           "UNION "
+                           "  SELECT images.id, \
+                                     storage.name, \
+                                     STRFTIME('%%s',storage.created), \
+                                     %d, \
+                                     images.name, \
+                                     '', \
+                                     images.fileSystemType, \
+                                     images.size, \
+                                     0, \
+                                     0, \
+                                     0, \
+                                     0, \
+                                     images.blockOffset, \
+                                     images.blockCount \
+                              FROM images \
+                                LEFT JOIN storage ON storage.id=images.storageId \
+                              WHERE     %d \
+                                    AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,images.name)) \
+                                    AND (%d OR (images.storageId IN (%S))) \
+                                    AND (%d OR (images.id IN (%S))) \
+                           "
+                           "UNION "
+                           "  SELECT directories.id, \
+                                     storage.name, \
+                                     STRFTIME('%%s',storage.created), \
+                                     %d, \
+                                     directories.name, \
+                                     '', \
+                                     0, \
+                                     0, \
+                                     directories.timeModified, \
+                                     directories.userId, \
+                                     directories.groupId, \
+                                     directories.permission, \
+                                     0, \
+                                     0 \
+                              FROM directories \
+                                LEFT JOIN storage ON storage.id=directories.storageId \
+                              WHERE     %d \
+                                    AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,directories.name)) \
+                                    AND (%d OR (directories.storageId IN (%S))) \
+                                    AND (%d OR (directories.id IN (%S))) \
+                           "
+                           "UNION "
+                           "  SELECT links.id, \
+                                     storage.name, \
+                                     STRFTIME('%%s',storage.created), \
+                                     %d, \
+                                     links.name, \
+                                     links.destinationName, \
+                                     0, \
+                                     0, \
+                                     links.timeModified, \
+                                     links.userId, \
+                                     links.groupId, \
+                                     links.permission, \
+                                     0, \
+                                     0 \
+                              FROM links \
+                                LEFT JOIN storage ON storage.id=links.storageId \
+                              WHERE     %d \
+                                    AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,links.name)) \
+                                    AND (%d OR (links.storageId IN (%S))) \
+                                    AND (%d OR (links.id IN (%S))) \
+                           "
+                           "UNION "
+                           "  SELECT hardlinks.id, \
+                                     storage.name, \
+                                     STRFTIME('%%s',storage.created), \
+                                     %d, \
+                                     hardlinks.name, \
+                                     '', \
+                                     0, \
+                                     hardlinks.size, \
+                                     hardlinks.timeModified, \
+                                     hardlinks.userId, \
+                                     hardlinks.groupId, \
+                                     hardlinks.permission, \
+                                     hardlinks.fragmentOffset, \
+                                     hardlinks.fragmentSize \
+                              FROM hardlinks \
+                                LEFT JOIN storage ON storage.id=hardlinks.storageId \
+                              WHERE     %d \
+                                    AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,hardlinks.name)) \
+                                    AND (%d OR (hardlinks.storageId IN (%S))) \
+                                    AND (%d OR (hardlinks.id IN (%S))) \
+                           "
+                           "UNION "
+                           "  SELECT special.id, \
+                                     storage.name, \
+                                     STRFTIME('%%s',storage.created), \
+                                     %d, \
+                                     special.name, \
+                                     '', \
+                                     0, \
+                                     0, \
+                                     special.timeModified, \
+                                     special.userId, \
+                                     special.groupId, \
+                                     special.permission, \
+                                     0, \
+                                     0 \
+                              FROM special \
+                                LEFT JOIN storage ON storage.id=special.storageId \
+                              WHERE     %d \
+                                    AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,special.name)) \
+                                    AND (%d OR (special.storageId IN (%S))) \
+                                    AND (%d OR (special.id IN (%S))) \
+                           "
+                           "LIMIT %d,%d",
+                           INDEX_TYPE_FILE,
+                           IN_SET(indexTypeSet,INDEX_TYPE_FILE),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           INDEX_TYPE_IMAGE,
+                           IN_SET(indexTypeSet,INDEX_TYPE_IMAGE),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           INDEX_TYPE_DIRECTORY,
+                           IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           INDEX_TYPE_LINK,
+                           IN_SET(indexTypeSet,INDEX_TYPE_LINK),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           INDEX_TYPE_HARDLINK,
+                           IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           INDEX_TYPE_SPECIAL,
+                           IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+
+                           offset,
+                           limit
+                          );
+  String_delete(entryIdsString);
+  String_delete(storageIdsString);
+  String_delete(ftsString);
+  String_delete(regexpString);
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+
+  return error;
+}
+
+bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
+                   DatabaseId        *databaseId,
+                   String            storageName,
+                   uint64            *storageDateTime,
+                   IndexTypes        *type,
+                   String            name,
+                   String            destinationName,
+                   FileSystemTypes   *fileSystemType,
+                   uint64            *size,
+                   uint64            *timeModified,
+                   uint32            *userId,
+                   uint32            *groupId,
+                   uint32            *permission,
+                   uint64            *fragmentOffsetOrBlockOffset,
+                   uint64            *fragmentSizeOrBlockSize
+                  )
+{
+  assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+
+  // check init error
+  if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
+  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
+                             "%lld %S %llu %d %S %S %d %llu %llu %d %d %d %llu %llu",
+                             databaseId,
+                             storageName,
+                             storageDateTime,
+                             type,
+                             name,
+                             destinationName,
+                             fileSystemType,
+                             size,
+                             timeModified,
+                             userId,
+                             groupId,
+                             permission,
+                             fragmentOffsetOrBlockOffset,
+                             fragmentSizeOrBlockSize
+                            );
 }
 
 Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,

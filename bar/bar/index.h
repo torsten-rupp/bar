@@ -94,6 +94,29 @@ typedef struct
   } storage;
 } IndexQueryHandle;
 
+// index types
+typedef enum
+{
+  INDEX_TYPE_FILE,
+  INDEX_TYPE_IMAGE,
+  INDEX_TYPE_DIRECTORY,
+  INDEX_TYPE_LINK,
+  INDEX_TYPE_HARDLINK,
+  INDEX_TYPE_SPECIAL,
+} IndexTypes;
+
+#define INDEX_TYPE_SET_NONE 0
+#define INDEX_TYPE_SET_ANY \
+  (  SET_VALUE(INDEX_TYPE_FILE) \
+   | SET_VALUE(INDEX_TYPE_IMAGE) \
+   | SET_VALUE(INDEX_TYPE_DIRECTORY) \
+   | SET_VALUE(INDEX_TYPE_LINK) \
+   | SET_VALUE(INDEX_TYPE_HARDLINK) \
+   | SET_VALUE(INDEX_TYPE_SPECIAL) \
+  )
+
+typedef ulong IndexTypeSet;
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -158,7 +181,7 @@ const char *Index_stateToString(IndexStates indexState, const char *defaultValue
 bool Index_parseState(const char *name, IndexStates *indexState);
 
 /***********************************************************************\
-* Name   : Index_parseMode
+* Name   : Index_modeToString
 * Purpose: get name of index mode
 * Input  : indexMode    - index mode
 *          defaultValue - default value
@@ -179,6 +202,17 @@ const char *Index_modeToString(IndexModes indexMode, const char *defaultValue);
 \***********************************************************************/
 
 bool Index_parseMode(const char *name, IndexModes *indexMode);
+
+/***********************************************************************\
+* Name   : Index_parseType
+* Purpose: parse index type string
+* Input  : name - name
+* Output : indexType - index type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Index_parseType(const char *name, IndexTypes *indexType);
 
 /***********************************************************************\
 * Name   : Index_init
@@ -644,6 +678,104 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
                            ConstString storageName,
                            uint64      storageSize
                           );
+
+/***********************************************************************\
+* Name   : Index_getEntriesInfo
+* Purpose: get entries info
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          storageIds       - storage ids or NULL
+*          storageIdCount   - storage id count or 0
+*          entryIds         - entry ids or NULL
+*          entryIdCount     - entry id count or 0
+*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
+*          pattern          - name pattern (glob, can be NULL)
+* Output : indexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
+                            const DatabaseId storageIds[],
+                            uint             storageIdCount,
+                            const DatabaseId entryIds[],
+                            uint             entryIdCount,
+                            IndexTypeSet     indexTypeSet,
+                            String           pattern,
+                            uint             *entryCount
+                           );
+
+/***********************************************************************\
+* Name   : Index_initListEntries
+* Purpose: list entries
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          storageIds       - storage ids or NULL
+*          storageIdCount   - storage id count or 0
+*          entryIds         - entry ids or NULL
+*          entryIdCount     - entry id count or 0
+*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
+*          pattern          - name pattern (glob, can be NULL)
+*          offset           - offset or 0
+*          limit            - numer of entries to list
+* Output : indexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
+                             IndexHandle      *indexHandle,
+                             const DatabaseId storageIds[],
+                             uint             storageIdCount,
+                             const DatabaseId entryIds[],
+                             uint             entryIdCount,
+                             IndexTypeSet     indexTypeSet,
+                             String           pattern,
+                             uint             offset,
+                             uint             limit
+                            );
+
+/***********************************************************************\
+* Name   : Index_getNext
+* Purpose: get next entry
+* Input  : indexQueryHandle - index query handle
+* Output : databaseId                  - database id of entry
+*          storageName                 - storage name (can be NULL)
+*          storageDateTime             - storage date/time stamp [s]
+*          indexType                   - index type
+*          name                        - entry name
+*          destinationName             - destination name (for link
+*                                        entries)
+*          fileSystemType              - file system type (for image
+*                                        entries)
+*          size                        - size [bytes]
+*          timeModified                - modified date/time stamp [s]
+*          userId                      - user id
+*          groupId                     - group id
+*          permission                  - permission flags
+*          fragmentOffsetOrBlockOffset - fragment/block offset
+*                                        [bytes/block]
+*          fragmentSizeOrBlockSize     - fragment/block size [bytes]
+* Return : TRUE if entry read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
+                   DatabaseId        *databaseId,
+                   String            storageName,
+                   uint64            *storageDateTime,
+                   IndexTypes        *type,
+                   String            name,
+                   String            destinationName,
+                   FileSystemTypes   *fileSystemType,
+                   uint64            *size,
+                   uint64            *timeModified,
+                   uint32            *userId,
+                   uint32            *groupId,
+                   uint32            *permission,
+                   uint64            *fragmentOrBlockOffset,
+                   uint64            *fragmentOrBlockSize
+                  );
 
 /***********************************************************************\
 * Name   : Index_initListFiles
