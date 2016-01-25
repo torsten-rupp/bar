@@ -2584,6 +2584,18 @@ assert storagePattern != null;
     }
   };
 
+//TODO
+  class EntryDataMap2 extends HashMap<Integer,EntryData>
+  {
+    int i0,i1;
+
+    EntryDataMap2()
+    {
+      i0 = 0;
+      i1 = 0;
+    }
+  }
+
   /** entry data map
    */
   class EntryDataMap extends HashMap<String,WeakReference<EntryData>>
@@ -2733,6 +2745,8 @@ assert storagePattern != null;
      */
     public int compare(EntryData entryData1, EntryData entryData2)
     {
+Dprintf.dprintf("");
+if ((entryData1 == null) || (entryData2 == null)) return 0;
       switch (sortMode)
       {
         case ARCHIVE:
@@ -2759,13 +2773,20 @@ assert storagePattern != null;
    */
   class UpdateEntryListThread extends Thread
   {
-    private Object  trigger            = new Object();   // trigger update object
-    private boolean triggeredFlag      = false;
+    private final int PAGE_SIZE = 64;
 
-    private int        entryMaxCount      = 100;
-    private String     entryPattern       = "";
-    private EntryTypes entryType          = EntryTypes.ANY;
-    private boolean    newestEntriesOnly  = false;
+    private Object     trigger           = new Object();   // trigger update object
+    private boolean    updateFlag        = false;
+    private boolean    updateListFlag    = false;
+
+    private int        entryMaxCount     = 100;
+    private int        offset            = 0;
+    private int        count             = 0;
+//    private EntryTypes entryType         = EntryTypes.ANY;
+//    private String     entryPattern      = "";
+    public String     entryPattern       = "";
+    public EntryTypes entryType          = EntryTypes.ANY;
+    private boolean    newestEntriesOnly = false;
 
     /** create update entry list thread
      */
@@ -2773,13 +2794,15 @@ assert storagePattern != null;
     {
       super();
       setDaemon(true);
-      setName("BARControl Update Entry");
+      setName("BARControl Update Entry List");
     }
 
     /** run status update thread
      */
     public void run()
     {
+      boolean updateFlag     = false;
+      boolean updateListFlag = false;
       try
       {
         for (;;)
@@ -2794,10 +2817,22 @@ assert storagePattern != null;
             }
           });
 
-          // update table
+          // update table count, table segment
           try
           {
-            updateEntryList();
+            if (updateFlag)
+            {
+              updateEntryListCount();
+Dprintf.dprintf("offset=%d",offset);
+              updateEntryList(offset);
+              updateFlag     = false;
+              updateListFlag = false;
+            }
+            if (updateListFlag)
+            {
+              updateEntryList(offset);
+              updateListFlag = false;
+            }
           }
           catch (CommunicationError error)
           {
@@ -2824,15 +2859,18 @@ assert storagePattern != null;
             }
           });
 
-          // get new pattern
+          // wait for trigger
           synchronized(trigger)
           {
             // wait for refresh request trigger
-            while (!triggeredFlag)
+            while (!this.updateFlag && !this.updateListFlag)
             {
               try { trigger.wait(); } catch (InterruptedException exception) { /* ignored */ };
             }
-            triggeredFlag = false;
+            updateFlag     = this.updateFlag;
+            updateListFlag = this.updateListFlag;
+            this.updateFlag     = false;
+            this.updateListFlag = false;
           }
         }
       }
@@ -2869,7 +2907,8 @@ assert storagePattern != null;
           this.newestEntriesOnly  = newestEntriesOnly;
           this.entryMaxCount      = entryMaxCount;
 
-          triggeredFlag = true;
+Dprintf.dprintf("");
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -2888,7 +2927,8 @@ assert storagePattern != null;
         {
           this.entryPattern = entryPattern;
 
-          triggeredFlag = true;
+Dprintf.dprintf("");
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -2905,7 +2945,8 @@ assert storagePattern != null;
         {
           this.entryType = entryType;
 
-          triggeredFlag = true;
+Dprintf.dprintf("");
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -2923,7 +2964,27 @@ assert storagePattern != null;
         {
           this.newestEntriesOnly  = newestEntriesOnly;
 
-          triggeredFlag = true;
+Dprintf.dprintf("");
+          updateFlag = true;
+          trigger.notify();
+        }
+      }
+    }
+
+    /** trigger update of entry list
+     * @param offset offset in list to update
+     */
+    public void triggerUpdateEntry(int index)
+    {
+      synchronized(trigger)
+      {
+        int offset = (index / PAGE_SIZE)*PAGE_SIZE;
+        if (this.offset != offset)
+        {
+          this.offset = offset;
+
+Dprintf.dprintf("update list %d",offset);
+          updateListFlag = true;
           trigger.notify();
         }
       }
@@ -2940,7 +3001,8 @@ assert storagePattern != null;
         {
           this.entryMaxCount = entryMaxCount;
 
-          triggeredFlag = true;
+Dprintf.dprintf("");
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -2952,38 +3014,16 @@ assert storagePattern != null;
     {
       synchronized(trigger)
       {
-        triggeredFlag = true;
+Dprintf.dprintf("");
+        updateFlag = true;
         trigger.notify();
       }
     }
 
-    /** refresh entry list display
-     */
-    private void updateEntryList()
+    private void XupdateEntryList()
     {
-// ??? statt findFileListIndex
-//      EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable);
-
-      // get entries
-      final HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-          for (TableItem tableItem : widgetEntryTable.getItems())
-          {
-            if (!tableItem.getChecked())
-            {
-              removeTableItemSet.add(tableItem);
-            }
-          }
-        }
-      });
-      if (triggeredFlag) return;
-
-      // update table
-      assert entryPattern != null;
-      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S archiveEntryType=%s newestEntriesOnly=%y entryCountOffset=%d entryCountLimit=%d",
+Dprintf.dprintf("obsolete");
+      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y offset=%d limit=%d",
                                                                  entryPattern,
                                                                  entryType.toString(),
                                                                  newestEntriesOnly,
@@ -2992,10 +3032,20 @@ assert storagePattern != null;
                                                                 ),
                                              0
                                             );
-      String[] errorMessage = new String[1];
-      ValueMap valueMap     = new ValueMap();
+Dprintf.dprintf("");
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+widgetEntryTable.setItemCount(1000);
+}
+});
+if (false) {
+      final String[] errorMessage = new String[1];
+      ValueMap       valueMap     = new ValueMap();
       while (   !command.endOfData()
-             && !triggeredFlag
+             && !updateFlag
+             && !updateListFlag
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -3039,7 +3089,7 @@ assert storagePattern != null;
                       assert tableItem.getData() instanceof EntryData;
 
                       // keep tree item
-                      removeTableItemSet.remove(tableItem);
+//                      removeTableItemSet.remove(tableItem);
                     }
 
                     // update view
@@ -3087,7 +3137,7 @@ assert storagePattern != null;
                       assert tableItem.getData() instanceof EntryData;
 
                       // keep tree item
-                      removeTableItemSet.remove(tableItem);
+//                      removeTableItemSet.remove(tableItem);
                     }
 
                     // update view
@@ -3133,7 +3183,7 @@ assert storagePattern != null;
                       assert tableItem.getData() instanceof EntryData;
 
                       // keep tree item
-                      removeTableItemSet.remove(tableItem);
+//                      removeTableItemSet.remove(tableItem);
                     }
 
                     // update view
@@ -3180,7 +3230,7 @@ assert storagePattern != null;
                       assert tableItem.getData() instanceof EntryData;
 
                       // keep tree item
-                      removeTableItemSet.remove(tableItem);
+//                      removeTableItemSet.remove(tableItem);
                     }
 
                     // update view
@@ -3229,7 +3279,7 @@ assert storagePattern != null;
                       assert tableItem.getData() instanceof EntryData;
 
                       // keep tree item
-                      removeTableItemSet.remove(tableItem);
+//                      removeTableItemSet.remove(tableItem);
                     }
 
                     // update view
@@ -3276,7 +3326,7 @@ assert storagePattern != null;
                       assert tableItem.getData() instanceof EntryData;
 
                       // keep tree item
-                      removeTableItemSet.remove(tableItem);
+//                      removeTableItemSet.remove(tableItem);
                     }
 
                     // update view
@@ -3302,34 +3352,289 @@ assert storagePattern != null;
           }
         }
       }
-      if (triggeredFlag) return;
+}
+    }
 
-      // remove not existing entries
+
+    /** refresh entry list display count
+     */
+    private void updateEntryListCount()
+    {
+      assert entryPattern != null;
+
+      // reset count
+      offset = 0;
+      count  = 0;
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          for (TableItem tableItem : removeTableItemSet)
+//          widgetEntryTable.setItemCount(0);
+        }
+      });
+
+      // get entries info
+      final String[] errorMessage = new String[1];
+      ValueMap       valueMap     = new ValueMap();
+      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestEntriesOnly=%y",
+                                                        entryPattern,
+                                                        entryType.toString(),
+                                                        newestEntriesOnly
+                                                       ),
+                                   0,
+                                   errorMessage,
+                                   valueMap
+                                  ) == Errors.NONE
+         )
+      {
+        count = valueMap.getInt("entryCount");
+Dprintf.dprintf("entryCount=%d",count);
+      }
+
+      // set count
+Dprintf.dprintf("count=%d",count);
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+//          widgetEntryTable.clearAll();
+          widgetEntryTable.setItemCount(count);
+          widgetEntryTable.setTopIndex(0);
+          widgetEntryTable.clearAll();
+        }
+      });
+    }
+
+    private void updateEntryList(int offset)
+    {
+      // get limit
+      int limit = ((offset+128) < count) ? 128 : count-offset;
+
+      // update table segment
+      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y offset=%d limit=%d",
+                                                                 entryPattern,
+                                                                 entryType.toString(),
+                                                                 newestEntriesOnly,
+                                                                 offset,
+                                                                 limit
+                                                                ),
+                                             0
+                                            );
+      final String[] errorMessage = new String[1];
+      ValueMap       valueMap     = new ValueMap();
+      int            n            = 0;
+      while (   (n < limit)
+             && !command.endOfData()
+             && !updateFlag
+             && !updateListFlag
+             && command.getNextResult(errorMessage,
+                                      valueMap,
+                                      Command.TIMEOUT
+                                     ) == Errors.NONE
+            )
+      {
+        final int i = offset+n;
+
+        try
+        {
+          switch (valueMap.getEnum("entryType",EntryTypes.class))
           {
-            if (!tableItem.isDisposed())
-            {
-              EntryData entryData = (EntryData)tableItem.getData();
-              Widgets.removeTableItem(widgetEntryTable,tableItem);
-              entryDataMap.remove(entryData);
-            }
+            case FILE:
+              {
+                long   entryId         = valueMap.getLong  ("entryId"        );
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String fileName        = valueMap.getString("name"           );
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+                long   size            = valueMap.getLong  ("size"           );
+                long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
+                long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.FILE,fileName,dateTime,size);
+
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    TableItem tableItem = widgetEntryTable.getItem(i);
+
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "FILE",
+                                            Units.formatByteSize(entryData.size),
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case IMAGE:
+              {
+                long   entryId         = valueMap.getLong  ("entryId"        );
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String imageName       = valueMap.getString("name"           );
+                long   size            = valueMap.getLong  ("size"           );
+                long   blockOffset     = valueMap.getLong  ("blockOffset"    );
+                long   blockCount      = valueMap.getLong  ("blockCount"     );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.IMAGE,imageName,0L,size);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    TableItem tableItem = widgetEntryTable.getItem(i);
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "IMAGE",
+                                            Units.formatByteSize(entryData.size),
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case DIRECTORY:
+              {
+                long   entryId         = valueMap.getLong  ("entryId"        );
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String directoryName   = valueMap.getString("name"           );
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.DIRECTORY,directoryName,dateTime);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    TableItem tableItem = widgetEntryTable.getItem(i);
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "DIR",
+                                            "",
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case LINK:
+              {
+                long   entryId         = valueMap.getLong  ("entryId"        );
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String linkName        = valueMap.getString("name"           );
+                String destinationName = valueMap.getString("destinationName");
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.LINK,linkName,dateTime);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    TableItem tableItem = widgetEntryTable.getItem(i);
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "LINK",
+                                            "",
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case HARDLINK:
+              {
+                long   entryId         = valueMap.getLong  ("entryId"        );
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String fileName        = valueMap.getString("name"           );
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+                long   size            = valueMap.getLong  ("size"           );
+                long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
+                long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.HARDLINK,fileName,dateTime,size);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    TableItem tableItem = widgetEntryTable.getItem(i);
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "HARDLINK",
+                                            Units.formatByteSize(entryData.size),
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
+            case SPECIAL:
+              {
+
+                long   entryId         = valueMap.getLong  ("entryId"        );
+                String storageName     = valueMap.getString("storageName"    );
+                long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                String name            = valueMap.getString("name"           );
+                long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                // add/update entry data map
+                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.SPECIAL,name,dateTime);
+
+                // update/insert table item
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    TableItem tableItem = widgetEntryTable.getItem(i);
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryData,
+                                            entryData.storageName,
+                                            entryData.name,
+                                            "DEVICE",
+                                            Units.formatByteSize(entryData.size),
+                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                           );
+                  }
+                });
+              }
+              break;
           }
         }
-      });
-      if (triggeredFlag) return;
-
-      // enable/disable restore button
-      display.syncExec(new Runnable()
-      {
-        public void run()
+        catch (IllegalArgumentException exception)
         {
-          checkedEntryEvent.trigger();
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
         }
-      });
+
+        n++;
+      }
     }
   }
 
@@ -3389,6 +3694,7 @@ assert storagePattern != null;
 
   UpdateEntryListThread       updateEntryListThread = new UpdateEntryListThread();
   private EntryDataMap        entryDataMap          = new EntryDataMap();
+  private EntryDataMap2       entryDataMap2         = new EntryDataMap2();
 
   // ------------------------ native functions ----------------------------
 
@@ -4095,6 +4401,7 @@ assert storagePattern != null;
         @Override
         public void handleEvent(final Event event)
         {
+Dprintf.dprintf("");
         }
       });
       widgetStorageTable.addListener(SWT.MouseDoubleClick,new Listener()
@@ -4606,7 +4913,8 @@ Dprintf.dprintf("");
       control = Widgets.newSpacer(group);
       Widgets.layout(control,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,1);
 
-      widgetEntryTable = Widgets.newTable(group,SWT.CHECK);
+      widgetEntryTable = Widgets.newTable(group,SWT.CHECK|SWT.VIRTUAL);
+Dprintf.dprintf("");
       widgetEntryTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE);
       SelectionListener entryListColumnSelectionListener = new SelectionListener()
@@ -4651,6 +4959,17 @@ Dprintf.dprintf("");
       tableColumn = Widgets.addTableColumn(widgetEntryTable,4,BARControl.tr("Date"),   SWT.LEFT, 140,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for date."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
+      widgetEntryTable.addListener(SWT.SetData,new Listener()
+      {
+        @Override
+        public void handleEvent(final Event event)
+        {
+          TableItem tableItem = (TableItem)event.item;
+
+          int i = widgetEntryTable.indexOf(tableItem);
+          updateEntryListThread.triggerUpdateEntry(i);
+        }
+      });
       widgetEntryTable.addListener(SWT.MouseDoubleClick,new Listener()
       {
         @Override
@@ -6711,6 +7030,7 @@ assert storagePattern != null;
     });
 */
 
+Dprintf.dprintf("");
 String directory = "/tmp/x";
 boolean overwriteFiles = false;
 
@@ -6932,6 +7252,8 @@ boolean overwriteFiles = false;
   private void updateCheckedEntryList()
   {
     BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
+Dprintf.dprintf("");
+/*
     for (TableItem tableItem : widgetEntryTable.getItems())
     {
       EntryData entryData = (EntryData)tableItem.getData();
@@ -6945,6 +7267,7 @@ boolean overwriteFiles = false;
                                 );
       }
     }
+    */
   }
 
   /** set/clear tagging of all entries
@@ -6952,6 +7275,7 @@ boolean overwriteFiles = false;
    */
   private void setCheckedAllEntries(boolean checked)
   {
+Dprintf.dprintf("");
     for (TableItem tableItem : widgetEntryTable.getItems())
     {
       tableItem.setChecked(checked);
@@ -6974,6 +7298,7 @@ boolean overwriteFiles = false;
   {
     ArrayList<EntryData> entryDataArray = new ArrayList<EntryData>();
 
+Dprintf.dprintf("");
     for (TableItem tableItem : widgetEntryTable.getItems())
     {
       if (tableItem.getChecked())
@@ -6990,12 +7315,13 @@ boolean overwriteFiles = false;
    */
   private boolean isSomeEntryChecked()
   {
+Dprintf.dprintf("");
     for (TableItem tableItem : widgetEntryTable.getItems())
     {
-      if (tableItem.getChecked())
-      {
-        return true;
-      }
+//      if (tableItem.getChecked())
+//      {
+//        return true;
+//      }
     }
 
     return false;
@@ -7007,6 +7333,7 @@ boolean overwriteFiles = false;
    */
   private int findEntryListIndex(EntryData entryData)
   {
+Dprintf.dprintf("");
     TableItem           tableItems[]        = widgetEntryTable.getItems();
     EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable);
 
@@ -7029,6 +7356,7 @@ boolean overwriteFiles = false;
     EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable);
 
     // update
+Dprintf.dprintf("");
     widgetEntryTable.removeAll();
     synchronized(entryDataMap)
     {

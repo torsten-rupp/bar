@@ -286,12 +286,12 @@ typedef struct IndexNode
 {
   LIST_NODE_HEADER(struct IndexNode);
 
-  ArchiveEntryTypes type;
-  DatabaseId        databaseId;
-  String            storageName;
-  uint64            storageDateTime;
-  String            name;
-  uint64            timeModified;
+  IndexTypes indexType;
+  DatabaseId databaseId;
+  String     storageName;
+  uint64     storageDateTime;
+  String     name;
+  uint64     timeModified;
   union
   {
     struct
@@ -14735,7 +14735,100 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 }
 
 /***********************************************************************\
-* Name   : serverCommand_indexEntriesList
+* Name   : serverCommand_indexEntriesInfo
+* Purpose: get index database entry info
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entryPattern=<text>
+*            type=<text>
+*            isNewestEntriesOnly=0|1
+*            entryMaxCount=<n>|0
+*          Result:
+*            count=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  String     entryPatternString;
+  bool       indexTypeAny;
+  IndexTypes indexType;
+  bool       newestEntriesOnly;
+  uint       entryCount;
+  Errors     error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // entry pattern, get max. count, new entries only
+  entryPatternString = String_new();
+  if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryPattern=<text>");
+    String_delete(entryPatternString);
+    return;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
+  {
+    indexTypeAny = TRUE;
+  }
+  else if (StringMap_getEnum(argumentMap,"indexType",&indexType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_FILE))
+  {
+    indexTypeAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    String_delete(entryPatternString);
+    return;
+  }
+  if (!StringMap_getBool(argumentMap,"newestEntriesOnly",&newestEntriesOnly,FALSE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestEntriesOnly=yes|no");
+    String_delete(entryPatternString);
+    return;
+  }
+
+  // check if index database is available, check if index database is ready
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(entryPatternString);
+    return;
+  }
+
+  // get index info
+//Database_debugEnable(1);
+  error = Index_getEntriesInfo(indexHandle,
+                               Array_cArray(&clientInfo->storageIdArray),
+                               Array_length(&clientInfo->storageIdArray),
+                               NULL,  // entryIds
+                               0,  // entryIdCount
+                               indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
+                               entryPatternString,
+                               &entryCount
+                              );
+//Database_debugEnable(0);
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"index database fail");
+    String_delete(entryPatternString);
+    return;
+  }
+
+  // send data
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entryCount=%u",entryCount);
+
+  // free resources
+  String_delete(entryPatternString);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexEntryList
 * Purpose: get index database entry list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -14768,7 +14861,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 *            userId=<n> groupId=<n> permission=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   #define SEND_FILE_ENTRY(entryId,storageName,storageDateTime,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
@@ -14890,24 +14983,20 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
     UNUSED_VARIABLE(userData);
 
-    switch (indexNode->type)
+    switch (indexNode->indexType)
     {
-      case ARCHIVE_ENTRY_TYPE_NONE:
+      case INDEX_TYPE_FILE:
         break;
-      case ARCHIVE_ENTRY_TYPE_FILE:
+      case INDEX_TYPE_IMAGE:
         break;
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
+      case INDEX_TYPE_DIRECTORY:
         break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
+      case INDEX_TYPE_LINK:
         String_delete(indexNode->link.destinationName);
         break;
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      case INDEX_TYPE_HARDLINK:
         break;
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        break;
-      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      case INDEX_TYPE_SPECIAL:
         break;
       #ifndef NDEBUG
         default:
@@ -14934,7 +15023,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   \***********************************************************************/
 
   IndexNode *newIndexEntryNode(IndexList         *indexList,
-                               ArchiveEntryTypes archiveEntryType,
+                               IndexTypes        indexType,
                                DatabaseId        databaseId,
                                const String      storageName,
                                const String      name,
@@ -14953,29 +15042,25 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     }
 
     // initialize
-    indexNode->type         = archiveEntryType;
+    indexNode->indexType    = indexType;
     indexNode->databaseId   = databaseId;
     indexNode->storageName  = String_duplicate(storageName);
     indexNode->name         = String_duplicate(name);
     indexNode->timeModified = timeModified;
-    switch (indexNode->type)
+    switch (indexNode->indexType)
     {
-      case ARCHIVE_ENTRY_TYPE_NONE:
+      case INDEX_TYPE_FILE:
         break;
-      case ARCHIVE_ENTRY_TYPE_FILE:
+      case INDEX_TYPE_IMAGE:
         break;
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
+      case INDEX_TYPE_DIRECTORY:
         break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
+      case INDEX_TYPE_LINK:
         indexNode->link.destinationName = String_new();
         break;
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      case INDEX_TYPE_HARDLINK:
         break;
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        break;
-      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      case INDEX_TYPE_SPECIAL:
         break;
       #ifndef NDEBUG
         default:
@@ -15024,16 +15109,16 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   * Name   : findIndexEntryNode
   * Purpose: find index entry node
   * Input  : indexList - index list
-  *          type      - archive entry type
+  *          indexType - index type
   *          name      - entry name
   * Output : -
   * Return : index node or NULL
   * Notes  : -
   \***********************************************************************/
 
-  IndexNode *findIndexEntryNode(IndexList         *indexList,
-                                ArchiveEntryTypes type,
-                                const String      name
+  IndexNode *findIndexEntryNode(IndexList     *indexList,
+                                IndexTypes    indexType,
+                                const String  name
                                )
   {
     IndexNode *foundIndexNode;
@@ -15048,12 +15133,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
            && (foundIndexNode == NULL)
           )
     {
-      if      (indexNode->type < type)
+      if      (indexNode->indexType < indexType)
       {
         // next
         indexNode = indexNode->next;
       }
-      else if (indexNode->type == type)
+      else if (indexNode->indexType == indexType)
       {
         // compare
         switch (String_compare(indexNode->name,name,NULL,NULL))
@@ -15083,11 +15168,11 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   }
 
   String            entryPatternString;
-  bool              archiveEntryTypeAny;
-  ArchiveEntryTypes archiveEntryType;
+  bool              indexTypeAny;
+  IndexTypes        indexType;
   bool              newestEntriesOnly;
-  ulong             entryCountOffset;
-  uint              entryCountLimit;
+  ulong             offset;
+  uint              limit;
   uint              entryCount;
   IndexList         indexList;
   IndexNode         *indexNode;
@@ -15096,6 +15181,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   uint64            storageDateTime;
   String            name;
   String            destinationName;
+  FileSystemTypes   fileSystemType;
   Errors            error;
   IndexQueryHandle  indexQueryHandle;
   DatabaseId        databaseId;
@@ -15104,7 +15190,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   uint              userId,groupId;
   uint              permission;
   uint64            fragmentOffset,fragmentSize;
-  FileSystemTypes   fileSystemType;
+  uint64            fragmentOrBlockOffset,fragmentOrBlockSize;
   uint64            blockOffset,blockCount;
 #warning remove
 uint64 t[100];
@@ -15120,17 +15206,17 @@ uint64 t[100];
     String_delete(entryPatternString);
     return;
   }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"archiveEntryType","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
   {
-    archiveEntryTypeAny = TRUE;
+    indexTypeAny = TRUE;
   }
-  else if (StringMap_getEnum(argumentMap,"archiveEntryType",&archiveEntryType,(StringMapParseEnumFunction)Archive_parseArchiveEntryType,ARCHIVE_ENTRY_TYPE_UNKNOWN))
+  else if (StringMap_getEnum(argumentMap,"indexType",&indexType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_FILE))
   {
-    archiveEntryTypeAny = FALSE;
+    indexTypeAny = FALSE;
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveEntryType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
     String_delete(entryPatternString);
     return;
   }
@@ -15140,15 +15226,15 @@ uint64 t[100];
     String_delete(entryPatternString);
     return;
   }
-  if (!StringMap_getULong(argumentMap,"entryCountOffset",&entryCountOffset,0))
+  if (!StringMap_getULong(argumentMap,"offset",&offset,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryCountOffset=<n>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
     String_delete(entryPatternString);
     return;
   }
-  if (!StringMap_getULong(argumentMap,"entryCountLimit",&entryCountLimit,0))
+  if (!StringMap_getULong(argumentMap,"limit",&limit,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryCountLimit=<n>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected limit=<n>");
     String_delete(entryPatternString);
     return;
   }
@@ -15162,16 +15248,18 @@ uint64 t[100];
   }
 
   // initialize variables
-  entryCount   = 0;
+  entryCount      = 0;
   List_init(&indexList);
-  regexpString = String_new();
-  storageName  = String_new();
-  name         = String_new();
+  regexpString    = String_new();
+  storageName     = String_new();
+  name            = String_new();
+  destinationName = String_new();
 
+#if 0
   // collect index data
 memset(t,0,sizeof(t));
 t[0] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_FILE)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
+  if ((indexTypeAny || (indexType == INDEX_TYPE_FILE)) && ((limit == 0) || (entryCount < limit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15205,7 +15293,7 @@ t[0] = Misc_getTimestamp();
       String_delete(entryPatternString);
       return;
     }
-    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
+    while (   ((limit == 0) || (entryCount < limit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextFile(&indexQueryHandle,
                                 &databaseId,
@@ -15225,7 +15313,7 @@ t[0] = Misc_getTimestamp();
       if (newestEntriesOnly)
       {
         // find/allocate index node
-        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,name);
+        indexNode = findIndexEntryNode(&indexList,INDEX_TYPE_FILE,name);
         if (indexNode == NULL)
         {
           indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,databaseId,storageName,name,timeModified);
@@ -15258,7 +15346,7 @@ t[0] = Misc_getTimestamp();
   }
 
 t[1] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_IMAGE)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
+  if ((indexTypeAny || (indexType == ARCHIVE_ENTRY_TYPE_IMAGE)) && ((limit == 0) || (entryCount < limit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15292,7 +15380,7 @@ t[1] = Misc_getTimestamp();
       String_delete(entryPatternString);
       return;
     }
-    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
+    while (   ((limit == 0) || (entryCount < limit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextImage(&indexQueryHandle,
                                  &databaseId,
@@ -15309,10 +15397,10 @@ t[1] = Misc_getTimestamp();
       if (newestEntriesOnly)
       {
         // find/allocate index node
-        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,name);
+        indexNode = findIndexEntryNode(&indexList,INDEX_TYPE_IMAGE,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,databaseId,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,INDEX_TYPE_IMAGE,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -15340,7 +15428,7 @@ t[1] = Misc_getTimestamp();
   }
 
 t[2] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_DIRECTORY)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
+  if ((indexTypeAny || (indexType == INDEX_TYPE_DIRECTORY)) && ((limit == 0) || (entryCount < limit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15374,7 +15462,7 @@ t[2] = Misc_getTimestamp();
       String_delete(entryPatternString);
       return;
     }
-    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
+    while (   ((limit == 0) || (entryCount < limit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextDirectory(&indexQueryHandle,
                                      &databaseId,
@@ -15391,10 +15479,10 @@ t[2] = Misc_getTimestamp();
       if (newestEntriesOnly)
       {
         // find/allocate index node
-        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,name);
+        indexNode = findIndexEntryNode(&indexList,INDEX_TYPE_DIRECTORY,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,databaseId,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,INDEX_TYPE_DIRECTORY,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -15421,7 +15509,7 @@ t[2] = Misc_getTimestamp();
   }
 
 t[3] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_LINK)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
+  if ((indexTypeAny || (indexType == INDEX_TYPE_LINK)) && ((limit == 0) || (entryCount < limit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15456,7 +15544,7 @@ t[3] = Misc_getTimestamp();
       return;
     }
     destinationName = String_new();
-    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
+    while (   ((limit == 0) || (entryCount < limit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextLink(&indexQueryHandle,
                                 &databaseId,
@@ -15474,10 +15562,10 @@ t[3] = Misc_getTimestamp();
       if (newestEntriesOnly)
       {
         // find/allocate index node
-        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,name);
+        indexNode = findIndexEntryNode(&indexList,INDEX_TYPE_LINK,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,databaseId,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,INDEX_TYPE_LINK,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -15506,7 +15594,7 @@ t[3] = Misc_getTimestamp();
   }
 
 t[4] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_HARDLINK)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
+  if ((indexTypeAny || (indexType == INDEX_TYPE_HARDLINK)) && ((limit == 0) || (entryCount < limit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15541,7 +15629,7 @@ t[4] = Misc_getTimestamp();
       return;
     }
     destinationName = String_new();
-    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
+    while (   ((limit == 0) || (entryCount < limit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextHardLink(&indexQueryHandle,
                                     &databaseId,
@@ -15561,10 +15649,10 @@ t[4] = Misc_getTimestamp();
       if (newestEntriesOnly)
       {
         // find/allocate index node
-        indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,name);
+        indexNode = findIndexEntryNode(&indexList,INDEX_TYPE_HARDLINK,name);
         if (indexNode == NULL)
         {
-          indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,databaseId,storageName,name,timeModified);
+          indexNode = newIndexEntryNode(&indexList,INDEX_TYPE_HARDLINK,databaseId,storageName,name,timeModified);
           entryCount++;
         }
         if (indexNode == NULL) break;
@@ -15595,7 +15683,7 @@ t[4] = Misc_getTimestamp();
   }
 
 t[5] = Misc_getTimestamp();
-  if ((archiveEntryTypeAny || (archiveEntryType == ARCHIVE_ENTRY_TYPE_SPECIAL)) && ((entryCountLimit == 0) || (entryCount < entryCountLimit)))
+  if ((indexTypeAny || (indexType == INDEX_TYPE_SPECIAL)) && ((limit == 0) || (entryCount < limit)))
   {
     if (!Array_isEmpty(&clientInfo->storageIdArray))
     {
@@ -15629,7 +15717,7 @@ t[5] = Misc_getTimestamp();
       String_delete(entryPatternString);
       return;
     }
-    while (   ((entryCountLimit == 0) || (entryCount < entryCountLimit))
+    while (   ((limit == 0) || (entryCount < limit))
            && !isCommandAborted(clientInfo,id)
            && Index_getNextSpecial(&indexQueryHandle,
                                    &databaseId,
@@ -15685,6 +15773,106 @@ t[4]-t[3],
 t[5]-t[4],
 t[6]-t[5]
 );
+#else
+  error = Index_initListEntries(&indexQueryHandle,
+                                indexHandle,
+                                Array_cArray(&clientInfo->storageIdArray),
+                                Array_length(&clientInfo->storageIdArray),
+                                NULL,  // entryIds
+                                0,  // entryIdCount
+                                indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
+                                entryPatternString,
+                                offset,
+                                limit
+                               );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list entries fail: %s",Error_getText(error));
+    String_delete(name);
+    String_delete(storageName);
+    String_delete(regexpString);
+    List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+    String_delete(entryPatternString);
+    return;
+  }
+  while (   !isCommandAborted(clientInfo,id)
+         && Index_getNext(&indexQueryHandle,
+                          &databaseId,
+                          storageName,
+                          &storageDateTime,
+                          &indexType,
+                          name,
+                          destinationName,
+                          &fileSystemType,
+                          &size,
+                          &timeModified,
+                          &userId,
+                          &groupId,
+                          &permission,
+                          &fragmentOrBlockOffset,
+                          &fragmentOrBlockSize
+                         )
+        )
+  {
+    if (newestEntriesOnly)
+    {
+      // find/allocate index node
+      indexNode = findIndexEntryNode(&indexList,indexType,name);
+      if (indexNode == NULL)
+      {
+        indexNode = newIndexEntryNode(&indexList,indexType,databaseId,storageName,name,timeModified);
+        entryCount++;
+      }
+      if (indexNode == NULL) break;
+
+      // update index node
+      if (timeModified >= indexNode->timeModified)
+      {
+        indexNode->databaseId          = databaseId;
+        String_set(indexNode->storageName,storageName);
+        indexNode->storageDateTime     = storageDateTime;
+        indexNode->timeModified        = timeModified;
+        indexNode->file.size           = size;
+        indexNode->file.userId         = userId;
+        indexNode->file.groupId        = groupId;
+        indexNode->file.permission     = permission;
+        indexNode->file.fragmentOffset = fragmentOrBlockOffset;
+        indexNode->file.fragmentSize   = fragmentOrBlockSize;
+      }
+    }
+    else
+    {
+      switch (indexType)
+      {
+        case INDEX_TYPE_FILE:
+          SEND_FILE_ENTRY(databaseId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentOrBlockSize);
+          break;
+        case INDEX_TYPE_IMAGE:
+          SEND_IMAGE_ENTRY(databaseId,storageName,storageDateTime,name,fileSystemType,size,fragmentOrBlockOffset,fragmentOrBlockSize);
+          break;
+        case INDEX_TYPE_DIRECTORY:
+          SEND_DIRECTORY_ENTRY(databaseId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
+          break;
+        case INDEX_TYPE_LINK:
+          SEND_LINK_ENTRY(databaseId,storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
+          break;
+        case INDEX_TYPE_HARDLINK:
+          SEND_HARDLINK_ENTRY(databaseId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentOrBlockSize);
+          break;
+        case INDEX_TYPE_SPECIAL:
+          SEND_SPECIAL_ENTRY(databaseId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+      entryCount++;
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+#endif
 
   // send data
   indexNode = indexList.head;
@@ -15692,11 +15880,9 @@ t[6]-t[5]
          && !isCommandAborted(clientInfo,id)
         )
   {
-    switch (indexNode->type)
+    switch (indexNode->indexType)
     {
-      case ARCHIVE_ENTRY_TYPE_NONE:
-        break;
-      case ARCHIVE_ENTRY_TYPE_FILE:
+      case INDEX_TYPE_FILE:
         SEND_FILE_ENTRY(indexNode->databaseId,
                         indexNode->storageName,
                         indexNode->storageDateTime,
@@ -15710,7 +15896,7 @@ t[6]-t[5]
                         indexNode->file.fragmentSize
                        );
         break;
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
+      case INDEX_TYPE_IMAGE:
         SEND_IMAGE_ENTRY(indexNode->databaseId,
                          indexNode->storageName,
                          indexNode->storageDateTime,
@@ -15721,7 +15907,7 @@ t[6]-t[5]
                          indexNode->image.blockCount
                         );
         break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      case INDEX_TYPE_DIRECTORY:
         SEND_DIRECTORY_ENTRY(indexNode->databaseId,
                              indexNode->storageName,
                              indexNode->storageDateTime,
@@ -15732,7 +15918,7 @@ t[6]-t[5]
                              indexNode->directory.permission
                             );
         break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
+      case INDEX_TYPE_LINK:
         SEND_LINK_ENTRY(indexNode->databaseId,
                         indexNode->storageName,
                         indexNode->storageDateTime,
@@ -15744,7 +15930,7 @@ t[6]-t[5]
                         indexNode->link.permission
                        );
         break;
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      case INDEX_TYPE_HARDLINK:
         SEND_HARDLINK_ENTRY(indexNode->databaseId,
                             indexNode->storageName,
                             indexNode->storageDateTime,
@@ -15758,7 +15944,7 @@ t[6]-t[5]
                             indexNode->hardLink.fragmentSize
                            );
         break;
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      case INDEX_TYPE_SPECIAL:
         SEND_SPECIAL_ENTRY(indexNode->databaseId,
                            indexNode->storageName,
                            indexNode->storageDateTime,
@@ -15768,8 +15954,6 @@ t[6]-t[5]
                            indexNode->special.groupId,
                            indexNode->special.permission
                           );
-        break;
-      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
         break;
       #ifndef NDEBUG
         default:
@@ -15783,6 +15967,7 @@ t[6]-t[5]
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
+  String_delete(destinationName);
   String_delete(name);
   String_delete(storageName);
   String_delete(regexpString);
@@ -15999,7 +16184,8 @@ SERVER_COMMANDS[] =
   { "INDEX_REFRESH",               serverCommand_indexRefresh,             AUTHORIZATION_STATE_OK      },
   { "INDEX_REMOVE",                serverCommand_indexRemove,              AUTHORIZATION_STATE_OK      },
 
-  { "INDEX_ENTRIES_LIST",          serverCommand_indexEntriesList,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTRIES_INFO",          serverCommand_indexEntriesInfo,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTRY_LIST",            serverCommand_indexEntryList,           AUTHORIZATION_STATE_OK      },
 
   // obsolete
   { "OPTION_GET",                  serverCommand_jobOptionGet,             AUTHORIZATION_STATE_OK      },
