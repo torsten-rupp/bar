@@ -2457,7 +2457,7 @@ assert storagePattern != null;
                 subMenu = Widgets.insertMenu(widgetStorageTreeAssignToMenu,
                                              findStorageMenuIndex(uuidIndexData),
                                              (Object)uuidIndexData,
-                                             uuidIndexData.name
+                                             uuidIndexData.name.replaceAll("&","&&")
                                             );
                 menuItem = Widgets.addMenuItem(subMenu,
                                                null,
@@ -2581,7 +2581,7 @@ assert storagePattern != null;
             if (subMenu != null)
             {
               MenuItem menuItems[] = subMenu.getItems();
-              for (int i = 5; i < menuItems.length; i++)
+              for (int i = STORAGE_LIST_MENU_START_INDEX; i < menuItems.length; i++)
               {
                 assert menuItems[i].getData() instanceof EntityIndexData;
                 removeEntityMenuItemSet.add(menuItems[i]);
@@ -4865,6 +4865,74 @@ Dprintf.dprintf("");
         {
         }
 
+        subMenu = Widgets.addMenu(menu,BARControl.tr("Set job type\u2026"));
+        {
+          menuItem = Widgets.addMenuItem(subMenu,
+                                         null,
+                                         BARControl.tr("normal")
+                                        );
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+
+              setEntityType(Settings.ArchiveTypes.NORMAL);
+            }
+          });
+          menuItem = Widgets.addMenuItem(subMenu,
+                                         null,
+                                         BARControl.tr("full")
+                                        );
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+
+              setEntityType(Settings.ArchiveTypes.FULL);
+            }
+          });
+          menuItem = Widgets.addMenuItem(subMenu,
+                                         null,
+                                         BARControl.tr("incremental")
+                                        );
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+
+              setEntityType(Settings.ArchiveTypes.INCREMENTAL);
+            }
+          });
+          menuItem = Widgets.addMenuItem(subMenu,
+                                         null,
+                                         BARControl.tr("differential")
+                                        );
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+
+              setEntityType(Settings.ArchiveTypes.DIFFERENTIAL);
+            }
+          });
+        }
+
         Widgets.addMenuSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add to index")+"\u2026");
@@ -6493,6 +6561,94 @@ assert storagePattern != null;
     getCheckedIndexData(indexDataHashSet);
     getSelectedIndexData(indexDataHashSet);
     assignStorage(indexDataHashSet,toEntityIndexData);
+  }
+
+  /** set entity type
+   * @param entityIndexData entity index data
+   * @param archiveType archive type
+   */
+  private void setEntityType(HashSet<IndexData> indexDataHashSet, Settings.ArchiveTypes archiveType)
+  {
+    if (!indexDataHashSet.isEmpty())
+    {
+      try
+      {
+        for (IndexData indexData : indexDataHashSet)
+        {
+          final String info = indexData.getInfo();
+
+          int      error        = Errors.UNKNOWN;
+          String[] errorMessage = new String[1];
+          if      (indexData instanceof UUIDIndexData)
+          {
+            UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
+
+            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S archiveType=%s jobUUID=%'S",
+                                                                 uuidIndexData.jobUUID,
+                                                                 archiveType.toString(),
+                                                                 uuidIndexData.jobUUID
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
+          }
+          else if (indexData instanceof EntityIndexData)
+          {
+            EntityIndexData entityIndexData = (EntityIndexData)indexData;
+
+            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
+                                                                 entityIndexData.entityId,
+                                                                 archiveType.toString(),
+                                                                 entityIndexData.entityId
+                                                                ),
+                                             0,
+                                             errorMessage
+                                            );
+          }
+          else if (indexData instanceof StorageIndexData)
+          {
+            // nothing to do
+          }
+          if (error == Errors.NONE)
+          {
+            indexData.setState(IndexStates.UPDATE_REQUESTED);
+          }
+          else
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
+          }
+        }
+      }
+      catch (CommunicationError error)
+      {
+        Dialogs.error(shell,BARControl.tr("Communication error while set entity type in index database\n\n(error: {0})",error.toString()));
+      }
+      updateStorageThread.triggerUpdate();
+    }
+  }
+
+  /** set entity type
+   * @param entityIndexData entity index data
+   * @param archiveType archive type
+   */
+  private void setEntityType(EntityIndexData entityIndexData, Settings.ArchiveTypes archiveType)
+  {
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+    indexDataHashSet.add(entityIndexData);
+    setEntityType(indexDataHashSet,archiveType);
+  }
+
+  /** set entity type
+   * @param archiveType archive type
+   */
+  private void setEntityType(Settings.ArchiveTypes archiveType)
+  {
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+    getCheckedIndexData(indexDataHashSet);
+    getSelectedIndexData(indexDataHashSet);
+    setEntityType(indexDataHashSet,archiveType);
   }
 
   /** refresh storage from index database
