@@ -11,7 +11,13 @@
 /****************************** Imports ********************************/
 
 // base
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -26,6 +32,17 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 // graphics
+import org.eclipse.swt.dnd.ByteArrayTransfer;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DragSource;
+import org.eclipse.swt.dnd.DragSourceEvent;
+import org.eclipse.swt.dnd.DragSourceListener;
+import org.eclipse.swt.dnd.DropTarget;
+import org.eclipse.swt.dnd.DropTargetAdapter;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
@@ -266,7 +283,7 @@ public class TabRestore
 
   /** index data
    */
-  class IndexData implements Comparable<IndexData>
+  class IndexData implements Comparable<IndexData>,Serializable
   {
     /** tree item update runnable
      */
@@ -339,6 +356,14 @@ public class TabRestore
     IndexData(String name)
     {
       this(name,0L);
+    }
+
+    /** get tree item reference
+     * @param tree item or null
+     */
+    public TreeItem getTreeItem()
+    {
+      return treeItem;
     }
 
     /** set tree item reference
@@ -478,6 +503,35 @@ public class TabRestore
       return "";
     }
 
+    /** write index data object to object stream
+     * Note: must be implented because Java serializaion API cannot write
+     *       inner classes without writing outer classes, too!
+     * @param out stream
+     */
+    private void writeObject(java.io.ObjectOutputStream out)
+      throws IOException
+    {
+      out.writeObject(name);
+      out.writeObject(dateTime);
+      out.writeObject(size);
+      out.writeObject(errorMessage);
+    }
+
+    /** read index data object from object stream
+     * Note: must be implented because Java serializaion API cannot read
+     *       inner classes without reading outer classes, too!
+     * @param in stream
+     * @return
+     */
+    private void readObject(java.io.ObjectInputStream in)
+      throws IOException, ClassNotFoundException
+    {
+      name         = (String)in.readObject();
+      dateTime     = (Long)in.readObject();
+      size         = (Long)in.readObject();
+      errorMessage = (String)in.readObject();
+    }
+
     /** convert data to string
      * @return string
      */
@@ -577,6 +631,124 @@ public class TabRestore
     public String toString()
     {
       return "IndexDataComparator {"+sortMode+"}";
+    }
+  }
+
+  /** index data transfer class (required for drag&drop)
+   */
+  static class IndexDataTransfer extends ByteArrayTransfer
+  {
+    private static final String NAME = "IndexData";
+    private static final int    ID   = registerType(NAME);
+
+    private static IndexDataTransfer instance = new IndexDataTransfer();
+
+    /** get index data transfer instance
+     * @return index data transfer instance
+     */
+    public static IndexDataTransfer getInstance()
+    {
+      return instance;
+    }
+
+    /** convert Java object to native data
+     * @param object object to convert
+     * @param transferData transfer data
+     */
+    public void javaToNative(Object object, TransferData transferData)
+    {
+      if (!validate(object) || !isSupportedType(transferData))
+      {
+        DND.error(DND.ERROR_INVALID_DATA);
+      }
+
+      IndexData indexData = (IndexData)object;
+      try
+      {
+        // write data to a byte array and then ask super to convert to pMedium
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ObjectOutputStream outputStream = new ObjectOutputStream(byteArrayOutputStream);
+        outputStream.writeObject(indexData);
+        byte[] buffer = byteArrayOutputStream.toByteArray();
+        outputStream.close();
+
+        // call super to convert to pMedium
+        super.javaToNative(buffer,transferData);
+      }
+      catch (IOException exception)
+      {
+        // do nothing
+        if (Settings.debugLevel > 0)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+    }
+
+    /** get native data from transfer and convert to object
+     * @param transferData transfer data
+     * @return object
+     */
+    public Object nativeToJava(TransferData transferData)
+    {
+      if (isSupportedType(transferData))
+      {
+        byte[] buffer = (byte[])super.nativeToJava(transferData);
+        if (buffer == null) return null;
+
+        IndexData indexData = null;
+        try
+        {
+          ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(buffer);
+          ObjectInputStream inputStream = new ObjectInputStream(byteArrayInputStream);
+          indexData = (IndexData)inputStream.readObject();
+          inputStream.close ();
+        }
+        catch (java.lang.ClassNotFoundException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            BARControl.printStackTrace(exception);
+          }
+          return null;
+        }
+        catch (IOException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            BARControl.printStackTrace(exception);
+          }
+          return null;
+        }
+
+        return indexData;
+      }
+
+      return null;
+    }
+
+    /** get type names
+     * @return names
+     */
+    protected String[] getTypeNames()
+    {
+      return new String[]{NAME};
+    }
+
+    /** get ids
+     * @return ids
+     */
+    protected int[] getTypeIds()
+    {
+      return new int[]{ID};
+    }
+
+    /** validate data
+     * @return true iff data OK, false otherwise
+     */
+    protected boolean validate(Object object)
+    {
+      return (object != null && (object instanceof IndexData));
     }
   }
 
@@ -721,7 +893,7 @@ public class TabRestore
 
   /** entity index data
    */
-  class EntityIndexData extends IndexData
+  class EntityIndexData extends IndexData implements Serializable
   {
     public long                  entityId;
     public Settings.ArchiveTypes archiveType;
@@ -823,6 +995,35 @@ public class TabRestore
       return String.format("%d: %s",entityId,archiveType.toString());
     }
 
+    /** write storage index data object to object stream
+     * Note: must be implented because Java serializaion API cannot write
+     *       inner classes without writing outer classes, too!
+     * @param out stream
+     */
+    private void writeObject(java.io.ObjectOutputStream out)
+      throws IOException
+    {
+      super.writeObject(out);
+      out.writeObject(entityId);
+      out.writeObject(archiveType);
+      out.writeObject(totalEntries);
+    }
+
+    /** read storage index data object from object stream
+     * Note: must be implented because Java serializaion API cannot read
+     *       inner classes without reading outer classes, too!
+     * @param in stream
+     * @return
+     */
+    private void readObject(java.io.ObjectInputStream in)
+      throws IOException, ClassNotFoundException
+    {
+      super.readObject(in);
+      entityId     = (Long)in.readObject();
+      archiveType  = (Settings.ArchiveTypes)in.readObject();
+      totalEntries = (Long)in.readObject();
+    }
+
     /** convert data to string
      * @return string
      */
@@ -878,7 +1079,7 @@ public class TabRestore
 
   /** storage index data
    */
-  class StorageIndexData extends IndexData
+  class StorageIndexData extends IndexData implements Serializable
   {
     public long                  storageId;                // database storage id
     public String                jobName;                  // job name or null
@@ -1016,12 +1217,49 @@ public class TabRestore
       return String.format("%d: %s, %s",storageId,jobName,name);
     }
 
+    /** write storage index data object to object stream
+     * Note: must be implented because Java serializaion API cannot write
+     *       inner classes without writing outer classes, too!
+     * @param out stream
+     */
+    private void writeObject(java.io.ObjectOutputStream out)
+      throws IOException
+    {
+      super.writeObject(out);
+      out.writeObject(storageId);
+      out.writeObject(jobName);
+      out.writeObject(archiveType);
+      out.writeObject(entries);
+      out.writeObject(indexMode);
+      out.writeObject(lastCheckedDateTime);
+      out.writeObject(errorMessage);
+    }
+
+    /** read storage index data object from object stream
+     * Note: must be implented because Java serializaion API cannot read
+     *       inner classes without reading outer classes, too!
+     * @param in stream
+     * @return
+     */
+    private void readObject(java.io.ObjectInputStream in)
+      throws IOException, ClassNotFoundException
+    {
+      super.readObject(in);
+      storageId           = (Long)in.readObject();
+      jobName             = (String)in.readObject();
+      archiveType         = (Settings.ArchiveTypes)in.readObject();
+      entries             = (Long)in.readObject();
+      indexMode           = (IndexModes)in.readObject();
+      lastCheckedDateTime = (Long)in.readObject();
+      errorMessage        = (String)in.readObject();
+    }
+
     /** convert data to string
      * @return string
      */
     public String toString()
     {
-      return "StorageIndexData {"+name+", created="+dateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", checked="+isChecked()+"}";
+      return "StorageIndexData {"+storageId+", name="+name+", created="+dateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", checked="+isChecked()+"}";
     }
   };
 
@@ -2223,6 +2461,23 @@ assert storagePattern != null;
                                             );
                 menuItem = Widgets.addMenuItem(subMenu,
                                                null,
+                                               BARControl.tr("new normal")
+                                              );
+                menuItem.addSelectionListener(new SelectionListener()
+                {
+                  public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                  {
+                  }
+                  public void widgetSelected(SelectionEvent selectionEvent)
+                  {
+                    MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                    UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                    assignStorage(uuidIndexData,Settings.ArchiveTypes.NORMAL);
+                  }
+                });
+                menuItem = Widgets.addMenuItem(subMenu,
+                                               null,
                                                BARControl.tr("new full")
                                               );
                 menuItem.addSelectionListener(new SelectionListener()
@@ -2270,23 +2525,6 @@ assert storagePattern != null;
 
                     UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
                     assignStorage(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
-                  }
-                });
-                menuItem = Widgets.addMenuItem(subMenu,
-                                               null,
-                                               BARControl.tr("new continuous")
-                                              );
-                menuItem.addSelectionListener(new SelectionListener()
-                {
-                  public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                  {
-                  }
-                  public void widgetSelected(SelectionEvent selectionEvent)
-                  {
-                    MenuItem widget = (MenuItem)selectionEvent.widget;
-
-                    UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                    assignStorage(uuidIndexData,Settings.ArchiveTypes.CONTINUOUS);
                   }
                 });
                 Widgets.addMenuSeparator(subMenu);
@@ -3680,6 +3918,7 @@ Dprintf.dprintf("count=%d",count);
 
   UpdateStorageThread         updateStorageThread = new UpdateStorageThread();
   private IndexDataMap        indexDataMap        = new IndexDataMap();
+  private IndexData           selectedIndexData   = null;
 
   UpdateEntryListThread       updateEntryListThread = new UpdateEntryListThread();
   private EntryDataMap        entryDataMap          = new EntryDataMap();
@@ -4039,6 +4278,8 @@ Dprintf.dprintf("count=%d",count);
     Text        text;
     TableColumn tableColumn;
     Control     control;
+    DragSource  dragSource;
+    DropTarget  dropTarget;
 
     // get shell, display
     shell = parentTabFolder.getShell();
@@ -4343,6 +4584,91 @@ Dprintf.dprintf("count=%d",count);
               treeEvent.detail = SWT.CHECK;
               widgetStorageTree.notifyListeners(SWT.Selection,treeEvent);
             }
+          }
+        }
+      });
+      dragSource = new DragSource(widgetStorageTree,DND.DROP_MOVE);
+      dragSource.setTransfer(new Transfer[]{IndexDataTransfer.getInstance()});
+      dragSource.addDragListener(new DragSourceListener()
+      {
+        public void dragStart(DragSourceEvent dragSourceEvent)
+        {
+          Point point = new Point(dragSourceEvent.x,dragSourceEvent.y);
+
+          TreeItem treeItem = widgetStorageTree.getItem(point);
+          if (treeItem != null)
+          {
+            selectedIndexData = (IndexData)treeItem.getData();
+          }
+          else
+          {
+            dragSourceEvent.doit = false;
+          }
+        }
+        public void dragSetData(DragSourceEvent dragSourceEvent)
+        {
+          dragSourceEvent.data = selectedIndexData;
+Dprintf.dprintf("dragSourceEvent.data=%s",dragSourceEvent.data);
+        }
+        public void dragFinished(DragSourceEvent dragSourceEvent)
+        {
+          selectedIndexData = null;
+        }
+      });
+      dropTarget = new DropTarget(widgetStorageTree,DND.DROP_MOVE);
+      dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance(),IndexDataTransfer.getInstance()});
+      dropTarget.addDropListener(new DropTargetAdapter()
+      {
+        public void dragLeave(DropTargetEvent dropTargetEvent)
+        {
+        }
+        public void dragOver(DropTargetEvent dropTargetEvent)
+        {
+        }
+        public void drop(DropTargetEvent dropTargetEvent)
+        {
+Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
+          if (dropTargetEvent.data != null)
+          {
+            Point point = display.map(null,widgetStorageTree,dropTargetEvent.x,dropTargetEvent.y);
+
+            TreeItem treeItem = widgetStorageTree.getItem(point);
+            if (treeItem != null)
+            {
+              IndexData fromIndexData = (IndexData)dropTargetEvent.data;
+              IndexData toIndexData   = (IndexData)treeItem.getData();
+Dprintf.dprintf("fromIndexData=%s",fromIndexData);
+Dprintf.dprintf("toIndexData=%s",toIndexData);
+
+              if      (toIndexData instanceof UUIDIndexData)
+              {
+Dprintf.dprintf("");
+              }
+              else if (toIndexData instanceof EntityIndexData)
+              {
+                EntityIndexData toEntityIndexData = (EntityIndexData)toIndexData;
+                assignStorage(fromIndexData,toEntityIndexData);
+              }
+              else if (toIndexData instanceof StorageIndexData)
+              {
+                StorageIndexData toStorageIndexData = (StorageIndexData)toIndexData;
+                if (toStorageIndexData.getTreeItem() != null)
+                {
+Dprintf.dprintf("ubsP? toStorageIndexData.getTreeItem()=%s",toStorageIndexData.getTreeItem());
+Dprintf.dprintf("ubsP? toStorageIndexData.getTreeItem()=%s",toStorageIndexData.getTreeItem().getParent());
+                  EntityIndexData toEntityIndexData = (EntityIndexData)toStorageIndexData.getTreeItem().getParent().getData();
+Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
+                  if (toEntityIndexData != null)
+                  {
+                    assignStorage(fromIndexData,toEntityIndexData);
+                  }
+                }
+              }
+            }
+          }
+          else
+          {
+            dropTargetEvent.detail = DND.DROP_NONE;
           }
         }
       });
@@ -5977,12 +6303,8 @@ assert storagePattern != null;
    * @param toUUIDIndexData UUID index data
    * @param archiveType archive type
    */
-  private void assignStorage(UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
+  private void assignStorage(HashSet<IndexData> indexDataHashSet, UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
   {
-    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-    getCheckedIndexData(indexDataHashSet);
-    getSelectedIndexData(indexDataHashSet);
     if (!indexDataHashSet.isEmpty())
     {
       try
@@ -6009,8 +6331,9 @@ assert storagePattern != null;
 
             if      (indexData instanceof UUIDIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld jobUUID=%'S",
-                                                                   entityId,
+              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
+                                                                   toUUIDIndexData.jobUUID,
+                                                                   archiveType.toString(),
                                                                    ((UUIDIndexData)indexData).jobUUID
                                                                   ),
                                                0,
@@ -6019,8 +6342,9 @@ assert storagePattern != null;
             }
             else if (indexData instanceof EntityIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld entityId=%lld",
-                                                                   entityId,
+              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
+                                                                   toUUIDIndexData.jobUUID,
+                                                                   archiveType.toString(),
                                                                    ((EntityIndexData)indexData).entityId
                                                                   ),
                                                0,
@@ -6029,8 +6353,9 @@ assert storagePattern != null;
             }
             else if (indexData instanceof StorageIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
-                                                                   entityId,
+              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
+                                                                   toUUIDIndexData.jobUUID,
+                                                                   archiveType.toString(),
                                                                    ((StorageIndexData)indexData).storageId
                                                                   ),
                                                0,
@@ -6056,15 +6381,38 @@ assert storagePattern != null;
     }
   }
 
-  /** assing selected/checked job/entity/storage to entity
-   * @param toEntityIndexData entity index data
+  /** assing storage to entity
+   * @param indexData index data
+   * @param toUUIDIndexData UUID index data
+   * @param archiveType archive type
    */
-  private void assignStorage(EntityIndexData toEntityIndexData)
+  private void assignStorage(IndexData indexData, UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
+  {
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+    indexDataHashSet.add(indexData);
+    assignStorage(indexDataHashSet,toUUIDIndexData,archiveType);
+  }
+
+  /** assing storage to entity
+   * @param toUUIDIndexData UUID index data
+   * @param archiveType archive type
+   */
+  private void assignStorage(UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
   {
     HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
 
     getCheckedIndexData(indexDataHashSet);
     getSelectedIndexData(indexDataHashSet);
+    assignStorage(indexDataHashSet,toUUIDIndexData,archiveType);
+  }
+
+  /** assing storage to entity
+   * @param indexDataHashSet index data hash set
+   * @param toEntityIndexData entity index data
+   */
+  private void assignStorage(HashSet<IndexData> indexDataHashSet, EntityIndexData toEntityIndexData)
+  {
     if (!indexDataHashSet.isEmpty())
     {
       try
@@ -6121,6 +6469,30 @@ assert storagePattern != null;
       }
       updateStorageThread.triggerUpdate();
     }
+  }
+
+  /** assing storage to entity
+   * @param indexData index data
+   * @param toEntityIndexData entity index data
+   */
+  private void assignStorage(IndexData indexData, EntityIndexData toEntityIndexData)
+  {
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+    indexDataHashSet.add(indexData);
+    assignStorage(indexDataHashSet,toEntityIndexData);
+  }
+
+  /** assing storage to entity
+   * @param toEntityIndexData entity index data
+   */
+  private void assignStorage(EntityIndexData toEntityIndexData)
+  {
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+    getCheckedIndexData(indexDataHashSet);
+    getSelectedIndexData(indexDataHashSet);
+    assignStorage(indexDataHashSet,toEntityIndexData);
   }
 
   /** refresh storage from index database
