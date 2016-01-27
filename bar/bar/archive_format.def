@@ -205,6 +205,10 @@ CONST FILE_SYSTEM_TYPE_REISERFS4   = 9;
 # parent: none
 # never compress/encrypted
 CHUNK BAR "BAR0" Bar
+#TODO creator
+#TODO created
+#TODO host
+#TODO comment
   crc32  crc
 
 # ----------------------------------------------------------------------
