@@ -1531,6 +1531,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                            INDEX_STATE_SET(INDEX_STATE_UPDATE),
                            NULL, // jobUUID
                            NULL, // scheduleUUID
+                           NULL, // entityId
                            &storageId,
                            NULL, // storageName
                            NULL  // lastCheckedTimestamp
@@ -1609,6 +1610,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
                            INDEX_STATE_SET(INDEX_STATE_CREATE),
                            NULL, // jobUUID
                            NULL, // scheduleUUID
+                           NULL, // entityId
                            &storageId,
                            storageName,
                            NULL  // lastCheckedTimestamp
@@ -3457,6 +3459,7 @@ bool Index_findById(IndexHandle *indexHandle,
                     DatabaseId  storageId,
                     String      jobUUID,
                     String      scheduleUUID,
+                    DatabaseId  *entityId,
                     String      storageName,
                     IndexStates *indexState,
                     uint64      *lastCheckedTimestamp
@@ -3476,7 +3479,8 @@ bool Index_findById(IndexHandle *indexHandle,
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT entities.jobUUID, \
+                           "SELECT entities.id, \
+                                   entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    storage.name, \
                                    storage.state, \
@@ -3492,7 +3496,8 @@ bool Index_findById(IndexHandle *indexHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%S %S %S %d %llu",
+                               "%llu %S %S %S %d %llu",
+                               entityId,
                                jobUUID,
                                scheduleUUID,
                                storageName,
@@ -3512,6 +3517,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
                       ConstString  fileName,
                       String       jobUUID,
                       String       scheduleUUID,
+                      DatabaseId   *entityId,
                       DatabaseId   *storageId,
                       IndexStates  *indexState,
                       uint64       *lastCheckedTimestamp
@@ -3536,7 +3542,8 @@ bool Index_findByName(IndexHandle  *indexHandle,
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT entities.jobUUID, \
+                           "SELECT entities.id, \
+                                   entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    storage.id, \
                                    storage.name, \
@@ -3556,7 +3563,8 @@ bool Index_findByName(IndexHandle  *indexHandle,
   foundFlag   = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&databaseQueryHandle,
-                                "%S %S %lld %S %d %llu",
+                                "%llu %S %S %lld %S %d %llu",
+                                entityId,
                                 jobUUID,
                                 scheduleUUID,
                                 storageId,
@@ -3639,6 +3647,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                        IndexStateSet indexStateSet,
                        String        jobUUID,
                        String        scheduleUUID,
+                       DatabaseId    *entityId,
                        DatabaseId    *storageId,
                        String        storageName,
                        uint64        *lastCheckedTimestamp
@@ -3665,7 +3674,8 @@ bool Index_findByState(IndexHandle   *indexHandle,
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT entities.jobUUID, \
+                           "SELECT entities.id, \
+                                   entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    storage.id, \
                                    storage.name, \
@@ -3683,7 +3693,8 @@ bool Index_findByState(IndexHandle   *indexHandle,
   }
   String_delete(indexStateSetString);
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%S %S %lld %S %llu",
+                               "%llu %S %S %lld %S %llu",
+                               entityId,
                                jobUUID,
                                scheduleUUID,
                                storageId,
@@ -6899,12 +6910,13 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   return error;
 }
 
-Errors Index_assignTo(IndexHandle *indexHandle,
-                      ConstString jobUUID,
-                      DatabaseId  entityId,
-                      DatabaseId  storageId,
-                      DatabaseId  toEntityId,
-                      DatabaseId  toStorageId
+Errors Index_assignTo(IndexHandle  *indexHandle,
+                      ConstString  jobUUID,
+                      DatabaseId   entityId,
+                      DatabaseId   storageId,
+                      DatabaseId   toEntityId,
+                      DatabaseId   toStorageId,
+                      ArchiveTypes toArchiveType
                      )
 {
   Errors error;
@@ -6997,6 +7009,8 @@ Errors Index_assignTo(IndexHandle *indexHandle,
       }
     }
   }
+
+#warning TODO toArchiveType
 
   return ERROR_NONE;
 }

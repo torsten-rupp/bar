@@ -251,9 +251,10 @@ void __Index_done(const char  *__fileName__,
 * Purpose: find storage by id
 * Input  : indexHandle - index handle
 *          storageId   - database id of storage
-* Output : jobUUID        - unique job id (can be NULL)
-*          scheduleUUID   - unique schedule id (can be NULL)
-*          storageName          - storage name
+* Output : jobUUID              - unique job id (can be NULL)
+*          scheduleUUID         - unique schedule id (can be NULL)
+*          entityId             - database id of entity (can be NULL)
+*          storageName          - storage name (can be NULL)
 *          indexState           - index state (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -265,6 +266,7 @@ bool Index_findById(IndexHandle *indexHandle,
                     DatabaseId  storageId,
                     String      jobUUID,
                     String      scheduleUUID,
+                    DatabaseId  *entityId,
                     String      storageName,
                     IndexStates *indexState,
                     uint64      *lastCheckedTimestamp
@@ -281,7 +283,8 @@ bool Index_findById(IndexHandle *indexHandle,
 *          findFileName    - file name to find or NULL
 * Output : jobUUID              - unique job id (can be NULL)
 *          scheduleUUID         - unique schedule id (can be NULL)
-*          storageId            - database id of storage
+*          entityId             - database id of entity (can be NULL)
+*          storageId            - database id of storage (can be NULL)
 *          indexState           - index state (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -297,6 +300,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
                       ConstString  findFileName,
                       String       jobUUID,
                       String       scheduleUUID,
+                      DatabaseId   *entityId,
                       DatabaseId   *storageId,
                       IndexStates  *indexState,
                       uint64       *lastCheckedTimestamp
@@ -309,7 +313,8 @@ bool Index_findByName(IndexHandle  *indexHandle,
 *          indexState  - index state
 * Output : jobUUID              - unique job id (can be NULL)
 *          scheduleUUID         - unique schedule id (can be NULL)
-*          storageId            - database id of storage
+*          entityId             - database id of entity (can be NULL)
+*          storageId            - database id of storage (can be NULL)
 *          storageName          - storage name (can be NULL)
 *          lastCheckedTimestamp - last checked date/time stamp [s] (can
 *                                 be NULL)
@@ -321,6 +326,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                        IndexStateSet indexStateSet,
                        String        jobUUID,
                        String        scheduleUUID,
+                       DatabaseId    *entityId,
                        DatabaseId    *storageId,
                        String        storageName,
                        uint64        *lastCheckedTimestamp
@@ -1363,25 +1369,27 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 /***********************************************************************\
 * Name   : Index_assignTo
 * Purpose: assign job/entity/storage to other entity/storage
-* Input  : indexHandle - index handle
-*          jobUUID     - job UUID (can be NULL)
-*          entityId    - database id of entity index (can be
-*                        DATABASE_ID_NONE)
-*          storageId   - database id of storage index (can be
-*                        DATABASE_ID_NONE)
-*          toEntityId  - to entity id (can be DATABASE_ID_NONE)
-*          toStorageId - to storage id (can be DATABASE_ID_NONE)
+* Input  : indexHandle   - index handle
+*          jobUUID       - job UUID (can be NULL)
+*          entityId      - database id of entity index (can be
+*                          DATABASE_ID_NONE)
+*          storageId     - database id of storage index (can be
+*                          DATABASE_ID_NONE)
+*          toEntityId    - to entity id (can be DATABASE_ID_NONE)
+*          toStorageId   - to storage id (can be DATABASE_ID_NONE)
+*          toArchiveType - to archive type (can be ARCHIVE_TYPE_NONE)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_assignTo(IndexHandle *indexHandle,
-                      ConstString jobUUID,
-                      DatabaseId  entityId,
-                      DatabaseId  storageId,
-                      DatabaseId  toEntityId,
-                      DatabaseId  toStorageId
+Errors Index_assignTo(IndexHandle  *indexHandle,
+                      ConstString  jobUUID,
+                      DatabaseId   entityId,
+                      DatabaseId   storageId,
+                      DatabaseId   toEntityId,
+                      DatabaseId   toStorageId,
+                      ArchiveTypes toArchiveType
                      );
 
 /***********************************************************************\
