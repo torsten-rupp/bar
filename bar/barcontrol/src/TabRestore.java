@@ -4265,7 +4265,7 @@ Dprintf.dprintf("count=%d",count);
   {
     TabFolder   tabFolder;
     Composite   tab;
-    Menu        menu;
+    Menu        menu,subMenu;
     MenuItem    menuItem;
     Composite   composite,subComposite;
     Label       label;
