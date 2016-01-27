@@ -4020,6 +4020,7 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
                               storageMsg.archiveName,
                               NULL,  // jobUUID,
                               NULL,  // scheduleUUID,
+                              NULL,  // entityId
                               &storageId,
                               NULL,  // indexState,
                               NULL  // lastCheckedTimestamp
@@ -4033,7 +4034,8 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
                                DATABASE_ID_NONE,  // enityId
                                storageMsg.storageId,
                                DATABASE_ID_NONE,  // toEnityId
-                               storageId
+                               storageId,
+                               ARCHIVE_TYPE_NONE
                               );
         if (error != ERROR_NONE)
         {
@@ -4144,7 +4146,8 @@ fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
                                DATABASE_ID_NONE,  // enityId
                                storageMsg.storageId,
                                entityId,
-                               DATABASE_ID_NONE  // toStorageId
+                               DATABASE_ID_NONE,  // toStorageId
+                               ARCHIVE_TYPE_NONE
                               );
         if (error != ERROR_NONE)
         {
