@@ -3945,9 +3945,10 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
   if (!Index_findById(indexHandle,
                       storageId,
                       jobUUID,
-                      NULL, // scheduleUUID
+                      NULL,  // scheduleUUID
+                      NULL,  // entityId
                       storageName,
-                      NULL, // indexState
+                      NULL,  // indexState
                       NULL  // lastCheckedTimestamp
                      )
      )
@@ -4712,6 +4713,7 @@ LOCAL void indexThreadCode(void)
   Errors                 error;
   JobNode                *jobNode;
   IndexCryptPasswordNode *indexCryptPasswordNode;
+  uint64                 totalTimeLastChanged;
   uint64                 totalEntries,totalSize;
   uint                   sleepTime;
 
@@ -4746,8 +4748,9 @@ LOCAL void indexThreadCode(void)
     // update index entries
     while (   Index_findByState(indexHandle,
                                 INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
-                                NULL, // jobUUID
-                                NULL, // scheduleUUID
+                                NULL,  // jobUUID
+                                NULL,  // scheduleUUID
+                                NULL,  // entityId
                                 &storageId,
                                 storageName,
                                 NULL  // lastCheckedTimestamp
@@ -4797,6 +4800,7 @@ fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(stora
                                       &storageHandle,
                                       storageName,
                                       &jobOptions,
+                                      &totalTimeLastChanged,
                                       &totalEntries,
                                       &totalSize,
                                       CALLBACK(indexPauseCallback,NULL),
@@ -5051,6 +5055,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                                                 storageSpecifier.archiveName,
                                                                 NULL,  // jobUUID
                                                                 NULL,  // scheduleUUID
+                                                                NULL,  // entityId
                                                                 &storageId,
                                                                 &indexState,
                                                                 NULL  // lastCheckedTimestamp
@@ -13624,6 +13629,72 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, uint id, const S
 }
 
 /***********************************************************************\
+* Name   : serverCommand_indexEntitySet
+* Purpose: set entity in index database
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<id>
+*            createDateTime=<time stamp>
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes archiveType;
+  DatabaseId   entityId;
+  Errors       error;
+
+#warning TODO
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get jobUUID, archive type
+  String_clear(jobUUID);
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  archiveType = ARCHIVE_TYPE_UNKNOWN;
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+    return;
+  }
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // create new entity
+  error = Index_newEntity(indexHandle,
+                           jobUUID,
+                           NULL,  // scheduleUUID,
+                           archiveType,
+                           &entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
+    return;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : serverCommand_indexStorageInfo
 * Purpose: get index database storage info
 * Input  : clientInfo    - client info
@@ -13970,6 +14041,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
                                                      storageSpecifier.archiveName,
                                                      NULL,  // jobUUID
                                                      NULL,  // scheduleUUID
+                                                     NULL,  // entityId
    //TODO NULL
                                                      &storageId,
                                                      NULL,  // indexState,
@@ -14102,7 +14174,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
                              DATABASE_ID_NONE,  // entityId,
                              DATABASE_ID_NONE,  // storageId
                              toEntityId,
-                             DATABASE_ID_NONE  // toStorageId
+                             DATABASE_ID_NONE,  // toStorageId
+                             ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
       {
@@ -14131,7 +14204,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
                              DATABASE_ID_NONE,  // entityId
                              DATABASE_ID_NONE,  // storageId
                              toEntityId,
-                             DATABASE_ID_NONE  // toStorageId
+                             DATABASE_ID_NONE,  // toStorageId
+                             ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
       {
@@ -14152,7 +14226,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
                              entityId,
                              DATABASE_ID_NONE,  // storageId
                              toEntityId,
-                             DATABASE_ID_NONE  // toStorageId
+                             DATABASE_ID_NONE,  // toStorageId
+                             ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
       {
@@ -14181,7 +14256,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
                              DATABASE_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             DATABASE_ID_NONE  // toStorageId
+                             DATABASE_ID_NONE,  // toStorageId
+                             ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
       {
@@ -14201,7 +14277,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
                              DATABASE_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             DATABASE_ID_NONE  // toStorageId
+                             DATABASE_ID_NONE,  // toStorageId
+                             ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
       {
@@ -14230,7 +14307,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
                              DATABASE_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             DATABASE_ID_NONE  // toStorageId
+                             DATABASE_ID_NONE,  // toStorageId
+                             ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
       {
@@ -16177,6 +16255,7 @@ SERVER_COMMANDS[] =
   { "INDEX_UUID_LIST",             serverCommand_indexUUIDList,            AUTHORIZATION_STATE_OK      },
   { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_OK      },
   { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTITY_SET",            serverCommand_indexEntitySet,           AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_INFO",          serverCommand_indexStorageInfo,         AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_OK      },
