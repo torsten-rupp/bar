@@ -1355,8 +1355,10 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 *          indexMode     - index mode
 *          jobOptions    - job options
 *          logHandle     - log handle (can be NULL)
-* Output : totalEntries - total entries (can be NULL)
-*          totalSize    - total size [bytes] (can be NULL)
+* Output : totalTimeLastChanged - total last change time [s] (can be
+*                                 NULL)
+*          totalEntries         - total entries (can be NULL)
+*          totalSize            - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1366,6 +1368,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
+                          uint64           *totalTimeLastChanged,
                           uint64           *totalEntries,
                           uint64           *totalSize,
                           LogHandle        *logHandle
@@ -1374,18 +1377,19 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 /***********************************************************************\
 * Name   : Archive_updateIndex
 * Purpose: update storage index
-* Input  : indexHandle   - index handle
-*          storageId     - database id of storage
-*          storageHandle - storage handle
-*          storageName   - storage name
-*          jobOptions    - job options
-*          pauseCallback - pause check callback (can be NULL)
-*          pauseUserData - pause user data
-*          abortCallback - abort check callback (can be NULL)
-*          abortUserData - abort user data
-*          logHandle     - log handle (can be NULL)
-* Output : totalEntries - total entries (can be NULL)
-*          totalSize    - total size [bytes] (can be NULL)
+* Input  : indexHandle             - index handle
+*          storageId               - database id of storage
+*          storageHandle           - storage handle
+*          storageName             - storage name
+*          jobOptions              - job options
+*          pauseCallback           - pause check callback (can be NULL)
+*          pauseUserData           - pause user data
+*          abortCallback           - abort check callback (can be NULL)
+*          abortUserData           - abort user data
+* Output : totalTimeLastChanged - total last change time [s] (can be
+*                                 NULL)
+*          totalEntries         - total entries (can be NULL)
+*          totalSize            - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1395,6 +1399,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            StorageHandle                *storageHandle,
                            ConstString                  storageName,
                            const JobOptions             *jobOptions,
+                           uint64                       *totalTimeLastChanged,
                            uint64                       *totalEntries,
                            uint64                       *totalSize,
                            ArchivePauseCallbackFunction pauseCallback,

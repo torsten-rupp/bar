@@ -10386,6 +10386,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
+                          uint64           *totalTimeLastChanged,
                           uint64           *totalEntries,
                           uint64           *totalSize,
                           LogHandle        *logHandle
@@ -10416,6 +10417,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                               storageHandle,
                               storageName,
                               jobOptions,
+                              totalTimeLastChanged,
                               totalEntries,
                               totalSize,
                               CALLBACK(NULL,NULL),
@@ -10436,6 +10438,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            StorageHandle                *storageHandle,
                            ConstString                  storageName,
                            const JobOptions             *jobOptions,
+                           uint64                       *totalTimeLastChanged,
                            uint64                       *totalEntries,
                            uint64                       *totalSize,
                            ArchivePauseCallbackFunction pauseCallback,
@@ -10448,6 +10451,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   StorageSpecifier  storageSpecifier;
   String            printableStorageName;
   Errors            error;
+  uint64            timeLastChanged;
   bool              abortedFlag,serverAllocationPendingFlag;
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
@@ -10563,6 +10567,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
   error                       = ERROR_NONE;
+  timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
   while (   !Archive_eof(&archiveInfo,FALSE)
@@ -10658,6 +10663,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
               String_delete(fileName);
               break;
             }
+
+            // save max. time last changed
+            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
             pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(fileName),fileInfo.size,String_cString(printableStorageName));
 
             // close archive file, free resources
@@ -10756,6 +10765,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
               String_delete(directoryName);
               break;
             }
+
+            // save max. time last changed
+            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
             pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
 
             // close archive file, free resources
@@ -10807,6 +10820,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
               String_delete(linkName);
               break;
             }
+
+            // save max. time last changed
+            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
             pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
 
             // close archive file, free resources
@@ -10873,6 +10890,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
               StringList_done(&fileNameList);
               break;
             }
+
+            // save max. time last changed
+            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
             pprintInfo(4,"INDEX: ","Added hardlink '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),fileInfo.size,String_cString(printableStorageName));
 
             // close archive file, free resources
@@ -10921,6 +10942,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
               String_delete(fileName);
               break;
             }
+
+            // save max. time last changed
+            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
             pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
             // close archive file, free resources
@@ -11015,6 +11040,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                      Error_getCode(error)
                     );
     }
+    if (totalTimeLastChanged != NULL) (*totalTimeLastChanged) = timeLastChanged;
     if (totalEntries != NULL) (*totalEntries) = Archive_getEntries(&archiveInfo);
     if (totalSize != NULL) (*totalSize) = Archive_getSize(&archiveInfo);
   }
