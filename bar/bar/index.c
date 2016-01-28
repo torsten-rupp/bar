@@ -150,6 +150,9 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
   // disable synchronous mode and journal to increase transaction speed
   Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
 
+  // enable foreign key constrains
+  Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
   return ERROR_NONE;
 }
 
@@ -208,6 +211,9 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
     #endif /* NDEBUG */
     return error;
   }
+
+  // enable foreign key constrains
+  Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
   return ERROR_NONE;
 }
@@ -1534,7 +1540,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                            NULL, // entityId
                            &storageId,
                            NULL, // storageName
-                           NULL  // lastCheckedTimestamp
+                           NULL  // lastCheckedDateTime
                           )
          && (error == ERROR_NONE)
         )
@@ -1613,7 +1619,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
                            NULL, // entityId
                            &storageId,
                            storageName,
-                           NULL  // lastCheckedTimestamp
+                           NULL  // lastCheckedDateTime
                           )
          && (error == ERROR_NONE)
         )
@@ -2315,7 +2321,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
         (void)Index_setState(indexHandle,
                              storageId,
                              INDEX_STATE_UPDATE_REQUESTED,
-                             0LL,  // lastCheckedTimestamp
+                             0LL,  // lastCheckedDateTime
                              NULL  // errorMessage
                             );
       }
@@ -3462,7 +3468,7 @@ bool Index_findById(IndexHandle *indexHandle,
                     DatabaseId  *entityId,
                     String      storageName,
                     IndexStates *indexState,
-                    uint64      *lastCheckedTimestamp
+                    uint64      *lastCheckedDateTime
                    )
 {
   Errors              error;
@@ -3502,7 +3508,7 @@ bool Index_findById(IndexHandle *indexHandle,
                                scheduleUUID,
                                storageName,
                                indexState,
-                               lastCheckedTimestamp
+                               lastCheckedDateTime
                               );
   Database_finalize(&databaseQueryHandle);
 
@@ -3520,7 +3526,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
                       DatabaseId   *entityId,
                       DatabaseId   *storageId,
                       IndexStates  *indexState,
-                      uint64       *lastCheckedTimestamp
+                      uint64       *lastCheckedDateTime
                      )
 {
   Errors              error;
@@ -3570,7 +3576,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
                                 storageId,
                                 storageName,
                                 indexState,
-                                lastCheckedTimestamp
+                                lastCheckedDateTime
                                )
         )
   {
@@ -3650,7 +3656,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                        DatabaseId    *entityId,
                        DatabaseId    *storageId,
                        String        storageName,
-                       uint64        *lastCheckedTimestamp
+                       uint64        *lastCheckedDateTime
                       )
 {
   Errors              error;
@@ -3663,7 +3669,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
 
   (*storageId) = DATABASE_ID_NONE;
   if (storageName != NULL) String_clear(storageName);
-  if (lastCheckedTimestamp != NULL) (*lastCheckedTimestamp) = 0LL;
+  if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = 0LL;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -3699,7 +3705,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                                scheduleUUID,
                                storageId,
                                storageName,
-                               lastCheckedTimestamp
+                               lastCheckedDateTime
                               );
   Database_finalize(&databaseQueryHandle);
 
@@ -3709,7 +3715,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
 Errors Index_getState(IndexHandle *indexHandle,
                       DatabaseId  storageId,
                       IndexStates *indexState,
-                      uint64      *lastCheckedTimestamp,
+                      uint64      *lastCheckedDateTime,
                       String      errorMessage
                      )
 {
@@ -3741,7 +3747,7 @@ Errors Index_getState(IndexHandle *indexHandle,
   if (!Database_getNextRow(&databaseQueryHandle,
                            "%d %llu %S",
                            indexState,
-                           lastCheckedTimestamp,
+                           lastCheckedDateTime,
                            errorMessage
                           )
      )
@@ -3757,7 +3763,7 @@ Errors Index_getState(IndexHandle *indexHandle,
 Errors Index_setState(IndexHandle *indexHandle,
                       DatabaseId  storageId,
                       IndexStates indexState,
-                      uint64      lastCheckedTimestamp,
+                      uint64      lastCheckedDateTime,
                       const char  *errorMessage,
                       ...
                      )
@@ -3789,7 +3795,7 @@ Errors Index_setState(IndexHandle *indexHandle,
     return error;
   }
 
-  if (lastCheckedTimestamp != 0LL)
+  if (lastCheckedDateTime != 0LL)
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -3797,7 +3803,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                               SET lastChecked=DATETIME(%llu,'unixepoch') \
                               WHERE id=%lld; \
                              ",
-                             lastCheckedTimestamp,
+                             lastCheckedDateTime,
                              storageId
                             );
     if (error != ERROR_NONE)

@@ -251,13 +251,13 @@ void __Index_done(const char  *__fileName__,
 * Purpose: find storage by id
 * Input  : indexHandle - index handle
 *          storageId   - database id of storage
-* Output : jobUUID              - unique job id (can be NULL)
-*          scheduleUUID         - unique schedule id (can be NULL)
-*          entityId             - database id of entity (can be NULL)
-*          storageName          - storage name (can be NULL)
-*          indexState           - index state (can be NULL)
-*          lastCheckedTimestamp - last checked date/time stamp [s] (can
-*                                 be NULL)
+* Output : jobUUID             - unique job id (can be NULL)
+*          scheduleUUID        - unique schedule id (can be NULL)
+*          entityId            - database id of entity (can be NULL)
+*          storageName         - storage name (can be NULL)
+*          indexState          - index state (can be NULL)
+*          lastCheckedDateTime - last checked date/time stamp [s] (can
+*                                be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -269,7 +269,7 @@ bool Index_findById(IndexHandle *indexHandle,
                     DatabaseId  *entityId,
                     String      storageName,
                     IndexStates *indexState,
-                    uint64      *lastCheckedTimestamp
+                    uint64      *lastCheckedDateTime
                    );
 
 /***********************************************************************\
@@ -281,13 +281,13 @@ bool Index_findById(IndexHandle *indexHandle,
 *          findLoginName   - login name to find or NULL
 *          findDeviceName  - device name to find or NULL
 *          findFileName    - file name to find or NULL
-* Output : jobUUID              - unique job id (can be NULL)
-*          scheduleUUID         - unique schedule id (can be NULL)
-*          entityId             - database id of entity (can be NULL)
-*          storageId            - database id of storage (can be NULL)
-*          indexState           - index state (can be NULL)
-*          lastCheckedTimestamp - last checked date/time stamp [s] (can
-*                                 be NULL)
+* Output : jobUUID             - unique job id (can be NULL)
+*          scheduleUUID        - unique schedule id (can be NULL)
+*          entityId            - database id of entity (can be NULL)
+*          storageId           - database id of storage (can be NULL)
+*          indexState          - index state (can be NULL)
+*          lastCheckedDateTime - last checked date/time stamp [s] (can
+*                                be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -303,7 +303,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
                       DatabaseId   *entityId,
                       DatabaseId   *storageId,
                       IndexStates  *indexState,
-                      uint64       *lastCheckedTimestamp
+                      uint64       *lastCheckedDateTime
                      );
 
 /***********************************************************************\
@@ -311,13 +311,13 @@ bool Index_findByName(IndexHandle  *indexHandle,
 * Purpose: find index by state
 * Input  : indexHandle - index handle
 *          indexState  - index state
-* Output : jobUUID              - unique job id (can be NULL)
-*          scheduleUUID         - unique schedule id (can be NULL)
-*          entityId             - database id of entity (can be NULL)
-*          storageId            - database id of storage (can be NULL)
-*          storageName          - storage name (can be NULL)
-*          lastCheckedTimestamp - last checked date/time stamp [s] (can
-*                                 be NULL)
+* Output : jobUUID             - unique job id (can be NULL)
+*          scheduleUUID        - unique schedule id (can be NULL)
+*          entityId            - database id of entity (can be NULL)
+*          storageId           - database id of storage (can be NULL)
+*          storageName         - storage name (can be NULL)
+*          lastCheckedDateTime - last checked date/time stamp [s] (can
+*                                be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -329,7 +329,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                        DatabaseId    *entityId,
                        DatabaseId    *storageId,
                        String        storageName,
-                       uint64        *lastCheckedTimestamp
+                       uint64        *lastCheckedDateTime
                       );
 
 /***********************************************************************\
@@ -337,10 +337,10 @@ bool Index_findByState(IndexHandle   *indexHandle,
 * Purpose: get index state
 * Input  : indexHandle - index handle
 *          storageId   - database id of storage
-* Output : indexState           - index state; see IndexStates
-*          lastCheckedTimestamp - last checked date/time stamp [s] (can
-*                                 be NULL)
-*          errorMessage         - error message (can be NULL)
+* Output : indexState          - index state; see IndexStates
+*          lastCheckedDateTime - last checked date/time stamp [s] (can
+*                                be NULL)
+*          errorMessage        - error message (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -348,20 +348,20 @@ bool Index_findByState(IndexHandle   *indexHandle,
 Errors Index_getState(IndexHandle  *indexHandle,
                       DatabaseId   storageId,
                       IndexStates  *indexState,
-                      uint64       *lastCheckedTimestamp,
+                      uint64       *lastCheckedDateTime,
                       String       errorMessage
                      );
 
 /***********************************************************************\
 * Name   : Index_setState
 * Purpose: set storage index state
-* Input  : indexHandle          - index handle
-*          storageId            - database id of storage
-*          indexState           - index state; see IndexStates
-*          lastCheckedTimestamp - last checked date/time stamp [s] (can
-*                                 be 0LL)
-*          errorMessage         - error message (can be NULL)
-*          ...                  - optional arguments for error message
+* Input  : indexHandle         - index handle
+*          storageId           - database id of storage
+*          indexState          - index state; see IndexStates
+*          lastCheckedDateTime - last checked date/time stamp [s] (can
+*                                be 0LL)
+*          errorMessage        - error message (can be NULL)
+*          ...                 - optional arguments for error message
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -370,7 +370,7 @@ Errors Index_getState(IndexHandle  *indexHandle,
 Errors Index_setState(IndexHandle *indexHandle,
                       DatabaseId  storageId,
                       IndexStates indexState,
-                      uint64      lastCheckedTimestamp,
+                      uint64      lastCheckedDateTime,
                       const char  *errorMessage,
                       ...
                      );
