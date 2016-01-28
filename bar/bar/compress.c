@@ -257,7 +257,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_Z
         error = CompressZIP_compressData(compressInfo);
       #else /* not HAVE_Z */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_Z */
       break;
     case COMPRESS_ALGORITHM_BZIP2_1:
@@ -273,7 +273,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_BZ2
         error = CompressBZ2_compressData(compressInfo);
       #else /* not HAVE_BZ2 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
     case COMPRESS_ALGORITHM_LZMA_1:
@@ -289,7 +289,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZMA
         error = CompressLZMA_compressData(compressInfo);
       #else /* not HAVE_LZMA */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
     case COMPRESS_ALGORITHM_LZO_1:
@@ -301,7 +301,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZO
         error = CompressLZO_compressData(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -325,7 +325,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZ4
         error = CompressLZ4_compressData(compressInfo);
       #else /* not HAVE_LZ4 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZ4 */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
@@ -341,7 +341,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         error = CompressXD3_compressData(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
@@ -433,7 +433,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_Z
         error = CompressZIP_decompressData(compressInfo);
       #else /* not HAVE_Z */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_Z */
       break;
     case COMPRESS_ALGORITHM_BZIP2_1:
@@ -449,7 +449,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_BZ2
         error = CompressBZ2_decompressData(compressInfo);
       #else /* not HAVE_BZ2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
     case COMPRESS_ALGORITHM_LZMA_1:
@@ -465,7 +465,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZMA
         error = CompressLZMA_decompressData(compressInfo);
       #else /* not HAVE_LZMA */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
     case COMPRESS_ALGORITHM_LZO_1:
@@ -477,7 +477,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZO
         error = CompressLZO_decompressData(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -501,7 +501,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZ4
         error = CompressLZ4_decompressData(compressInfo);
       #else /* not HAVE_LZ4 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZ4 */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
@@ -517,7 +517,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         error = CompressXD3_decompressData(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
@@ -671,7 +671,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_Z
         error = CompressZIP_init(compressInfo,compressMode,compressAlgorithm);
       #else /* not HAVE_Z */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_Z */
       break;
     case COMPRESS_ALGORITHM_BZIP2_1:
@@ -686,7 +686,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_BZ2
         error = CompressBZ2_init(compressInfo,compressMode,compressAlgorithm);
       #else /* not HAVE_BZ2 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
     case COMPRESS_ALGORITHM_LZMA_1:
@@ -701,7 +701,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_LZMA
         error = CompressLZMA_init(compressInfo,compressMode,compressAlgorithm);
       #else /* not HAVE_LZMA */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
     case COMPRESS_ALGORITHM_LZO_1:
@@ -713,7 +713,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_LZO
         error = CompressLZO_init(compressInfo,compressMode,compressAlgorithm);
       #else /* not HAVE_LZO */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -736,7 +736,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_LZ4
         error = CompressLZ4_init(compressInfo,compressMode,compressAlgorithm);
       #else /* not HAVE_LZ4 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZ4 */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
@@ -751,7 +751,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_XDELTA3
         error = CompressXD3_init(compressInfo,compressAlgorithm,deltaSourceHandle);
       #else /* not HAVE_XDELTA3 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
@@ -761,6 +761,12 @@ bool Compress_isValidAlgorithm(uint16 n)
       break; /* not reached */
   }
   assert(error != ERROR_UNKNOWN);
+  if (error != ERROR_NONE)
+  {
+    RingBuffer_done(&compressInfo->compressRingBuffer,CALLBACK(NULL,NULL));
+    RingBuffer_done(&compressInfo->dataRingBuffer,CALLBACK(NULL,NULL));
+    return error;
+  }
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(compressInfo,sizeof(CompressInfo));
@@ -768,7 +774,7 @@ bool Compress_isValidAlgorithm(uint16 n)
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,compressInfo,sizeof(CompressInfo));
   #endif /* NDEBUG */
 
-  return error;
+  return ERROR_NONE;
 }
 
 #ifdef NDEBUG
@@ -843,7 +849,7 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_LZO
         CompressLZO_done(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -926,7 +932,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_Z
         error = CompressZIP_reset(compressInfo);
       #else /* not HAVE_Z */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_Z */
       break;
     case COMPRESS_ALGORITHM_BZIP2_1:
@@ -941,7 +947,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_BZ2
         error = CompressBZ2_reset(compressInfo);
       #else /* not HAVE_BZ2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
     case COMPRESS_ALGORITHM_LZMA_1:
@@ -956,7 +962,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_LZMA
         error = CompressLZMA_reset(compressInfo);
       #else /* not HAVE_LZMA */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
     case COMPRESS_ALGORITHM_LZO_1:
@@ -967,7 +973,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_LZO
         error = CompressLZO_reset(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -990,7 +996,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_LZ4
         error = CompressLZ4_reset(compressInfo);
       #else /* not HAVE_LZ4 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZ4 */
       break;
     case COMPRESS_ALGORITHM_XDELTA_1:
@@ -1005,7 +1011,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         error = CompressXD3_reset(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
@@ -1193,7 +1199,7 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
       #ifdef HAVE_LZO
         length = CompressLZO_getInputLength(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -1310,7 +1316,7 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
       #ifdef HAVE_LZO
         length = CompressLZO_getOutputLength(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -1348,7 +1354,7 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         length = CompressXD3_getOutputLength(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
