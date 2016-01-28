@@ -4094,6 +4094,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   DEBUG_TESTCODE("Archive_newFileEntry12") { Compress_done(&archiveEntryInfo->file.deltaCompressInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->file.deltaCompressInfo); });
 
+  // init byte compress
   error = Compress_init(&archiveEntryInfo->file.byteCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->file.byteCompressAlgorithm,
@@ -4440,6 +4441,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   DEBUG_TESTCODE("Archive_newImageEntry10") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->image.deltaCompressInfo); });
 
+  // init byte compress
   error = Compress_init(&archiveEntryInfo->image.byteCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->image.byteCompressAlgorithm,
@@ -5277,6 +5279,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->hardLink.deltaCompressInfo); });
 
+  // init byte compress
   error = Compress_init(&archiveEntryInfo->hardLink.byteCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->hardLink.byteCompressAlgorithm,
@@ -5960,21 +5963,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->file.deltaBuffer,{ free(archiveEntryInfo->file.deltaBuffer); });
 
-  // init byte decompress
-  error = Compress_init(&archiveEntryInfo->file.byteCompressInfo,
-                        COMPRESS_MODE_INFLATE,
-                        archiveEntryInfo->file.byteCompressAlgorithm,
-                        archiveEntryInfo->blockLength,
-                        NULL
-                       );
-  if (error != ERROR_NONE)
-  {
-    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->file.byteCompressInfo,{ Compress_done(&archiveEntryInfo->file.byteCompressInfo); });
-
   // try to read file entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->file.chunkFile.info,&index);
@@ -6168,6 +6156,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileEntry.info,{ Chunk_close(&archiveEntryInfo->file.chunkFileEntry.info); });
 
             // get file meta data
             String_set(fileName,archiveEntryInfo->file.chunkFileEntry.name);
@@ -6266,6 +6255,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileData.info,{ Chunk_close(&archiveEntryInfo->file.chunkFileData.info); });
 
             // get data meta data
             if (fragmentOffset != NULL) (*fragmentOffset) = archiveEntryInfo->file.chunkFileData.fragmentOffset;
@@ -6352,6 +6342,22 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->file.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->file.deltaCompressInfo); });
+
+  // init byte decompress
+  error = Compress_init(&archiveEntryInfo->file.byteCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->file.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
+  if (error != ERROR_NONE)
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->file.byteCompressInfo,{ Compress_done(&archiveEntryInfo->file.byteCompressInfo); });
 
   // init variables
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->file.deltaCompressAlgorithm;
@@ -6541,21 +6547,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->image.deltaBuffer,{ free(archiveEntryInfo->image.deltaBuffer); });
 
-  // init byte decompress
-  error = Compress_init(&archiveEntryInfo->image.byteCompressInfo,
-                        COMPRESS_MODE_INFLATE,
-                        archiveEntryInfo->image.byteCompressAlgorithm,
-                        archiveEntryInfo->blockLength,
-                        NULL
-                       );
-  if (error != ERROR_NONE)
-  {
-    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.byteCompressInfo,{ Compress_done(&archiveEntryInfo->image.byteCompressInfo); });
-
   // try to read image entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->image.chunkImage.info,&index);
@@ -6723,6 +6714,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageEntry.info,{ Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info); });
 
             // get image meta data
             String_set(deviceName,archiveEntryInfo->image.chunkImageEntry.name);
@@ -6779,6 +6771,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageData.info,{ Chunk_close(&archiveEntryInfo->image.chunkImageData.info); });
 
             if (blockOffset != NULL) (*blockOffset) = archiveEntryInfo->image.chunkImageData.blockOffset;
             if (blockCount  != NULL) (*blockCount)  = archiveEntryInfo->image.chunkImageData.blockCount;
@@ -6864,6 +6857,21 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     return error;
   }
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->image.deltaCompressInfo); });
+
+  // init byte decompress
+  error = Compress_init(&archiveEntryInfo->image.byteCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->image.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
+  if (error != ERROR_NONE)
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.byteCompressInfo,{ Compress_done(&archiveEntryInfo->image.byteCompressInfo); });
 
   // init variables
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->image.deltaCompressAlgorithm;
@@ -7823,20 +7831,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->hardLink.deltaBuffer,{ free(archiveEntryInfo->hardLink.deltaBuffer); });
 
-  // init byte decompress
-  error = Compress_init(&archiveEntryInfo->hardLink.byteCompressInfo,
-                        COMPRESS_MODE_INFLATE,
-                        archiveEntryInfo->hardLink.byteCompressAlgorithm,
-                        archiveEntryInfo->blockLength,
-                        NULL
-                       );
-  if (error != ERROR_NONE)
-  {
-    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-    AutoFree_cleanup(&autoFreeList1);
-    return error;
-  }
-
   // try to read hard link entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->hardLink.chunkHardLink.info,&index);
@@ -8060,6 +8054,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,{ Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info); });
 
             // get hard link meta data
             if (fileInfo != NULL)
@@ -8177,6 +8172,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkData.info,{ Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info); });
 
             // get fragment meta data
             if (fragmentOffset != NULL) (*fragmentOffset) = archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset;
@@ -8263,6 +8259,20 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     return error;
   }
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->hardLink.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->hardLink.deltaCompressInfo); });
+
+  // init byte decompress
+  error = Compress_init(&archiveEntryInfo->hardLink.byteCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->hardLink.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
+  if (error != ERROR_NONE)
+  {
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
 
   // init variables
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->hardLink.deltaCompressAlgorithm;
