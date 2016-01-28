@@ -3949,7 +3949,7 @@ LOCAL Errors deleteStorage(DatabaseId storageId)
                       NULL,  // entityId
                       storageName,
                       NULL,  // indexState
-                      NULL  // lastCheckedTimestamp
+                      NULL  // lastCheckedDateTime
                      )
      )
   {
@@ -4753,7 +4753,7 @@ LOCAL void indexThreadCode(void)
                                 NULL,  // entityId
                                 &storageId,
                                 storageName,
-                                NULL  // lastCheckedTimestamp
+                                NULL  // lastCheckedDateTime
                                )
            && !quitFlag
           )
@@ -5058,7 +5058,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                                                 NULL,  // entityId
                                                                 &storageId,
                                                                 &indexState,
-                                                                NULL  // lastCheckedTimestamp
+                                                                NULL  // lastCheckedDateTime
                                                                )
                                               )
                                            {
@@ -14045,7 +14045,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
    //TODO NULL
                                                      &storageId,
                                                      NULL,  // indexState,
-                                                     NULL  // lastCheckedTimestamp
+                                                     NULL  // lastCheckedDateTime
                                                     )
                                   )
                                {
