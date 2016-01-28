@@ -14079,7 +14079,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,error,"add storage to index fail");
+    sendClientResult(clientInfo,id,TRUE,error,"add storage to index fail: %s",Error_getText(error));
   }
 
   // free resources
