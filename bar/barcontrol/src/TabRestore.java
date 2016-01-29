@@ -3050,8 +3050,6 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             if (updateFlag)
             {
               updateEntryListCount();
-Dprintf.dprintf("offset=%d",offset);
-              updateEntryList(offset);
               updateFlag     = false;
               updateListFlag = false;
             }
@@ -3134,7 +3132,6 @@ Dprintf.dprintf("offset=%d",offset);
           this.newestEntriesOnly  = newestEntriesOnly;
           this.entryMaxCount      = entryMaxCount;
 
-Dprintf.dprintf("");
           updateFlag = true;
           trigger.notify();
         }
@@ -3154,7 +3151,6 @@ Dprintf.dprintf("");
         {
           this.entryPattern = entryPattern;
 
-Dprintf.dprintf("");
           updateFlag = true;
           trigger.notify();
         }
@@ -3172,7 +3168,6 @@ Dprintf.dprintf("");
         {
           this.entryType = entryType;
 
-Dprintf.dprintf("");
           updateFlag = true;
           trigger.notify();
         }
@@ -3191,7 +3186,6 @@ Dprintf.dprintf("");
         {
           this.newestEntriesOnly  = newestEntriesOnly;
 
-Dprintf.dprintf("");
           updateFlag = true;
           trigger.notify();
         }
@@ -3210,26 +3204,7 @@ Dprintf.dprintf("");
         {
           this.offset = offset;
 
-Dprintf.dprintf("update list %d",offset);
           updateListFlag = true;
-          trigger.notify();
-        }
-      }
-    }
-
-    /** trigger update of entry list
-     * @param entryMaxCount max. entries in list
-     */
-    public void triggerUpdateEntryMaxCount(int entryMaxCount)
-    {
-      synchronized(trigger)
-      {
-        if (this.entryMaxCount != entryMaxCount)
-        {
-          this.entryMaxCount = entryMaxCount;
-
-Dprintf.dprintf("");
-          updateFlag = true;
           trigger.notify();
         }
       }
@@ -3241,7 +3216,6 @@ Dprintf.dprintf("");
     {
       synchronized(trigger)
       {
-Dprintf.dprintf("");
         updateFlag = true;
         trigger.notify();
       }
@@ -3619,23 +3593,28 @@ Dprintf.dprintf("entryCount=%d",count);
       }
 
       // set count
-Dprintf.dprintf("count=%d",count);
       display.syncExec(new Runnable()
       {
         public void run()
         {
-//          widgetEntryTable.clearAll();
           widgetEntryTable.setItemCount(count);
           widgetEntryTable.setTopIndex(0);
           widgetEntryTable.clearAll();
+//          widgetEntryTable.clearAll();
+Dprintf.dprintf("");
+//updateEntryList(0);
         }
       });
+
+updateEntryList(0);
+display.update();
     }
 
     private void updateEntryList(int offset)
     {
       // get limit
       int limit = ((offset+128) < count) ? 128 : count-offset;
+Dprintf.dprintf("update list %d %d",offset,limit);
 
       // update table segment
       Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y offset=%d limit=%d",
