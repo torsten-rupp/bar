@@ -5029,13 +5029,11 @@ LOCAL void autoIndexUpdateThreadCode(void)
             error = Storage_forAll(pattern,
                                    CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                    {
-                                     StorageSpecifier storageSpecifier;
-                                     Errors           error;
+                                     Errors error;
+
+                                     assert(fileInfo != NULL);
 
                                      UNUSED_VARIABLE(userData);
-
-                                     // init variables
-                                     Storage_initSpecifier(&storageSpecifier);
 
                                      error = Storage_parseName(&storageSpecifier,storageName);
                                      if (error == ERROR_NONE)
@@ -5058,11 +5056,21 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                                                 NULL,  // entityId
                                                                 &storageId,
                                                                 &indexState,
-                                                                NULL  // lastCheckedDateTime
+                                                                &lastCheckedDateTime
                                                                )
                                               )
                                            {
-                                             if (indexState == INDEX_STATE_OK)
+                                             if      (fileInfo->timeModified > lastCheckedDateTime)
+                                             {
+                                               // request update index
+                                               error = Index_setState(indexHandle,
+                                                                      storageId,
+                                                                      INDEX_STATE_UPDATE_REQUESTED,
+                                                                      Misc_getCurrentDateTime(),
+                                                                      NULL
+                                                                     );
+                                             }
+                                             else if (indexState == INDEX_STATE_OK)
                                              {
                                                // set last checked date/time
                                                error = Index_setState(indexHandle,
@@ -5098,9 +5106,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                            break;
                                        }
                                      }
-
-                                     // free resources
-                                     Storage_doneSpecifier(&storageSpecifier);
 
                                      return error;
                                    },NULL)
@@ -13987,10 +13992,11 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  PatternTypes patternType;
-  String       patternString;
-  DatabaseId   storageId;
-  Errors       error;
+  PatternTypes     patternType;
+  String           patternString;
+  StorageSpecifier storageSpecifier;
+  DatabaseId       storageId;
+  Errors           error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14013,19 +14019,18 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
+  // init variables
+  Storage_initSpecifier(&storageSpecifier);
+
   // create index for matching files
+#warning remove
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Storage_forAll(patternString,
                          CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                          {
-                           StorageSpecifier storageSpecifier;
-
                            UNUSED_VARIABLE(fileInfo);
                            UNUSED_VARIABLE(userData);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-
-                           // init variables
-                           Storage_initSpecifier(&storageSpecifier);
 
                            error = Storage_parseName(&storageSpecifier,storageName);
                            if (error == ERROR_NONE)
@@ -14033,21 +14038,30 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                              if (String_endsWithCString(storageSpecifier.archiveName,".bar"))
                              {
 fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPrintableName(&storageSpecifier,NULL)));
-                               if (!Index_findByName(indexHandle,
-                                                     storageSpecifier.type,
-                                                     storageSpecifier.hostName,
-                                                     storageSpecifier.loginName,
-                                                     storageSpecifier.deviceName,
-                                                     storageSpecifier.archiveName,
-                                                     NULL,  // jobUUID
-                                                     NULL,  // scheduleUUID
-                                                     NULL,  // entityId
-   //TODO NULL
-                                                     &storageId,
-                                                     NULL,  // indexState,
-                                                     NULL  // lastCheckedDateTime
-                                                    )
+                               if (Index_findByName(indexHandle,
+                                                    storageSpecifier.type,
+                                                    storageSpecifier.hostName,
+                                                    storageSpecifier.loginName,
+                                                    storageSpecifier.deviceName,
+                                                    storageSpecifier.archiveName,
+                                                    NULL,  // jobUUID
+                                                    NULL,  // scheduleUUID
+                                                    NULL,  // entityId
+//TODO NULL
+                                                    &storageId,
+                                                    NULL,  // indexState,
+                                                    NULL  // lastCheckedDateTime
+                                                   )
                                   )
+                               {
+                                 error = Index_setState(indexHandle,
+                                                        storageId,
+                                                        INDEX_STATE_UPDATE_REQUESTED,
+                                                        Misc_getCurrentDateTime(),
+                                                        NULL
+                                                       );
+                               }
+                               else
                                {
                                  error = Index_newStorage(indexHandle,
                                                           DATABASE_ID_NONE, // entityId
@@ -14066,9 +14080,6 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
                              }
                            }
 
-                           // free resources
-                           Storage_doneSpecifier(&storageSpecifier);
-
                            return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
                          },NULL)
                         );
@@ -14083,6 +14094,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
   }
 
   // free resources
+  Storage_doneSpecifier(&storageSpecifier);
   String_delete(patternString);
 }
 
