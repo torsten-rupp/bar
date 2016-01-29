@@ -1361,7 +1361,6 @@ LOCAL DeviceNode *newDeviceNode(ConstString name)
   }
   initDevice(&deviceNode->device);
   deviceNode->id          = Misc_getId();
-  deviceNode->name        = String_duplicate(name);
   deviceNode->device.name = String_duplicate(name);
 
   return deviceNode;
@@ -1396,7 +1395,6 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
   String_delete(deviceNode->device.unloadVolumeCommand    );
   String_delete(deviceNode->device.requestVolumeCommand   );
   String_delete(deviceNode->device.name                   );
-  String_delete(deviceNode->name);
 }
 
 /***********************************************************************\
@@ -1724,7 +1722,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       deviceNode = NULL;
       SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->name,name));
+        deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->device.name,name));
         if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
       }
       if (deviceNode == NULL) deviceNode = newDeviceNode(name);
@@ -3197,6 +3195,7 @@ LOCAL void doneAll(void)
   if (defaultDevice.unloadVolumeCommand != NULL) String_delete(defaultDevice.unloadVolumeCommand);
   if (defaultDevice.loadVolumeCommand != NULL) String_delete(defaultDevice.loadVolumeCommand);
   if (defaultDevice.requestVolumeCommand != NULL) String_delete(defaultDevice.requestVolumeCommand);
+  if (defaultDevice.name != NULL) String_delete(defaultDevice.name);
   doneServer(&defaultWebDAVServer);
   doneServer(&defaultSSHServer);
   doneServer(&defaultFTPServer);
@@ -5176,7 +5175,7 @@ void getDeviceSettings(ConstString      name,
     // find device
     deviceNode = LIST_FIND(&globalOptions.deviceList,
                            deviceNode,
-                           String_equals(deviceNode->name,name)
+                           String_equals(deviceNode->device.name,name)
                           );
 
     // get device settings
