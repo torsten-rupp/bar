@@ -256,14 +256,14 @@ typedef struct ServerNode
 {
   LIST_NODE_HEADER(struct ServerNode);
 
-  uint      id;                                               // unique server id
-  Server    server;
+  uint   id;                                                  // unique server id
+  Server server;
   struct
   {
-    uint      lowPriorityRequestCount;                        // number of waiting low priority connection requests
-    uint      highPriorityRequestCount;                       // number of waiting high priority connection requests
-    uint      count;                                          // number of current connections
-  }           connection;
+    uint lowPriorityRequestCount;                             // number of waiting low priority connection requests
+    uint highPriorityRequestCount;                            // number of waiting high priority connection requests
+    uint count;                                               // number of current connections
+  }      connection;
 } ServerNode;
 
 // server list
@@ -355,7 +355,6 @@ typedef struct DeviceNode
   LIST_NODE_HEADER(struct DeviceNode);
 
   uint   id;                                                  // unique device id
-  String name;                                                // device name
   Device device;
 } DeviceNode;
 
