@@ -3374,7 +3374,7 @@ Errors updateConfig(void)
   }
 
   // update config entries
-  CONFIG_VALUE_ITERATE(CONFIG_VALUES,i)
+  CONFIG_VALUE_ITERATE(CONFIG_VALUES,NULL,i)
   {
     // delete old entries, get position for insert new entries
     nextStringNode = ConfigValue_deleteEntries(&configLinesList,NULL,CONFIG_VALUES[i].name);
@@ -3404,7 +3404,7 @@ Errors updateConfig(void)
         String_format(String_clear(line),"[file-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
-        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"file-server",i)
+        CONFIG_VALUE_ITERATE(CONFIG_VALUES,"file-server",i)
         {
           ConfigValue_formatInit(&configValueFormat,
                                  &CONFIG_VALUES[i],
@@ -3434,7 +3434,7 @@ Errors updateConfig(void)
         String_format(String_clear(line),"[ftp-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
-        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"ftp-server",i)
+        CONFIG_VALUE_ITERATE(CONFIG_VALUES,"ftp-server",i)
         {
           ConfigValue_formatInit(&configValueFormat,
                                  &CONFIG_VALUES[i],
@@ -3464,7 +3464,7 @@ Errors updateConfig(void)
         String_format(String_clear(line),"[ssh-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
-        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"ssh-server",i)
+        CONFIG_VALUE_ITERATE(CONFIG_VALUES,"ssh-server",i)
         {
           ConfigValue_formatInit(&configValueFormat,
                                  &CONFIG_VALUES[i],
@@ -3494,7 +3494,7 @@ Errors updateConfig(void)
         String_format(String_clear(line),"[webdav-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
-        CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"webdav-server",i)
+        CONFIG_VALUE_ITERATE(CONFIG_VALUES,"webdav-server",i)
         {
           ConfigValue_formatInit(&configValueFormat,
                                  &CONFIG_VALUES[i],

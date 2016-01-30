@@ -180,6 +180,9 @@ typedef struct JobNode
   uint64          lastExecutedDateTime;                 // last execution date/time (timestamp)
   uint64          lastCheckDateTime;                    // last check date/time (timestamp)
 
+  // comment
+  String          comment;                              // comment
+
   // job passwords
   Password        *ftpPassword;                         // FTP password if password mode is 'ask'
   Password        *sshPassword;                         // SSH password if password mode is 'ask'
@@ -568,6 +571,8 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN  ("no-storage",              ScheduleNode,noStorage                          ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("enabled",                 ScheduleNode,enabled                            ),
   CONFIG_VALUE_END_SECTION(),
+
+  CONFIG_STRUCT_VALUE_STRING   ("comment",                 JobNode,comment                                 ),
 
   // deprecated
   CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",                JobNode,scheduleList,                           configValueParseSchedule,NULL,NULL,NULL,NULL),
@@ -1686,6 +1691,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->master);
 
   doneJobOptions(&jobNode->jobOptions);
+  String_delete(jobNode->comment);
   List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&jobNode->deltaSourceList);
   PatternList_done(&jobNode->compressExcludePatternList);
@@ -1754,6 +1760,8 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
 
   jobNode->lastExecutedDateTime           = 0LL;
   jobNode->lastCheckDateTime              = 0LL;
+
+  jobNode->comment                        = String_new();
 
   jobNode->ftpPassword                    = NULL;
   jobNode->sshPassword                    = NULL;
@@ -1852,6 +1860,8 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
 
   newJobNode->lastExecutedDateTime           = 0LL;
   newJobNode->lastCheckDateTime              = 0LL;
+
+  newJobNode->comment                        = String_duplicate(jobNode->comment);
 
   newJobNode->ftpPassword                    = NULL;
   newJobNode->sshPassword                    = NULL;
@@ -2375,7 +2385,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
     }
 
     // update line list
-    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,i)
+    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,NULL,i)
     {
       // delete old entries, get position for insert new entries
       nextStringNode = ConfigValue_deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
@@ -2404,7 +2414,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
         String_format(String_clear(line),"[schedule]");
         StringList_insert(&jobLinesList,line,nextStringNode);
 
-        CONFIG_VALUE_ITERATE_SECTION(JOB_CONFIG_VALUES,"schedule",i)
+        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"schedule",i)
         {
           ConfigValue_formatInit(&configValueFormat,
                                  &JOB_CONFIG_VALUES[i],
@@ -6193,10 +6203,10 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, uint id, const 
   }
 
   // find config value
-  i = ConfigValue_valueIndex(CONFIG_VALUES,String_cString(name));
+  i = ConfigValue_valueIndex(CONFIG_VALUES,NULL,String_cString(name));
   if (i < 0)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config value '%S'",name);
     String_delete(name);
     return;
   }
@@ -6267,7 +6277,7 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, uint id, const 
                         )
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config value '%S'",name);
     String_delete(value);
     String_delete(name);
     return;
@@ -8099,16 +8109,10 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
     }
 
     // find config value
-    i = 0;
-    while (   (JOB_CONFIG_VALUES[i].name != NULL)
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
-          )
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
+    if (i < 0)
     {
-      i++;
-    }
-    if (JOB_CONFIG_VALUES[i].name == NULL)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config value '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -8208,7 +8212,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config value '%S'",name);
     }
   }
 
@@ -8269,16 +8273,10 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
     }
 
     // find config value
-    i = 0;
-    while (   (JOB_CONFIG_VALUES[i].name != NULL)
-           && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
-          )
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
+    if (i < 0)
     {
-      i++;
-    }
-    if (JOB_CONFIG_VALUES[i].name == NULL)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config value '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -11208,6 +11206,8 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
     }
 
     // find config value
+#warning todo
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     i = 0;
     while (   (JOB_CONFIG_VALUES[i].name != NULL)
            && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
@@ -11217,7 +11217,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
     }
     if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config value '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -11333,7 +11333,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, cons
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config value '%S'",name);
     }
 
     // notify about changed schedule
@@ -11414,6 +11414,8 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
     }
 
     // find config value
+#warning todo
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     i = 0;
     while (   (JOB_CONFIG_VALUES[i].name != NULL)
            && !String_equalsCString(name,JOB_CONFIG_VALUES[i].name)
@@ -11423,7 +11425,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
     }
     if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config value '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
