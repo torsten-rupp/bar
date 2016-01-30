@@ -25,6 +25,7 @@
   * added option --include-command, --exclude-command
   * added configuration options include-file-command,
     include-image-command, exclude-command
+  * add job option comment: free text comment
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store
