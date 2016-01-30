@@ -101,10 +101,10 @@ import org.eclipse.swt.events.PaintEvent;
  */
 class WidgetVariable<T>
 {
-  private final String name;
-  private final Class  type;
-  private T            value;      // value
-  private String[]     values;     // possible values or null
+  private final String   name;
+  private final Class    type;
+  private final String[] values;     // possible values or null
+  private T              value;      // value
 
   /** get widget variable instance
    * @param object value
@@ -153,24 +153,25 @@ class WidgetVariable<T>
   }
 
   /** create widget variable
-   * @param value value
    * @param name name
+   * @param value value
    * @param values values
    */
-  WidgetVariable(T value, String name, Object values)
+  WidgetVariable(String name, T value, Object values)
   {
-    this.name = name;
-    this.type = value.getClass();
-    this.value = value;
+    this.name   = name;
+    this.type   = value.getClass();
+    this.values = null;
+    this.value  = value;
   }
 
   /** create widget variable
-   * @param value value
    * @param name name
+   * @param value value
    */
-  WidgetVariable(T value, String name)
+  WidgetVariable(String name, T value)
   {
-    this(value,name,(Object)null);
+    this(name,value,(Object)null);
   }
 
   /** create widget variable
@@ -179,7 +180,7 @@ class WidgetVariable<T>
    */
   WidgetVariable(T value, Object values)
   {
-    this(value,(String)null,values);
+    this((String)null,value,values);
   }
 
   /** create widget variable
@@ -187,65 +188,58 @@ class WidgetVariable<T>
    */
   WidgetVariable(T value)
   {
-    this(value,(String)null,(Object)null);
+    this(value,(Object)null);
   }
 
   /** create widget variable
-   * @param value value
    * @param name name
+   * @param value value
    * @param values values
    */
-  WidgetVariable(String value, String name, String[] values)
+  WidgetVariable(String name, String[] values, T value)
   {
     this.name   = name;
     this.type   = String.class;
-    this.value  = (T)new String(value);
     this.values = values;
+    this.value  = value;
   }
 
   /** create widget variable
+   * @param name name
    * @param b/l/d/string/enumeration value
    */
-  WidgetVariable(boolean b, String name)
+  WidgetVariable(String name, boolean b)
   {
-    this.name  = name;
-    this.type  = Boolean.class;
-    this.value = (T)new Boolean(b);
+    this.name   = name;
+    this.type   = Boolean.class;
+    this.values = null;
+    this.value  = (T)new Boolean(b);
   }
   WidgetVariable(boolean b)
   {
-    this(b,(String)null);
+    this((String)null,b);
   }
-  WidgetVariable(long l, String name)
+  WidgetVariable(String name, long l)
   {
-    this.name  = name;
-    this.type  = Long.class;
-    this.value = (T)new Long(l);
+    this.name   = name;
+    this.type   = Long.class;
+    this.values = null;
+    this.value  = (T)new Long(l);
   }
   WidgetVariable(long l)
   {
-    this(l,(String)null);
+    this((String)null,l);
   }
-  WidgetVariable(double d, String name)
+  WidgetVariable(String name, double d)
   {
-    this.name  = name;
-    this.type  = Double.class;
-    this.value = (T)new Double(d);
+    this.name   = name;
+    this.type   = Double.class;
+    this.values = null;
+    this.value  = (T)new Double(d);
   }
   WidgetVariable(double d)
   {
-    this(d,(String)null);
-  }
-  WidgetVariable(String enumeration[], String name)
-  {
-    this.name   = name;
-    this.type   = Enum.class;
-    this.value  = (T)new String();//new String(value);
-    this.values = enumeration;
-  }
-  WidgetVariable(String enumeration[])
-  {
-    this(enumeration,(String)null);
+    this((String)null,d);
   }
 
   /** get variable name

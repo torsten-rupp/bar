@@ -3602,12 +3602,12 @@ Dprintf.dprintf("entryCount=%d",count);
           widgetEntryTable.clearAll();
 //          widgetEntryTable.clearAll();
 Dprintf.dprintf("");
-//updateEntryList(0);
+updateEntryList(0);
         }
       });
 
-updateEntryList(0);
-display.update();
+//updateEntryList(0);
+//display.update();
     }
 
     private void updateEntryList(int offset)

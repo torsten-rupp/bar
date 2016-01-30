@@ -1681,34 +1681,51 @@ public class TabJobs
   private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
 
   // BAR variables
-  private WidgetVariable  remoteHostName          = new WidgetVariable<String> ("",   "remote-host-name");
-  private WidgetVariable  remoteHostPort          = new WidgetVariable<Long>   (0,    "remote-host-port");
-  private WidgetVariable  remoteHostForceSSL      = new WidgetVariable<Boolean>(false,"remote-host-force-ssl");
-  private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("",   "include-file-command");
-  private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("",   "include-image-command");
-  private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("",   "exclude-command");
-  private WidgetVariable  archiveType             = new WidgetVariable<String> ("normal",new String[]{"normal","full","incremental","differential"});
+  private WidgetVariable  remoteHostName          = new WidgetVariable<String> ("remote-host-name","");
+  private WidgetVariable  remoteHostPort          = new WidgetVariable<Long>   ("remote-host-port",0);
+  private WidgetVariable  remoteHostForceSSL      = new WidgetVariable<Boolean>("remote-host-force-ssl",false);
+  private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("include-file-command","");
+  private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("include-image-command","");
+  private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("exclude-command","");
+  private WidgetVariable  archiveType             = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential"},"normal");
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  archivePartSize         = new WidgetVariable<Long>   (0);
-  private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String> ("none",new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
-  private WidgetVariable  deltaSource             = new WidgetVariable<String> ("");
-  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable<String> ("none",
+  private WidgetVariable  archivePartSize         = new WidgetVariable<Long>   ("archive-part-size",0);
+  private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String> ("delta-compress-algorithm",
+                                                                                new String[]{"none",
+                                                                                             "xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"
+                                                                                            },
+                                                                                "none"
+                                                                               );
+  private WidgetVariable  deltaSource             = new WidgetVariable<String> ("delta-source","");
+  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable<String> ("byte-compress-algorithm",
                                                                                 new String[]{"none",
                                                                                              "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
                                                                                              "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
                                                                                              "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
                                                                                              "lzo1","lzo2","lzo3","lzo4","lzo5",
                                                                                              "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16"
-                                                                                            }
+                                                                                            },
+                                                                                "none"
                                                                                );
-  private WidgetVariable  compressMinSize         = new WidgetVariable<Long>   (0);
-  private WidgetVariable  cryptAlgorithm          = new WidgetVariable<Enum>   (new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
-  private WidgetVariable  cryptType               = new WidgetVariable<Enum>   (new String[]{"none","symmetric","asymmetric"});
-  private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable<String> ("", "crypt-public-key");
-  private WidgetVariable  cryptPasswordMode       = new WidgetVariable<String> ("default",new String[]{"default","ask","config"});
-  private WidgetVariable  cryptPassword           = new WidgetVariable<String> ("", "crypt-password");
-  private WidgetVariable  incrementalListFileName = new WidgetVariable<String> ("", "incremental-list-file");
-  private WidgetVariable  storageType             = new WidgetVariable<String> ("filesystem",
+  private WidgetVariable  compressMinSize         = new WidgetVariable<Long>   ("compress-min-size",0);
+  private WidgetVariable  cryptAlgorithm          = new WidgetVariable<String> ("crypt-algorithm",
+                                                                                new String[]{"none",
+                                                                                             "3DES",
+                                                                                             "CAST5",
+                                                                                             "BLOWFISH",
+                                                                                             "AES128","AES192","AES256",
+                                                                                             "TWOFISH128","TWOFISH256",
+                                                                                             "SERPENT128","SERPENT192","SERPENT256",
+                                                                                             "CAMELLIA128","CAMELLIA192","CAMELLIA256"
+                                                                                            },
+                                                                                "none"
+                                                                               );
+  private WidgetVariable  cryptType               = new WidgetVariable<String> ("crypt-type",new String[]{"none","symmetric","asymmetric"},"none");
+  private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable<String> ("crypt-public-key","");
+  private WidgetVariable  cryptPasswordMode       = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
+  private WidgetVariable  cryptPassword           = new WidgetVariable<String> ("crypt-password","");
+  private WidgetVariable  incrementalListFileName = new WidgetVariable<String> ("incremental-list-file","");
+  private WidgetVariable  storageType             = new WidgetVariable<String> ("storage-type",
                                                                                 new String[]{"filesystem",
                                                                                              "ftp",
                                                                                              "scp",
@@ -1718,29 +1735,31 @@ public class TabJobs
                                                                                              "dvd",
                                                                                              "bd",
                                                                                              "device"
-                                                                                            }
+                                                                                            },
+                                                                                "filesystem"
                                                                                );
   private WidgetVariable  storageHostName         = new WidgetVariable<String> ("");
-  private WidgetVariable  storageHostPort         = new WidgetVariable<Long>   (0);
-  private WidgetVariable  storageLoginName        = new WidgetVariable<String> ("");
-  private WidgetVariable  storageLoginPassword    = new WidgetVariable<String> ("");
-  private WidgetVariable  storageDeviceName       = new WidgetVariable<String> ("");
-  private WidgetVariable  storageFileName         = new WidgetVariable<String> ("");
-  private WidgetVariable  mountDeviceName         = new WidgetVariable<String> ("");
-  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   (0);
-  private WidgetVariable  archiveFileMode         = new WidgetVariable<String> ("stop",new String[]{"stop","overwrite","append"});
-  private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String> ("","ssh-public-key");
-  private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable<String> ("","ssh-private-key");
+  private WidgetVariable  storageHostPort         = new WidgetVariable<Long>   ("",0);
+  private WidgetVariable  storageLoginName        = new WidgetVariable<String> ("","");
+  private WidgetVariable  storageLoginPassword    = new WidgetVariable<String> ("","");
+  private WidgetVariable  storageDeviceName       = new WidgetVariable<String> ("","");
+  private WidgetVariable  storageFileName         = new WidgetVariable<String> ("","");
+  private WidgetVariable  mountDeviceName         = new WidgetVariable<String> ("","");
+  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   ("max-storage-size",0);
+  private WidgetVariable  archiveFileMode         = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","overwrite","append"},"stop");
+  private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String> ("ssh-public-key","");
+  private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable<String> ("ssh-private-key","");
   private WidgetVariable  maxBandWidthFlag        = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>   (0);
-  private WidgetVariable  volumeSize              = new WidgetVariable<Long>   (0);
-  private WidgetVariable  ecc                     = new WidgetVariable<Boolean>(false,"ecc");
-  private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>(false,"wait-first-volume");
-  private WidgetVariable  skipUnreadable          = new WidgetVariable<Boolean>(false,"skip-unreadable");
-  private WidgetVariable  rawImages               = new WidgetVariable<Boolean>(false,"raw-images");
-  private WidgetVariable  overwriteFiles          = new WidgetVariable<Boolean>(false,"overwrite-files");
-  private WidgetVariable  preCommand              = new WidgetVariable<String> ("","pre-command");
-  private WidgetVariable  postCommand             = new WidgetVariable<String> ("","post-command");
+  private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>   ("max-band-width",0);
+  private WidgetVariable  volumeSize              = new WidgetVariable<Long>   ("volume-size",0);
+  private WidgetVariable  ecc                     = new WidgetVariable<Boolean>("ecc",false);
+  private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>("wait-first-volume",false);
+  private WidgetVariable  skipUnreadable          = new WidgetVariable<Boolean>("skip-unreadable",false);
+  private WidgetVariable  rawImages               = new WidgetVariable<Boolean>("raw-images",false);
+  private WidgetVariable  overwriteFiles          = new WidgetVariable<Boolean>("overwrite-files",false);
+  private WidgetVariable  preCommand              = new WidgetVariable<String> ("pre-command","");
+  private WidgetVariable  postCommand             = new WidgetVariable<String> ("post-command","");
+  private WidgetVariable  comment                 = new WidgetVariable<String> ("comment","");
 
   // variables
   private DirectoryInfoThread          directoryInfoThread;
@@ -3600,10 +3619,10 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 StyledText widget = (StyledText)modifyEvent.widget;
-                String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+                String     string = widget.getText();
                 Color      color  = COLOR_MODIFIED;
 
-                if (includeFileCommand.equals(string)) color = null;
+                if (includeFileCommand.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
                 widget.setBackground(color);
               }
             });
@@ -3674,10 +3693,10 @@ Dprintf.dprintf("");
               public void modifyText(ModifyEvent modifyEvent)
               {
                 StyledText widget = (StyledText)modifyEvent.widget;
-                String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+                String     string = widget.getText();
                 Color      color  = COLOR_MODIFIED;
 
-                if (includeImageCommand.equals(string)) color = null;
+                if (includeImageCommand.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
                 widget.setBackground(color);
               }
             });
@@ -4055,8 +4074,9 @@ Dprintf.dprintf("");
               {
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
+
                 skipUnreadable.set(checkedFlag);
-                BARServer.setJobOption(selectedJobData.uuid,"skip-unreadable",checkedFlag);
+                BARServer.setJobOption(selectedJobData.uuid,skipUnreadable);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
@@ -4075,8 +4095,9 @@ Dprintf.dprintf("");
               {
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
+
                 rawImages.set(checkedFlag);
-                BARServer.setJobOption(selectedJobData.uuid,"raw-images",checkedFlag);
+                BARServer.setJobOption(selectedJobData.uuid,rawImages);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,rawImages));
@@ -4110,7 +4131,7 @@ Dprintf.dprintf("");
 
               boolean changedFlag = archivePartSizeFlag.set(false);
               archivePartSize.set(0);
-              BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",0);
+              BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
 
               if (   changedFlag
                   && (   storageType.equals("cd")
@@ -4201,7 +4222,7 @@ Dprintf.dprintf("");
               {
                 long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
-                BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
+                BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
                 widget.setText(Units.formatByteSize(n));
                 widget.setBackground(null);
               }
@@ -4224,7 +4245,7 @@ Dprintf.dprintf("");
               {
                 long  n = Units.parseByteSize(string);
                 archivePartSize.set(n);
-                BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
+                BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
                 widget.setText(Units.formatByteSize(n));
                 widget.setBackground(null);
               }
@@ -4256,7 +4277,7 @@ Dprintf.dprintf("");
               {
                 long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
-                BARServer.setJobOption(selectedJobData.uuid,"archive-part-size",n);
+                BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
                 widget.setText(Units.formatByteSize(n));
                 widget.setBackground(null);
               }
@@ -4308,6 +4329,7 @@ Dprintf.dprintf("");
             {
               Combo  widget = (Combo)selectionEvent.widget;
               String string = widget.getText();
+
               deltaCompressAlgorithm.set(string);
               BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
             }
@@ -4339,6 +4361,7 @@ Dprintf.dprintf("");
             {
               Combo  widget = (Combo)selectionEvent.widget;
               String string = widget.getText();
+
               byteCompressAlgorithm.set(string);
               BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
             }
@@ -4758,8 +4781,9 @@ Dprintf.dprintf("");
             {
               Combo  widget = (Combo)selectionEvent.widget;
               String string = widget.getText();
+
               cryptAlgorithm.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"crypt-algorithm",string);
+              BARServer.setJobOption(selectedJobData.uuid,cryptAlgorithm);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,cryptAlgorithm));
@@ -4790,9 +4814,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               cryptType.set("symmetric");
-              BARServer.setJobOption(selectedJobData.uuid,"crypt-type","symmetric");
+              BARServer.setJobOption(selectedJobData.uuid,cryptType);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptType)
@@ -4825,9 +4848,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               cryptType.set("asymmetric");
-              BARServer.setJobOption(selectedJobData.uuid,"crypt-type","asymmetric");
+              BARServer.setJobOption(selectedJobData.uuid,cryptType);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptType)
@@ -4882,8 +4904,9 @@ Dprintf.dprintf("");
             {
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
+
               cryptPublicKeyFileName.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"crypt-public-key",string);
+              BARServer.setJobOption(selectedJobData.uuid,cryptPublicKeyFileName);
               widget.setBackground(null);
             }
             @Override
@@ -4902,8 +4925,9 @@ Dprintf.dprintf("");
             {
               Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
+
               cryptPublicKeyFileName.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"crypt-public-key",string);
+              BARServer.setJobOption(selectedJobData.uuid,cryptPublicKeyFileName);
               widget.setBackground(null);
             }
           });
@@ -4964,7 +4988,7 @@ Dprintf.dprintf("");
               if (fileName != null)
               {
                 cryptPublicKeyFileName.set(fileName);
-                BARServer.setJobOption(selectedJobData.uuid,"crypt-public-key",fileName);
+                BARServer.setJobOption(selectedJobData.uuid,cryptPublicKeyFileName);
               }
             }
           });
@@ -5000,9 +5024,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("default");
-              BARServer.setJobOption(selectedJobData.uuid,"crypt-password-mode","default");
+              BARServer.setJobOption(selectedJobData.uuid,cryptPasswordMode);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -5037,9 +5060,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("ask");
-              BARServer.setJobOption(selectedJobData.uuid,"crypt-password-mode","ask");
+              BARServer.setJobOption(selectedJobData.uuid,cryptPasswordMode);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -5074,9 +5096,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("config");
-              BARServer.setJobOption(selectedJobData.uuid,"crypt-password-mode","config");
+              BARServer.setJobOption(selectedJobData.uuid,cryptPasswordMode);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -5126,7 +5147,7 @@ Dprintf.dprintf("");
               if (string1.equals(string2))
               {
                 cryptPassword.set(string1);
-                BARServer.setJobOption(selectedJobData.uuid,"crypt-password",string1);
+                BARServer.setJobOption(selectedJobData.uuid,cryptPassword);
                 widgetCryptPassword1.setBackground(null);
                 widgetCryptPassword2.setBackground(null);
               }
@@ -5150,7 +5171,7 @@ Dprintf.dprintf("");
               if (string1.equals(string2))
               {
                 cryptPassword.set(string1);
-                BARServer.setJobOption(selectedJobData.uuid,"crypt-password",string1);
+                BARServer.setJobOption(selectedJobData.uuid,cryptPassword);
                 widgetCryptPassword1.setBackground(null);
                 widgetCryptPassword2.setBackground(null);
               }
@@ -5199,7 +5220,7 @@ Dprintf.dprintf("");
               if (string1.equals(string2))
               {
                 cryptPassword.set(string1);
-                BARServer.setJobOption(selectedJobData.uuid,"crypt-password",string1);
+                BARServer.setJobOption(selectedJobData.uuid,cryptPassword);
                 widgetCryptPassword1.setBackground(null);
                 widgetCryptPassword2.setBackground(null);
               }
@@ -5223,7 +5244,7 @@ Dprintf.dprintf("");
               if (string1.equals(string2))
               {
                 cryptPassword.set(string1);
-                BARServer.setJobOption(selectedJobData.uuid,"crypt-password",string1);
+                BARServer.setJobOption(selectedJobData.uuid,cryptPassword);
                 widgetCryptPassword1.setBackground(null);
                 widgetCryptPassword2.setBackground(null);
               }
@@ -5255,9 +5276,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               archiveType.set("normal");
-              BARServer.setJobOption(selectedJobData.uuid,"archive-type","normal");
+              BARServer.setJobOption(selectedJobData.uuid,archiveType);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -5281,9 +5301,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               archiveType.set("full");
-              BARServer.setJobOption(selectedJobData.uuid,"archive-type","full");
+              BARServer.setJobOption(selectedJobData.uuid,archiveType);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -5307,9 +5326,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               archiveType.set("incremental");
-              BARServer.setJobOption(selectedJobData.uuid,"archive-type","incremental");
+              BARServer.setJobOption(selectedJobData.uuid,archiveType);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -5333,9 +5351,8 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               archiveType.set("differential");
-              BARServer.setJobOption(selectedJobData.uuid,"archive-type","differential");
+              BARServer.setJobOption(selectedJobData.uuid,archiveType);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -5377,6 +5394,7 @@ Dprintf.dprintf("");
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
               Text widget = (Text)selectionEvent.widget;
+
               storageFileName.set(widget.getText());
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               widget.setBackground(null);
@@ -5396,6 +5414,7 @@ Dprintf.dprintf("");
             public void focusLost(FocusEvent focusEvent)
             {
               Text widget = (Text)focusEvent.widget;
+
               storageFileName.set(widget.getText());
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               widget.setBackground(null);
@@ -5502,8 +5521,9 @@ Dprintf.dprintf("");
             {
               Text   widget = (Text)selectionEvent.widget;
               String string = widget.getText();
+
               incrementalListFileName.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"incremental-list-file",string);
+              BARServer.setJobOption(selectedJobData.uuid,incrementalListFileName);
               widget.setBackground(null);
             }
             @Override
@@ -5522,8 +5542,9 @@ Dprintf.dprintf("");
             {
               Text   widget = (Text)focusEvent.widget;
               String string = widget.getText();
+
               incrementalListFileName.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,"incremental-list-file",string);
+              BARServer.setJobOption(selectedJobData.uuid,incrementalListFileName);
               widget.setBackground(null);
             }
           });
@@ -5569,7 +5590,7 @@ Dprintf.dprintf("");
               if (fileName != null)
               {
                 incrementalListFileName.set(fileName);
-                BARServer.setJobOption(selectedJobData.uuid,"incremental-list-file",fileName);
+                BARServer.setJobOption(selectedJobData.uuid,incrementalListFileName);
               }
             }
           });
@@ -5593,7 +5614,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               storageType.set("filesystem");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
@@ -5619,7 +5639,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               storageType.set("ftp");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
@@ -5645,7 +5664,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               storageType.set("scp");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
@@ -5671,7 +5689,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               storageType.set("sftp");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
@@ -5697,7 +5714,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               storageType.set("webdav");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
@@ -5723,8 +5739,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
-
               boolean changedFlag = storageType.set("cd");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
 
@@ -5773,8 +5787,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
-
               boolean changedFlag = storageType.set("dvd");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
 
@@ -5823,8 +5835,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
-
               boolean changedFlag = storageType.set("bd");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
 
@@ -5873,7 +5883,6 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               storageType.set("device");
               BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
             }
@@ -5936,8 +5945,9 @@ Dprintf.dprintf("");
                 {
                   Text widget   = (Text)selectionEvent.widget;
                   String string = widget.getText();
+
                   mountDeviceName.set(string);
-                  BARServer.setJobOption(selectedJobData.uuid,"mount-device",string);
+                  BARServer.setJobOption(selectedJobData.uuid,mountDeviceName);
                   widget.setBackground(null);
                 }
                 @Override
@@ -5956,8 +5966,9 @@ Dprintf.dprintf("");
                 {
                   Text widget   = (Text)focusEvent.widget;
                   String string = widget.getText();
+
                   mountDeviceName.set(string);
-                  BARServer.setJobOption(selectedJobData.uuid,"mount-device",string);
+                  BARServer.setJobOption(selectedJobData.uuid,mountDeviceName);
                   widget.setBackground(null);
                 }
               });
@@ -5996,7 +6007,7 @@ Dprintf.dprintf("");
                   if (pathName != null)
                   {
                     mountDeviceName.set(pathName);
-                    BARServer.setJobOption(selectedJobData.uuid,"mount-device",pathName);
+                    BARServer.setJobOption(selectedJobData.uuid,mountDeviceName);
                   }
                 }
               });
@@ -6045,7 +6056,7 @@ Dprintf.dprintf("");
                   {
                     long n = Units.parseByteSize(string);
                     maxStorageSize.set(n);
-                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n);
+                    BARServer.setJobOption(selectedJobData.uuid,maxStorageSize);
                     widget.setText(Units.formatByteSize(n));
                     widget.setBackground(null);
                   }
@@ -6068,7 +6079,7 @@ Dprintf.dprintf("");
                   {
                     long  n = Units.parseByteSize(string);
                     maxStorageSize.set(n);
-                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n);
+                    BARServer.setJobOption(selectedJobData.uuid,maxStorageSize);
                     widget.setText(Units.formatByteSize(n));
                     widget.setBackground(null);
                   }
@@ -6100,7 +6111,7 @@ Dprintf.dprintf("");
                   {
                     long n = Units.parseByteSize(string);
                     maxStorageSize.set(n);
-                    BARServer.setJobOption(selectedJobData.uuid,"max-storage-size",n);
+                    BARServer.setJobOption(selectedJobData.uuid,maxStorageSize);
                     widget.setText(Units.formatByteSize(n));
                     widget.setBackground(null);
                   }
@@ -6153,8 +6164,9 @@ Dprintf.dprintf("");
                 {
                   Combo  widget = (Combo)selectionEvent.widget;
                   String string = Widgets.getSelectedComboItem(widget,"stop");
+
                   archiveFileMode.set(string);
-                  BARServer.setJobOption(selectedJobData.uuid,"archive-file-mode",archiveFileMode.getString());
+                  BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
                 }
               });
               Widgets.addModifyListener(new WidgetModifyListener(combo,archiveFileMode)
@@ -6213,7 +6225,8 @@ Dprintf.dprintf("");
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
                 widget.setBackground(null);
               }
               @Override
@@ -6232,7 +6245,8 @@ Dprintf.dprintf("");
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginName.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
                 widget.setBackground(null);
               }
             });
@@ -6264,7 +6278,8 @@ Dprintf.dprintf("");
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
                 widget.setBackground(null);
               }
               @Override
@@ -6283,7 +6298,8 @@ Dprintf.dprintf("");
               {
                 Text widget = (Text)focusEvent.widget;
                 storageHostName.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
                 widget.setBackground(null);
               }
             });
@@ -6315,7 +6331,8 @@ Dprintf.dprintf("");
               {
                 Text widget = (Text)selectionEvent.widget;
                 storageLoginPassword.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
                 widget.setBackground(null);
               }
               @Override
@@ -6334,7 +6351,8 @@ Dprintf.dprintf("");
               {
                 Text widget = (Text)focusEvent.widget;
                 storageLoginPassword.set(widget.getText());
-                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
                 widget.setBackground(null);
               }
             });
@@ -6361,7 +6379,7 @@ Dprintf.dprintf("");
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setJobOption(selectedJobData.uuid,"max-band-width",0);
+                BARServer.setJobOption(selectedJobData.uuid,maxBandWidth);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -6451,6 +6469,7 @@ Dprintf.dprintf("");
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
+
                 storageLoginName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -6470,6 +6489,7 @@ Dprintf.dprintf("");
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
+
                 storageLoginName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -6502,6 +6522,7 @@ Dprintf.dprintf("");
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
+
                 storageHostName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -6521,6 +6542,7 @@ Dprintf.dprintf("");
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
+
                 storageHostName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -6673,7 +6695,7 @@ Dprintf.dprintf("");
                 Text   widget = (Text)selectionEvent.widget;
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"ssh-public-key",string);
+                BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 widget.setBackground(null);
               }
               @Override
@@ -6693,7 +6715,7 @@ Dprintf.dprintf("");
                 Text   widget = (Text)focusEvent.widget;
                 String string = widget.getText();
                 sshPublicKeyFileName.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"ssh-public-key",string);
+                BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 widget.setBackground(null);
               }
             });
@@ -6739,7 +6761,7 @@ Dprintf.dprintf("");
                 if (fileName != null)
                 {
                   sshPublicKeyFileName.set(fileName);
-                  BARServer.setJobOption(selectedJobData.uuid,"ssh-public-key",fileName);
+                  BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 }
               }
             });
@@ -6774,8 +6796,9 @@ Dprintf.dprintf("");
               {
                 Text   widget = (Text)selectionEvent.widget;
                 String string = widget.getText();
+
                 sshPrivateKeyFileName.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"ssh-private-key",string);
+                BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 widget.setBackground(null);
               }
               @Override
@@ -6794,8 +6817,9 @@ Dprintf.dprintf("");
               {
                 Text   widget = (Text)focusEvent.widget;
                 String string = widget.getText();
+
                 sshPrivateKeyFileName.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"ssh-private-key",string);
+                BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 widget.setBackground(null);
               }
             });
@@ -6839,7 +6863,7 @@ Dprintf.dprintf("");
                 if (fileName != null)
                 {
                   sshPrivateKeyFileName.set(fileName);
-                  BARServer.setJobOption(selectedJobData.uuid,"ssh-private-key",fileName);
+                  BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 }
               }
             });
@@ -6862,10 +6886,9 @@ Dprintf.dprintf("");
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setJobOption(selectedJobData.uuid,"max-band-width",0);
+                BARServer.setJobOption(selectedJobData.uuid,maxBandWidth);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -6889,10 +6912,9 @@ Dprintf.dprintf("");
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setJobOption(selectedJobData.uuid,"max-band-width",0);
+                BARServer.setJobOption(selectedJobData.uuid,maxBandWidth);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -6957,6 +6979,7 @@ Dprintf.dprintf("");
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
+
                 storageLoginName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -6976,6 +6999,7 @@ Dprintf.dprintf("");
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
+
                 storageLoginName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -7008,6 +7032,7 @@ Dprintf.dprintf("");
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
+
                 storageHostName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -7027,6 +7052,7 @@ Dprintf.dprintf("");
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
+
                 storageHostName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -7178,8 +7204,9 @@ Dprintf.dprintf("");
               {
                 Text   widget = (Text)selectionEvent.widget;
                 String string = widget.getText();
+
                 sshPublicKeyFileName.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"ssh-public-key",string);
+                BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 widget.setBackground(null);
               }
               @Override
@@ -7198,8 +7225,9 @@ Dprintf.dprintf("");
               {
                 Text   widget = (Text)focusEvent.widget;
                 String string = widget.getText();
+
                 sshPublicKeyFileName.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"ssh-public-key",string);
+                BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 widget.setBackground(null);
               }
             });
@@ -7245,7 +7273,7 @@ Dprintf.dprintf("");
                 if (fileName != null)
                 {
                   sshPublicKeyFileName.set(fileName);
-                  BARServer.setJobOption(selectedJobData.uuid,"ssh-public-key",fileName);
+                  BARServer.setJobOption(selectedJobData.uuid,sshPublicKeyFileName);
                 }
               }
             });
@@ -7280,8 +7308,9 @@ Dprintf.dprintf("");
               {
                 Text   widget = (Text)selectionEvent.widget;
                 String string = widget.getText();
+
                 sshPrivateKeyFileName.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"ssh-private-key",string);
+                BARServer.setJobOption(selectedJobData.uuid,sshPrivateKeyFileName);
                 widget.setBackground(null);
               }
               @Override
@@ -7300,8 +7329,9 @@ Dprintf.dprintf("");
               {
                 Text   widget = (Text)focusEvent.widget;
                 String string = widget.getText();
+
                 sshPrivateKeyFileName.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"ssh-private-key",string);
+                BARServer.setJobOption(selectedJobData.uuid,sshPrivateKeyFileName);
                 widget.setBackground(null);
               }
             });
@@ -7345,7 +7375,7 @@ Dprintf.dprintf("");
                 if (fileName != null)
                 {
                   sshPrivateKeyFileName.set(fileName);
-                  BARServer.setJobOption(selectedJobData.uuid,"ssh-private-key",fileName);
+                  BARServer.setJobOption(selectedJobData.uuid,sshPrivateKeyFileName);
                 }
               }
             });
@@ -7368,10 +7398,9 @@ Dprintf.dprintf("");
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setJobOption(selectedJobData.uuid,"max-band-width",0);
+                BARServer.setJobOption(selectedJobData.uuid,maxBandWidth);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -7395,10 +7424,9 @@ Dprintf.dprintf("");
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
-                BARServer.setJobOption(selectedJobData.uuid,"max-band-width",0);
+                BARServer.setJobOption(selectedJobData.uuid,maxBandWidth);
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -7460,6 +7488,7 @@ Dprintf.dprintf("");
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
+
                 storageDeviceName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -7479,6 +7508,7 @@ Dprintf.dprintf("");
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
+
                 storageDeviceName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -7601,7 +7631,7 @@ Dprintf.dprintf("");
                 String string = widget.getText();
                 try
                 {
-                  long  n = Units.parseByteSize(string);
+                  long n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
                   BARServer.setJobOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
@@ -7699,6 +7729,7 @@ Dprintf.dprintf("");
               {
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
+
                 boolean changedFlag = ecc.set(checkedFlag);
                 BARServer.setJobOption(selectedJobData.uuid,"ecc",checkedFlag);
 
@@ -7729,6 +7760,7 @@ Dprintf.dprintf("");
               {
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
+
                 waitFirstVolume.set(checkedFlag);
                 BARServer.setJobOption(selectedJobData.uuid,"wait-first-volume",checkedFlag);
               }
@@ -7779,6 +7811,7 @@ Dprintf.dprintf("");
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text widget = (Text)selectionEvent.widget;
+
                 storageDeviceName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -7798,6 +7831,7 @@ Dprintf.dprintf("");
               public void focusLost(FocusEvent focusEvent)
               {
                 Text widget = (Text)focusEvent.widget;
+
                 storageDeviceName.set(widget.getText());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
                 widget.setBackground(null);
@@ -7910,7 +7944,7 @@ Dprintf.dprintf("");
                 String string = widget.getText();
                 try
                 {
-                  long  n = Units.parseByteSize(string);
+                  long n = Units.parseByteSize(string);
                   volumeSize.set(n);
                   BARServer.setJobOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
@@ -7992,10 +8026,10 @@ Dprintf.dprintf("");
             public void modifyText(ModifyEvent modifyEvent)
             {
               StyledText widget = (StyledText)modifyEvent.widget;
-              String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              String     string = widget.getText();
               Color      color  = COLOR_MODIFIED;
 
-              if (preCommand.equals(string)) color = null;
+              if (preCommand.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
               widget.setBackground(color);
             }
           });
@@ -8005,8 +8039,10 @@ Dprintf.dprintf("");
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
               StyledText widget = (StyledText)selectionEvent.widget;
-              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              BARServer.setJobOption(selectedJobData.uuid,"pre-command",text);
+              String     text   = widget.getText();
+
+              preCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,preCommand);
               widget.setBackground(null);
             }
             @Override
@@ -8024,8 +8060,10 @@ Dprintf.dprintf("");
             public void focusLost(FocusEvent focusEvent)
             {
               StyledText widget = (StyledText)focusEvent.widget;
-              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              BARServer.setJobOption(selectedJobData.uuid,"pre-command",text);
+              String     text   = widget.getText();
+
+              preCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,preCommand);
               widget.setBackground(null);
             }
           });
@@ -8065,10 +8103,10 @@ Dprintf.dprintf("");
             public void modifyText(ModifyEvent modifyEvent)
             {
               StyledText widget = (StyledText)modifyEvent.widget;
-              String     string = widget.getText().replace(widget.getLineDelimiter(),"\n");
+              String     string = widget.getText();
               Color      color  = COLOR_MODIFIED;
 
-              if (postCommand.equals(string)) color = null;
+              if (postCommand.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
               widget.setBackground(color);
             }
           });
@@ -8078,8 +8116,10 @@ Dprintf.dprintf("");
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
               StyledText widget = (StyledText)selectionEvent.widget;
-              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              BARServer.setJobOption(selectedJobData.uuid,"post-command",text);
+              String     text   = widget.getText();
+
+              postCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,postCommand);
               widget.setBackground(null);
             }
             @Override
@@ -8097,8 +8137,10 @@ Dprintf.dprintf("");
             public void focusLost(FocusEvent focusEvent)
             {
               StyledText widget = (StyledText)focusEvent.widget;
-              String     text   = widget.getText().replace(widget.getLineDelimiter(),"\n");
-              BARServer.setJobOption(selectedJobData.uuid,"post-command",text);
+              String     text   = widget.getText();
+
+              postCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,postCommand);
               widget.setBackground(null);
             }
           });
@@ -8467,6 +8509,63 @@ Dprintf.dprintf("");
             }
           });
         }
+      }
+
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Comment"));
+      tab.setLayout(new TableLayout(1.0,1.0));
+      Widgets.layout(tab,0,0,TableLayoutData.NSWE);
+      {
+        styledText = Widgets.newStyledText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+        styledText.setToolTipText(BARControl.tr("Free text comment for job."));
+        Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
+        styledText.addModifyListener(new ModifyListener()
+        {
+          @Override
+          public void modifyText(ModifyEvent modifyEvent)
+          {
+            StyledText widget = (StyledText)modifyEvent.widget;
+            String     string = widget.getText();
+            Color      color  = COLOR_MODIFIED;
+
+            if (comment.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
+            widget.setBackground(color);
+          }
+        });
+        styledText.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            StyledText widget = (StyledText)selectionEvent.widget;
+            String     text   = widget.getText();
+
+            comment.set(text.replace(widget.getLineDelimiter(),"\n"));
+            BARServer.setJobOption(selectedJobData.uuid,comment);
+            widget.setBackground(null);
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        styledText.addFocusListener(new FocusListener()
+        {
+          @Override
+          public void focusGained(FocusEvent focusEvent)
+          {
+          }
+          @Override
+          public void focusLost(FocusEvent focusEvent)
+          {
+            StyledText widget = (StyledText)focusEvent.widget;
+            String     text   = widget.getText();
+
+            comment.set(text.replace(widget.getLineDelimiter(),"\n"));
+            BARServer.setJobOption(selectedJobData.uuid,comment);
+            widget.setBackground(null);
+          }
+        });
+        Widgets.addModifyListener(new WidgetModifyListener(styledText,comment));
       }
     }
     Widgets.addEventListener(new WidgetEventListener(widgetTabFolder,selectJobEvent)
@@ -9081,6 +9180,8 @@ throw new Error("NYI");
       BARServer.getJobOption(selectedJobData.uuid,postCommand);
       mountDeviceName.set(BARServer.getStringJobOption(selectedJobData.uuid,"mount-device"));
       maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0));
+      BARServer.getJobOption(selectedJobData.uuid,comment);
+Dprintf.dprintf("comment=%s",comment);
 
       updateFileTreeImages();
       updateDeviceImages();
