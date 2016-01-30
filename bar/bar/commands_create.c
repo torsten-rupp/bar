@@ -1394,12 +1394,12 @@ LOCAL String formatIncrementalFileName(String                 fileName,
 
 LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 {
-  Dictionary          duplicateNamesDictionary;
-  String              name;
-  Errors              error;
-  FileInfo            fileInfo;
-  SemaphoreLock       semaphoreLock;
-  DeviceInfo          deviceInfo;
+  Dictionary    duplicateNamesDictionary;
+  String        name;
+  Errors        error;
+  FileInfo      fileInfo;
+  SemaphoreLock semaphoreLock;
+  DeviceInfo    deviceInfo;
 
   assert(createInfo != NULL);
   assert(createInfo->includeEntryList != NULL);
@@ -1652,7 +1652,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               {
                 if (   isIncluded(includeEntryNode,name)
                     && !isInExcludedList(createInfo->excludePatternList,name)
-                    )
+                   )
                 {
                   switch (includeEntryNode->type)
                   {
@@ -1903,7 +1903,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               if (   isIncluded(includeEntryNode,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                   && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
-                  )
+                 )
               {
                 // add to known names history
                 Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
@@ -1937,7 +1937,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               if (   isIncluded(includeEntryNode,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                   && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
-                  )
+                 )
               {
                 // add to known names history
                 Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
@@ -2027,18 +2027,19 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
 LOCAL void collectorThreadCode(CreateInfo *createInfo)
 {
-  AutoFreeList        autoFreeList;
-  Dictionary          duplicateNamesDictionary;
-  StringList          nameList;
-  String              basePath;
-  String              name;
-  FileInfo            fileInfo;
-  SemaphoreLock       semaphoreLock;
-  String              fileName;
-  Dictionary          hardLinksDictionary;
-  Errors              error;
-  DeviceInfo          deviceInfo;
-  DictionaryIterator  dictionaryIterator;
+  AutoFreeList       autoFreeList;
+  Dictionary         duplicateNamesDictionary;
+  StringList         nameList;
+  ulong              n;
+  String             basePath;
+  String             name;
+  FileInfo           fileInfo;
+  SemaphoreLock      semaphoreLock;
+  String             fileName;
+  Dictionary         hardLinksDictionary;
+  Errors             error;
+  DeviceInfo         deviceInfo;
+  DictionaryIterator dictionaryIterator;
 //???
 union { const void *value; const uint64 *id; } keyData;
 union { void *value; HardLinkInfo *hardLinkInfo; } data;
@@ -2365,6 +2366,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       File_doneSplitFileName(&fileNameTokenizer);
 
       // find files
+      n = 0;
       StringList_append(&nameList,basePath);
       while (   !StringList_isEmpty(&nameList)
              && (createInfo->failError == ERROR_NONE)
@@ -2376,8 +2378,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
         // get next entry to process
         StringList_getLast(&nameList,name);
-//fprintf(stderr,"%s, %d: ----------------------\n",__FILE__,__LINE__);
-//fprintf(stderr,"%s, %d: %s included=%d excluded=%d dictionary=%d\n",__FILE__,__LINE__,String_cString(name),isIncluded(includeEntryNode,name),isInExcludedList(createInfo->excludePatternList,name),Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)));
 
         // read file info
         error = File_getFileInfo(name,&fileInfo);
@@ -2525,27 +2525,26 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       }
                       continue;
                     }
-//fprintf(stderr,"%s, %d: %s included=%d excluded=%d dictionary=%d\n",__FILE__,__LINE__,String_cString(fileName),isIncluded(includeEntryNode,fileName),isInExcludedList(createInfo->excludePatternList,fileName),Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)));
+
+                    // read file info
+                    error = File_getFileInfo(fileName,&fileInfo);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
+                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+
+                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                      {
+                        createInfo->statusInfo.errorEntries++;
+                        updateStatusInfo(createInfo);
+                      }
+                      continue;
+                    }
 
                     if (   isIncluded(includeEntryNode,fileName)
                         && !isInExcludedList(createInfo->excludePatternList,fileName)
                        )
                     {
-                      // read file info
-                      error = File_getFileInfo(fileName,&fileInfo);
-                      if (error != ERROR_NONE)
-                      {
-                        printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
-                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
-
-                        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-                        {
-                          createInfo->statusInfo.errorEntries++;
-                          updateStatusInfo(createInfo);
-                        }
-                        continue;
-                      }
-
                       if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
                       {
                         switch (fileInfo.type)
@@ -3056,7 +3055,17 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           }
         }
 
+        // increment number of possible found files
+        n++;
+
         // free resources
+      }
+      if (n <= 0)
+      {
+        printError("No matching entry found for '%s'!\n",
+                   String_cString(includeEntryNode->string)
+                  );
+        createInfo->failError = ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(includeEntryNode->string));
       }
 
       // next include entry
