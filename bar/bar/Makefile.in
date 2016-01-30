@@ -57,6 +57,7 @@ CC_OPTIMIZE_DEBUG      = @CC_OPTIMIZE_DEBUG@
 CC_ADDITIONAL          =
 CC_ADDITIONAL_RELEASE  =
 CC_ADDITIONAL_DEBUG    = -finstrument-functions
+CC_ADDITIONAL_GCOV     = -fprofile-arcs -ftest-coverage
 CC_ADDITIONAL_VALGRIND = -fno-builtin
 CC_DEFINES             = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG
 CC_DEFINES_RELEASE     = @CC_DEFINES_RELEASE@
@@ -72,6 +73,7 @@ LD                     = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS               = @LD_FLAGS@
 LD_FLAGS_RELEASE       =
 LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create
+LD_FLAGS_GCOV          = -Wl,-wrap,pthread_create -fprofile-arcs
 LD_FLAGS_VALGRIND      =
 LD_LIBRARY_PATHS       = @LIBRARY_PATHS@
 LD_LIBRARIES           = @LIBRARIES@
@@ -138,6 +140,9 @@ MKFS           = /sbin/mkfs
 MOUNT          = /bin/mount
 UMOUNT         = /bin/umount
 SUDO           = sudo
+
+LCOV           = lcov
+GENHTML        = genhtml
 
 VALGRIND       = valgrind  
 VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)      
@@ -270,6 +275,10 @@ debug/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h in
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
 
+gcov/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_GCOV) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
+
 valgrind/%.o: $(SOURCE_DIR)/%.c errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $(@D)/$*.o
@@ -282,6 +291,9 @@ release/%.o: $(SOURCE_DIR)/%.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
 
 debug/%.o: $(SOURCE_DIR)/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
+
+gcov/%.o: $(SOURCE_DIR)/%.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $(@D)/$*.o
 
 valgrind/%.o: $(SOURCE_DIR)/%.cpp
@@ -357,6 +369,11 @@ BAR_OBJECTS_DEBUG    = $(foreach z,$(filter %.c,$(BAR_SOURCES)),debug/$(patsubst
                        debug/errors.o \
                        debug/archive_format.o \
 
+BAR_OBJECTS_GCOV     = $(foreach z,$(filter %.c,$(BAR_SOURCES)),gcov/$(patsubst %.c,%.o,$z)) \
+                       $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),gcov/$(patsubst %.cpp,%.o,$z)) \
+                       gcov/errors.o \
+                       gcov/archive_format.o \
+
 BAR_OBJECTS_VALGRIND = $(foreach z,$(filter %.c,$(BAR_SOURCES)),valgrind/$(patsubst %.c,%.o,$z)) \
                        $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),valgrind/$(patsubst %.cpp,%.o,$z)) \
                        valgrind/errors.o \
@@ -426,6 +443,7 @@ INTERMEDIATE         = errors.c \
 
 TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
+                       bar-gcov@EXEEXT@ \
                        bar-valgrind@EXEEXT@ \
                        $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                        $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
@@ -477,6 +495,7 @@ help:
 	@$(ECHO) "  rundev"
 	@$(ECHO) "  rundevd"
 	@$(ECHO) "  rundevddd"
+	@$(ECHO) "  rundevgcov"
 	@$(ECHO) "  rundevvalgrind"
 	@$(ECHO) "  rundev_en"
 	@$(ECHO) "  rundev_de"
@@ -577,6 +596,13 @@ endif
 
 bar-debug@EXEEXT@.sym: bar-debug@EXEEXT@
 	$(OBJCOPY) --only-keep-debug bar-debug@EXEEXT@ $@
+
+bar-gcov@EXEEXT@: \
+  $(BAR_OBJECTS_GCOV) \
+  $(EXTERN_OBJECTS)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_GCOV) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
 # Note: a special valgrind version is needed because of a bug in valgrind
 #       reporting false positives when gcc builtin-functions are used.
@@ -903,6 +929,7 @@ TEST_FILES_CLEAN = \
 # test bar exeuctables
 TEST_BAR          ?= ./bar@EXEEXT@
 TEST_BAR_DEBUG    = ./bar-debug@EXEEXT@
+TEST_BAR_GCOV     = ./bar-gcov@EXEEXT@
 TEST_BAR_VALGRIND = ./bar-valgrind@EXEEXT@
 TEST_DESTROYER    = ./destroyer@EXEEXT@
 
@@ -1820,7 +1847,7 @@ test_file_operations_incremental: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	$(INSTALL) -d test/new; $(CP) $(TEST_DATA_DIR)/data/random1024.dat test/new/random1024-new.dat
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
@@ -1835,7 +1862,7 @@ test_file_operations_differential: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	$(INSTALL) -d test/new; $(CP) $(TEST_DATA_DIR)/data/random1024.dat test/new/random1024-new.dat
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
@@ -3126,6 +3153,72 @@ test_dvd_operations: \
 	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+
+# ----------------------------------------------------------------------------
+
+# code coverage analysis
+.PHONY: gcov coverage
+.PHONY: clean_gcov
+gcov coverage: \
+  $(TEST_BAR_GCOV) \
+  $(TEST_FILES)
+	@$(RMF) test/key.*; $(MAKE) test/key.public test/key.private
+	$(MAKE) \
+          $(if $(CHECK),\
+            gcov$(CHECK),\
+            gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 \
+           )
+	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
+	$(INSTALL) -d coverage
+	$(GENHTML) -o coverage bar-gcov.info
+
+clean_gcov:
+	$(RMF) gcov/*.gcda
+	$(RMRF) $(TEST_FILES_CLEAN)
+	$(RMRF) coverage
+
+.PHONY: gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7
+gcov1: \
+  $(TEST_BAR_GCOV) \
+  $(TEST_FILES)
+	$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) QUIET=1 --no-print-directory -s \
+          test_basic 2>/dev/null
+
+gcov2: \
+  $(TEST_BAR_GCOV) \
+  $(TEST_FILES)
+	$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) QUIET=1 --no-print-directory -s \
+          test_compress 2>/dev/null
+
+gcov3: \
+  $(TEST_BAR_GCOV) \
+  $(TEST_FILES)
+	$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) QUIET=1 --no-print-directory -s \
+          test_crypt 2>/dev/null
+
+gcov4: \
+  $(TEST_BAR_GCOV) \
+  $(TEST_FILES)
+	$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) QUIET=1 --no-print-directory -s \
+          test_asymmetric_crypt 2>/dev/null
+
+gcov5: \
+  $(TEST_BAR_GCOV) \
+  $(TEST_FILES)
+	$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) QUIET=1 --no-print-directory -s \
+          test_split
+
+gcov6: \
+  $(TEST_BAR_GCOV) \
+  $(TEST_FILES)
+	$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) QUIET=1 --no-print-directory -s \
+          test_parameters 2>/dev/null
+
+gcov7: \
+  $(TEST_BAR_GCOV) \
+  $(TEST_FILES)
+	$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) QUIET=1 --no-print-directory -s \
+          test_misc 2>/dev/null
 
 # ----------------------------------------------------------------------------
 
