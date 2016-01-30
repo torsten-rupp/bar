@@ -166,6 +166,15 @@
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
 
+/* icu installed (local) */
+#undef HAVE_ICU
+
+/* icudata installed */
+#undef HAVE_ICUI18N
+
+/* icuuc installed */
+#undef HAVE_ICUUC
+
 /* Define to 1 if you have the <icu.h> header file. */
 #undef HAVE_ICU_H
 
