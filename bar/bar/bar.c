@@ -3344,7 +3344,7 @@ Errors updateConfig(void)
   StringList        configLinesList;
   String            line;
   Errors            error;
-  uint              i;
+  int               i;
   StringNode        *nextStringNode;
   ConfigValueFormat configValueFormat;
   SemaphoreLock     semaphoreLock;
