@@ -743,7 +743,7 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/icu-$ICU_VERSION icu)
+      (cd $destination; $LN -sfT packages/icu icu)
     fi
   fi
 
