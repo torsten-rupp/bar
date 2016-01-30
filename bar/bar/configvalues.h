@@ -78,7 +78,7 @@ typedef struct
 typedef struct
 {
   ConfigValueTypes type;                          // type of config value
-  const char       *name;                         // name of config value
+  const char       *name;                         // name of config value or section name
   union
   {
     void       *pointer;
@@ -850,6 +850,7 @@ typedef struct
 * Name   : CONFIG_VALUE_ITERATE
 * Purpose: iterated over config value array
 * Input  : configValues - config values array
+*          sectionName  - section name or NULL
 *          index        - iteration variable
 * Output : -
 * Return : -
@@ -861,9 +862,9 @@ typedef struct
 *            }
 \***********************************************************************/
 
-#define CONFIG_VALUE_ITERATE(configValues,index) \
-  for ((index) = ConfigValue_firstValueIndex(configValues); \
-       (index) < ConfigValue_lastValueIndex(configValues); \
+#define CONFIG_VALUE_ITERATE(configValues,sectionName,index) \
+  for ((index) = ConfigValue_firstValueIndex(configValues,sectionName); \
+       (index) < ConfigValue_lastValueIndex(configValues,sectionName); \
        (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
@@ -871,6 +872,7 @@ typedef struct
 * Name   : CONFIG_VALUE_ITERATEX
 * Purpose: iterated over config value array
 * Input  : configValues - config values array
+*          sectionName  - section name or NULL
 *          index        - iteration variable
 *          condition    - additional condition
 * Output : -
@@ -883,9 +885,9 @@ typedef struct
 *            }
 \***********************************************************************/
 
-#define CONFIG_VALUE_ITERATEX(configValues,index,condition) \
-  for ((index) = ConfigValue_firstValueIndex(configValues); \
-       ((index) < ConfigValue_lastValueIndex(configValues)) && (condition); \
+#define CONFIG_VALUE_ITERATEX(configValues,sectionName,index,condition) \
+  for ((index) = ConfigValue_firstValueIndex(configValues,sectionName); \
+       ((index) < ConfigValue_lastValueIndex(configValues,sectionName)) && (condition); \
        (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
@@ -906,9 +908,9 @@ typedef struct
 \***********************************************************************/
 
 #define CONFIG_VALUE_ITERATE_SECTION(configValues,sectionName,index) \
-  for ((index) = ConfigValue_firstSectionValueIndex(configValues,sectionName); \
-       (index) <= ConfigValue_lastSectionValueIndex(configValues,index); \
-       (index) = ConfigValue_nextSectionValueIndex(configValues,index) \
+  for ((index) = ConfigValue_firstValueIndex(configValues,sectionName); \
+       (index) <= ConfigValue_lastValueIndex(configValues,index); \
+       (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
 /***********************************************************************\
@@ -929,9 +931,9 @@ typedef struct
 \***********************************************************************/
 
 #define CONFIG_VALUE_ITERATE_SECTIONX(configValues,sectionName,index,condition) \
-  for ((index) = ConfigValue_firstSectionValueIndex(configValues,sectionName); \
-       ((index) <= ConfigValue_lastSectionValueIndex(configValues,index)) && (condition); \
-       (index) = ConfigValue_nextSectionValueIndex(configValues,index) \
+  for ((index) = ConfigValue_firstValueIndex(configValues,sectionName); \
+       ((index) <= ConfigValue_lastValueIndex(configValues,index)) && (condition); \
+       (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
 /***************************** Functions ******************************/
@@ -1004,35 +1006,43 @@ static inline bool ConfigValue_isSection(const ConfigValue configValue)
 * Name   : ConfigValue_valueIndex
 * Purpose: get value index
 * Input  : configValues - config values array
+*          sectionName  - section name
 *          name         - name
 * Output : -
 * Return : index or -1
 * Notes  : -
 \***********************************************************************/
 
-int ConfigValue_valueIndex(const ConfigValue configValues[], const char *name);
+int ConfigValue_valueIndex(const ConfigValue configValues[],
+                           const char        *sectionName,
+                           const char        *name
+                          );
 
 /***********************************************************************\
 * Name   : ConfigValue_firstValueIndex
 * Purpose: get first value index
 * Input  : configValues - config values array
 * Output : -
-* Return : first index
+* Return : first index or -1
 * Notes  : -
 \***********************************************************************/
 
-uint ConfigValue_firstValueIndex(const ConfigValue configValues[]);
+int ConfigValue_firstValueIndex(const ConfigValue configValues[],
+                                const char        *sectionName
+                               );
 
 /***********************************************************************\
 * Name   : ConfigValue_lastValueIndex
 * Purpose: get last value index
 * Input  : configValues - config values array
 * Output : -
-* Return : always configValueCount
+* Return : last index or -1
 * Notes  : -
 \***********************************************************************/
 
-uint ConfigValue_lastValueIndex(const ConfigValue configValues[]);
+int ConfigValue_lastValueIndex(const ConfigValue configValues[],
+                               const char        *sectionName
+                              );
 
 /***********************************************************************\
 * Name   : ConfigValue_nextValueIndex
@@ -1040,47 +1050,13 @@ uint ConfigValue_lastValueIndex(const ConfigValue configValues[]);
 * Input  : configValues - config values array
 *          index        - index
 * Output : -
-* Return : next index
+* Return : next index or -1
 * Notes  : -
 \***********************************************************************/
 
-uint ConfigValue_nextValueIndex(const ConfigValue configValues[], uint index);
-
-/***********************************************************************\
-* Name   : ConfigValue_firstSectionValue
-* Purpose: get first section value index
-* Input  : configValues - config values array
-*          name         - section name
-* Output : -
-* Return : first index in section
-* Notes  : -
-\***********************************************************************/
-
-uint ConfigValue_firstSectionValueIndex(const ConfigValue configValues[], const char *name);
-
-/***********************************************************************\
-* Name   : ConfigValue_lastSectionValue
-* Purpose: get last section value index
-* Input  : configValues - config values array
-*          index        - index
-* Output : -
-* Return : last index
-* Notes  : -
-\***********************************************************************/
-
-uint ConfigValue_lastSectionValueIndex(const ConfigValue configValues[], uint index);
-
-/***********************************************************************\
-* Name   : ConfigValue_nextSectionValueIndex
-* Purpose: get next section value index
-* Input  : configValues - config values array
-*          index        - index
-* Output : -
-* Return : next index
-* Notes  : -
-\***********************************************************************/
-
-uint ConfigValue_nextSectionValueIndex(const ConfigValue configValues[], uint index);
+int ConfigValue_nextValueIndex(const ConfigValue configValues[],
+                               int               index
+                              );
 
 /***********************************************************************
 * Name   : ConfigValue_parse
