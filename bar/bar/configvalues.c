@@ -529,6 +529,8 @@ LOCAL bool processValue(const ConfigValue *configValue,
 
   switch (configValue->type)
   {
+    case CONFIG_VALUE_TYPE_NONE:
+      break;
     case CONFIG_VALUE_TYPE_INTEGER:
       {
         int data;
@@ -1134,6 +1136,8 @@ LOCAL bool processValue(const ConfigValue *configValue,
     case CONFIG_VALUE_TYPE_IGNORE:
       // nothing to do
       break;
+    case CONFIG_VALUE_TYPE_DEPRECATED:
+      break;
     case CONFIG_VALUE_TYPE_BEGIN_SECTION:
     case CONFIG_VALUE_TYPE_END_SECTION:
       // nothing to do
@@ -1171,7 +1175,7 @@ int ConfigValue_valueIndex(const ConfigValue configValues[],
                            const char        *name
                           )
 {
-  uint index;
+  int index;
 
   assert(configValues != NULL);
   assert(name != NULL);
