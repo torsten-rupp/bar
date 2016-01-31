@@ -2217,6 +2217,7 @@ Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
   offset = (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size <= size)
              ? chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size
              : size+1;
+  assert(offset > chunkInfo->index);
   error = chunkInfo->io->seek(chunkInfo->ioUserData,offset);
   if (error != ERROR_NONE)
   {
