@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchiver archive restore function
+* Contents: Backup ARchiver archive restore functions
 * Systems: all
 *
 \***********************************************************************/

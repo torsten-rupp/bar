@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchiver archive list function
+* Contents: Backup ARchiver archive list functions
 * Systems: all
 *
 \***********************************************************************/
@@ -423,8 +423,6 @@ LOCAL void printFileInfo(ConstString        storageName,
   TextMacro  textMacros[15];
 
   assert(fileName != NULL);
-
-//  UNUSED_VARIABLE(storageName);
 
   // init variables
   dateTimeString = String_new();

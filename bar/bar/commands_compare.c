@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchiver archive compare function
+* Contents: Backup ARchiver archive compare functions
 * Systems: all
 *
 \***********************************************************************/
