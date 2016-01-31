@@ -2649,6 +2649,33 @@ remoteBarFlag=FALSE;
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("USER"));
           if (storageSpecifier->hostPort == 0) storageSpecifier->hostPort = sshServer.port;
+          if (String_isEmpty(storageSpecifier->hostName))
+          {
+            printError("Cannot connect to '%s:%d' (error: %s)!\n",
+                       String_cString(storageSpecifier->hostName),
+                       storageSpecifier->hostPort,
+                       Error_getText(error)
+                      );
+            break;
+          }
+          if (sshServer.publicKey.data == NULL)
+          {
+            printError("Cannot connect to '%s:%d' (error: %s)!\n",
+                       String_cString(storageSpecifier->hostName),
+                       storageSpecifier->hostPort,
+                       Error_getText(error)
+                      );
+            break;
+          }
+          if (sshServer.privateKey.data == NULL)
+          {
+            printError("Cannot connect to '%s:%d' (error: %s)!\n",
+                       String_cString(storageSpecifier->hostName),
+                       storageSpecifier->hostPort,
+                       Error_getText(error)
+                      );
+            break;
+          }
 
           // connect to SSH server
           error = Network_connect(&socketHandle,

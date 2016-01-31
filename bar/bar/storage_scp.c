@@ -362,15 +362,22 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
     if (storageHandle->storageSpecifier.hostPort == 0) storageHandle->storageSpecifier.hostPort = sshServer.port;
-#ifndef WERROR
-#warning TODO!!!!!
-#endif
-//    storageHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
-//    storageHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
+    storageHandle->sftp.publicKey  = sshServer.publicKey;
+    storageHandle->sftp.privateKey = sshServer.privateKey;
     if (String_isEmpty(storageHandle->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_HOST_NAME;
+    }
+    if (sshServer.publicKey.data == NULL)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NO_SSH_PUBLIC_KEY;
+    }
+    if (sshServer.privateKey.data == NULL)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NO_SSH_PRIVATE_KEY;
     }
 
     // allocate SSH server
@@ -389,8 +396,6 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
                             storageHandle->storageSpecifier.hostPort,
                             storageHandle->storageSpecifier.loginName,
                             sshServer.password,
-//                            storageHandle->scp.sshPublicKeyFileName,
-//                            storageHandle->scp.sshPrivateKeyFileName
                             storageHandle->scp.publicKey.data,
                             storageHandle->scp.publicKey.length,
                             storageHandle->scp.privateKey.data,
@@ -412,8 +417,6 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
                               defaultSSHPassword,
-//                              storageHandle->scp.sshPublicKeyFileName,
-//                              storageHandle->scp.sshPrivateKeyFileName
                               storageHandle->scp.publicKey.data,
                               storageHandle->scp.publicKey.length,
                               storageHandle->scp.privateKey.data,

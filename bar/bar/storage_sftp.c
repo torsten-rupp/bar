@@ -358,6 +358,16 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_HOST_NAME;
     }
+    if (sshServer.publicKey.data == NULL)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NO_SSH_PUBLIC_KEY;
+    }
+    if (sshServer.privateKey.data == NULL)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NO_SSH_PRIVATE_KEY;
+    }
 
     // allocate SSH server
     if (!allocateServer(storageHandle->sftp.serverId,serverConnectionPriority,60*1000L))
@@ -375,8 +385,6 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
                             storageHandle->storageSpecifier.hostPort,
                             storageHandle->storageSpecifier.loginName,
                             sshServer.password,
-//                            storageHandle->sftp.sshPublicKeyFileName,
-//                            storageHandle->sftp.sshPrivateKeyFileName
                             storageHandle->sftp.publicKey.data,
                             storageHandle->sftp.publicKey.length,
                             storageHandle->sftp.privateKey.data,
@@ -398,8 +406,6 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
                               defaultSSHPassword,
-//                              storageHandle->sftp.sshPublicKeyFileName,
-//                              storageHandle->sftp.sshPrivateKeyFileName
                               storageHandle->sftp.publicKey.data,
                               storageHandle->sftp.publicKey.length,
                               storageHandle->sftp.privateKey.data,
@@ -1534,6 +1540,16 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
       {
         AutoFree_cleanup(&autoFreeList);
         return ERROR_NO_HOST_NAME;
+      }
+      if (sshServer.publicKey.data == NULL)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_NO_SSH_PUBLIC_KEY;
+      }
+      if (sshServer.privateKey.data == NULL)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_NO_SSH_PRIVATE_KEY;
       }
 
       // open network connection
