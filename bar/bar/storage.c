@@ -445,16 +445,14 @@ LOCAL bool initDefaultSSHPassword(ConstString hostName, ConstString loginName, c
 /***********************************************************************\
 * Name   : checkSSHLogin
 * Purpose: check if SSH login is possible
-* Input  : hostName           - host name
-*          hostPort           - host SSH port
-*          loginName          - login name
-*          loginPassword      - login password
-*          publicKeyFileName  - SSH public key file name
-*          publicKey          - SSH public key
-*          publicKeyLength    - SSH public key length
-*          privateKeyFileName - SSH private key file name
-*          privateKey         - SSH private key
-*          privateKeyLength   - SSH private key length
+* Input  : hostName         - host name
+*          hostPort         - host SSH port
+*          loginName        - login name
+*          loginPassword    - login password
+*          publicKey        - SSH public key
+*          publicKeyLength  - SSH public key length
+*          privateKey       - SSH private key
+*          privateKeyLength - SSH private key length
 * Output : -
 * Return : ERROR_NONE if login is possible, error code otherwise
 * Notes  : -
@@ -464,8 +462,6 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                            uint        hostPort,
                            ConstString loginName,
                            Password    *loginPassword,
-//                           ConstString publicKeyFileName,
-//                           ConstString privateKeyFileName
                            void        *publicKey,
                            uint        publicKeyLength,
                            void        *privateKey,
