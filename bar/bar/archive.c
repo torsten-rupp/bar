@@ -5994,12 +5994,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   foundFileEntryFlag = FALSE;
   foundFileDataFlag  = FALSE;
-  error              = ERROR_NONE;
-  while (   !foundFileEntryFlag
-         && !foundFileDataFlag
-         && (error == ERROR_NONE)
-        )
+  do
   {
+    // reset
+    error = ERROR_NONE;
+    AutoFree_freeAll(&autoFreeList2);
     // reset chunk read position
     Chunk_seek(&archiveEntryInfo->file.chunkFile.info,index);
 
@@ -6281,11 +6280,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
         }
       }
-      if (error != ERROR_NONE)
-      {
-        // free resources
-        AutoFree_freeAll(&autoFreeList2);
-      }
     }
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
@@ -6307,7 +6301,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
         password = NULL;
       }
     }
-  } // while
+  }
+  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -6578,13 +6573,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   foundImageEntryFlag = FALSE;
   foundImageDataFlag  = FALSE;
-  error               = ERROR_NONE;
-  while (   !foundImageEntryFlag
-         && !foundImageDataFlag
-         && (error == ERROR_NONE)
-        )
+  do
   {
+    // reset
     error = ERROR_NONE;
+    AutoFree_freeAll(&autoFreeList2);
 
     // reset chunk read position
     Chunk_seek(&archiveEntryInfo->image.chunkImage.info,index);
@@ -6796,11 +6789,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
         }
       }
-      if (error != ERROR_NONE)
-      {
-        // free resources
-        AutoFree_freeAll(&autoFreeList2);
-      }
     }
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
@@ -6822,7 +6810,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
         password = NULL;
       }
     }
-  } // while
+  }
+  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -7045,11 +7034,12 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     decryptedFlag = TRUE;
   }
   foundDirectoryEntryFlag = FALSE;
-  error                   = ERROR_NONE;
-  while (   !foundDirectoryEntryFlag
-         && (error == ERROR_NONE)
-        )
+  do
   {
+    // reset
+    error = ERROR_NONE;
+    AutoFree_freeAll(&autoFreeList2);
+
     // reset chunk read position
     Chunk_seek(&archiveEntryInfo->directory.chunkDirectory.info,index);
 
@@ -7212,11 +7202,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
         }
       }
-      if (error != ERROR_NONE)
-      {
-        // free resources
-        AutoFree_freeAll(&autoFreeList2);
-      }
     }
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
@@ -7238,7 +7223,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
         password = NULL;
       }
     }
-  } // while
+  }
+  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -7430,12 +7416,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     decryptedFlag = TRUE;
   }
   foundLinkEntryFlag = FALSE;
-  error              = ERROR_NONE;
-  while (   !foundLinkEntryFlag
-         && (error == ERROR_NONE)
-        )
+  do
   {
+    // reset
     error = ERROR_NONE;
+    AutoFree_freeAll(&autoFreeList2);
 
     // reset chunk read position
     Chunk_seek(&archiveEntryInfo->link.chunkLink.info,index);
@@ -7600,11 +7585,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
         }
       }
-      if (error != ERROR_NONE)
-      {
-        // free resources
-        AutoFree_freeAll(&autoFreeList2);
-      }
     }
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
@@ -7626,7 +7606,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
         password = NULL;
       }
     }
-  } // while
+  }
+  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -7862,13 +7843,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   }
   foundHardLinkEntryFlag = FALSE;
   foundHardLinkDataFlag  = FALSE;
-  error                  = ERROR_NONE;
-  while (   !foundHardLinkEntryFlag
-         && !foundHardLinkDataFlag
-         && (error == ERROR_NONE)
-        )
+  do
   {
+    // reset
     error = ERROR_NONE;
+    AutoFree_freeAll(&autoFreeList2);
 
     // reset chunk read position
     Chunk_seek(&archiveEntryInfo->hardLink.chunkHardLink.info,index);
@@ -8198,11 +8177,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
         }
       }
-      if (error != ERROR_NONE)
-      {
-        // free resources
-        AutoFree_freeAll(&autoFreeList2);
-      }
     }
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
@@ -8224,7 +8198,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
         password = NULL;
       }
     }
-  } // while
+  }
+  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -8619,11 +8594,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             break;
         }
       }
-      if (error != ERROR_NONE)
-      {
-        // free resources
-        AutoFree_freeAll(&autoFreeList2);
-      }
     }
 
     if (error == ERROR_INVALID_CRYPT_PASSWORD)
@@ -8645,7 +8615,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
         password = NULL;
       }
     }
-  } // while
+  }
+  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
