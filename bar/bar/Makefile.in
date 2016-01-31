@@ -1751,10 +1751,11 @@ test/bar.cfg:
 	( \
           echo '# bar test configuration'; \
         ) > $@
+	$(CHMOD) 600 $@
 
 test/key.public test/key.private:
 	$(INSTALL) -d test
-	$(ECHO_NO_LF) -e "$(TEST_PASSWORD_CRYPT)\n$(TEST_PASSWORD_CRYPT)\n" | DISPLAY= SSH_ASKPASS= ./bar --generate-keys test/key
+	$(ECHO_NO_LF) -e "$(TEST_PASSWORD_CRYPT)\n$(TEST_PASSWORD_CRYPT)\n" | DISPLAY= SSH_ASKPASS= $(TEST_BAR) $(TEST_OPTIONS) --generate-keys test/key
 
 # helper function to check if parameter exists
 # call functionVerifyParameter,<name>[,message]
