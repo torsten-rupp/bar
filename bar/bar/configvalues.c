@@ -1142,6 +1142,9 @@ LOCAL bool processValue(const ConfigValue *configValue,
     case CONFIG_VALUE_TYPE_END_SECTION:
       // nothing to do
       break;
+    case CONFIG_VALUE_TYPE_END:
+      // nothing to do
+      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1437,6 +1440,7 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
 
   switch (configValue->type)
   {
+    case CONFIG_VALUE_TYPE_NONE:
     case CONFIG_VALUE_TYPE_INTEGER:
     case CONFIG_VALUE_TYPE_INTEGER64:
     case CONFIG_VALUE_TYPE_DOUBLE:
@@ -1508,8 +1512,14 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
     case CONFIG_VALUE_TYPE_IGNORE:
       // nothing to do
       break;
+    case CONFIG_VALUE_TYPE_DEPRECATED:
+      // nothing to do
+      break;
     case CONFIG_VALUE_TYPE_BEGIN_SECTION:
     case CONFIG_VALUE_TYPE_END_SECTION:
+      // nothing to do
+      break;
+    case CONFIG_VALUE_TYPE_END:
       // nothing to do
       break;
     #ifndef NDEBUG
@@ -1527,6 +1537,8 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
 
   switch (configValueFormat->configValue->type)
   {
+    case CONFIG_VALUE_TYPE_NONE:
+      break;
     case CONFIG_VALUE_TYPE_INTEGER:
     case CONFIG_VALUE_TYPE_INTEGER64:
     case CONFIG_VALUE_TYPE_DOUBLE:
@@ -1547,8 +1559,14 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
     case CONFIG_VALUE_TYPE_IGNORE:
       // nothing to do
       break;
+    case CONFIG_VALUE_TYPE_DEPRECATED:
+      // nothing to do
+      break;
     case CONFIG_VALUE_TYPE_BEGIN_SECTION:
     case CONFIG_VALUE_TYPE_END_SECTION:
+      // nothing to do
+      break;
+    case CONFIG_VALUE_TYPE_END:
       // nothing to do
       break;
     #ifndef NDEBUG
@@ -1613,6 +1631,8 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 
     switch (configValueFormat->configValue->type)
     {
+      case CONFIG_VALUE_TYPE_NONE:
+        break;
       case CONFIG_VALUE_TYPE_INTEGER:
         // get value
         if (configValueFormat->configValue->offset >= 0)
@@ -2032,10 +2052,16 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         // nothing to do
         return FALSE;
         break;
+      case CONFIG_VALUE_TYPE_DEPRECATED:
+        // nothing to do
+        break;
       case CONFIG_VALUE_TYPE_BEGIN_SECTION:
       case CONFIG_VALUE_TYPE_END_SECTION:
         // nothing to do
         return FALSE;
+        break;
+      case CONFIG_VALUE_TYPE_END:
+        // nothing to do
         break;
       #ifndef NDEBUG
         default:
