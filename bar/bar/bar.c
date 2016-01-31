@@ -3797,6 +3797,7 @@ Errors initLog(LogHandle *logHandle)
   assert(logHandle != NULL);
 
   logHandle->logFileName = String_new();
+#warning todo: create not in tmp dir?
   error = File_getTmpFileNameCString(logHandle->logFileName,"log-XXXXXX",tmpDirectory);
   if (error != ERROR_NONE)
   {
@@ -5202,106 +5203,107 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
   ServerNode    *serverNode;
   uint          maxConnectionCount;
 
-  assert(serverId != 0);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (serverId != 0)
   {
-    // find server
-    serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
-    if (serverNode == NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      Semaphore_unlock(&globalOptions.deviceList.lock);
-      return FALSE;
-    }
-
-    // get max. number of allowed concurrent connections
-    if (serverNode->server.maxConnectionCount != 0)
-    {
-      maxConnectionCount = serverNode->server.maxConnectionCount;
-    }
-    else
-    {
-      maxConnectionCount = 0;
-      switch (serverNode->server.type)
+      // find server
+      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+      if (serverNode == NULL)
       {
-        case SERVER_TYPE_FILE:
-          maxConnectionCount = MAX_UINT;
-          break;
-        case SERVER_TYPE_FTP:
-          maxConnectionCount = defaultFTPServer.maxConnectionCount;
-          break;
-        case SERVER_TYPE_SSH:
-          maxConnectionCount = defaultSSHServer.maxConnectionCount;
-          break;
-        case SERVER_TYPE_WEBDAV:
-          maxConnectionCount = defaultWebDAVServer.maxConnectionCount;
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
+        Semaphore_unlock(&globalOptions.deviceList.lock);
+        return FALSE;
       }
-    }
 
-    // allocate server
-    switch (priority)
-    {
-      case SERVER_CONNECTION_PRIORITY_LOW:
-        if (   (maxConnectionCount != 0)
-            && (serverNode->connection.count >= maxConnectionCount)
-           )
+      // get max. number of allowed concurrent connections
+      if (serverNode->server.maxConnectionCount != 0)
+      {
+        maxConnectionCount = serverNode->server.maxConnectionCount;
+      }
+      else
+      {
+        maxConnectionCount = 0;
+        switch (serverNode->server.type)
         {
-          // request low priority connection
-          serverNode->connection.lowPriorityRequestCount++;
-
-          // wait for free connection
-          while (serverNode->connection.count >= maxConnectionCount)
-          {
-            if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
-            {
-              Semaphore_unlock(&globalOptions.serverList.lock);
-              return FALSE;
-            }
-          }
-
-          // low priority request done
-          assert(serverNode->connection.lowPriorityRequestCount > 0);
-          serverNode->connection.lowPriorityRequestCount--;
+          case SERVER_TYPE_FILE:
+            maxConnectionCount = MAX_UINT;
+            break;
+          case SERVER_TYPE_FTP:
+            maxConnectionCount = defaultFTPServer.maxConnectionCount;
+            break;
+          case SERVER_TYPE_SSH:
+            maxConnectionCount = defaultSSHServer.maxConnectionCount;
+            break;
+          case SERVER_TYPE_WEBDAV:
+            maxConnectionCount = defaultWebDAVServer.maxConnectionCount;
+            break;
+          default:
+            #ifndef NDEBUG
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            #endif /* NDEBUG */
+            break;
         }
-        break;
-      case SERVER_CONNECTION_PRIORITY_HIGH:
-        if (   (maxConnectionCount != 0)
-            && (serverNode->connection.count >= maxConnectionCount)
-           )
-        {
-          // request high priority connection
-          serverNode->connection.highPriorityRequestCount++;
+      }
 
-          // wait for free connection
-          while (serverNode->connection.count >= maxConnectionCount)
+      // allocate server
+      switch (priority)
+      {
+        case SERVER_CONNECTION_PRIORITY_LOW:
+          if (   (maxConnectionCount != 0)
+              && (serverNode->connection.count >= maxConnectionCount)
+             )
           {
-            if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
-            {
-              Semaphore_unlock(&globalOptions.serverList.lock);
-              return FALSE;
-            }
-          }
+            // request low priority connection
+            serverNode->connection.lowPriorityRequestCount++;
 
-          // high priority request done
-          assert(serverNode->connection.highPriorityRequestCount > 0);
-          serverNode->connection.highPriorityRequestCount--;
-        }
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            // wait for free connection
+            while (serverNode->connection.count >= maxConnectionCount)
+            {
+              if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
+              {
+                Semaphore_unlock(&globalOptions.serverList.lock);
+                return FALSE;
+              }
+            }
+
+            // low priority request done
+            assert(serverNode->connection.lowPriorityRequestCount > 0);
+            serverNode->connection.lowPriorityRequestCount--;
+          }
           break;
-      #endif /* NDEBUG */
-    }
+        case SERVER_CONNECTION_PRIORITY_HIGH:
+          if (   (maxConnectionCount != 0)
+              && (serverNode->connection.count >= maxConnectionCount)
+             )
+          {
+            // request high priority connection
+            serverNode->connection.highPriorityRequestCount++;
 
-    // allocated connection
-    serverNode->connection.count++;
+            // wait for free connection
+            while (serverNode->connection.count >= maxConnectionCount)
+            {
+              if (!Semaphore_waitModified(&globalOptions.serverList.lock,timeout))
+              {
+                Semaphore_unlock(&globalOptions.serverList.lock);
+                return FALSE;
+              }
+            }
+
+            // high priority request done
+            assert(serverNode->connection.highPriorityRequestCount > 0);
+            serverNode->connection.highPriorityRequestCount--;
+          }
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+
+      // allocated connection
+      serverNode->connection.count++;
+    }
   }
 
   return TRUE;
@@ -5312,18 +5314,19 @@ void freeServer(uint serverId)
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
 
-  assert(serverId != 0);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (serverId != 0)
   {
-    // find server
-    serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
-    if (serverNode != NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      assert(serverNode->connection.count > 0);
+      // find server
+      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+      if (serverNode != NULL)
+      {
+        assert(serverNode->connection.count > 0);
 
-      // free connection
-      serverNode->connection.count--;
+        // free connection
+        serverNode->connection.count--;
+      }
     }
   }
 }
@@ -5395,16 +5398,18 @@ bool isServerAllocationPending(uint serverId)
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
 
-  assert(serverId != 0);
-
   pendingFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+
+  if (serverId != 0)
   {
-    // find server
-    serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
-    if (serverNode != NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
     {
-      pendingFlag = (serverNode->connection.highPriorityRequestCount > 0);
+      // find server
+      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
+      if (serverNode != NULL)
+      {
+        pendingFlag = (serverNode->connection.highPriorityRequestCount > 0);
+      }
     }
   }
 
