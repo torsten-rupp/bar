@@ -968,6 +968,9 @@ AC_PATH_PROGS(MAKE,make)
 if test -z "$MAKE"; then
   AC_MSG_ERROR([Cannot find a 'make' in PATH. Please check your PATH environment variable.])
 fi
+if test -z "`$MAKE --version 2>/dev/null|grep GNU 2>/dev/null`"; then
+  AC_MSG_ERROR([$MAKE is not a GNU make. Please install a GNU make.])
+fi
 
 AC_PATH_PROGS(PERL,perl)
 if test -z "$PERL"; then

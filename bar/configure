@@ -3150,6 +3150,9 @@ done
 if test -z "$MAKE"; then
   as_fn_error $? "Cannot find a 'make' in PATH. Please check your PATH environment variable." "$LINENO" 5
 fi
+if test -z "`$MAKE --version 2>/dev/null|grep GNU 2>/dev/null`"; then
+  as_fn_error $? "$MAKE is not a GNU make. Please install a GNU make." "$LINENO" 5
+fi
 
 for ac_prog in perl
 do
