@@ -99,6 +99,8 @@ ERROR TLS_CERTIFICATE_NOT_ACTIVE
 
 ERROR TLS_HANDSHAKE                    "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPECIFIER            "invalid SSH specifier"
+ERROR NO_SSH_PUBLIC_KEY                "no SSh public key"
+ERROR NO_SSH_PRIVATE_KEY               "no SSh private key"
 ERROR NO_SSH_PASSWORD
   strncpy(errorText,"no SSH password given",sizeof(errorText));
   if (ERROR_TEXT != NULL)
