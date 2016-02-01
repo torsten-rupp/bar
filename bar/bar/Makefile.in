@@ -351,7 +351,7 @@ BAR_SOURCES          = bar.c \
                        network.c \
                        server.c \
                        remote.c \
-                       $(if @HAVE_BREAKPAD@,minidump.cpp) \
+                       minidump.cpp \
                        \
                        global.c \
                        autofree.c \
@@ -370,31 +370,27 @@ BAR_SOURCES          = bar.c \
                        dictionaries.c \
                        bitmaps.c \
                        database.c \
-                       $(if @HAVE_BFD_H@,stacktraces.c) \
+                       stacktraces.c \
+
+BAR_SOURCES_FILTER   = $(if @HAVE_BREAKPAD@,,minidump.cpp) \
+                       $(if @HAVE_BFD@,,stacktraces.c) \
 
 BAR_HEADERS          = $(patsubst %.c,%.h,$(filter %.c,$(BAR_SOURCES))) \
                        $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
                        bar_global.h \
 
-BAR_OBJECTS_RELEASE  = $(foreach z,$(filter %.c,$(BAR_SOURCES)),release/$(patsubst %.c,%.o,$z)) \
-                       $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),release/$(patsubst %.cpp,%.o,$z)) \
-                       release/errors.o \
-                       release/archive_format.o \
+BAR_OBJECTS          = $(foreach z,$(filter %.c,  $(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                       $(foreach z,$(filter %.cpp,$(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+                       errors.o \
+                       archive_format.o \
 
-BAR_OBJECTS_DEBUG    = $(foreach z,$(filter %.c,$(BAR_SOURCES)),debug/$(patsubst %.c,%.o,$z)) \
-                       $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),debug/$(patsubst %.cpp,%.o,$z)) \
-                       debug/errors.o \
-                       debug/archive_format.o \
+BAR_OBJECTS_RELEASE  = $(addprefix release/,$(BAR_OBJECTS))
 
-BAR_OBJECTS_GCOV     = $(foreach z,$(filter %.c,$(BAR_SOURCES)),gcov/$(patsubst %.c,%.o,$z)) \
-                       $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),gcov/$(patsubst %.cpp,%.o,$z)) \
-                       gcov/errors.o \
-                       gcov/archive_format.o \
+BAR_OBJECTS_DEBUG    = $(addprefix debug/,$(BAR_OBJECTS))
 
-BAR_OBJECTS_VALGRIND = $(foreach z,$(filter %.c,$(BAR_SOURCES)),valgrind/$(patsubst %.c,%.o,$z)) \
-                       $(foreach z,$(filter %.cpp,$(BAR_SOURCES)),valgrind/$(patsubst %.cpp,%.o,$z)) \
-                       valgrind/errors.o \
-                       valgrind/archive_format.o \
+BAR_OBJECTS_GCOV     = $(addprefix gcov/,$(BAR_OBJECTS))
+
+BAR_OBJECTS_VALGRIND = $(addprefix valgrind/,$(BAR_OBJECTS))
 
 EXTERN_SOURCES       = sqlite3.c \
 
@@ -588,6 +584,10 @@ Makefile.depend:
             $(SED) 's/\(.*\.o:\)/release\/\1/g' >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z | \
             $(SED) 's/\(.*\.o:\)/debug\/\1/g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z | \
+            $(SED) 's/\(.*\.o:\)/gcov\/\1/g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z | \
+            $(SED) 's/\(.*\.o:\)/valgrind\/\1/g' >> Makefile.depend; \
         done;
 
 # ----------------------------------------------------------------------------
