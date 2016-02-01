@@ -1302,7 +1302,7 @@ LOCAL Errors StorageOptical_open(StorageArchiveHandle *storageArchiveHandle,
 LOCAL void StorageOptical_close(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
   assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
 
   DEBUG_REMOVE_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk,sizeof(storageArchiveHandle->opticalDisk));
@@ -1340,7 +1340,7 @@ LOCAL void StorageOptical_close(StorageArchiveHandle *storageArchiveHandle)
 LOCAL bool StorageOptical_eof(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -1372,7 +1372,7 @@ LOCAL Errors StorageOptical_read(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -1452,7 +1452,7 @@ LOCAL Errors StorageOptical_write(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
   assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -1473,7 +1473,7 @@ LOCAL uint64 StorageOptical_getSize(StorageArchiveHandle *storageArchiveHandle)
   uint64 size;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
 
@@ -1496,7 +1496,7 @@ LOCAL Errors StorageOptical_tell(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(offset != NULL);
@@ -1524,7 +1524,7 @@ LOCAL Errors StorageOptical_seek(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
 

@@ -831,7 +831,7 @@ String_delete(storageArchiveHandle->device.fileName);
 LOCAL void StorageDevice_close(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->device);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
@@ -866,7 +866,7 @@ LOCAL void StorageDevice_close(StorageArchiveHandle *storageArchiveHandle)
 LOCAL bool StorageDevice_eof(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->device);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -890,7 +890,7 @@ LOCAL Errors StorageDevice_read(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->device);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -916,7 +916,7 @@ LOCAL Errors StorageDevice_write(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->device);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -939,7 +939,7 @@ LOCAL Errors StorageDevice_tell(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->device);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(offset != NULL);
@@ -963,7 +963,7 @@ LOCAL Errors StorageDevice_seek(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->device);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
@@ -982,7 +982,7 @@ LOCAL uint64 StorageDevice_getSize(StorageArchiveHandle *storageArchiveHandle)
   uint64 size;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->device);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 

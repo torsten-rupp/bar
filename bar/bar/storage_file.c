@@ -415,7 +415,7 @@ LOCAL Errors StorageFile_open(StorageArchiveHandle *storageArchiveHandle,
 LOCAL void StorageFile_close(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->fileSystem);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
@@ -445,7 +445,7 @@ LOCAL void StorageFile_close(StorageArchiveHandle *storageArchiveHandle)
 LOCAL bool StorageFile_eof(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->fileSystem);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
@@ -469,7 +469,7 @@ LOCAL Errors StorageFile_read(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->fileSystem);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
@@ -492,7 +492,7 @@ LOCAL Errors StorageFile_write(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->fileSystem);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
@@ -514,7 +514,7 @@ LOCAL Errors StorageFile_tell(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->fileSystem);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(offset != NULL);
@@ -537,7 +537,7 @@ LOCAL Errors StorageFile_seek(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->fileSystem);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
@@ -555,7 +555,7 @@ LOCAL uint64 StorageFile_getSize(StorageArchiveHandle *storageArchiveHandle)
   uint64 size;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageArchiveHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->fileSystem);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
