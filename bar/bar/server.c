@@ -14930,7 +14930,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
 * Return : -
 * Notes  : Arguments:
 *            entryPattern=<text>
-*            type=<text>
+*            indexType=<text>
 *            isNewestEntriesOnly=0|1
 *            entryMaxCount=<n>|0
 *          Result:
