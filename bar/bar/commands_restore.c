@@ -261,6 +261,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
   // init storage
   error = Storage_init(&storageHandle,
@@ -277,6 +278,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                Storage_getPrintableNameCString(storageSpecifier,archiveName),
                Error_getText(error)
               );
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
 
@@ -297,7 +299,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                Storage_getPrintableNameCString(storageSpecifier,archiveName),
                Error_getText(error)
               );
-    (void)Storage_done(&storageHandle);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
   String_set(restoreInfo->statusInfo.storageName,Storage_getPrintableName(storageSpecifier,archiveName));
@@ -2205,6 +2207,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
   (void)Storage_done(&storageHandle);
 
   // free resources
+  free(buffer);
   AutoFree_done(&autoFreeList);
 
   return error;
