@@ -6830,7 +6830,7 @@ assert storagePattern != null;
     if (storageName != null)
     {
       String[] errorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",storageName),
+      int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%S",storageName),
                                            0,
                                            errorMessage
                                           );
