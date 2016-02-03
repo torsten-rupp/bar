@@ -13711,6 +13711,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            indexStateSet=<state set>|*
 *          Result:
 *            okCount=<entries OK count>
 *            createCount=<entries create count>
@@ -13721,16 +13722,24 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  long storageEntryOKCount;
-  long storageEntryCreateCount;
-  long storageEntryUpdateRequestedCount;
-  long storageEntryUpdateCount;
-  long storageEntryErrorCount;
+  IndexStateSet indexStateSet;
+  long          storageEntryOKCount;
+  long          storageEntryCreateCount;
+  long          storageEntryUpdateRequestedCount;
+  long          storageEntryUpdateCount;
+  long          storageEntryErrorCount;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(argumentMap);
+
+  if (!StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    return;
+  }
+#warning use indexStateSet
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -13779,8 +13788,8 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 * Notes  : Arguments:
 *            entityId=<id>|0|*
 *            maxCount=<n>|0
-*            indexState=<state>|*
-*            indexMode=<mode>|*
+*            indexStateSet=<state set>|*
+*            indexModeSet=<mode set>|*
 *            pattern=<text>
 *          Result:
 *            storageId=<id>
@@ -13827,7 +13836,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get entity id, max. count, index state, index mode, filter pattern
+  // get entity id, max. count, index state set, index mode set, filter pattern
   if   (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
     entityId = DATABASE_ID_ANY;
@@ -13842,12 +13851,12 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     entityId = (DatabaseId)n;
   }
   StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
-  if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  if (!StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if (!StringMap_getEnumSet(argumentMap,"indexMode",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_ALL,"|",INDEX_MODE_UNKNOWN))
+  if (!StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
     return;
