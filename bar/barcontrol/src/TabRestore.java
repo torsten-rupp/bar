@@ -1196,6 +1196,9 @@ public class TabRestore
       setTreeItem(treeItem,treeItemUpdateRunnable);
     }
 
+    /** set table item reference
+     * @param tableItem table item
+     */
     public void setTableItem(TableItem tableItem)
     {
       setTableItem(tableItem,tableItemUpdateRunnable);
@@ -1614,13 +1617,19 @@ public class TabRestore
     return index;
   }
 
-  /** update storage tree/list thread
+  /** update storage tree/table thread
    */
-  class UpdateStorageThread extends Thread
+  class UpdateStorageTreeTableThread extends Thread
   {
+    private final int PAGE_SIZE = 64;
+
     private Object        trigger              = new Object();   // trigger update object
-    private boolean       triggeredFlag        = false;
+    private boolean       updateFlag           = false;
+    private boolean       updateListFlag       = false;
+
     private int           storageMaxCount      = 100;
+    private int           offset            = 0;
+    private int           count             = 0;
     private String        storagePattern       = "";
     private IndexStateSet storageIndexStateSet = INDEX_STATE_SET_ALL;
     private EntityStates  storageEntityState   = EntityStates.ANY;
@@ -1628,7 +1637,7 @@ public class TabRestore
 
     /** create update storage list thread
      */
-    UpdateStorageThread()
+    UpdateStorageTreeTableThread()
     {
       super();
       setDaemon(true);
@@ -1664,30 +1673,47 @@ public class TabRestore
           try
           {
             HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
-            if (!triggeredFlag)
+            if (!updateFlag)
             {
               updateUUIDTreeItems(uuidTreeItems);
             }
 
             HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
-            if (!triggeredFlag)
+            if (!updateFlag)
             {
               updateEntityTreeItems(uuidTreeItems,entityTreeItems);
             }
 
-            if (!triggeredFlag)
+            if (!updateFlag)
             {
               updateStorageTreeItems(entityTreeItems);
             }
 
-            if (!triggeredFlag)
+            if (updateFlag)
             {
-              updateStorageTableItems();
+              updateStorageTableCount();
+              updateFlag     = false;
+              updateListFlag = false;
+            }
+            if (updateListFlag)
+            {
+              updateStorageTable(offset);
+              updateListFlag = false;
             }
           }
           catch (CommunicationError error)
           {
             // ignored
+          }
+          catch (Exception exception)
+          {
+            if (Settings.debugLevel > 0)
+            {
+              BARServer.disconnect();
+              System.err.println("ERROR: "+exception.getMessage());
+              BARControl.printStackTrace(exception);
+              System.exit(1);
+            }
           }
 
           // update menues
@@ -1698,6 +1724,16 @@ public class TabRestore
           catch (CommunicationError error)
           {
             // ignored
+          }
+          catch (Exception exception)
+          {
+            if (Settings.debugLevel > 0)
+            {
+              BARServer.disconnect();
+              System.err.println("ERROR: "+exception.getMessage());
+              BARControl.printStackTrace(exception);
+              System.exit(1);
+            }
           }
 
           // reset cursor and foreground color
@@ -1714,19 +1750,24 @@ public class TabRestore
             });
           }
 
-          // sleep a short time or get new pattern
+          // wait for trigger or sleep a short time
           synchronized(trigger)
           {
-            if (!triggeredFlag)
+            if (!this.updateFlag && !this.updateListFlag)
             {
               // wait for refresh request or timeout
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // if not triggered (timeout occurred) update is done invisible (color is not set)
-            if (!triggeredFlag) setUpdateIndicator = false;
+            if (!this.updateFlag && !this.updateListFlag) setUpdateIndicator = false;
+Dprintf.dprintf("update sto %s %s",updateFlag,updateListFlag);
 
-            triggeredFlag = false;
+            // save trigger flags, reset flags
+            updateFlag     = this.updateFlag;
+            updateListFlag = this.updateListFlag;
+            this.updateFlag     = false;
+            this.updateListFlag = false;
           }
         }
       }
@@ -1765,7 +1806,7 @@ public class TabRestore
           this.storageMaxCount      = storageMaxCount;
           this.setUpdateIndicator   = true;
 
-          triggeredFlag = true;
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -1785,7 +1826,7 @@ public class TabRestore
           this.storagePattern     = storagePattern;
           this.setUpdateIndicator = true;
 
-          triggeredFlag = true;
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -1805,7 +1846,25 @@ public class TabRestore
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
 
-          triggeredFlag = true;
+          updateFlag = true;
+          trigger.notify();
+        }
+      }
+    }
+
+    /** trigger update of entry list
+     * @param offset offset in list to update
+     */
+    public void triggerUpdate(int index)
+    {
+      synchronized(trigger)
+      {
+        int offset = (index / PAGE_SIZE)*PAGE_SIZE;
+        if (this.offset != offset)
+        {
+          this.offset = offset;
+
+          updateListFlag = true;
           trigger.notify();
         }
       }
@@ -1823,7 +1882,7 @@ public class TabRestore
           this.storageMaxCount    = storageMaxCount;
           this.setUpdateIndicator = true;
 
-          triggeredFlag = true;
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -1837,7 +1896,7 @@ public class TabRestore
       {
         this.setUpdateIndicator = true;
 
-        triggeredFlag = true;
+        updateFlag = true;
         trigger.notify();
       }
     }
@@ -1865,7 +1924,7 @@ public class TabRestore
           }
         }
       });
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // update UUID list
 // TODO
@@ -1877,7 +1936,8 @@ assert storagePattern != null;
                                      0
                                     );
       while (   !command.endOfData()
-             && !triggeredFlag
+             && !updateFlag
+             && !updateListFlag
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -1944,7 +2004,7 @@ assert storagePattern != null;
           }
         }
       }
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // remove not existing entries
       display.syncExec(new Runnable()
@@ -1992,7 +2052,7 @@ assert storagePattern != null;
           uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
         }
       });
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // update entity list
 // TODO
@@ -2129,12 +2189,12 @@ assert storagePattern != null;
           entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
         }
       });
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // update storage list
 // TODO
 assert storagePattern != null;
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexStateSet=%s indexModeSet=%s pattern=%'S",
                                                          entityIndexData[0].entityId,
                                                          storageMaxCount,
                                                          storageIndexStateSet.nameList("|"),
@@ -2249,18 +2309,79 @@ assert storagePattern != null;
     {
       if      (treeItem.getData() instanceof UUIDIndexData)
       {
-        updateStorageThread.updateEntityTreeItems(treeItem,new HashSet<TreeItem>());
+        updateStorageTreeTableThread.updateEntityTreeItems(treeItem,new HashSet<TreeItem>());
       }
       else if (treeItem.getData() instanceof EntityIndexData)
       {
-        updateStorageThread.updateStorageTreeItems(treeItem);
+        updateStorageTreeTableThread.updateStorageTreeItems(treeItem);
       }
     }
 
-    /** update storage table items
+    /** refresh storage table display count
      */
-    private void updateStorageTableItems()
+    private void updateStorageTableCount()
     {
+//      assert entryPattern != null;
+
+      // reset count
+      offset = 0;
+      count  = 0;
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+//          widgetStorageTable.setItemCount(0);
+        }
+      });
+
+      // get entries info
+      final String[] errorMessage = new String[1];
+      ValueMap       valueMap     = new ValueMap();
+String entryPattern="*";
+      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGE_INFO indexStateSet=%s",
+                                                        storageIndexStateSet.nameList("|")
+                                                       ),
+                                   0,
+                                   errorMessage,
+                                   valueMap
+                                  ) == Errors.NONE
+         )
+      {
+        count = valueMap.getInt("okCount")
+                +valueMap.getInt("createCount")
+                +valueMap.getInt("updateRequestedCount")
+                +valueMap.getInt("updateCount")
+                +valueMap.getInt("errorCount")
+                ;
+Dprintf.dprintf("count=%d",count);
+      }
+      // set count
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          widgetStorageTable.setItemCount(count);
+          widgetStorageTable.setTopIndex(0);
+          widgetStorageTable.clearAll();
+//          widgetStorageTable.clearAll();
+Dprintf.dprintf("update notwendig?");
+updateStorageTable(0);
+        }
+      });
+
+//updateEntryTable(0);
+//display.update();
+    }
+
+    /** refresh storage table items
+     * @param offset refresh offset
+     */
+    private void updateStorageTable(int offset)
+    {
+      // get limit
+      int limit = ((offset+128) < count) ? 128 : count-offset;
+Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
+
       Command  command;
       String[] errorMessage = new String[1];
       ValueMap valueMap     = new ValueMap();
@@ -2277,12 +2398,12 @@ assert storagePattern != null;
           }
         }
       });
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // update storage table
 // TODO
 assert storagePattern != null;
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d indexState=%s indexModeSet=%s pattern=%'S",
                                                          (storageEntityState != EntityStates.NONE) ? "*" : "0",
                                                          storageMaxCount,
                                                          storageIndexStateSet.nameList("|"),
@@ -2292,7 +2413,8 @@ assert storagePattern != null;
                                      0
                                     );
       while (   !command.endOfData()
-             && !triggeredFlag
+             && !updateFlag
+             && !updateListFlag
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -2329,6 +2451,7 @@ assert storagePattern != null;
                                                                                         errorMessage_
                                                                                        );
 
+Dprintf.dprintf("INDEX_STORAGE_LIST");
 /*
           // insert/update table item
           display.syncExec(new Runnable()
@@ -2364,7 +2487,7 @@ assert storagePattern != null;
           }
         }
       }
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // remove not existing entries
       display.syncExec(new Runnable()
@@ -2411,14 +2534,15 @@ assert storagePattern != null;
           }
         }
       });
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // update UUIDs
       command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST pattern=*"),
                                      0
                                     );
       while (   !command.endOfData()
-             && !triggeredFlag
+             && !updateFlag
+             && !updateListFlag
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -2552,7 +2676,7 @@ assert storagePattern != null;
           }
         }
       }
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // remove not existing UUID menus
       display.syncExec(new Runnable()
@@ -2590,7 +2714,7 @@ assert storagePattern != null;
           }
         }
       });
-      if (triggeredFlag) return;
+      if (updateFlag || updateListFlag) return;
 
       // update entities
       for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
@@ -2603,7 +2727,8 @@ assert storagePattern != null;
                                        0
                                       );
         while (   !command.endOfData()
-               && !triggeredFlag
+               && !updateFlag
+               && !updateListFlag
                && command.getNextResult(errorMessage,
                                         valueMap,
                                         Command.TIMEOUT
@@ -2678,7 +2803,7 @@ assert storagePattern != null;
             }
           }
         }
-        if (triggeredFlag) return;
+        if (updateFlag || updateListFlag) return;
       }
 
       // remove not existing entity menu items
@@ -2996,9 +3121,9 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     }
   }
 
-  /** update entry list thread
+  /** update entry table thread
    */
-  class UpdateEntryListThread extends Thread
+  class UpdateEntryTableThread extends Thread
   {
     private final int PAGE_SIZE = 64;
 
@@ -3017,7 +3142,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
 
     /** create update entry list thread
      */
-    UpdateEntryListThread()
+    UpdateEntryTableThread()
     {
       super();
       setDaemon(true);
@@ -3049,13 +3174,13 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           {
             if (updateFlag)
             {
-              updateEntryListCount();
+              updateEntryTableCount();
               updateFlag     = false;
               updateListFlag = false;
             }
             if (updateListFlag)
             {
-              updateEntryList(offset);
+              updateEntryTable(offset);
               updateListFlag = false;
             }
           }
@@ -3092,6 +3217,8 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             {
               try { trigger.wait(); } catch (InterruptedException exception) { /* ignored */ };
             }
+
+            // save trigger flags, reset flags
             updateFlag     = this.updateFlag;
             updateListFlag = this.updateListFlag;
             this.updateFlag     = false;
@@ -3192,10 +3319,10 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       }
     }
 
-    /** trigger update of entry list
-     * @param offset offset in list to update
+    /** trigger update of list
+     * @param offset offset in list to start update
      */
-    public void triggerUpdateEntry(int index)
+    public void triggerUpdate(int index)
     {
       synchronized(trigger)
       {
@@ -3223,7 +3350,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
 
     private void XupdateEntryList()
     {
-Dprintf.dprintf("obsolete");
+Dprintf.dprintf("obsolete~~~~~~~!!!!!!!!!!");
       Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y offset=%d limit=%d",
                                                                  entryPattern,
                                                                  entryType.toString(),
@@ -3557,9 +3684,9 @@ if (false) {
     }
 
 
-    /** refresh entry list display count
+    /** refresh entry table display count
      */
-    private void updateEntryListCount()
+    private void updateEntryTableCount()
     {
       assert entryPattern != null;
 
@@ -3601,20 +3728,23 @@ Dprintf.dprintf("entryCount=%d",count);
           widgetEntryTable.setTopIndex(0);
           widgetEntryTable.clearAll();
 //          widgetEntryTable.clearAll();
-Dprintf.dprintf("");
-updateEntryList(0);
+Dprintf.dprintf("update notwendig?");
+updateEntryTable(0);
         }
       });
 
-//updateEntryList(0);
+//updateEntryTable(0);
 //display.update();
     }
 
-    private void updateEntryList(int offset)
+    /** refresh entry table items
+     * @param offset refresh offset
+     */
+    private void updateEntryTable(int offset)
     {
       // get limit
       int limit = ((offset+128) < count) ? 128 : count-offset;
-Dprintf.dprintf("update list %d %d",offset,limit);
+Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
 
       // update table segment
       Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y offset=%d limit=%d",
@@ -3866,41 +3996,41 @@ Dprintf.dprintf("update list %d %d",offset,limit);
   // --------------------------- variables --------------------------------
 
   // global variable references
-  private Shell               shell;
-  private Display             display;
+  private Shell                shell;
+  private Display              display;
 
   // widgets
-  public  Composite           widgetTab;
-  private TabFolder           widgetTabFolder;
+  public  Composite            widgetTab;
+  private TabFolder            widgetTabFolder;
 
-  private TabFolder           widgetStorageTabFolder;
-  private Tree                widgetStorageTree;
-  private Shell               widgetStorageTreeToolTip = null;
-  private Menu                widgetStorageTreeAssignToMenu;
-  private Table               widgetStorageTable;
-  private Shell               widgetStorageTableToolTip = null;
+  private TabFolder            widgetStorageTabFolder;
+  private Tree                 widgetStorageTree;
+  private Shell                widgetStorageTreeToolTip = null;
+  private Menu                 widgetStorageTreeAssignToMenu;
+  private Table                widgetStorageTable;
+  private Shell                widgetStorageTableToolTip = null;
 //TODO: NYI
-  private Menu                widgetStorageTableAssignToMenu;
-  private Text                widgetStoragePattern;
-  private Combo               widgetStorageState;
-  private Combo               widgetStorageMaxCount;
-  private WidgetEvent         checkedStorageEvent = new WidgetEvent();        // triggered when some checked storage changed
+  private Menu                 widgetStorageTableAssignToMenu;
+  private Text                 widgetStoragePattern;
+  private Combo                widgetStorageState;
+  private Combo                widgetStorageMaxCount;
+  private WidgetEvent          checkedStorageEvent = new WidgetEvent();       // triggered when some checked storage changed
 
-  private Table               widgetEntryTable;
-  private Shell               widgetEntryTableToolTip = null;
-  private WidgetEvent         checkedEntryEvent = new WidgetEvent();          // triggered when some checked entry changed
+  private Table                widgetEntryTable;
+  private Shell                widgetEntryTableToolTip = null;
+  private WidgetEvent          checkedEntryEvent = new WidgetEvent();         // triggered when some checked entry changed
 
-  private Button              widgetRestoreTo;
-  private Text                widgetRestoreToDirectory;
-  private Button              widgetOverwriteEntries;
-  private WidgetEvent         selectRestoreToEvent = new WidgetEvent();
+  private Button               widgetRestoreTo;
+  private Text                 widgetRestoreToDirectory;
+  private Button               widgetOverwriteEntries;
+  private WidgetEvent          selectRestoreToEvent = new WidgetEvent();
 
-  UpdateStorageThread         updateStorageThread = new UpdateStorageThread();
-  private IndexDataMap        indexDataMap        = new IndexDataMap();
-  private IndexData           selectedIndexData   = null;
+  UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
+  private IndexDataMap         indexDataMap        = new IndexDataMap();
+  private IndexData            selectedIndexData   = null;
 
-  UpdateEntryListThread       updateEntryListThread = new UpdateEntryListThread();
-  private EntryDataMap        entryDataMap          = new EntryDataMap();
+  UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
+  private EntryDataMap         entryDataMap          = new EntryDataMap();
 
   // ------------------------ native functions ----------------------------
 
@@ -4343,8 +4473,10 @@ Dprintf.dprintf("update list %d %d",offset,limit);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
+Dprintf.dprintf("");
           updateCheckedStorageList();
-          updateEntryListThread.triggerUpdate();
+          updateStorageTreeTableThread.triggerUpdate();
+          updateEntryTableThread.triggerUpdate();
         }
       });
       widgetStorageTree.addListener(SWT.Expand,new Listener()
@@ -4354,7 +4486,7 @@ Dprintf.dprintf("update list %d %d",offset,limit);
         {
           TreeItem treeItem = (TreeItem)event.item;
           treeItem.removeAll();
-          updateStorageThread.updateTreeItems(treeItem);
+          updateStorageTreeTableThread.updateTreeItems(treeItem);
           treeItem.setExpanded(true);
         }
       });
@@ -4694,7 +4826,11 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
         @Override
         public void handleEvent(final Event event)
         {
-Dprintf.dprintf("");
+Dprintf.dprintf("widgetStorageTable setdata");
+          TableItem tableItem = (TableItem)event.item;
+
+          int i = widgetStorageTable.indexOf(tableItem);
+          updateStorageTreeTableThread.triggerUpdate(i);
         }
       });
       widgetStorageTable.addListener(SWT.MouseDoubleClick,new Listener()
@@ -5123,13 +5259,13 @@ Dprintf.dprintf("");
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            updateStorageThread.triggerUpdateStoragePattern(widget.getText());
+            updateStorageTreeTableThread.triggerUpdateStoragePattern(widget.getText());
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            updateStorageThread.triggerUpdateStoragePattern(widget.getText());
+            updateStorageTreeTableThread.triggerUpdateStoragePattern(widget.getText());
           }
         });
         widgetStoragePattern.addKeyListener(new KeyListener()
@@ -5142,7 +5278,7 @@ Dprintf.dprintf("");
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
-            updateStorageThread.triggerUpdateStoragePattern(widget.getText());
+            updateStorageTreeTableThread.triggerUpdateStoragePattern(widget.getText());
           }
         });
 //???
@@ -5156,7 +5292,7 @@ Dprintf.dprintf("");
           public void focusLost(FocusEvent focusEvent)
           {
 //            Text widget = (Text)focusEvent.widget;
-//            updateStorageThread.triggerUpdateStoragePattern(widget.getText());
+//            updateStorageTreeTableThread.triggerUpdateStoragePattern(widget.getText());
           }
         });
 
@@ -5193,10 +5329,10 @@ Dprintf.dprintf("");
               default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
 
             }
-            updateStorageThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);
+            updateStorageTreeTableThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);
           }
         });
-        updateStorageThread.triggerUpdateStorageState(INDEX_STATE_SET_ALL,EntityStates.ANY);
+        updateStorageTreeTableThread.triggerUpdateStorageState(INDEX_STATE_SET_ALL,EntityStates.ANY);
 
         label = Widgets.newLabel(composite,BARControl.tr("Max")+":");
         Widgets.layout(label,0,5,TableLayoutData.W);
@@ -5219,7 +5355,7 @@ Dprintf.dprintf("");
             try
             {
               int storageMaxCount = Integer.parseInt(widget.getText());
-              updateStorageThread.triggerUpdateStorageMaxCount(storageMaxCount);
+              updateStorageTreeTableThread.triggerUpdateStorageMaxCount(storageMaxCount);
             }
             catch (NumberFormatException exception)
             {
@@ -5227,7 +5363,7 @@ Dprintf.dprintf("");
             }
           }
         });
-        updateStorageThread.triggerUpdateStorageMaxCount(100);
+        updateStorageTreeTableThread.triggerUpdateStorageMaxCount(100);
 
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
@@ -5275,7 +5411,6 @@ Dprintf.dprintf("");
       Widgets.layout(control,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,1);
 
       widgetEntryTable = Widgets.newTable(group,SWT.CHECK|SWT.VIRTUAL);
-Dprintf.dprintf("");
       widgetEntryTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE);
       SelectionListener entryListColumnSelectionListener = new SelectionListener()
@@ -5328,7 +5463,7 @@ Dprintf.dprintf("");
           TableItem tableItem = (TableItem)event.item;
 
           int i = widgetEntryTable.indexOf(tableItem);
-          updateEntryListThread.triggerUpdateEntry(i);
+          updateEntryTableThread.triggerUpdate(i);
         }
       });
       widgetEntryTable.addListener(SWT.MouseDoubleClick,new Listener()
@@ -5412,7 +5547,7 @@ Dprintf.dprintf("");
         @Override
         public void trigger(Control control)
         {
-          updateEntryListThread.triggerUpdate();
+          updateEntryTableThread.triggerUpdate();
         }
       });
 
@@ -5560,13 +5695,13 @@ Dprintf.dprintf("");
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Text  widget = (Text)selectionEvent.widget;
-            updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
+            updateEntryTableThread.triggerUpdateEntryPattern(widget.getText());
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
+            updateEntryTableThread.triggerUpdateEntryPattern(widget.getText());
           }
         });
         text.addKeyListener(new KeyListener()
@@ -5579,7 +5714,7 @@ Dprintf.dprintf("");
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
-            updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
+            updateEntryTableThread.triggerUpdateEntryPattern(widget.getText());
           }
         });
 //???
@@ -5593,7 +5728,7 @@ Dprintf.dprintf("");
           public void focusLost(FocusEvent focusEvent)
           {
 //            Text widget = (Text)focusEvent.widget;
-//            updateEntryListThread.triggerUpdateEntryPattern(widget.getText());
+//            updateEntryTableThread.triggerUpdateEntryPattern(widget.getText());
           }
         });
 
@@ -5622,7 +5757,7 @@ Dprintf.dprintf("");
           {
             Combo      widget    = (Combo)selectionEvent.widget;
             EntryTypes entryType = Widgets.getSelectedOptionMenuItem(widget,EntryTypes.ANY);
-            updateEntryListThread.triggerUpdateEntryType(entryType);
+            updateEntryTableThread.triggerUpdateEntryType(entryType);
           }
         });
 
@@ -5640,7 +5775,7 @@ Dprintf.dprintf("");
           {
             Button widget = (Button)selectionEvent.widget;
             boolean newestEntriesOnly = widget.getSelection();
-            updateEntryListThread.triggerUpdateNewestEntriesOnly(newestEntriesOnly);
+            updateEntryTableThread.triggerUpdateNewestEntriesOnly(newestEntriesOnly);
           }
         });
 
@@ -5778,8 +5913,8 @@ Dprintf.dprintf("");
     }
 
     // start storage/entry update threads
-    updateStorageThread.start();
-    updateEntryListThread.start();
+    updateStorageTreeTableThread.start();
+    updateEntryTableThread.start();
   }
 
   //-----------------------------------------------------------------------
@@ -5827,13 +5962,14 @@ Dprintf.dprintf("");
         }
         break;
       case 1:
-        // list view
+        // table view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-          if (storageIndexData.isChecked())
+Dprintf.dprintf("");
+//          if (storageIndexData.isChecked())
           {
-            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageIndexData.storageId),0);
+//            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageIndexData.storageId),0);
           }
         }
         break;
@@ -5902,7 +6038,7 @@ Dprintf.dprintf("");
         }
         break;
       case 1:
-        // list view
+        // table view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
@@ -5961,7 +6097,7 @@ Dprintf.dprintf("");
         }
         break;
       case 1:
-        // list view
+        // table view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           indexData = (StorageIndexData)tableItem.getData();
@@ -6013,7 +6149,7 @@ Dprintf.dprintf("");
         }
         break;
       case 1:
-        // list view
+        // table view
         for (TableItem tableItem : widgetStorageTable.getSelection())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
@@ -6067,7 +6203,7 @@ Dprintf.dprintf("");
         }
         break;
       case 1:
-        // list view
+        // table view
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           IndexData indexData = (IndexData)tableItem.getData();
@@ -6226,7 +6362,7 @@ Dprintf.dprintf("");
           EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
 // TODO
 assert storagePattern != null;
-          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexMode=%s pattern=%'S",
+          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexModeSet=%s pattern=%'S",
                                                                      entityIndexData.entityId,
                                                                      -1,
                                                                      "*",
@@ -6424,7 +6560,7 @@ assert storagePattern != null;
       {
         Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
       }
-      updateStorageThread.triggerUpdate();
+      updateStorageTreeTableThread.triggerUpdate();
     }
   }
 
@@ -6514,7 +6650,7 @@ assert storagePattern != null;
       {
         Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
       }
-      updateStorageThread.triggerUpdate();
+      updateStorageTreeTableThread.triggerUpdate();
     }
   }
 
@@ -6602,7 +6738,7 @@ assert storagePattern != null;
       {
         Dialogs.error(shell,BARControl.tr("Communication error while set entity type in index database\n\n(error: {0})",error.toString()));
       }
-      updateStorageThread.triggerUpdate();
+      updateStorageTreeTableThread.triggerUpdate();
     }
   }
 
@@ -6716,7 +6852,7 @@ assert storagePattern != null;
                                             );
         if (error == Errors.NONE)
         {
-          updateStorageThread.triggerUpdate();
+          updateStorageTreeTableThread.triggerUpdate();
         }
         else
         {
@@ -6836,7 +6972,7 @@ assert storagePattern != null;
                                           );
       if (error == Errors.NONE)
       {
-        updateStorageThread.triggerUpdate();
+        updateStorageTreeTableThread.triggerUpdate();
       }
       else
       {
@@ -6944,7 +7080,7 @@ assert storagePattern != null;
                 }
               });
 
-              updateStorageThread.triggerUpdate();
+              updateStorageTreeTableThread.triggerUpdate();
             }
             catch (CommunicationError error)
             {
@@ -7059,7 +7195,7 @@ assert storagePattern != null;
                     }
                   });
 
-                  updateStorageThread.triggerUpdate();
+                  updateStorageTreeTableThread.triggerUpdate();
 
                   return;
                 }
@@ -7078,7 +7214,7 @@ assert storagePattern != null;
                   }
                 });
 
-                updateStorageThread.triggerUpdate();
+                updateStorageTreeTableThread.triggerUpdate();
               }
               catch (CommunicationError error)
               {
@@ -7275,7 +7411,7 @@ assert storagePattern != null;
                 }
               });
 
-              updateStorageThread.triggerUpdate();
+              updateStorageTreeTableThread.triggerUpdate();
             }
             catch (CommunicationError error)
             {
