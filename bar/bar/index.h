@@ -47,13 +47,14 @@ typedef enum
 } IndexStates;
 typedef uint64 IndexStateSet;
 
-#define INDEX_STATE_SET_ALL (1 << INDEX_STATE_NONE|\
-                             1 << INDEX_STATE_OK|\
-                             1 << INDEX_STATE_CREATE|\
-                             1 << INDEX_STATE_UPDATE_REQUESTED|\
-                             1 << INDEX_STATE_UPDATE|\
-                             1 << INDEX_STATE_ERROR\
-                            )
+#define INDEX_STATE_SET_NONE 0
+#define INDEX_STATE_SET_ALL  (1 << INDEX_STATE_NONE|\
+                              1 << INDEX_STATE_OK|\
+                              1 << INDEX_STATE_CREATE|\
+                              1 << INDEX_STATE_UPDATE_REQUESTED|\
+                              1 << INDEX_STATE_UPDATE|\
+                              1 << INDEX_STATE_ERROR\
+                             )
 
 // index modes
 typedef enum
@@ -65,7 +66,8 @@ typedef enum
 } IndexModes;
 typedef uint64 IndexModeSet;
 
-#define INDEX_MODE_ALL (INDEX_MODE_MANUAL|INDEX_MODE_AUTO)
+#define INDEX_MODE_SET_NONE 0
+#define INDEX_MODE_SET_ALL  (INDEX_MODE_MANUAL|INDEX_MODE_AUTO)
 
 /***************************** Datatypes *******************************/
 
@@ -158,7 +160,7 @@ Errors Index_initAll(void);
 void Index_doneAll(void);
 
 /***********************************************************************\
-* Name   : Index_stateToString
+* Name   : Index_stateToStringindexStateSet
 * Purpose: get name of index sIndex_donetateIndex_init
 * Input  : indexState   - index state
 *          defaultValue - default value

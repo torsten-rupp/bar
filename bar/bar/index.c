@@ -58,7 +58,8 @@ LOCAL const struct
 {
   { "MANUAL", INDEX_MODE_MANUAL },
   { "AUTO",   INDEX_MODE_AUTO   },
-  { "*",      INDEX_MODE_ALL    }
+//TODO: requried?
+  { "*",      INDEX_MODE_SET_ALL }
 };
 
 LOCAL const struct
@@ -4981,7 +4982,6 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
   String storageIdsString;
   String entryIdsString;
   uint   i;
-  uint   n;
 
   assert(indexHandle != NULL);
   assert((storageIdCount == 0) || (storageIds != NULL));
