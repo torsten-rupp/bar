@@ -17512,7 +17512,7 @@ Errors Server_batch(int inputDescriptor,
   quitFlag = FALSE;
 
   // initialize input/output
-  error = File_openDescriptor(&inputFileHandle,inputDescriptor,FILE_OPEN_READ);
+  error = File_openDescriptor(&inputFileHandle,inputDescriptor,FILE_OPEN_READ|FILE_STREAM);
   if (error != ERROR_NONE)
   {
     fprintf(stderr,
@@ -17521,7 +17521,7 @@ Errors Server_batch(int inputDescriptor,
            );
     return error;
   }
-  error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPEN_WRITE);
+  error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPEN_WRITE|FILE_STREAM);
   if (error != ERROR_NONE)
   {
     fprintf(stderr,
