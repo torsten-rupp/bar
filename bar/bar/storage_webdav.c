@@ -1629,7 +1629,6 @@ LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(buffer != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = ERROR_NONE;
   #ifdef HAVE_CURL
     if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
@@ -1685,15 +1684,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           break;
         }
         if (storageArchiveHandle->webdav.sendBuffer.index < storageArchiveHandle->webdav.sendBuffer.length)
         {
-fprintf(stderr,"%s, %d: runningHandles=%d\n",__FILE__,__LINE__,runningHandles);
-int msgq;
-struct CURLMsg *m = curl_multi_info_read(storageArchiveHandle->webdav.curlMultiHandle, &msgq);
-fprintf(stderr,"%s, %d: msgq=%d: %d %d\n",__FILE__,__LINE__,m->msg,m->data.result);
           error = ERROR_NETWORK_SEND;
           break;
         }
