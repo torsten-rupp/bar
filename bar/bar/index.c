@@ -1927,20 +1927,20 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
 
   // clean-up
   n = 0L;
-  error = Index_initListStorage(&indexQueryHandle,
-                                indexHandle,
-                                NULL, // uuid
-                                DATABASE_ID_ANY, // entity id
-                                STORAGE_TYPE_ANY,
-                                NULL, // storageName
-                                NULL, // hostName
-                                NULL, // loginName
-                                NULL, // deviceName
-                                NULL, // fileName
-                                INDEX_STATE_SET_ALL,
-                                NULL, // storageIds
-                                0  // storageIdCount
-                               );
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 NULL, // uuid
+                                 DATABASE_ID_ANY, // entity id
+                                 STORAGE_TYPE_ANY,
+                                 NULL, // storageName
+                                 NULL, // hostName
+                                 NULL, // loginName
+                                 NULL, // deviceName
+                                 NULL, // fileName
+                                 INDEX_STATE_SET_ALL,
+                                 NULL, // storageIds
+                                 0  // storageIdCount
+                                );
   if (error == ERROR_NONE)
   {
     while (Index_getNextStorage(&indexQueryHandle,
@@ -2208,20 +2208,20 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     deletedIndexFlag = FALSE;
 
     // get storage entry
-    error = Index_initListStorage(&indexQueryHandle1,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL, // storageIds
-                                  0  // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle1,
+                                   indexHandle,
+                                   NULL, // uuid
+                                   DATABASE_ID_ANY, // entity id
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL, // storageIds
+                                   0  // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       break;
@@ -2246,20 +2246,20 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
           )
     {
       // check for duplicate entry
-      error = Index_initListStorage(&indexQueryHandle2,
-                                    indexHandle,
-                                    NULL, // uuid
-                                    DATABASE_ID_ANY, // entity id
-                                    STORAGE_TYPE_ANY,
-                                    NULL, // storageName
-                                    NULL, // hostName
-                                    NULL, // loginName
-                                    NULL, // deviceName
-                                    NULL, // fileName
-                                    INDEX_STATE_SET_ALL,
-                                    NULL, // storageIds
-                                    0  // storageIdCount
-                                   );
+      error = Index_initListStorages(&indexQueryHandle2,
+                                     indexHandle,
+                                     NULL, // uuid
+                                     DATABASE_ID_ANY, // entity id
+                                     STORAGE_TYPE_ANY,
+                                     NULL, // storageName
+                                     NULL, // hostName
+                                     NULL, // loginName
+                                     NULL, // deviceName
+                                     NULL, // fileName
+                                     INDEX_STATE_SET_ALL,
+                                     NULL, // storageIds
+                                     0  // storageIdCount
+                                    );
       if (error != ERROR_NONE)
       {
         continue;
@@ -2625,7 +2625,7 @@ LOCAL String getREGEXPString(String string, const char *columnName, ConstString 
 
   return string;
 }
-LOCAL String getREGEXPString2(String string, const char *columnName, ConstString patternText)
+LOCAL String getREGEXPString2(String string, ConstString patternText)
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -2761,7 +2761,7 @@ LOCAL String getFTSString(String string, const char *tableName, ConstString patt
 
   return string;
 }
-LOCAL String getFTSString2(String string, const char *tableName, ConstString patternText)
+LOCAL String getFTSString2(String string, ConstString patternText)
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -2914,20 +2914,20 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
   IndexQueryHandle indexQueryHandle;
   DatabaseId       storageId;
 
-  error = Index_initListStorage(&indexQueryHandle,
-                                indexHandle,
-                                NULL, // uuid
-                                entityId,
-                                STORAGE_TYPE_ANY,
-                                NULL, // storageName
-                                NULL, // hostName
-                                NULL, // loginName
-                                NULL, // deviceName
-                                NULL, // fileName
-                                INDEX_STATE_SET_ALL,
-                                NULL, // storageIds
-                                0  // storageIdCount
-                               );
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 NULL, // uuid
+                                 entityId,
+                                 STORAGE_TYPE_ANY,
+                                 NULL, // storageName
+                                 NULL, // hostName
+                                 NULL, // loginName
+                                 NULL, // deviceName
+                                 NULL, // fileName
+                                 INDEX_STATE_SET_ALL,
+                                 NULL, // storageIds
+                                 0  // storageIdCount
+                                );
   if (error != ERROR_NONE)
   {
     return error;
@@ -4374,20 +4374,102 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   return error;
 }
 
-Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
-                             IndexHandle      *indexHandle,
-                             ConstString      jobUUID,
-                             DatabaseId       entityId,
-                             StorageTypes     storageType,
-                             ConstString      storageName,
-                             ConstString      hostName,
-                             ConstString      loginName,
-                             ConstString      deviceName,
-                             ConstString      fileName,
-                             IndexStateSet    indexStateSet,
+Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
                              const DatabaseId storageIds[],
-                             uint             storageIdCount
+                             uint             storageIdCount,
+                             IndexStateSet    indexStateSet,
+                             String           pattern,
+                             ulong            *count
                             )
+{
+  String              regexpString;
+  String              ftsString;
+  String              storageIdsString;
+  String              indexStateSetString;
+  DatabaseQueryHandle databaseQueryHandle;
+  Errors              error;
+  uint                i;
+
+  assert(indexHandle != NULL);
+  assert((storageIdCount == 0) || (storageIds != NULL));
+  assert(count != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
+
+  storageIdsString = String_new();
+  if (storageIds != NULL)
+  {
+    for (i = 0; i < storageIdCount; i++)
+    {
+      if (i > 0) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%d",storageIds[i]);
+    }
+  }
+  else
+  {
+    String_appendCString(storageIdsString,"0");
+  }
+#warning entryIds not used
+
+  (*count) = 0;
+
+  indexStateSetString = String_new();
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(id) \
+                            FROM storage \
+                            WHERE     (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                  AND (%d OR REGEXP(%S,0,storage.name)) \
+                                  AND (state IN (%s)) \
+                           ",
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           getIndexStateSetString(indexStateSetString,indexStateSet)
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(indexStateSetString);
+    String_delete(storageIdsString);
+    String_delete(ftsString);
+    String_delete(regexpString);
+    return -1L;
+  }
+  String_delete(indexStateSetString);
+  (void)Database_getNextRow(&databaseQueryHandle,
+                            "%lu",
+                            &count
+                           );
+  Database_finalize(&databaseQueryHandle);
+
+  // free resources
+  String_delete(storageIdsString);
+  String_delete(ftsString);
+  String_delete(regexpString);
+
+  return ERROR_NONE;
+}
+
+Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
+                              IndexHandle      *indexHandle,
+                              ConstString      jobUUID,
+                              DatabaseId       entityId,
+                              StorageTypes     storageType,
+                              ConstString      storageName,
+                              ConstString      hostName,
+                              ConstString      loginName,
+                              ConstString      deviceName,
+                              ConstString      fileName,
+                              IndexStateSet    indexStateSet,
+                              const DatabaseId storageIds[],
+                              uint             storageIdCount
+                             )
 {
   Errors error;
   String indexStateSetString;
@@ -4972,21 +5054,21 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
                             uint             entryIdCount,
                             IndexTypeSet     indexTypeSet,
                             String           pattern,
-                            uint             *entryCount
+                            ulong            *count
                            )
 {
   DatabaseQueryHandle databaseQueryHandle;
-  Errors error;
-  String regexpString;
-  String ftsString;
-  String storageIdsString;
-  String entryIdsString;
-  uint   i;
+  Errors              error;
+  String              regexpString;
+  String              ftsString;
+  String              storageIdsString;
+  String              entryIdsString;
+  uint                i;
 
   assert(indexHandle != NULL);
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
-  assert(entryCount != NULL);
+  assert(count != NULL);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -4994,8 +5076,8 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  regexpString = getREGEXPString2(String_new(),"files.name",pattern);
-  ftsString    = getFTSString2   (String_new(),"FTS_files",pattern);
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
 
   storageIdsString = String_new();
   if (storageIds != NULL)
@@ -5025,7 +5107,7 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
     String_appendCString(entryIdsString,"0");
   }
 
-  (*entryCount) = 0;
+  (*count) = 0;
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -5126,19 +5208,25 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
                            (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
                            (entryIdCount   == 0  ) ? 1 : 0,entryIdsString
                           );
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(ftsString);
+    String_delete(regexpString);
+    return error;
+  }
+  (void)Database_getNextRow(&databaseQueryHandle,
+                            "%lu",
+                            count
+                           );
+  Database_finalize(&databaseQueryHandle);
+
+  // free resources
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
   String_delete(regexpString);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  (void)Database_getNextRow(&databaseQueryHandle,
-                            "%u",
-                            entryCount
-                           );
-  Database_finalize(&databaseQueryHandle);
 
   return ERROR_NONE;
 }
@@ -5175,8 +5263,8 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString2(String_new(),"files.name",pattern);
-  ftsString    = getFTSString2   (String_new(),"FTS_files",pattern);
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
 
   storageIdsString = String_new();
   if (storageIds != NULL)
@@ -7080,20 +7168,20 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
 fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
 
   // prune storage of entity
-  error = Index_initListStorage(&indexQueryHandle,
-                                indexHandle,
-                                NULL, // uuid
-                                entityId,
-                                STORAGE_TYPE_ANY,
-                                NULL, // storageName
-                                NULL, // hostName
-                                NULL, // loginName
-                                NULL, // deviceName
-                                NULL, // fileName
-                                INDEX_STATE_SET_ALL,
-                                NULL,  // storageIds
-                                0   // storageIdCount
-                               );
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 NULL, // uuid
+                                 entityId,
+                                 STORAGE_TYPE_ANY,
+                                 NULL, // storageName
+                                 NULL, // hostName
+                                 NULL, // loginName
+                                 NULL, // deviceName
+                                 NULL, // fileName
+                                 INDEX_STATE_SET_ALL,
+                                 NULL,  // storageIds
+                                 0   // storageIdCount
+                                );
   if (error != ERROR_NONE)
   {
     return error;

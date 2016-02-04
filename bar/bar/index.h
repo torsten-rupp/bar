@@ -519,7 +519,29 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                          );
 
 /***********************************************************************\
-* Name   : Index_initListStorage
+* Name   : Index_getStoragesInfo
+* Purpose: get storages info
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          storageIds       - storage ids or NULL
+*          storageIdCount   - storage id count or 0
+*          indexStateSet    - index state set or INDEX_STATE_SET_ANY
+*          pattern          - name pattern (glob, can be NULL)
+* Output : count - entry count
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
+                             const DatabaseId storageIds[],
+                             uint             storageIdCount,
+                             IndexStateSet    indexStateSet,
+                             String           pattern,
+                             ulong            *count
+                            );
+
+/***********************************************************************\
+* Name   : Index_initListStorages
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
@@ -539,20 +561,20 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListStorage(IndexQueryHandle *indexQueryHandle,
-                             IndexHandle      *indexHandle,
-                             ConstString      uuid,
-                             DatabaseId       entityId,
-                             StorageTypes     storageType,
-                             ConstString      storageName,
-                             ConstString      hostName,
-                             ConstString      loginName,
-                             ConstString      deviceName,
-                             ConstString      fileName,
-                             IndexStateSet    indexStateSet,
-                             const DatabaseId storageIds[],
-                             uint             storageIdCount
-                            );
+Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
+                              IndexHandle      *indexHandle,
+                              ConstString      uuid,
+                              DatabaseId       entityId,
+                              StorageTypes     storageType,
+                              ConstString      storageName,
+                              ConstString      hostName,
+                              ConstString      loginName,
+                              ConstString      deviceName,
+                              ConstString      fileName,
+                              IndexStateSet    indexStateSet,
+                              const DatabaseId storageIds[],
+                              uint             storageIdCount
+                             );
 
 /***********************************************************************\
 * Name   : Index_getNextStorage
@@ -698,7 +720,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 *          entryIdCount     - entry id count or 0
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
 *          pattern          - name pattern (glob, can be NULL)
-* Output : indexQueryHandle - index query handle
+* Output : count - entry count
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -710,7 +732,7 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
                             uint             entryIdCount,
                             IndexTypeSet     indexTypeSet,
                             String           pattern,
-                            uint             *entryCount
+                            ulong            *count
                            );
 
 /***********************************************************************\
