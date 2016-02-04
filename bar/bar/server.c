@@ -13718,13 +13718,19 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
+  String        storagePatternString;
+  bool          indexStateAny;
   IndexStateSet indexStateSet;
-  String        patternString;
+  Errors        error;
+#if 0
   long          storageEntryOKCount;
   long          storageEntryCreateCount;
   long          storageEntryUpdateRequestedCount;
   long          storageEntryUpdateCount;
   long          storageEntryErrorCount;
+#else
+  ulong         count;
+#endif
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13732,16 +13738,26 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   UNUSED_VARIABLE(argumentMap);
 
   // get index state set, filter pattern
-  if (!StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    return;
-  }
-  patternString = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  storagePatternString = String_new();
+  if (!StringMap_getString(argumentMap,"storagePattern",storagePatternString,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
-    String_delete(patternString);
+    String_delete(storagePatternString);
+    return;
+  }
+#warning use storagePatternString
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  {
+    indexStateAny = TRUE;
+  }
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  {
+    indexStateAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    String_delete(storagePatternString);
     return;
   }
 #warning use indexStateSet
@@ -13753,6 +13769,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
     return;
   }
 
+#if 0
   storageEntryOKCount              = Index_countState(indexHandle,INDEX_STATE_OK              );
   storageEntryCreateCount          = Index_countState(indexHandle,INDEX_STATE_CREATE          );
   storageEntryUpdateRequestedCount = Index_countState(indexHandle,INDEX_STATE_UPDATE_REQUESTED);
@@ -13779,6 +13796,30 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get index database fail");
   }
+#else
+  // get index info
+//Database_debugEnable(1);
+  error = Index_getStoragesInfo(indexHandle,
+                                Array_cArray(&clientInfo->storageIdArray),
+                                Array_length(&clientInfo->storageIdArray),
+                                indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                                storagePatternString,
+                                &count
+                              );
+//Database_debugEnable(0);
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"index database fail");
+    String_delete(storagePatternString);
+    return;
+  }
+
+  // send data
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu",count);
+#endif
+
+  // free resources
+  String_delete(storagePatternString);
 }
 
 /***********************************************************************\
@@ -13793,9 +13834,9 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 * Notes  : Arguments:
 *            entityId=<id>|0|*
 *            maxCount=<n>|0
+*            storagePattern=<text>
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
-*            pattern=<text>
 *          Result:
 *            storageId=<id>
 *            entityId=<id>
@@ -13818,7 +13859,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   uint             maxCount;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
-  String           patternString;
+  String           storagePatternString;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   StorageSpecifier storageSpecifier;
@@ -13841,7 +13882,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get entity id, max. count, index state set, index mode set, filter pattern
+  // get entity id, max. count, filter storage pattern, index state set, index mode set
   if   (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
     entityId = DATABASE_ID_ANY;
@@ -13856,21 +13897,23 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     entityId = (DatabaseId)n;
   }
   StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
+  storagePatternString = String_new();
+  if (!StringMap_getString(argumentMap,"storagePattern",storagePatternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storagePattern=<text>");
+    String_delete(storagePatternString);
+    return;
+  }
   if (!StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    String_delete(storagePatternString);
     return;
   }
   if (!StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
-    return;
-  }
-  patternString = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
-    String_delete(patternString);
+    String_delete(storagePatternString);
     return;
   }
 
@@ -13878,7 +13921,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(patternString);
+    String_delete(storagePatternString);
     return;
   }
 
@@ -13895,7 +13938,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  NULL, // uuid
                                  entityId,
                                  STORAGE_TYPE_ANY,
-                                 patternString,
+                                 storagePatternString,
                                  NULL, // hostName
                                  NULL, // loginName
                                  NULL, // deviceName
@@ -13914,7 +13957,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
 
-    String_delete(patternString);
+    String_delete(storagePatternString);
     return;
   }
   count = 0;
@@ -13987,7 +14030,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   String_delete(storageName);
   String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
-  String_delete(patternString);
+  String_delete(storagePatternString);
 }
 
 /***********************************************************************\

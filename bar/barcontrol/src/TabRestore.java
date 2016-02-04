@@ -1648,6 +1648,8 @@ public class TabRestore
      */
     public void run()
     {
+      boolean updateFlag     = false;
+      boolean updateListFlag = false;
       try
       {
         for (;;)
@@ -1762,7 +1764,7 @@ Dprintf.dprintf("updateFlag=%s",updateFlag);
 
             // if not triggered (timeout occurred) update is done invisible (color is not set)
             if (!this.updateFlag && !this.updateListFlag) setUpdateIndicator = false;
-Dprintf.dprintf("update sto %s %s",updateFlag,updateListFlag);
+Dprintf.dprintf("update sto %s %s",this.updateFlag,this.updateListFlag);
 
             // save trigger flags, reset flags
             updateFlag     = this.updateFlag;
@@ -2195,12 +2197,12 @@ assert storagePattern != null;
       // update storage list
 // TODO
 assert storagePattern != null;
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexStateSet=%s indexModeSet=%s pattern=%'S",
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s",
                                                          entityIndexData[0].entityId,
                                                          storageMaxCount,
-                                                         storageIndexStateSet.nameList("|"),
+                                                         storagePattern,
                                                          "*",
-                                                         storagePattern
+                                                         storageIndexStateSet.nameList("|")
                                                         ),
                                      0
                                     );
@@ -2336,6 +2338,7 @@ assert storagePattern != null;
       });
 
       // get entries info
+Dprintf.dprintf("xxxxxxxxxxxxxxx");
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
 String storagePattern="*";
@@ -2349,12 +2352,7 @@ String storagePattern="*";
                                   ) == Errors.NONE
          )
       {
-        count = valueMap.getInt("okCount")
-                +valueMap.getInt("createCount")
-                +valueMap.getInt("updateRequestedCount")
-                +valueMap.getInt("updateCount")
-                +valueMap.getInt("errorCount")
-                ;
+        count = valueMap.getInt("count");
 Dprintf.dprintf("count=%d",count);
       }
       // set count
@@ -2405,12 +2403,12 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
       // update storage table
 // TODO
 assert storagePattern != null;
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d indexState=%s indexModeSet=%s pattern=%'S",
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d storagePattern=%'S indexState=%s indexModeSet=%s",
                                                          (storageEntityState != EntityStates.NONE) ? "*" : "0",
                                                          storageMaxCount,
+                                                         storagePattern,
                                                          storageIndexStateSet.nameList("|"),
-                                                         "*",
-                                                         storagePattern
+                                                         "*"
                                                         ),
                                      0
                                     );
@@ -2501,8 +2499,9 @@ Dprintf.dprintf("INDEX_STORAGE_LIST");
             if (!tableItem.isDisposed())
             {
               IndexData indexData = (IndexData)tableItem.getData();
-              Widgets.removeTableItem(widgetStorageTable,tableItem);
-              indexData.clearTableItem();
+Dprintf.dprintf("");
+//              Widgets.removeTableItem(widgetStorageTable,tableItem);
+//              indexData.clearTableItem();
             }
           }
         }
@@ -6364,12 +6363,12 @@ Dprintf.dprintf("");
           EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
 // TODO
 assert storagePattern != null;
-          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d indexState=%s indexModeSet=%s pattern=%'S",
+          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexState=%s indexModeSet=%s",
                                                                      entityIndexData.entityId,
                                                                      -1,
+                                                                     storagePattern,
                                                                      "*",
-                                                                     "*",
-                                                                     storagePattern
+                                                                     "*"
                                                                     ),
                                                  0
                                                 );
