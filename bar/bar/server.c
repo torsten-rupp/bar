@@ -4072,20 +4072,20 @@ LOCAL Errors deleteEntity(DatabaseId entityId)
   assert(indexHandle != NULL);
 
   // delete all storage with entity id
-  error = Index_initListStorage(&indexQueryHandle,
-                                indexHandle,
-                                NULL, // uuid
-                                entityId,
-                                STORAGE_TYPE_ANY,
-                                NULL, // storageName
-                                NULL, // hostName
-                                NULL, // loginName
-                                NULL, // deviceName
-                                NULL, // fileName
-                                INDEX_STATE_SET_ALL,
-                                NULL,  // storageIds
-                                0   // storageIdCount
-                               );
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 NULL, // uuid
+                                 entityId,
+                                 STORAGE_TYPE_ANY,
+                                 NULL, // storageName
+                                 NULL, // hostName
+                                 NULL, // loginName
+                                 NULL, // deviceName
+                                 NULL, // fileName
+                                 INDEX_STATE_SET_ALL,
+                                 NULL,  // storageIds
+                                 0   // storageIdCount
+                                );
   if (error != ERROR_NONE)
   {
     return error;
@@ -5129,20 +5129,20 @@ LOCAL void autoIndexUpdateThreadCode(void)
     doneJobOptions(&jobOptions);
 
     // delete not existing and expired indizes
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   NULL, // uuid
+                                   DATABASE_ID_ANY, // entity id
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error == ERROR_NONE)
     {
       now      = Misc_getCurrentDateTime();
@@ -12539,20 +12539,20 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   {
 //????
     // add all storage ids with specified uuid
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  jobUUID,
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   jobUUID,
+                                   DATABASE_ID_ANY, // entity id
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
@@ -12583,20 +12583,20 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   if (entityId != DATABASE_ID_NONE)
   {
     // add all storage ids with entity id
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  entityId,
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   NULL, // uuid
+                                   entityId,
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
@@ -12860,20 +12860,20 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     case ARCHIVES:
       if (String_isEmpty(storageName))
       {
-        error = Index_initListStorage(&indexQueryHandle,
-                                      indexHandle,
-                                      NULL,  // uuid,
-                                      DATABASE_ID_ANY,
-                                      STORAGE_TYPE_ANY,
-                                      NULL,  // storageName,
-                                      NULL,  // hostName,
-                                      NULL,  // loginName,
-                                      NULL,  // deviceName,
-                                      NULL,  // fileName,
-                                      INDEX_STATE_SET_ALL,
-                                      Array_cArray(&clientInfo->storageIdArray),
-                                      Array_length(&clientInfo->storageIdArray)
-                                     );
+        error = Index_initListStorages(&indexQueryHandle,
+                                       indexHandle,
+                                       NULL,  // uuid,
+                                       DATABASE_ID_ANY,
+                                       STORAGE_TYPE_ANY,
+                                       NULL,  // storageName,
+                                       NULL,  // hostName,
+                                       NULL,  // loginName,
+                                       NULL,  // deviceName,
+                                       NULL,  // fileName,
+                                       INDEX_STATE_SET_ALL,
+                                       Array_cArray(&clientInfo->storageIdArray),
+                                       Array_length(&clientInfo->storageIdArray)
+                                      );
         if (error != ERROR_NONE)
         {
           String_delete(entryName);
@@ -13702,7 +13702,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 }
 
 /***********************************************************************\
-* Name   : serverCommand_indexStorageInfo
+* Name   : serverCommand_indexStoragesInfo
 * Purpose: get index database storage info
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -13713,16 +13713,13 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 * Notes  : Arguments:
 *            indexStateSet=<state set>|*
 *          Result:
-*            okCount=<entries OK count>
-*            createCount=<entries create count>
-*            updateRequestedCount=<entries update requested count>
-*            updateCount=<entries update count>
-*            errorCount=<entries error count>
+*            count=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   IndexStateSet indexStateSet;
+  String        patternString;
   long          storageEntryOKCount;
   long          storageEntryCreateCount;
   long          storageEntryUpdateRequestedCount;
@@ -13734,9 +13731,17 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
   UNUSED_VARIABLE(argumentMap);
 
+  // get index state set, filter pattern
   if (!StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    return;
+  }
+  patternString = String_new();
+  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    String_delete(patternString);
     return;
   }
 #warning use indexStateSet
@@ -13885,20 +13890,20 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   printableStorageName = String_new();
 
   // list index
-  error = Index_initListStorage(&indexQueryHandle,
-                                indexHandle,
-                                NULL, // uuid
-                                entityId,
-                                STORAGE_TYPE_ANY,
-                                patternString,
-                                NULL, // hostName
-                                NULL, // loginName
-                                NULL, // deviceName
-                                NULL, // fileName
-                                indexStateSet,
-                                NULL,  // storageIds
-                                0   // storageIdCount
-                               );
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 NULL, // uuid
+                                 entityId,
+                                 STORAGE_TYPE_ANY,
+                                 patternString,
+                                 NULL, // hostName
+                                 NULL, // loginName
+                                 NULL, // deviceName
+                                 NULL, // fileName
+                                 indexStateSet,
+                                 NULL,  // storageIds
+                                 0   // storageIdCount
+                                );
   if (error != ERROR_NONE)
   {
     String_delete(printableStorageName);
@@ -14420,20 +14425,20 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
   if (String_isEmpty(jobUUID) && (storageId == DATABASE_ID_NONE) && (entityId == DATABASE_ID_NONE) && String_isEmpty(patternString))
   {
     // refresh all storage with specific state
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   NULL, // uuid
+                                   DATABASE_ID_ANY, // entity id
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
@@ -14475,20 +14480,20 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
   if (!String_isEmpty(jobUUID))
   {
     // refresh all storage of all entities of job
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  jobUUID,
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   jobUUID,
+                                   DATABASE_ID_ANY, // entity id
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
@@ -14526,20 +14531,20 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
   if (entityId != DATABASE_ID_NONE)
   {
     // refresh all storage of entity
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  entityId,
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   NULL, // uuid
+                                   entityId,
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
@@ -14588,20 +14593,20 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
   if (!String_isEmpty(patternString))
   {
     // refresh all storage which match pattern
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  DATABASE_ID_ANY, // entityId,
-                                  STORAGE_TYPE_ANY,
-                                  patternString,//NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   NULL, // uuid
+                                   DATABASE_ID_ANY, // entityId,
+                                   STORAGE_TYPE_ANY,
+                                   patternString,//NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
@@ -14718,20 +14723,20 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
     printableStorageName = String_new();
 
     // delete all indizes with specific state
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL, // uuid
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL,
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   NULL, // uuid
+                                   DATABASE_ID_ANY, // entity id
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
@@ -14837,7 +14842,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 
 /***********************************************************************\
 * Name   : serverCommand_indexEntriesInfo
-* Purpose: get index database entry info
+* Purpose: get index database entries info
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -16279,7 +16284,7 @@ SERVER_COMMANDS[] =
   { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_OK      },
   { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_OK      },
   { "INDEX_ENTITY_SET",            serverCommand_indexEntitySet,           AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_INFO",          serverCommand_indexStorageInfo,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGES_INFO",         serverCommand_indexStoragesInfo,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_OK      },
   { "INDEX_ASSIGN",                serverCommand_indexAssign,              AUTHORIZATION_STATE_OK      },
