@@ -3387,22 +3387,22 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
     String_clear(oldestStorageName);
     oldestCreatedDateTime = MAX_UINT64;
     oldestSize            = 0LL;
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  jobUUID,
-                                  DATABASE_ID_ANY,  // entityId
-                                  STORAGE_TYPE_ANY,  // storageType
-                                  NULL,  // storageName
-                                  NULL,  // hostName
-                                  NULL,  // loginName
-                                  NULL,  // deviceName
-                                  NULL,  // fileName
-                                    INDEX_STATE_SET(INDEX_STATE_OK)
-                                  | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
-                                  | INDEX_STATE_SET(INDEX_STATE_ERROR),
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   jobUUID,
+                                   DATABASE_ID_ANY,  // entityId
+                                   STORAGE_TYPE_ANY,  // storageType
+                                   NULL,  // storageName
+                                   NULL,  // hostName
+                                   NULL,  // loginName
+                                   NULL,  // deviceName
+                                   NULL,  // fileName
+                                     INDEX_STATE_SET(INDEX_STATE_OK)
+                                   | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
+                                   | INDEX_STATE_SET(INDEX_STATE_ERROR),
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       logMessage(logHandle,
@@ -3573,22 +3573,22 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
     String_clear(oldestStorageName);
     oldestCreatedDateTime = MAX_UINT64;
     oldestSize            = 0LL;
-    error = Index_initListStorage(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL,  // jobUUID,
-                                  DATABASE_ID_ANY,  // entityId
-                                  STORAGE_TYPE_ANY,  // storageType
-                                  storagePattern,  // storageName
-                                  NULL,  // hostName
-                                  NULL,  // loginName
-                                  NULL,  // deviceName
-                                  NULL,  // fileName
-                                    INDEX_STATE_SET(INDEX_STATE_OK)
-                                  | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
-                                  | INDEX_STATE_SET(INDEX_STATE_ERROR),
-                                  NULL,  // storageIds
-                                  0   // storageIdCount
-                                 );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   NULL,  // jobUUID,
+                                   DATABASE_ID_ANY,  // entityId
+                                   STORAGE_TYPE_ANY,  // storageType
+                                   storagePattern,  // storageName
+                                   NULL,  // hostName
+                                   NULL,  // loginName
+                                   NULL,  // deviceName
+                                   NULL,  // fileName
+                                     INDEX_STATE_SET(INDEX_STATE_OK)
+                                   | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
+                                   | INDEX_STATE_SET(INDEX_STATE_ERROR),
+                                   NULL,  // storageIds
+                                   0   // storageIdCount
+                                  );
     if (error != ERROR_NONE)
     {
       logMessage(logHandle,
@@ -4061,20 +4061,20 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
       else
       {
         // delete old indizes for same storage file
-        error = Index_initListStorage(&indexQueryHandle,
-                                      indexHandle,
-                                      NULL, // jobUUID,
-                                      DATABASE_ID_ANY, // entityId
-                                      STORAGE_TYPE_ANY,  // storageType
-                                      NULL, // storageName
-                                      createInfo->storageSpecifier->hostName,
-                                      createInfo->storageSpecifier->loginName,
-                                      createInfo->storageSpecifier->deviceName,
-                                      storageMsg.archiveName,
-                                      INDEX_STATE_SET_ALL,
-                                      NULL,  // storageIds
-                                      0   // storageIdCount
-                                     );
+        error = Index_initListStorages(&indexQueryHandle,
+                                       indexHandle,
+                                       NULL, // jobUUID,
+                                       DATABASE_ID_ANY, // entityId
+                                       STORAGE_TYPE_ANY,  // storageType
+                                       NULL, // storageName
+                                       createInfo->storageSpecifier->hostName,
+                                       createInfo->storageSpecifier->loginName,
+                                       createInfo->storageSpecifier->deviceName,
+                                       storageMsg.archiveName,
+                                       INDEX_STATE_SET_ALL,
+                                       NULL,  // storageIds
+                                       0   // storageIdCount
+                                      );
         while (Index_getNextStorage(&indexQueryHandle,
                                     &oldStorageId,
                                     &oldEntityId,
