@@ -1107,7 +1107,6 @@ fprintf(stderr,"%s, %d: archiveSize=%llu\n",__FILE__,__LINE__,archiveSize);
       }
       if (curlCode == CURLE_OK)
       {
-fprintf(stderr,"%s, %d: callback \n",__FILE__,__LINE__);
         curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_READFUNCTION,curlWebDAVReadDataCallback);
       }
       if (curlCode == CURLE_OK)
@@ -1116,7 +1115,6 @@ fprintf(stderr,"%s, %d: callback \n",__FILE__,__LINE__);
       }
       if (curlCode == CURLE_OK)
       {
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,storageArchiveHandle->webdav.size);
         curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageArchiveHandle->webdav.size);
       }
       if (curlCode != CURLE_OK)
@@ -1150,7 +1148,6 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,storageArchiveHandle->webdav.siz
       while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
              && (runningHandles > 0)
             );
-fprintf(stderr,"%s, %d: runningHandles=%d\n",__FILE__,__LINE__,runningHandles);
       if (curlMCode != CURLM_OK)
       {
         String_delete(baseName);
