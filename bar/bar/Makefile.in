@@ -113,6 +113,7 @@ FIND           = find
 GREP           = grep
 GETFATTR       = @GETFATTR@
 INSTALL        = @INSTALL@
+KILL           = kill
 LN             = ln
 LS             = ls
 MKDIR          = mkdir
@@ -128,6 +129,7 @@ SETFATTR       = @SETFATTR@
 SLEEP          = sleep
 SORT           = sort
 STAT           = stat
+TAIL           = tail
 TAR            = tar
 TIME           = @TIME@
 TOUCH          = touch
@@ -213,6 +215,8 @@ TEST_IMAGE_OPERATIONS = test_image_operations
 # ports used for tests
 TEST_SERVER_PORT     = 39909
 TEST_SERVER_SSL_PORT = 39910
+TEST_SERVER_PID_FILE = test/barserver.pid
+TEST_SERVER_DATABASE = test/index.db
 
 # hosts, ports, passwords, keys for tests
 TEST_HOST             ?= localhost
@@ -529,10 +533,12 @@ help:
 	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav)[-debug|-valgrind]"
 	@$(ECHO) "  test8[-debug|-valgrind], test_largefiles[-debug|-valgrind]"
 	@$(ECHO) "  test9[-debug|-valgrind], test_dvd[-debug|-valgrind]"
+	@$(ECHO) "  test10[-debug|-valgrind], test_server[-debug|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-valgrind]"
 	@$(ECHO) "  test_parameters[-debug|-valgrind]"
 	@$(ECHO) "  test_misc[-debug|-valgrind]"
 	@$(ECHO) "  test_all[-debug|-valgrind]"
+	@$(ECHO) "  test_clean"
 	@$(ECHO) ""
 	@$(ECHO) "  test_file_operations"
 	@$(ECHO) "  test_file_operations_dryrun"
@@ -548,8 +554,9 @@ help:
 	@$(ECHO) "  run_debug_test_code"
 	@$(ECHO) ""
 	@$(ECHO) "  gcov [CHECK=1|2|3|4|5|6|7|8]"
-	@$(ECHO) "  gcov<1|2|3|4|5|6|7|8>"
+	@$(ECHO) "  gcov_clean"
 	@$(ECHO) "  gcov_zero                                 reset gcov data"
+	@$(ECHO) "  gcov<1|2|3|4|5|6|7|8>"
 	@$(ECHO) "  gcov_html                                 re-generate gcov HTML report"
 	@$(ECHO) ""
 	@$(ECHO) "  memcheck [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
@@ -967,9 +974,9 @@ TEST_OPTIONS = --no-default-config --config=$(CURDIR)/test/bar.cfg
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
-.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9
-.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug
-.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind
+.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10
+.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug
+.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters test_misc
 .PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug test_misc-debug
 .PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind test_misc-valgrind
@@ -977,7 +984,7 @@ TEST_OPTIONS = --no-default-config --config=$(CURDIR)/test/bar.cfg
 .PHONY: test_storage_file-debug test_storage_ftp-debug test_storage_scp-debug test_storage_sftp-debug test_storage_webdav-debug
 .PHONY: test_storage_file-valgrind test_storage_ftp-valgrind test_storage_scp-valgrind test_storage_sftp-valgrind test_storage_webdav-valgrind
 .PHONY: test_all test_all-debug test_all-valgrind
-.PHONY: clean_test show_debug_test_code run_debug_test_code
+.PHONY: test_clean show_debug_test_code run_debug_test_code
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s \
           test_basic \
@@ -987,6 +994,7 @@ test:
           test_split \
           test_image \
           test_combined \
+          test_server \
           test_parameters \
           test_misc
 
@@ -1003,7 +1011,7 @@ test_win: $(TEST_BAR)
 test-win-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test-win
 
-clean_test:
+test_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMF)  test/bar.cfg \
                 test/key.* 
@@ -1246,16 +1254,6 @@ test6 test_image: $(TEST_BAR)
           if test $$rc -ne 0; then \
             exit $$rc; \
           fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none" \
-            $(addsuffix _dryrun,$(TEST_IMAGE_OPERATIONS)) \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
         done
 	@$(ECHO) "ok"
 
@@ -1437,6 +1435,22 @@ test9-debug test_dvd-debug: $(TEST_BAR_DEBUG)
 test9-valgrind test_dvd-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
 
+test10 test_server: $(TEST_BAR)
+	@$(ECHO_NO_LF) "Test 10: server..."
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          test_server_operations \
+          ;
+	@$(ECHO) "ok"
+
+test10-debug test_serverd-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
+
+test10-valgrind test_server-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
+
 test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
 	@$(RMF) test/key.*; $(MAKE) $(TEST_KEYS)
@@ -1457,16 +1471,6 @@ test_combined: $(TEST_BAR)
               BAR_PATTERN="test-*" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --archive-part-size=10M" \
               $(TEST_IMAGE_OPERATIONS) \
-              ; \
-            rc=$$?; \
-            if test $$rc -ne 0; then \
-              exit $$rc; \
-            fi; \
-            $(MAKE) \
-              BAR_FILE=test-### \
-              BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --archive-part-size=10M" \
-              $(addsuffix _dryrun,$(TEST_IMAGE_OPERATIONS)) \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -1588,7 +1592,7 @@ test_misc: \
 	@$(ECHO_NO_LF) "Test miscellaneous..."
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	#
-	$(call functionTestCheckExitcode,127,127,($(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null)))
+	$(call functionTestCheckExitcode,134,134,($(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null)))
 
 test_misc-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_misc
@@ -3209,18 +3213,61 @@ test_dvd_operations: \
 	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
 	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
 
+# send command to server
+functionServerCommand = \
+  $(ECHO) $2; $(ECHO) 1 $2|$(NETCAT) $1|$(TAIL) -n +2
+
+.PHONY: test_server_operations
+test_server_operations: \
+  $(TEST_BAR) \
+  $(TEST_CONFIGURATION) \
+  $(TEST_FILES)
+	# create test archive
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	# server
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@
+	( \
+	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+	  : start server; \
+	  DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) \
+	    --daemon \
+	    --pid-file=$(TEST_SERVER_PID_FILE) \
+	    --server-port=$(TEST_SERVER_PORT) \
+	    --index-database=$(TEST_SERVER_DATABASE) \
+	    --server-debug; \
+	  sleep 1; \
+	  \
+	  : test commands; \
+          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),VERSION); \
+          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),STATUS); \
+          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),JOB_LIST) >/dev/null; \
+          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),PAUSE time=120 modeMask=ALL); \
+          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),CONTINUE); \
+          \
+          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
+          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST maxCount=100 pattern='*'); \
+          \
+          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),QUIT); \
+	  sleep 1; \
+	  \
+	  $(KILL) `cat $(TEST_SERVER_PID_FILE)`; \
+        ) $(if $(QUIET),</dev/null 1>/dev/null)
+
 # ----------------------------------------------------------------------------
 
 # code coverage analysis
 .PHONY: gcov coverage
-.PHONY: clean_gcov
-.PHONY: zero_gcov
-.PHONY: gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 gcov8 gcov9
+.PHONY: gcov_clean
+.PHONY: gcov_zero
+.PHONY: gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 gcov8 gcov9 gcov10
+.PHONY: gcov_basic gcov_compress gcov_crypt gcov_asymmetric_crypt gcov_split gcov_image gcov_storage gcov_server gcov_parameters gcov_misc
 gcov coverage:
 	$(MAKE) QUIET=1 --no-print-directory -s \
           $(if $(CHECK),\
             gcov$(CHECK),\
-            gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 gcov8 gcov9 \
+            gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 gcov8 gcov9 gcov10 \
            )
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
 	$(INSTALL) -d coverage
@@ -3228,7 +3275,7 @@ gcov coverage:
 	# work-around for bug in genhtml?
 	ln -sfT coverage/gcov.css gcov.css
 
-clean_gcov:
+gcov_clean:
 	$(RMF) gcov/*.gcda
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMRF) coverage
@@ -3243,47 +3290,52 @@ gcov_html:
 	# work-around for bug in genhtml?
 	ln -sfT coverage/gcov.css gcov.css
 
-gcov1: \
+gcov1 gcov_basic: \
   $(TEST_BAR_GCOV)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) \
           test_basic 2>/dev/null
 
-gcov2: \
+gcov2 gcov_compress: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
+	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES="zip0 bzip1 lzma1 lzo1 lz4-0" \
           test_compress 2>/dev/null
 
-gcov3: \
+gcov3 gcov_crypt: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
+	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) CRYPT_NAMES=AES256 \
           test_crypt 2>/dev/null
 
-gcov4: \
+gcov4 gcov_asymmetric_crypt: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
+	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) CRYPT_NAMES=AES256 \
           test_asymmetric_crypt 2>/dev/null
 
-gcov5: \
+gcov5 gcov_split: \
   $(TEST_BAR_GCOV)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
           test_split
 
-gcov6: \
+gcov6 gcov_image: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 TEST_IMAGE_OPERATIONS="test_image_operations_raw test_image_operations_ext2" \
+	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 TEST_IMAGE_OPERATIONS="test_image_operations_raw test_image_operations_ext2 test_image_operations_fat16 test_image_operations_reiserfs1" \
           test_image
 
-gcov7: \
+gcov7 gcov_storage: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 TEST_IMAGE_OPERATIONS="test_image_operations_raw test_image_operations_ext2" \
+	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
           test_storage
 
-gcov8: \
+gcov8 gcov_server: \
+  $(TEST_BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) \
+          test_server 2>/dev/null
+
+gcov9 gcov_parameters: \
   $(TEST_BAR_GCOV)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) \
           test_parameters 2>/dev/null
 
-gcov9: \
+gcov10 gcov_misc: \
   $(TEST_BAR_GCOV)
 	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) \
           test_misc 2>/dev/null
