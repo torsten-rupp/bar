@@ -1689,6 +1689,7 @@ public class TabRestore
               updateStorageTreeItems(entityTreeItems);
             }
 
+Dprintf.dprintf("updateFlag=%s",updateFlag);
             if (updateFlag)
             {
               updateStorageTableCount();
@@ -2337,8 +2338,9 @@ assert storagePattern != null;
       // get entries info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-String entryPattern="*";
-      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGE_INFO indexStateSet=%s",
+String storagePattern="*";
+      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO storagePattern=%'S indexStateSet=%s",
+                                                        storagePattern,
                                                         storageIndexStateSet.nameList("|")
                                                        ),
                                    0,
@@ -4473,7 +4475,7 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-Dprintf.dprintf("");
+Dprintf.dprintf("-----------------------------------------");
           updateCheckedStorageList();
           updateStorageTreeTableThread.triggerUpdate();
           updateEntryTableThread.triggerUpdate();
@@ -7117,7 +7119,7 @@ assert storagePattern != null;
       // get number of indizes with error state
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand("INDEX_STORAGE_INFO",
+      if (BARServer.executeCommand("INDEX_STORAGES_INFO storagePattern='*' indexStateSet=ERROR",
                                    0,
                                    errorMessage,
                                    valueMap
@@ -7134,7 +7136,7 @@ assert storagePattern != null;
         });
         return;
       }
-      long errorCount = valueMap.getLong("errorCount");
+      long errorCount = valueMap.getLong("count");
 
       if (errorCount > 0)
       {
