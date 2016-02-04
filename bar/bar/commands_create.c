@@ -4422,10 +4422,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
-  // try to set status done entry info
-  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,fileName,fileInfo.size);
-
-  // get file info, file extended attributes
+  // get file info
   error = File_getFileInfo(fileName,&fileInfo);
   if (error != ERROR_NONE)
   {
@@ -4437,7 +4434,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.errorEntries++;
       }
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return ERROR_NONE;
     }
     else
@@ -4447,10 +4443,14 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
   }
+
+  // try to set status done entry info
+  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,fileName,fileInfo.size);
+
+  // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,fileName);
   if (error != ERROR_NONE)
@@ -4745,9 +4745,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(deviceName));
 
-  // try to set status done entry info
-  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,deviceName,deviceInfo.size);
-
   // get device info
   error = Device_getDeviceInfo(&deviceInfo,deviceName);
   if (error != ERROR_NONE)
@@ -4760,7 +4757,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.errorEntries++;
       }
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return ERROR_NONE;
     }
     else
@@ -4770,10 +4766,12 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                  String_cString(deviceName),
                  Error_getText(error)
                 );
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
   }
+
+  // try to set status done entry info
+  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,deviceName,deviceInfo.size);
 
   // check device block size, get max. blocks in buffer
   if (deviceInfo.blockSize > bufferSize)
@@ -5082,10 +5080,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(directoryName));
 
-  // try to set status done entry info
-  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,directoryName,0LL);
-
-  // get file info, file extended attributes
+  // get file info
   error = File_getFileInfo(directoryName,&fileInfo);
   if (error != ERROR_NONE)
   {
@@ -5097,7 +5092,6 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.errorEntries++;
       }
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return ERROR_NONE;
     }
     else
@@ -5107,10 +5101,14 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
                  String_cString(directoryName),
                  Error_getText(error)
                 );
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
   }
+
+  // try to set status done entry info
+  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,directoryName,0LL);
+
+  // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,directoryName);
   if (error != ERROR_NONE)
@@ -5239,10 +5237,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(linkName));
 
-  // try to set status done entry info
-  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,linkName,0LL);
-
-  // get file info, file extended attributes
+  // get file info
   error = File_getFileInfo(linkName,&fileInfo);
   if (error != ERROR_NONE)
   {
@@ -5254,7 +5249,6 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.errorEntries++;
       }
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return ERROR_NONE;
     }
     else
@@ -5264,10 +5258,14 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
                  String_cString(linkName),
                  Error_getText(error)
                 );
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
   }
+
+  // try to set status done entry info
+  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,linkName,0LL);
+
+  // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,linkName);
   if (error != ERROR_NONE)
@@ -5450,10 +5448,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(StringList_first(nameList,NULL)));
 
-  // try to set status done entry info
-  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,StringList_first(nameList,NULL),fileInfo.size);
-
-  // get file info, file extended attributes
+  // get file info
   error = File_getFileInfo(StringList_first(nameList,NULL),&fileInfo);
   if (error != ERROR_NONE)
   {
@@ -5465,7 +5460,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       {
         createInfo->statusInfo.errorEntries += StringList_count(nameList);
       }
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return ERROR_NONE;
     }
     else
@@ -5475,10 +5469,14 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  String_cString(StringList_first(nameList,NULL)),
                  Error_getText(error)
                 );
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
   }
+
+  // try to set status done entry info
+  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,StringList_first(nameList,NULL),fileInfo.size);
+
+  // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,StringList_first(nameList,NULL));
   if (error != ERROR_NONE)
@@ -5758,9 +5756,6 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
-  // try to set status done entry info
-  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,fileName,0LL);
-
   // get file info, file extended attributes
   error = File_getFileInfo(fileName,&fileInfo);
   if (error != ERROR_NONE)
@@ -5773,7 +5768,6 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       {
         createInfo->statusInfo.errorEntries++;
       }
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return ERROR_NONE;
     }
     else
@@ -5783,10 +5777,14 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
   }
+
+  // try to set status done entry info
+  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,fileName,0LL);
+
+  // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,fileName);
   if (error != ERROR_NONE)
