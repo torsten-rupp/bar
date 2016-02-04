@@ -3214,19 +3214,25 @@ test_dvd_operations: \
 	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
 
 # send command to server
-functionServerCommand = \
+functionServerCommandSocket = \
   $(ECHO) $2; $(ECHO) 1 $2|$(NETCAT) $1|$(TAIL) -n +2
+functionServerCommandBatch = \
+  $(ECHO) 1 $1
 
-.PHONY: test_server_operations
+.PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
 test_server_operations: \
+  test_server_operations_socket \
+  test_server_operations_batch
+
+test_server_operations_socket: \
   $(TEST_BAR) \
   $(TEST_CONFIGURATION) \
   $(TEST_FILES)
-	# create test archive
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	# server
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
+	@
+	# create test archive
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	@
 	( \
 	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -3240,19 +3246,49 @@ test_server_operations: \
 	  sleep 1; \
 	  \
 	  : test commands; \
-          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),VERSION); \
-          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),STATUS); \
-          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),JOB_LIST) >/dev/null; \
-          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),PAUSE time=120 modeMask=ALL); \
-          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),CONTINUE); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),VERSION); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STATUS); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_LIST) >/dev/null; \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=120 modeMask=ALL); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CONTINUE); \
           \
-          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
-          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST maxCount=100 pattern='*'); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST maxCount=100 pattern='*'); \
           \
-          $(call functionServerCommand,localhost $(TEST_SERVER_PORT),QUIT); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
 	  sleep 1; \
 	  \
 	  $(KILL) `cat $(TEST_SERVER_PID_FILE)`; \
+        ) $(if $(QUIET),</dev/null 1>/dev/null)
+
+test_server_operations_batch: \
+  $(TEST_BAR) \
+  $(TEST_CONFIGURATION) \
+  $(TEST_FILES)
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@
+	# create test archive
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	@
+	( \
+          $(call functionServerCommandBatch,VERSION); \
+          $(call functionServerCommandBatch,STATUS); \
+          $(call functionServerCommandBatch,JOB_LIST) >/dev/null; \
+          $(call functionServerCommandBatch,PAUSE time=120 modeMask=ALL); \
+          $(call functionServerCommandBatch,CONTINUE); \
+          \
+          $(call functionServerCommandBatch,INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
+          $(call functionServerCommandBatch,INDEX_UUID_LIST maxCount=100 pattern='*'); \
+          \
+          $(call functionServerCommandBatch,QUIT); \
+        ) | \
+        ( \
+	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+	  DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) \
+	    --batch \
+	    --index-database=$(TEST_SERVER_DATABASE) \
+	    --server-debug; \
         ) $(if $(QUIET),</dev/null 1>/dev/null)
 
 # ----------------------------------------------------------------------------
