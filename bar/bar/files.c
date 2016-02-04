@@ -255,7 +255,7 @@ LOCAL void fileCheckValid(const char       *fileName,
   }
   pthread_mutex_unlock(&debugFileLock);
 
-  assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+  assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
 }
 #endif /* NDEBUG */
 
@@ -307,13 +307,16 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       }
 
       // truncate and seek to start
-      if (FTRUNCATE(fileDescriptor,0) != 0)
+      if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        return ERROR_(CREATE_FILE,errno);
-      }
-      if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
-      {
-        return ERROR_(CREATE_FILE,errno);
+        if (FTRUNCATE(fileDescriptor,0) != 0)
+        {
+          return ERROR_(CREATE_FILE,errno);
+        }
+        if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
+        {
+          return ERROR_(CREATE_FILE,errno);
+        }
       }
 
       fileHandle->index = 0LL;
@@ -328,26 +331,31 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       }
 
       // get file size
-      if (FSEEK(fileHandle->file,0,SEEK_END) == -1)
+      if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        error = ERRORX_(IO_ERROR,errno,NULL);
-        fclose(fileHandle->file);
-        return error;
+        if (FSEEK(fileHandle->file,0,SEEK_END) != 0)
+        {
+          error = ERRORX_(IO_ERROR,errno,NULL);
+          fclose(fileHandle->file);
+          return error;
+        }
+        n = (int64_t)FTELL(fileHandle->file);
+        if (n == (-1LL))
+        {
+          error = ERRORX_(IO_ERROR,errno,NULL);
+          fclose(fileHandle->file);
+          return error;
+        }
+        if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
+        {
+          error = ERRORX_(IO_ERROR,errno,NULL);
+          fclose(fileHandle->file);
+          return error;
+        }
       }
-      n = (int64_t)FTELL(fileHandle->file);
-      if (n == (-1LL))
+      else
       {
-        error = ERRORX_(IO_ERROR,errno,NULL);
-        fclose(fileHandle->file);
-        return error;
-      }
-
-      // seek to start
-      if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
-      {
-        error = ERRORX_(IO_ERROR,errno,NULL);
-        fclose(fileHandle->file);
-        return error;
+        n = 0LL;
       }
 
       fileHandle->index = 0LL;
@@ -362,9 +370,12 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       }
 
       // seek to start
-      if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
+      if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        return ERROR_(CREATE_FILE,errno);
+        if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
+        {
+          return ERROR_(CREATE_FILE,errno);
+        }
       }
 
       fileHandle->index = 0LL;
@@ -378,19 +389,24 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
         return ERROR_(OPEN_FILE,errno);
       }
 
-      // seek to end
-      if (FSEEK(fileHandle->file,0,SEEK_END) != 0)
-      {
-        return ERROR_(CREATE_FILE,errno);
-      }
-
       // get file size
-      n = (int64_t)FTELL(fileHandle->file);
-      if (n == (-1LL))
+      if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        error = ERROR_(IO_ERROR,errno);
-        fclose(fileHandle->file);
-        return error;
+        if (FSEEK(fileHandle->file,0,SEEK_END) != 0)
+        {
+          return ERROR_(CREATE_FILE,errno);
+        }
+        n = (int64_t)FTELL(fileHandle->file);
+        if (n == (-1LL))
+        {
+          error = ERROR_(IO_ERROR,errno);
+          fclose(fileHandle->file);
+          return error;
+        }
+      }
+      else
+      {
+        n = 0LL;
       }
 
       fileHandle->index = (uint64)n;
@@ -408,7 +424,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
     fileHandle->deleteOnCloseFlag = FALSE;
   #endif /* not NDEBUG */
   StringList_init(&fileHandle->lineBufferList);
-  assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+  assert((((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || fileHandle->index == (uint64)FTELL(fileHandle->file)));
 
   #ifndef NDEBUG
     pthread_once(&debugFileInitFlag,debugFileInit);
@@ -1953,7 +1969,7 @@ Errors File_read(FileHandle *fileHandle,
       return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
     }
     fileHandle->index += (uint64)n;
-    assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+    assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
     (*bytesRead) = n;
   }
   else
@@ -1977,7 +1993,7 @@ Errors File_read(FileHandle *fileHandle,
       buffer = (byte*)buffer+n;
       bufferLength -= (ulong)n;
       fileHandle->index += (uint64)n;
-      assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+      assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
     }
   }
 
@@ -2004,7 +2020,7 @@ Errors File_write(FileHandle *fileHandle,
   if (n > 0)
   {
     fileHandle->index += (uint64)n;
-    assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+    assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
   }
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
@@ -2039,7 +2055,7 @@ Errors File_readLine(FileHandle *fileHandle,
       if (ch != EOF)
       {
         fileHandle->index += 1LL;
-        assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+        assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
         if (((char)ch != '\n') && ((char)ch != '\r'))
         {
           String_appendChar(line,ch);
@@ -2060,11 +2076,11 @@ Errors File_readLine(FileHandle *fileHandle,
       if (ch != EOF)
       {
         fileHandle->index += 1LL;
-        assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+        assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
         if (ch != '\n')
         {
           fileHandle->index -= 1LL;
-          assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+          assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
           ungetc(ch,fileHandle->file);
         }
       }
