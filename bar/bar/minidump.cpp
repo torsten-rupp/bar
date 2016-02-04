@@ -44,11 +44,12 @@
 
 /***************************** Variables *******************************/
 #ifdef HAVE_BREAKPAD
-  LOCAL bool               initFlag = FALSE;
-  LOCAL char               minidumpFileName[1024];
-  LOCAL int                minidumpFileDescriptor;
+  LOCAL bool                                initFlag = FALSE;
+  LOCAL char                                minidumpFileName[1024];
+  LOCAL int                                 minidumpFileDescriptor;
   LOCAL google_breakpad::MinidumpDescriptor *minidumpDescriptor;
   LOCAL google_breakpad::ExceptionHandler   *exceptionHandler;
+  LOCAL bool                                crashFlag = FALSE;
 #endif /* HAVE_BREAKPAD */
 
 /****************************** Macros *********************************/
@@ -334,14 +335,17 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
   // output info
   uname(&utsname);
   printString("+++ BAR CRASH DUMP ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-  printString("Dump file   : "); printString(minidumpFileName); printString("\n");
-  printString("Version     : "); printString(VERSION_STRING); printString("\n");
-  printString("OS          : "); printString(utsname.sysname); printString(", "); printString(utsname.release); printString(", "); printString(utsname.machine);  printString("\n");
+  printString("Dump file: "); printString(minidumpFileName); printString("\n");
+  printString("Version  : "); printString(VERSION_STRING); printString("\n");
+  printString("OS       : "); printString(utsname.sysname); printString(", "); printString(utsname.release); printString(", "); printString(utsname.machine);  printString("\n");
   printString("Please send the crash dump file and this information to torsten.rupp@gmx.net\n");
   printString("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 
   // free resources
   close(minidumpFileDescriptor);
+
+  // set crash flag
+  crashFlag = TRUE;
 
   if (IS_DEBUG_TESTCODE("minidump")) exit(EXITCODE_TESTCODE);
 
