@@ -1305,6 +1305,14 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
   // create full-text-search indizes
   error = Database_execute(&newIndexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
+                           "INSERT INTO FTS_storage SELECT id,name FROM storage;"
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_execute(&newIndexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
                            "INSERT INTO FTS_files SELECT id,name FROM files;"
                           );
   if (error != ERROR_NONE)
@@ -1489,7 +1497,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
                              CALLBACK(NULL,NULL),
                              "DELETE FROM meta \
                               WHERE     name=%'S \
-                                    AND rowid NOT IN (SELECT rowid FROM meta WHERE name=%'S ORDER BY rowId DESC LIMIT 0,1); \
+                                    AND (rowid NOT IN (SELECT rowid FROM meta WHERE name=%'S ORDER BY rowId DESC LIMIT 0,1)); \
                              ",
                              name,
                              name
@@ -3689,7 +3697,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                                    STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
                             LEFT JOIN entities ON storage.entityId=entities.id \
-                            WHERE storage.state IN (%S) \
+                            WHERE (storage.state IN (%S)) \
                            ",
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
@@ -4420,6 +4428,7 @@ Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
 
   (*count) = 0;
 
+//Database_debugEnable(1);
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -4427,12 +4436,13 @@ Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
                             FROM storage \
                             WHERE     (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
                                   AND (%d OR REGEXP(%S,0,storage.name)) \
-                                  AND (state IN (%s)) \
+                                  AND (state IN (%S)) \
                            ",
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     String_delete(indexStateSetString);
@@ -4444,9 +4454,10 @@ Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
   String_delete(indexStateSetString);
   (void)Database_getNextRow(&databaseQueryHandle,
                             "%lu",
-                            &count
+                            count
                            );
   Database_finalize(&databaseQueryHandle);
+//Database_debugEnable(0);
 
   // free resources
   String_delete(storageIdsString);
@@ -4528,7 +4539,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                             LEFT JOIN entities ON entities.id=storage.entityId \
                             WHERE     (%d OR (entities.jobUUID='%S')) \
                                   AND (%d OR (storage.entityId=%lld)) \
-                                  AND storage.state IN (%S) \
+                                  AND (storage.state IN (%S)) \
                                   AND %S \
                             ORDER BY storage.created DESC \
                            ",
@@ -4561,7 +4572,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                             LEFT JOIN entities ON entities.id=storage.entityId \
                             WHERE     (%d OR (entities.jobUUID='%S')) \
                                   AND (%d OR (storage.entityId=%lld)) \
-                                  AND storage.state IN (%S) \
+                                  AND (storage.state IN (%S)) \
                                   AND %S \
                             ORDER BY storage.created DESC \
                            ",
@@ -5014,6 +5025,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   // update name
   if (storageName != NULL)
   {
+    // update name
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
@@ -5681,6 +5693,8 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
                         DatabaseId  databaseId
                        )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
   // check init error
@@ -5828,6 +5842,8 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
                          DatabaseId  databaseId
                         )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
   // check init error
@@ -5975,6 +5991,8 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
                              DatabaseId  databaseId
                             )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
   // check init error
@@ -6125,6 +6143,8 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
                         DatabaseId  databaseId
                        )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
   // check init error
@@ -6282,6 +6302,8 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
                             DatabaseId  databaseId
                            )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
   // check init error
@@ -6429,6 +6451,8 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
                            DatabaseId  databaseId
                           )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
 
   // check init error
@@ -6468,8 +6492,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                      uint64      fragmentSize
                     )
 {
-  Errors     error;
-  DatabaseId fileId;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(fileName != NULL);
@@ -6524,31 +6547,12 @@ Errors Index_addFile(IndexHandle *indexHandle,
                            fragmentOffset,
                            fragmentSize
                           );
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    // get file id
-    fileId = Database_getLastRowId(&indexHandle->databaseHandle);
-
-    // add full text search
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "INSERT INTO FTS_files \
-                                ( \
-                                 fileId, \
-                                 name \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lu, \
-                                 %'S \
-                                ); \
-                             ",
-                             fileId,
-                             fileName
-                            );
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addImage(IndexHandle     *indexHandle,
@@ -6561,8 +6565,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                       uint64          blockCount
                      )
 {
-  Errors     error;
-  DatabaseId imageId;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(imageName != NULL);
@@ -6605,31 +6608,12 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                            blockOffset,
                            blockCount
                           );
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    // get image id
-    imageId = Database_getLastRowId(&indexHandle->databaseHandle);
-
-    // add full text search
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "INSERT INTO FTS_images \
-                                ( \
-                                 imageId, \
-                                 name \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lu, \
-                                 %'S \
-                                ); \
-                             ",
-                             imageId,
-                             imageName
-                            );
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
@@ -6643,8 +6627,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                           uint32      permission
                          )
 {
-  Errors     error;
-  DatabaseId directoryId;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(directoryName != NULL);
@@ -6690,31 +6673,12 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                            groupId,
                            permission
                           );
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    // get directory id
-    directoryId = Database_getLastRowId(&indexHandle->databaseHandle);
-
-    // add full text search
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "INSERT INTO FTS_directories \
-                                ( \
-                                 directoryId, \
-                                 name \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lu, \
-                                 %'S \
-                                ); \
-                             ",
-                             directoryId,
-                             directoryName
-                            );
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addLink(IndexHandle *indexHandle,
@@ -6729,8 +6693,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                      uint32      permission
                     )
 {
-  Errors     error;
-  DatabaseId linkId;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(linkName != NULL);
@@ -6782,31 +6745,12 @@ Errors Index_addLink(IndexHandle *indexHandle,
                            groupId,
                            permission
                           );
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    // get link id
-    linkId = Database_getLastRowId(&indexHandle->databaseHandle);
-
-    // add full text search
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "INSERT INTO FTS_links \
-                                ( \
-                                 linkId, \
-                                 name \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lu, \
-                                 %'S \
-                                ); \
-                             ",
-                             linkId,
-                             linkName
-                            );
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addHardLink(IndexHandle *indexHandle,
@@ -6823,8 +6767,7 @@ Errors Index_addHardLink(IndexHandle *indexHandle,
                          uint64      fragmentSize
                         )
 {
-  Errors     error;
-  DatabaseId hardLinkId;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(fileName != NULL);
@@ -6879,31 +6822,12 @@ Errors Index_addHardLink(IndexHandle *indexHandle,
                            fragmentOffset,
                            fragmentSize
                           );
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    // get hard link id
-    hardLinkId = Database_getLastRowId(&indexHandle->databaseHandle);
-
-    // add full text search
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "INSERT INTO FTS_hardLinks \
-                                ( \
-                                 hardLinkId, \
-                                 name \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lu, \
-                                 %'S \
-                                ); \
-                             ",
-                             hardLinkId,
-                             fileName
-                            );
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
@@ -6977,31 +6901,12 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                            minor
                           );
 
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    // get special id
-    specialId = Database_getLastRowId(&indexHandle->databaseHandle);
-
-    // add full text search
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "INSERT INTO FTS_special \
-                                ( \
-                                 specialId, \
-                                 name \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lu, \
-                                 %'S \
-                                ); \
-                             ",
-                             specialId,
-                             name
-                            );
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_assignTo(IndexHandle  *indexHandle,
