@@ -7211,7 +7211,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const StringM
     pauseFlags.indexUpdate = FALSE;
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "continue server\n"
+               "Continue server\n"
               );
   }
 
