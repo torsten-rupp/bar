@@ -281,6 +281,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_done(&storageHandle); });
 
   // open archive
   error = Archive_open(&archiveInfo,
@@ -302,6 +303,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveInfo,{ Archive_close(&archiveInfo); });
   String_set(restoreInfo->statusInfo.storageName,Storage_getPrintableName(storageSpecifier,archiveName));
   restoreInfo->statusInfo.storageDoneBytes  = 0LL;
   restoreInfo->statusInfo.storageTotalBytes = Archive_getSize(&archiveInfo);
