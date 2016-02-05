@@ -8590,7 +8590,7 @@ private static void printTree(Tree tree)
     Group group;
 
     group = new Group(composite,style);
-    group.setText(title);
+    if (title != null) group.setText(title);
     TableLayout tableLayout = new TableLayout(margin);
     group.setLayout(tableLayout);
 
@@ -8616,6 +8616,36 @@ private static void printTree(Tree tree)
   public static Group newGroup(Composite composite, String title)
   {
     return newGroup(composite,title,SWT.NONE);
+  }
+
+  /** new group widget
+   * @param composite composite widget
+   * @param style style
+   * @param margin margin or 0
+   * @return new group widget
+   */
+  public static Group newGroup(Composite composite, int style, int margin)
+  {
+    return newGroup(composite,(String)null,style,margin);
+  }
+
+  /** new group widget
+   * @param composite composite widget
+   * @param style style
+   * @return new group widget
+   */
+  public static Group newGroup(Composite composite, int style)
+  {
+    return newGroup(composite,style,0);
+  }
+
+  /** new group widget
+   * @param composite composite widget
+   * @return new group widget
+   */
+  public static Group newGroup(Composite composite)
+  {
+    return newGroup(composite,SWT.NONE);
   }
 
   //-----------------------------------------------------------------------
