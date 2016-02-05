@@ -17216,7 +17216,6 @@ Errors Server_run(uint             port,
   clientName = String_new();
   while (!quitFlag)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // wait for command
     FD_ZERO(&selectSet);
     if (serverFlag   ) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
@@ -17499,7 +17498,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
   }
   String_delete(clientName);
-fprintf(stderr,"%s, %d: quit?\n",__FILE__,__LINE__);
 
   // disconnect all clients
   while (!List_isEmpty(&clientList))
@@ -17509,7 +17507,6 @@ fprintf(stderr,"%s, %d: quit?\n",__FILE__,__LINE__);
     Network_disconnect(&clientNode->clientInfo.network.socketHandle);
     deleteClient(clientNode);
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // wait for thread exit
   Semaphore_setEnd(&jobList.lock);
@@ -17521,17 +17518,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
     Thread_join(&indexThread);
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&remoteThread);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&remoteConnectThread);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&pauseThread);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&schedulerThread);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&jobThread);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // done server
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);
