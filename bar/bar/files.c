@@ -383,7 +383,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       break;
     case FILE_OPEN_APPEND:
       // open file from descriptor
-      fileHandle->file = fdopen(fileDescriptor,"a+b");
+      fileHandle->file = fdopen(fileDescriptor,"ab");
       if (fileHandle->file == NULL)
       {
         return ERROR_(OPEN_FILE,errno);
