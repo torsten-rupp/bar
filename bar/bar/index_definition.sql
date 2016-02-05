@@ -8,6 +8,7 @@ VERSION = 6;
 PRAGMA foreign_keys = ON;
 PRAGMA auto_vacuum = INCREMENTAL;
 
+// --- meta ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meta(
   name  TEXT UNIQUE,
   value TEXT
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS meta(
 INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$version);
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
+// --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
   id              INTEGER PRIMARY KEY,
   jobUUID         TEXT NOT NULL,
@@ -26,6 +28,7 @@ CREATE TABLE IF NOT EXISTS entities(
 );
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (0,'','',0,0,0,0);
 
+// --- storage ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage(
   id              INTEGER PRIMARY KEY,
   entityId        INTEGER,
@@ -41,7 +44,29 @@ CREATE TABLE IF NOT EXISTS storage(
   // FOREIGN KEY(entityId) REFERENCES entities(id)
 );
 CREATE INDEX IF NOT EXISTS storagesIndex ON storage (entityId,name);
+CREATE VIRTUAL TABLE FTS_storage USING FTS4(
+  storageId,
+  name,
 
+  notindexed=storageId,
+//  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
+  tokenize=unicode61
+);
+CREATE TRIGGER storageInsert AFTER INSERT ON storage
+  BEGIN
+    INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
+  END;
+CREATE TRIGGER storageDelete BEFORE DELETE ON storage
+  BEGIN
+    DELETE FROM FTS_storage WHERE storageId = OLD.id;
+  END;
+CREATE TRIGGER storageUpdate AFTER UPDATE OF name ON storage
+  BEGIN
+    DELETE FROM FTS_storage WHERE storageId = OLD.id;
+    INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
+  END;
+
+// --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS files(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
@@ -67,7 +92,21 @@ CREATE VIRTUAL TABLE FTS_files USING FTS4(
 //  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
   tokenize=unicode61
 );
+CREATE TRIGGER fileInsert AFTER INSERT ON files
+  BEGIN
+    INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
+  END;
+CREATE TRIGGER fileDelete BEFORE DELETE ON files
+  BEGIN
+    DELETE FROM FTS_files WHERE fileId = OLD.id;
+  END;
+CREATE TRIGGER fileUpdate AFTER UPDATE OF name ON files
+  BEGIN
+    DELETE FROM FTS_files WHERE fileId = OLD.id;
+    INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
+  END;
 
+// --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS images(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
@@ -88,7 +127,21 @@ CREATE VIRTUAL TABLE FTS_images USING FTS4(
   notindexed=imageId,
   tokenize=unicode61
 );
+CREATE TRIGGER imageInsert AFTER INSERT ON images
+  BEGIN
+    INSERT INTO FTS_images VALUES (NEW.id,NEW.name);
+  END;
+CREATE TRIGGER imageDelete BEFORE DELETE ON images
+  BEGIN
+    DELETE FROM FTS_images WHERE imageId = OLD.id;
+  END;
+CREATE TRIGGER imageUpdate AFTER UPDATE OF name ON images
+  BEGIN
+    DELETE FROM FTS_images WHERE imageId = OLD.id;
+    INSERT INTO FTS_images VALUES (NEW.id,NEW.name);
+  END;
 
+// --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directories(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
@@ -110,7 +163,21 @@ CREATE VIRTUAL TABLE FTS_directories USING FTS4(
   notindexed=directoryId,
   tokenize=unicode61
 );
+CREATE TRIGGER directoryInsert AFTER INSERT ON directories
+  BEGIN
+    INSERT INTO FTS_directories VALUES (NEW.id,NEW.name);
+  END;
+CREATE TRIGGER directoryDelete BEFORE DELETE ON directories
+  BEGIN
+    DELETE FROM FTS_directories WHERE directoryId = OLD.id;
+  END;
+CREATE TRIGGER directoryUpdate AFTER UPDATE OF name ON directories
+  BEGIN
+    DELETE FROM FTS_directories WHERE directoryId = OLD.id;
+    INSERT INTO FTS_directories VALUES (NEW.id,NEW.name);
+  END;
 
+// --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS links(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
@@ -133,7 +200,21 @@ CREATE VIRTUAL TABLE FTS_links USING FTS4(
   notindexed=linkId,
   tokenize=unicode61
 );
+CREATE TRIGGER linkInsert AFTER INSERT ON links
+  BEGIN
+    INSERT INTO FTS_links VALUES (NEW.id,NEW.name);
+  END;
+CREATE TRIGGER linkDelete BEFORE DELETE ON links
+  BEGIN
+    DELETE FROM FTS_links WHERE linkId = OLD.id;
+  END;
+CREATE TRIGGER linkUpdate AFTER UPDATE OF name ON links
+  BEGIN
+    DELETE FROM FTS_links WHERE linkId = OLD.id;
+    INSERT INTO FTS_links VALUES (NEW.id,NEW.name);
+  END;
 
+// --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinks(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
@@ -158,7 +239,21 @@ CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
   notindexed=hardlinkId,
   tokenize=unicode61
 );
+CREATE TRIGGER hardlinkInsert AFTER INSERT ON hardlinks
+  BEGIN
+    INSERT INTO FTS_hardlinks VALUES (NEW.id,NEW.name);
+  END;
+CREATE TRIGGER hardlinkDelete BEFORE DELETE ON hardlinks
+  BEGIN
+    DELETE FROM FTS_hardlinks WHERE hardlinkId = OLD.id;
+  END;
+CREATE TRIGGER hardlinkUpdate AFTER UPDATE OF name ON hardlinks
+  BEGIN
+    DELETE FROM FTS_hardlinks WHERE hardlinkId = OLD.id;
+    INSERT INTO FTS_hardlinks VALUES (NEW.id,NEW.name);
+  END;
 
+// --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS special(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER,
@@ -183,6 +278,19 @@ CREATE VIRTUAL TABLE FTS_special USING FTS4(
   notindexed=specialId,
   tokenize=unicode61
 );
+CREATE TRIGGER specialInsert AFTER INSERT ON special
+  BEGIN
+    INSERT INTO FTS_special VALUES (NEW.id,NEW.name);
+  END;
+CREATE TRIGGER specialDelete BEFORE DELETE ON special
+  BEGIN
+    DELETE FROM FTS_special WHERE specialId = OLD.id;
+  END;
+CREATE TRIGGER specialUpdate AFTER UPDATE OF name ON special
+  BEGIN
+    DELETE FROM FTS_special WHERE specialId = OLD.id;
+    INSERT INTO FTS_special VALUES (NEW.id,NEW.name);
+  END;
 
 /*
 
