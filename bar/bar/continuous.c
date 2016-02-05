@@ -19,6 +19,7 @@
 #ifdef HAVE_SYS_INOTIFY_H
   #include <sys/inotify.h>
 #endif
+#include <signal.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -1525,6 +1526,8 @@ LOCAL void continuousInitThreadCode(void)
   }
 
   // free resources
+  String_delete(basePath);
+  StringList_done(&nameList);
 }
 
 /***********************************************************************\
@@ -1600,6 +1603,9 @@ LOCAL void continuousThreadCode(void)
 
   void                       *buffer;
   String                     name;
+  sigset_t                   signalMask;
+  fd_set                     selectSet;
+  struct timespec            selectTimeout;
   ssize_t                    n;
   const struct inotify_event *inotifyEvent;
   SemaphoreLock              semaphoreLock;
@@ -1615,15 +1621,38 @@ LOCAL void continuousThreadCode(void)
   }
   name = String_new();
 
+  // Note: ignore SIGALRM in pselect()
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask,SIGALRM);
+
   while (!quitFlag)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // read inotify events
+    n = 0;
     do
     {
-      n = read(inotifyHandle,buffer,BUFFER_SIZE);
+      // wait for event or timeout
+      FD_ZERO(&selectSet);
+      FD_SET(inotifyHandle,&selectSet);
+      selectTimeout.tv_sec  = 10L;
+      selectTimeout.tv_nsec = 0L;
+      if (pselect(FD_SETSIZE,&selectSet,NULL,NULL,&selectTimeout,&signalMask) < 0)
+      {
+        FD_ZERO(&selectSet);
+      }
+
+      // read events
+      if (FD_ISSET(inotifyHandle,&selectSet))
+      {
+        n = read(inotifyHandle,buffer,BUFFER_SIZE);
+      }
 //fprintf(stderr,"%s, %d: xxxxxx inotifyHandle=%d n=%d: %d %s\n",__FILE__,__LINE__,inotifyHandle,n,errno,strerror(errno));
     }
-    while ((n == -1) && ((errno == EAGAIN) || (errno == EINTR)));
+    while ((n == -1) && ((errno == EAGAIN) || (errno == EINTR)) && !quitFlag);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    if (quitFlag) break;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // process inotify events
     inotifyEvent = (const struct inotify_event*)buffer;
