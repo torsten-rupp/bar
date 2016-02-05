@@ -3554,7 +3554,7 @@ LOCAL void remoteConnectThreadCode(void)
   uint64            restBytes;
   uint64            restStorageBytes;
   ulong             estimatedRestTime;
-  uint         sleepTime;
+  uint              sleepTime;
 
   /***********************************************************************\
   * Name   : freeRemoteJobInfoNode
@@ -3736,6 +3736,7 @@ LOCAL void remoteThreadCode(void)
   uint64            restBytes;
   uint64            restStorageBytes;
   ulong             estimatedRestTime;
+  uint              sleepTime;
 
   /***********************************************************************\
   * Name   : parseJobState
@@ -3913,8 +3914,13 @@ LOCAL void remoteThreadCode(void)
       }
     }
 
-    // sleep
-    Misc_udelay(SLEEP_TIME_REMOTE_THREAD*MISC_US_PER_SECOND);
+    // sleep, check quit flag
+    sleepTime = 0;
+    while ((sleepTime < SLEEP_TIME_REMOTE_THREAD) && !quitFlag)
+    {
+      Misc_udelay(10LL*MISC_US_PER_SECOND);
+      sleepTime += 10;
+    }
   }
 
   // free resources
@@ -17210,6 +17216,7 @@ Errors Server_run(uint             port,
   clientName = String_new();
   while (!quitFlag)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // wait for command
     FD_ZERO(&selectSet);
     if (serverFlag   ) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
@@ -17492,6 +17499,7 @@ Errors Server_run(uint             port,
     }
   }
   String_delete(clientName);
+fprintf(stderr,"%s, %d: quit?\n",__FILE__,__LINE__);
 
   // disconnect all clients
   while (!List_isEmpty(&clientList))
@@ -17501,6 +17509,7 @@ Errors Server_run(uint             port,
     Network_disconnect(&clientNode->clientInfo.network.socketHandle);
     deleteClient(clientNode);
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // wait for thread exit
   Semaphore_setEnd(&jobList.lock);
@@ -17512,11 +17521,17 @@ Errors Server_run(uint             port,
     }
     Thread_join(&indexThread);
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&remoteThread);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&remoteConnectThread);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&pauseThread);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&schedulerThread);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_join(&jobThread);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // done server
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);
@@ -17542,6 +17557,7 @@ Errors Server_run(uint             port,
   Semaphore_done(&jobList.lock);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   AutoFree_done(&autoFreeList);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -17564,21 +17580,23 @@ Errors Server_batch(int inputDescriptor,
   if (error != ERROR_NONE)
   {
     fprintf(stderr,
-            "Cannot initialize input: %s!\n",
+            "ERROR: Cannot initialize input (error: %s)!\n",
             Error_getText(error)
            );
     return error;
   }
-  error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPEN_WRITE|FILE_STREAM);
+  error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPEN_APPEND|FILE_STREAM);
+fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,error);
   if (error != ERROR_NONE)
   {
     fprintf(stderr,
-            "Cannot initialize output: %s!\n",
+            "ERROR: Cannot initialize output (error: %s)!\n",
             Error_getText(error)
            );
     File_close(&inputFileHandle);
     return error;
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // init client
   initClient(&clientInfo);
