@@ -3242,21 +3242,29 @@ test_server_operations_socket: \
 	    --pid-file=$(TEST_SERVER_PID_FILE) \
 	    --server-port=$(TEST_SERVER_PORT) \
 	    --index-database=$(TEST_SERVER_DATABASE) \
-	    --server-debug; \
-	  sleep 1; \
+	    --server-debug \
+            ; \
+	  $(SLEEP) 60; \
 	  \
 	  : test commands; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),VERSION); \
+	  $(SLEEP) 2; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STATUS); \
+	  $(SLEEP) 2; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_LIST) >/dev/null; \
+	  $(SLEEP) 2; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=120 modeMask=ALL); \
+	  $(SLEEP) 2; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CONTINUE); \
+	  $(SLEEP) 2; \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
+	  $(SLEEP) 2; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST maxCount=100 pattern='*'); \
+	  $(SLEEP) 2; \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
-	  sleep 1; \
+	  $(SLEEP) 2; \
 	  \
 	  $(KILL) `cat $(TEST_SERVER_PID_FILE)`; \
         ) $(if $(QUIET),</dev/null 1>/dev/null)
@@ -3353,7 +3361,7 @@ gcov5 gcov_split: \
 
 gcov6 gcov_image: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 TEST_IMAGE_OPERATIONS="test_image_operations_raw test_image_operations_ext2 test_image_operations_fat16 test_image_operations_reiserfs1" \
+	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 TEST_IMAGE_OPERATIONS="test_image_operations_raw test_image_operations_ext2 test_image_operations_fat16 test_image_operations_reiserfs3" \
           test_image
 
 gcov7 gcov_storage: \
