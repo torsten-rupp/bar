@@ -17548,7 +17548,11 @@ Errors Server_run(uint             port,
   Semaphore_done(&jobList.lock);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   AutoFree_done(&autoFreeList);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Server quit\n"
+            );
 
   return ERROR_NONE;
 }
