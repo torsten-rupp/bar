@@ -3062,10 +3062,27 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       }
       if (n <= 0)
       {
-        printError("No matching entry found for '%s'!\n",
-                   String_cString(includeEntryNode->string)
-                  );
-        createInfo->failError = ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(includeEntryNode->string));
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_MISSING,"No matching entry found for '%s'\n",String_cString(includeEntryNode->string));
+
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        {
+          createInfo->statusInfo.skippedEntries++;
+          updateStatusInfo(createInfo);
+        }
+
+        if (createInfo->jobOptions->skipUnreadableFlag)
+        {
+          printWarning("No matching entry found for '%s' - skipped\n",
+                       String_cString(includeEntryNode->string)
+                      );
+        }
+        else
+        {
+          printError("No matching entry found for '%s'!\n",
+                     String_cString(includeEntryNode->string)
+                    );
+          createInfo->failError = ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(includeEntryNode->string));
+        }
       }
 
       // next include entry
