@@ -13926,13 +13926,13 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   }
   if (!StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     String_delete(storagePatternString);
     return;
   }
   if (!StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
     String_delete(storagePatternString);
     return;
   }
@@ -14022,6 +14022,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       String_set(printableStorageName,storageName);
     }
 
+fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(printableStorageName),archiveType);
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                      "storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu entries=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                      storageId,
