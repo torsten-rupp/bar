@@ -5526,7 +5526,7 @@ LOCAL bool decodeHex(const char *s, byte *data, uint *dataLength, uint maxDataLe
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool decryptPassword(Password *password, const ClientInfo *clientInfo, const String encryptType, const String encryptedPassword)
+LOCAL bool decryptPassword(Password *password, const ClientInfo *clientInfo, ConstString encryptType, ConstString encryptedPassword)
 {
   byte encryptedBuffer[1024];
   uint encryptedBufferLength;
