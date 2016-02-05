@@ -402,7 +402,14 @@ class ValueMap extends HashMap<String,Object>
             return (T)enumConstant;
           }
         }
-        throw new IllegalArgumentException("unknown enum value '"+value+"' for "+name);
+        if (defaultValue != null)
+        {
+          return defaultValue;
+        }
+        else
+        {
+          throw new IllegalArgumentException("unknown enum value '"+value+"' for "+name);
+        }
       }
       else
       {
@@ -426,7 +433,7 @@ class ValueMap extends HashMap<String,Object>
   public <T extends Enum<T>> T getEnum(String name, Class<T> type)
     throws IllegalArgumentException
   {
-    return getEnum(name,type,null);
+    return getEnum(name,type,(T)null);
   }
 
   /** convert to string
