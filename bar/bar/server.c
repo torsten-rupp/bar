@@ -6045,6 +6045,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
   }
@@ -11593,26 +11594,27 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
   }
 
-  // decrypt password
+  // decrypt password and add to list
   Password_init(&password);
   if (!decryptPassword(&password,clientInfo,encryptType,encryptedPassword))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
     Password_done(&password);
+    String_delete(encryptedPassword);
     String_delete(encryptType);
+    return;
   }
-
-  // add to decrypt password list
   Archive_appendDecryptPassword(&password);
+  Password_done(&password);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  Password_done(&password);
   String_delete(encryptedPassword);
   String_delete(encryptType);
 }
@@ -11651,6 +11653,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
   }
@@ -11660,7 +11663,9 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
   if (!decryptPassword(clientInfo->jobOptions.ftpServer.password,clientInfo,encryptType,encryptedPassword))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
+    return;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -11704,6 +11709,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
   }
@@ -11713,7 +11719,9 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
   if (!decryptPassword(clientInfo->jobOptions.sshServer.password,clientInfo,encryptType,encryptedPassword))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
+    return;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -11757,6 +11765,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const S
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
   }
@@ -11766,7 +11775,9 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const S
   if (!decryptPassword(clientInfo->jobOptions.webDAVServer.password,clientInfo,encryptType,encryptedPassword))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
+    return;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -11819,6 +11830,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
   }
@@ -11856,6 +11868,8 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
     if (!decryptPassword(clientInfo->jobOptions.cryptPassword,clientInfo,encryptType,encryptedPassword))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
+      String_delete(encryptedPassword);
+      String_delete(encryptType);
       return;
     }
   }
