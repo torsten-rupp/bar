@@ -1627,7 +1627,6 @@ LOCAL void continuousThreadCode(void)
 
   while (!quitFlag)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // read inotify events
     n = 0;
     do
@@ -1650,13 +1649,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //fprintf(stderr,"%s, %d: xxxxxx inotifyHandle=%d n=%d: %d %s\n",__FILE__,__LINE__,inotifyHandle,n,errno,strerror(errno));
     }
     while ((n == -1) && ((errno == EAGAIN) || (errno == EINTR)) && !quitFlag);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (quitFlag) break;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // process inotify events
     inotifyEvent = (const struct inotify_event*)buffer;
-    while (n > 0)
+    while ((n > 0) && !quitFlag)
     {
 //fprintf(stderr,"%s, %d: n=%d\n",__FILE__,__LINE__,n);
       if (inotifyEvent->len > 0)
