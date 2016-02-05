@@ -3248,15 +3248,21 @@ test_server_operations_socket: \
 	  \
 	  : test commands; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),VERSION); \
-	  $(SLEEP) 2; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STATUS); \
-	  $(SLEEP) 2; \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_LIST) >/dev/null; \
-	  $(SLEEP) 2; \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=120 modeMask=ALL); \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_LIST); \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=30 modeMask=ALL); \
 	  $(SLEEP) 2; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CONTINUE); \
-	  $(SLEEP) 2; \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_CLEAR); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),WEBDAV_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CRYPT_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
 	  $(SLEEP) 2; \
@@ -3264,9 +3270,7 @@ test_server_operations_socket: \
 	  $(SLEEP) 2; \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
-	  $(SLEEP) 2; \
-	  \
-	  $(KILL) `cat $(TEST_SERVER_PID_FILE)`; \
+	  $(SLEEP) 60; \
         ) $(if $(QUIET),</dev/null 1>/dev/null)
 
 test_server_operations_batch: \
@@ -3282,14 +3286,25 @@ test_server_operations_batch: \
 	( \
           $(call functionServerCommandBatch,VERSION); \
           $(call functionServerCommandBatch,STATUS); \
-          $(call functionServerCommandBatch,JOB_LIST) >/dev/null; \
+          \
+          $(call functionServerCommandBatch,JOB_LIST); \
+          \
           $(call functionServerCommandBatch,PAUSE time=120 modeMask=ALL); \
           $(call functionServerCommandBatch,CONTINUE); \
+          \
+          $(call functionServerCommandBatch,DECRYPT_PASSWORD_CLEAR); \
+          $(call functionServerCommandBatch,DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch,FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch,SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch,WEBDAV_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch,CRYPT_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch,PASSWORDS_CLEAR); \
           \
           $(call functionServerCommandBatch,INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
           $(call functionServerCommandBatch,INDEX_UUID_LIST maxCount=100 pattern='*'); \
           \
           $(call functionServerCommandBatch,QUIT); \
+	  $(SLEEP) 60; \
         ) | \
         ( \
 	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
