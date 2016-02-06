@@ -13731,6 +13731,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            storagePattern=<pattern>
 *            indexStateSet=<state set>|*
 *          Result:
 *            count=<n>
@@ -14915,8 +14916,8 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 * Return : -
 * Notes  : Arguments:
 *            entryPattern=<text>
-*            type=<text>
-*            isNewestEntriesOnly=0|1
+*            indexType=<text>
+*            newestEntriesOnly=yes|no
 *            entryMaxCount=<n>|0
 *          Result:
 *            count=<n>
@@ -15009,8 +15010,9 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
 * Notes  : Arguments:
 *            entryPattern=<text>
 *            indexType=<text>
-*            isNewestEntriesOnly=0|1
-*            entryMaxCount=<n>|0
+*            newestEntriesOnly=yes|no
+*            offset=<n>
+*            limit=<n>
 *          Result:
 *            entryType=FILE entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
