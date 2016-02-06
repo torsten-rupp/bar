@@ -2987,6 +2987,15 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE("initAll3") { Crypt_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Crypt_initAll,{ Crypt_doneAll(); });
 
+  error = EntryList_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE("initAll5") { EntryList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,EntryList_initAll,{ EntryList_doneAll(); });
+
   error = Pattern_initAll();
   if (error != ERROR_NONE)
   {
@@ -3228,6 +3237,7 @@ LOCAL void doneAll(void)
   Chunk_doneAll();
   PatternList_doneAll();
   Pattern_doneAll();
+  EntryList_doneAll();
   Crypt_doneAll();
   Compress_doneAll();
   Password_doneAll();
