@@ -1519,7 +1519,8 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --help 1>/dev/null $(if $(QUIET),</dev/null 1>/dev/null))
 	#
 	# special file names
-	$(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar not-existing-file-%d%f%p%s.dat $(if $(QUIET),</dev/null 1>/dev/null))	
+	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar not-existing-file-%d%f%p%s.dat $(if $(QUIET),</dev/null 1>/dev/null))	
+	$(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar not-existing-file-%d%f%p%s.dat --skip-unreadable=no $(if $(QUIET),</dev/null 1>/dev/null))	
 	#
 	# different options
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
@@ -3250,7 +3251,22 @@ test_server_operations_socket: \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),VERSION); \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STATUS); \
           \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_GET name=tmp-directory); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_SET name=tmp-directory value=/tmp); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_FLUSH); \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEVICE_LIST); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ROOT_LIST); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FILE_LIST directory=/tmp); \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_LIST); \
+echo          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=123); \
+echo          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MOUNT_LIST jobUUID=123); \
+echo          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST jobUUID=123); \
+echo          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST); \
+echo          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SOURCE_LIST jobUUID=123); \
+echo          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST jobUUID=123); \
+echo          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ARCHIVE_LIST name=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=30 modeMask=ALL); \
 	  $(SLEEP) 2; \
@@ -3261,13 +3277,26 @@ test_server_operations_socket: \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),WEBDAV_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CRYPT_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CRYPT_PASSWORD jobUUID=test encryptType=NONE encryptedPassword=test); \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STORAGE_LIST_CLEAR); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STORAGE_LIST_ADD uuid='*' enityId=0 storageId=0); \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
 	  $(SLEEP) 2; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST maxCount=100 pattern='*'); \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGES_INFO storagePattern='*' indexStateSet='*'); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST entityId=0 storagePattern='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100 maxCount=100); \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRIES_INFO entryPattern='*' indexType='*' newestEntriesOnly=yes entryMaxCount=100); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST entryPattern='*' indexType='*' newestEntriesOnly=yes offset=0 limit=100); \
 	  $(SLEEP) 2; \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_STATISTICS); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_MEMORY_INFO); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
 	  $(SLEEP) 60; \
@@ -3323,6 +3352,8 @@ test_server_operations_batch: \
 .PHONY: gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 gcov8 gcov9 gcov10
 .PHONY: gcov_basic gcov_compress gcov_crypt gcov_asymmetric_crypt gcov_split gcov_image gcov_storage gcov_server gcov_parameters gcov_misc
 gcov coverage:
+	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
+	@$(call functionVerifyParameter,TEST_PASSWORD_SSH,parameter TEST_PASSWORD_SSH nor TEST_PASSWORD set) 
 	$(MAKE) QUIET=1 --no-print-directory -s \
           $(if $(CHECK),\
             gcov$(CHECK),\
