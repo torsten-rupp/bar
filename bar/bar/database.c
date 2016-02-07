@@ -77,6 +77,39 @@ typedef union
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
+xxx
+  #define DATABASE_LOCK(databaseHandle) \
+    do \
+    { \
+      sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
+      databaseHandle->lockedLineNb = __LINE__; \
+    } \
+    while (0)
+
+  #define DATABASE_UNLOCK(databaseHandle) \
+    do \
+    { \
+      databaseHandle->lockedLineNb = 0; \
+      sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)); \
+    } \
+    while (0)
+#else /* NDEBUG */
+  #define DATABASE_LOCK(databaseHandle) \
+    do \
+    { \
+      sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
+    } \
+    while (0)
+
+  #define DATABASE_UNLOCK(databaseHandle) \
+    do \
+    { \
+      sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)); \
+    } \
+    while (0)
+#endif /* not NDEBUG */
+
+#ifndef NDEBUG
   #define DATABASE_DEBUG_SQL(databaseHandle,sqlString) \
     do \
     { \
@@ -1040,11 +1073,11 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
 
   // select rows in from-table
   BLOCK_DOX(error,
-            { sqlite3_mutex_enter(sqlite3_db_mutex(fromDatabaseHandle->handle));
-              sqlite3_mutex_enter(sqlite3_db_mutex(toDatabaseHandle->handle));
+            { DATABASE_LOCK(fromDatabaseHandle);
+              DATABASE_LOCK(toDatabaseHandle);
             },
-            { sqlite3_mutex_leave(sqlite3_db_mutex(fromDatabaseHandle->handle));
-              sqlite3_mutex_enter(sqlite3_db_mutex(toDatabaseHandle->handle));
+            { DATABASE_UNLOCK(fromDatabaseHandle);
+              DATABASE_UNLOCK(toDatabaseHandle);
             },
   {
     // create select statement
@@ -1511,8 +1544,8 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   sqlString = String_new();
   value     = String_new();
   BLOCK_DOX(error,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+            DATABASE_LOCK(databaseHandle),
+            DATABASE_UNLOCK(databaseHandle),
   {
     // create new table
     formatSQLString(String_clear(sqlString),"CREATE TABLE IF NOT EXISTS __new__(");
@@ -1708,8 +1741,8 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+            DATABASE_LOCK(databaseHandle),
+            DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     databaseRowCallback.function = databaseRowFunction;
@@ -1803,8 +1836,8 @@ return 0;
 
   // prepare SQL command execution
   error = ERROR_NONE;
-  BLOCK_DO(sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-           sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+  BLOCK_DO(DATABASE_LOCK(databaseHandle),
+           DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
 #if 0
@@ -1892,8 +1925,8 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 
   va_start(arguments,format);
   BLOCK_DOX(result,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
+            DATABASE_LOCK(databaseQueryHandle->databaseHandle),
+            DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
@@ -2134,8 +2167,8 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,sizeof(DatabaseQueryHandle));
   #endif /* NDEBUG */
 
-  BLOCK_DO(sqlite3_mutex_enter(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
-           sqlite3_mutex_leave(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
+  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle),
+           DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     sqlite3_finalize(databaseQueryHandle->handle);
   });
@@ -2186,8 +2219,8 @@ bool Database_exists(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(existsFlag,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+            DATABASE_LOCK(databaseHandle),
+            DATABASE_UNLOCK(databaseHandle),
   {
     bool existsFlag = FALSE;
 
@@ -2259,8 +2292,8 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+            DATABASE_LOCK(databaseHandle),
+            DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
     sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
@@ -2340,8 +2373,8 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     va_end(arguments);
   }
   BLOCK_DOX(error,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+            DATABASE_LOCK(databaseHandle),
+            DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
     sqliteResult = sqlite3_exec(databaseHandle->handle,
@@ -2378,8 +2411,8 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                     value
                    );
     BLOCK_DOX(error,
-              sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-              sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+              DATABASE_LOCK(databaseHandle),
+              DATABASE_UNLOCK(databaseHandle),
     {
       DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
       sqliteResult = sqlite3_exec(databaseHandle->handle,
@@ -2457,8 +2490,8 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+            DATABASE_LOCK(databaseHandle),
+            DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"get string",sqlString);
     sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
@@ -2537,8 +2570,8 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+            DATABASE_LOCK(databaseHandle),
+            DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"set string",sqlString);
     sqliteResult = sqlite3_exec(databaseHandle->handle,
@@ -2582,8 +2615,8 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
   assert(databaseHandle->handle != NULL);
 
   databaseId = DATABASE_ID_NONE;
-  BLOCK_DO(sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
-           sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
+  BLOCK_DO(DATABASE_LOCK(databaseHandle),
+           DATABASE_UNLOCK(databaseHandle),
   {
     databaseId = (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);
   });
