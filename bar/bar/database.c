@@ -525,6 +525,29 @@ LOCAL void freeColumnNode(DatabaseColumnNode *columnNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
+  switch (columnNode->type)
+  {
+    case DATABASE_TYPE_PRIMARY_KEY:
+      break;
+    case DATABASE_TYPE_INT64:
+      break;
+    case DATABASE_TYPE_DOUBLE:
+      break;
+    case DATABASE_TYPE_DATETIME:
+      break;
+    case DATABASE_TYPE_TEXT:
+      String_delete(columnNode->value.text);
+      break;
+    case DATABASE_TYPE_BLOB:
+//TODO: blob
+      HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; // not reached
+    #endif /* NDEBUG */
+  }
   free(columnNode->name);
 }
 
@@ -600,6 +623,8 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
     {
       type2 = NULL;
     }
+#warning xxxx
+type2=NULL;
 
     columnNode = LIST_NEW_NODE(DatabaseColumnNode);
     if (columnNode == NULL)
@@ -617,24 +642,32 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
       {
         if (primaryKey)
         {
-          columnNode->type = DATABASE_TYPE_PRIMARY_KEY;
+          columnNode->type     = DATABASE_TYPE_PRIMARY_KEY;
+          columnNode->value.id = 0LL;
         }
         else
         {
-          columnNode->type = DATABASE_TYPE_INT64;
+          columnNode->type    = DATABASE_TYPE_INT64;
+//          columnNode->value.i = 0LL;
+          columnNode->value.i = String_new();
         }
       }
       else if (stringEqualsIgnoreCase(type2,"REAL"))
       {
-        columnNode->type = DATABASE_TYPE_DOUBLE;
+        columnNode->type    = DATABASE_TYPE_DOUBLE;
+//        columnNode->value.d = 0.0;
+          columnNode->value.d = String_new();
       }
       else if (stringEqualsIgnoreCase(type2,"TEXT"))
       {
-        columnNode->type = DATABASE_TYPE_TEXT;
+        columnNode->type       = DATABASE_TYPE_TEXT;
+        columnNode->value.text = String_new();
       }
       else if (stringEqualsIgnoreCase(type2,"BLOB"))
       {
-        columnNode->type = DATABASE_TYPE_BLOB;
+        columnNode->type              = DATABASE_TYPE_BLOB;
+        columnNode->value.blob.data   = NULL;
+        columnNode->value.blob.length = 0;
       }
       else
       {
@@ -649,24 +682,32 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
       {
         if (primaryKey)
         {
-          columnNode->type = DATABASE_TYPE_PRIMARY_KEY;
+          columnNode->type     = DATABASE_TYPE_PRIMARY_KEY;
+          columnNode->value.id = 0LL;
         }
         else
         {
-          columnNode->type = DATABASE_TYPE_INT64;
+          columnNode->type    = DATABASE_TYPE_INT64;
+//          columnNode->value.i = 0LL;
+          columnNode->value.d = String_new();
         }
       }
       else if (stringEqualsIgnoreCase(type1,"REAL"))
       {
-        columnNode->type = DATABASE_TYPE_DOUBLE;
+        columnNode->type    = DATABASE_TYPE_DOUBLE;
+//        columnNode->value.d = 0.0;
+        columnNode->value.d = String_new();
       }
       else if (stringEqualsIgnoreCase(type1,"TEXT"))
       {
-        columnNode->type = DATABASE_TYPE_TEXT;
+        columnNode->type       = DATABASE_TYPE_TEXT;
+        columnNode->value.text = String_new();
       }
       else if (stringEqualsIgnoreCase(type1,"BLOB"))
       {
-        columnNode->type = DATABASE_TYPE_BLOB;
+        columnNode->type              = DATABASE_TYPE_BLOB;
+        columnNode->value.blob.data   = NULL;
+        columnNode->value.blob.length = 0;
       }
       else
       {
@@ -726,9 +767,11 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
     case DATABASE_TYPE_BLOB:
       string = "BLOB";
       break;
-    default:
-      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      break; // not reached
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; // not reached
+    #endif /* NDEBUG */
   }
 
   return string;
@@ -924,6 +967,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
   sqlite3_stmt       *fromHandle,*toHandle;
   int                sqliteResult;
   uint               n;
+  DatabaseColumnNode *toColumnNode;
   DatabaseId         lastRowId;
 
   assert(fromDatabaseHandle != NULL);
@@ -945,17 +989,14 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     return error;
   }
 
-  // create SQL statements
+  // create SQL select statement string
   sqlSelectString = formatSQLString(String_new(),"SELECT ");
   n = 0;
   LIST_ITERATE(&fromColumnList,columnNode)
   {
-    if (findTableColumnNode(&toColumnList,columnNode->name) != NULL)
-    {
-      if (n > 0) String_appendChar(sqlSelectString,',');
-      String_appendCString(sqlSelectString,columnNode->name);
-      n++;
-    }
+    if (n > 0) String_appendChar(sqlSelectString,',');
+    String_appendCString(sqlSelectString,columnNode->name);
+    n++;
   }
   formatSQLString(sqlSelectString," FROM %s",tableName);
   if (fromAdditional != NULL)
@@ -969,7 +1010,9 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     va_end(arguments);
   }
   String_appendCString(sqlSelectString,";");
+//fprintf(stderr,"%s, %d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sqlSelectString));
 
+  // create SQL insert statement string
   sqlInsertString = formatSQLString(String_new(),"INSERT INTO %s (",tableName);
   n = 0;
   LIST_ITERATE(&toColumnList,columnNode)
@@ -993,6 +1036,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     }
   }
   String_appendCString(sqlInsertString,");");
+//fprintf(stderr,"%s, %d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
 
   // select rows in from-table
   BLOCK_DOX(error,
@@ -1035,38 +1079,60 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     {
       sqlite3_reset(toHandle);
 
-      // get from values
+      // get from values, set in toColumnList
       n = 0;
       LIST_ITERATE(&fromColumnList,columnNode)
       {
         switch (columnNode->type)
         {
           case DATABASE_TYPE_PRIMARY_KEY:
-            columnNode->value.i        = sqlite3_column_int64(fromHandle,n);
-            Database_setTableColumnListInt64(&toColumnList,columnNode->name,columnNode->value.i);
+            columnNode->value.id = sqlite3_column_int64(fromHandle,n);
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_PRIMARY_KEY %d %s: %lld\n",__FILE__,__LINE__,n,columnNode->name,columnNode->value.id);
             break;
           case DATABASE_TYPE_INT64:
-            columnNode->value.i        = sqlite3_column_int64(fromHandle,n);
-            Database_setTableColumnListInt64(&toColumnList,columnNode->name,columnNode->value.i);
+            String_setCString(columnNode->value.i,(const char*)sqlite3_column_text(fromHandle,n));
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_INT64 %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
+            toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
+            if (toColumnNode != NULL)
+            {
+              String_set(toColumnNode->value.i,columnNode->value.i);
+            }
             break;
           case DATABASE_TYPE_DOUBLE:
-            columnNode->value.d        = sqlite3_column_double(fromHandle,n);
-            Database_setTableColumnListDouble(&toColumnList,columnNode->name,columnNode->value.d);
+            String_setCString(columnNode->value.d,(const char*)sqlite3_column_text(fromHandle,n));
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_DOUBLE %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
+            toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
+            if (toColumnNode != NULL)
+            {
+              String_set(toColumnNode->value.d,columnNode->value.d);
+            }
             break;
           case DATABASE_TYPE_DATETIME:
-            columnNode->value.dateTime = (uint64)sqlite3_column_int64(fromHandle,n);
-            Database_setTableColumnListInt64(&toColumnList,columnNode->name,columnNode->value.dateTime);
+            String_setCString(columnNode->value.i,(const char*)sqlite3_column_text(fromHandle,n));
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_DATETIME %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
+            toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
+            if (toColumnNode != NULL)
+            {
+              String_set(toColumnNode->value.i,columnNode->value.i);
+            }
             break;
           case DATABASE_TYPE_TEXT:
-            columnNode->value.text     = (const char*)sqlite3_column_text(fromHandle,n);
-            Database_setTableColumnListText(&toColumnList,columnNode->name,columnNode->value.text);
+            String_setCString(columnNode->value.text,(const char*)sqlite3_column_text(fromHandle,n));
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_TEXT %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
+            toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
+            if (toColumnNode != NULL)
+            {
+              String_set(toColumnNode->value.text,columnNode->value.text);
+            }
             break;
           case DATABASE_TYPE_BLOB:
             HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             break;
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; // not reached
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; // not reached
+          #endif /* NDEBUG */
         }
         n++;
       }
@@ -1093,23 +1159,27 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
             // can not be set
             break;
           case DATABASE_TYPE_INT64:
-            sqlite3_bind_int64(toHandle,n,columnNode->value.i);
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_INT64 %d %s: %s %d\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.i),sqlite3_column_type(fromHandle,n));
+            sqlite3_bind_text(toHandle,n,String_cString(columnNode->value.i),-1,NULL);
             break;
           case DATABASE_TYPE_DOUBLE:
-            sqlite3_bind_double(toHandle,n,columnNode->value.d);
+            sqlite3_bind_text(toHandle,n,String_cString(columnNode->value.d),-1,NULL);
             break;
           case DATABASE_TYPE_DATETIME:
-            sqlite3_bind_int64(toHandle,n,columnNode->value.dateTime);
+            sqlite3_bind_text(toHandle,n,String_cString(columnNode->value.d),-1,NULL);
             break;
           case DATABASE_TYPE_TEXT:
-            sqlite3_bind_text(toHandle,n,columnNode->value.text,-1,NULL);
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_TEXT %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
+            sqlite3_bind_text(toHandle,n,String_cString(columnNode->value.text),-1,NULL);
             break;
           case DATABASE_TYPE_BLOB:
             HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             break;
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; // not reached
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; // not reached
+          #endif /* NDEBUG */
         }
         n++;
       }
@@ -1127,7 +1197,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
         switch (columnNode->type)
         {
           case DATABASE_TYPE_PRIMARY_KEY:
-            columnNode->value.i = lastRowId;
+            columnNode->value.id = lastRowId;
             break;
           case DATABASE_TYPE_INT64:
           case DATABASE_TYPE_DOUBLE:
@@ -1135,9 +1205,11 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
           case DATABASE_TYPE_TEXT:
           case DATABASE_TYPE_BLOB:
             break;
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; // not reached
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; // not reached
+          #endif /* NDEBUG */
         }
       }
 
@@ -1177,7 +1249,15 @@ int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, con
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    return columnNode->value.i;
+    assert((columnNode->type == DATABASE_TYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_TYPE_INT64));
+    if (columnNode->type == DATABASE_TYPE_PRIMARY_KEY)
+    {
+      return columnNode->value.id;
+    }
+    else
+    {
+      return String_toInteger64(columnNode->value.d,STRING_BEGIN,NULL,NULL,0);
+    }
   }
   else
   {
@@ -1192,7 +1272,8 @@ double Database_getTableColumnListDouble(const DatabaseColumnList *columnList, c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    return columnNode->value.d;
+    assert(columnNode->type == DATABASE_TYPE_DOUBLE);
+    return String_toDouble(columnNode->value.d,STRING_BEGIN,NULL,NULL,0);
   }
   else
   {
@@ -1207,7 +1288,8 @@ uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList,
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    return columnNode->value.dateTime;
+    assert(columnNode->type == DATABASE_TYPE_DATETIME);
+    return String_toInteger64(columnNode->value.d,STRING_BEGIN,NULL,NULL,0);
   }
   else
   {
@@ -1222,7 +1304,8 @@ const char *Database_getTableColumnListText(const DatabaseColumnList *columnList
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    return columnNode->value.text;
+    assert(columnNode->type == DATABASE_TYPE_TEXT);
+    return String_cString(columnNode->value.text);
   }
   else
   {
@@ -1240,6 +1323,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
+    assert(columnNode->type == DATABASE_TYPE_BLOB);
 //    return columnNode->value.blob.data;
   }
   else
@@ -1255,7 +1339,8 @@ bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, cons
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    columnNode->value.i = value;
+    assert(columnNode->type == DATABASE_TYPE_INT64);
+    String_format(String_clear(columnNode->value.i),"%lld",value);
     return TRUE;
   }
   else
@@ -1271,7 +1356,8 @@ bool Database_setTableColumnListDouble(const DatabaseColumnList *columnList, con
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    columnNode->value.d = value;
+    assert(columnNode->type == DATABASE_TYPE_DOUBLE);
+    String_format(String_clear(columnNode->value.d),"%f",value);
     return TRUE;
   }
   else
@@ -1287,7 +1373,8 @@ bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    columnNode->value.dateTime = value;
+    assert(columnNode->type == DATABASE_TYPE_DATETIME);
+    String_format(String_clear(columnNode->value.i),"%lld",value);
     return TRUE;
   }
   else
@@ -1296,14 +1383,20 @@ bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, c
   }
 }
 
-bool Database_setTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, const char *value)
+bool Database_setTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, ConstString value)
+{
+  return Database_setTableColumnListTextCString(columnList,columnName,String_cString(value));
+}
+
+bool Database_setTableColumnListTextCString(const DatabaseColumnList *columnList, const char *columnName, const char *value)
 {
   DatabaseColumnNode *columnNode;
 
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    columnNode->value.text = value;
+    assert(columnNode->type == DATABASE_TYPE_TEXT);
+    String_setCString(columnNode->value.text,value);
     return TRUE;
   }
   else
@@ -1319,6 +1412,7 @@ bool Database_setTableColumnListBlob(const DatabaseColumnList *columnList, const
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
+    assert(columnNode->type == DATABASE_TYPE_BLOB);
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     columnNode->value.blob.data   = data;
     columnNode->value.blob.length = length;
@@ -1363,9 +1457,11 @@ Errors Database_addColumn(DatabaseHandle *databaseHandle,
     case DATABASE_TYPE_BLOB:
       columnTypeString = "BLOB";
       break;
-    default:
-      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      break; // not reached
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; // not reached
+    #endif /* NDEBUG */
   }
 
   // execute SQL command
@@ -1497,9 +1593,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
             case DATABASE_TYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; // not reached
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; // not reached
+            #endif /* NDEBUG */
           }
           n++;
         }

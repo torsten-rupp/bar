@@ -100,15 +100,16 @@ typedef struct DatabaseColumnNode
   DatabaseTypes type;
   union
   {
-    int64      i;
-    double     d;
-    uint64     dateTime;
-    const char *text;
+    // Note: data values are kept as strings to avoid conversion problems e.g. date/time -> integer
+    int64  id;
+    String i;
+    String d;
+    String text;
     struct
     {
       const void *data;
       ulong      length;
-    }            blob;
+    }      blob;
   } value;
 } DatabaseColumnNode;
 
@@ -244,7 +245,8 @@ void Database_getTableColumnListBlob(const DatabaseColumnList *columnList, const
 bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 value);
 bool Database_setTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double value);
 bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 value);
-bool Database_setTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, const char *value);
+bool Database_setTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, ConstString value);
+bool Database_setTableColumnListTextCString(const DatabaseColumnList *columnList, const char *columnName, const char *value);
 bool Database_setTableColumnListBlob(const DatabaseColumnList *columnList, const char *columnName, const void *data, uint length);
 
 /***********************************************************************\
