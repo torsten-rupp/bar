@@ -77,7 +77,6 @@ typedef union
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-xxx
   #define DATABASE_LOCK(databaseHandle) \
     do \
     { \
