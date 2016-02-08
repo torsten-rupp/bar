@@ -13867,8 +13867,8 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 *            storagePattern=<text>
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
-*            offset=<n>
-*            limit=<n>
+*            [offset=<n>]
+*            [limit=<n>]
 *          Result:
 *            storageId=<id>
 *            entityId=<id>
@@ -13948,18 +13948,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     String_delete(storagePatternString);
     return;
   }
-  if (!StringMap_getUInt64(argumentMap,"offset",&offset,0))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
-    String_delete(storagePatternString);
-    return;
-  }
-  if (!StringMap_getUInt64(argumentMap,"limit",&limit,0))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected limit=<n>");
-    String_delete(storagePatternString);
-    return;
-  }
+  StringMap_getUInt64(argumentMap,"offset",&offset,0);
+  StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -15047,8 +15037,8 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
 *            entryPattern=<text>
 *            indexType=<text>
 *            newestEntriesOnly=yes|no
-*            offset=<n>
-*            limit=<n>
+*            [offset=<n>]
+*            [limit=<n>]
 *          Result:
 *            entryType=FILE entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
@@ -15434,18 +15424,8 @@ uint64 t[100];
     String_delete(entryPatternString);
     return;
   }
-  if (!StringMap_getUInt64(argumentMap,"offset",&offset,0))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
-    String_delete(entryPatternString);
-    return;
-  }
-  if (!StringMap_getUInt64(argumentMap,"limit",&limit,0))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected limit=<n>");
-    String_delete(entryPatternString);
-    return;
-  }
+  StringMap_getUInt64(argumentMap,"offset",&offset,0);
+  StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
