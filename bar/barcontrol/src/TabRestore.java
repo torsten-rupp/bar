@@ -2208,7 +2208,7 @@ assert storagePattern != null;
       // update storage list
 // TODO
 assert storagePattern != null;
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s",
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
                                                          entityIndexData[0].entityId,
                                                          storageMaxCount,
                                                          storagePattern,
@@ -2414,12 +2414,14 @@ Dprintf.dprintf("updateStorageTable list %d %d",offset,limit);
 // TODO
 assert storagePattern != null;
 Dprintf.dprintf("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj");
-      Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s",
+      Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=%d limit=%d",
                                                                  (storageEntityState != EntityStates.NONE) ? "*" : "0",
                                                                  storageMaxCount,
                                                                  storagePattern,
                                                                  storageIndexStateSet.nameList("|"),
-                                                                 "*"
+                                                                 "*",
+                                                                 offset,
+                                                                 limit
                                                                 ),
                                      0
                                     );
@@ -3759,8 +3761,8 @@ if (false) {
                                   ) == Errors.NONE
          )
       {
-        count = valueMap.getInt("entryCount");
-Dprintf.dprintf("entryCount=%d",count);
+        count = valueMap.getInt("count");
+Dprintf.dprintf("count=%d",count);
       }
 
       // set count
@@ -6459,7 +6461,7 @@ Dprintf.dprintf("");
           EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
 // TODO
 assert storagePattern != null;
-          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s",
+          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
                                                                      entityIndexData.entityId,
                                                                      -1,
                                                                      storagePattern,
