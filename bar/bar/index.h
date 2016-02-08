@@ -32,7 +32,7 @@
 /***************************** Constants *******************************/
 #define INDEX_STORAGE_ID_NONE -1LL
 
-#define INDEX_UNLIMITED MAX_UINT64
+#define INDEX_UNLIMITED 9223372036854775807LL
 
 // index states
 typedef enum

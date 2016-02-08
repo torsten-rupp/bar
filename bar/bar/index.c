@@ -4585,11 +4585,8 @@ Database_debugEnable(1);
                                   AND (%d OR (storage.entityId=%lld)) \
                                   AND (storage.state IN (%S)) \
                                   AND (%d OR (storage.id IN (%S))) \
-\
-                                  AND (entities.type!=%d OR (    (%d OR (entities.type=%d)) \
-                                                             AND (%d OR REGEXP(%S,0,storage.name)) \
-                                                            ) \
-                                      ) \
+                                  AND (%d OR (entities.type!=%d)) \
+                                  AND (%d OR REGEXP(%S,0,storage.name)) \
                             ORDER BY storage.created DESC \
                             LIMIT %llu,%llu \
                            ",
@@ -4599,8 +4596,8 @@ Database_debugEnable(1);
                            getIndexStateSetString(indexStateSetString,indexStateSet),
                            (storageIds == NULL) ? 1 : 0,storageIdsString,
 
-                           STORAGE_TYPE_FILESYSTEM,
-                           (storageType == STORAGE_TYPE_ANY) ? 1 : 0, STORAGE_TYPE_FILESYSTEM,
+                           (storageType == STORAGE_TYPE_ANY) ? 1 : 0, storageType,
+
                            (storageName == NULL            ) ? 1 : 0, regexpStorageName,
 
                            offset,
