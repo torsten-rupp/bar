@@ -377,6 +377,7 @@ public class TabRestore
     {
       this.treeItem               = treeItem;
       this.treeItemUpdateRunnable = treeItemUpdateRunnable;
+      update();
     }
 
     /** clear tree item reference
@@ -394,6 +395,7 @@ public class TabRestore
     {
       this.tableItem               = tableItem;
       this.tableItemUpdateRunnable = tableItemUpdateRunnable;
+      update();
     }
 
     /** clear table item reference
@@ -1630,9 +1632,8 @@ public class TabRestore
     private boolean       updateFlag           = false;
     private boolean       updateListFlag       = false;
 
-    private int           storageMaxCount      = 100;
-    private int           offset            = 0;
-    private int           count             = 0;
+    private int           offset               = 0;
+    private int           count                = 0;
     private String        storagePattern       = "";
     private IndexStateSet storageIndexStateSet = INDEX_STATE_SET_ALL;
     private EntityStates  storageEntityState   = EntityStates.ANY;
@@ -1801,9 +1802,8 @@ Dprintf.dprintf("update sto %s %s",this.updateFlag,this.updateListFlag);
      * @param storagePattern new storage pattern
      * @param storageIndexStateSet new storage index state set
      * @param storageEntityState new storage entity state
-     * @param storageMaxCount new max. entries in list
      */
-    public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSet, EntityStates storageEntityState, int storageMaxCount)
+    public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
     {
       assert storagePattern != null;
 
@@ -1811,13 +1811,11 @@ Dprintf.dprintf("update sto %s %s",this.updateFlag,this.updateListFlag);
       {
         if (   !this.storagePattern.equals(storagePattern)
             || (this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState)
-            || (this.storageMaxCount != storageMaxCount)
            )
         {
           this.storagePattern       = storagePattern;
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
-          this.storageMaxCount      = storageMaxCount;
           this.setUpdateIndicator   = true;
 
           updateFlag = true;
@@ -1885,24 +1883,6 @@ Dprintf.dprintf("update sto %s %s",this.updateFlag,this.updateListFlag);
     }
 
     /** trigger update of storage list
-     * @param storageMaxCount new max. entries in list
-     */
-    public void triggerUpdateStorageMaxCount(int storageMaxCount)
-    {
-      synchronized(trigger)
-      {
-        if (this.storageMaxCount != storageMaxCount)
-        {
-          this.storageMaxCount    = storageMaxCount;
-          this.setUpdateIndicator = true;
-
-          updateFlag = true;
-          trigger.notify();
-        }
-      }
-    }
-
-    /** trigger update of storage list
      */
     public void triggerUpdate()
     {
@@ -1944,7 +1924,7 @@ Dprintf.dprintf("update sto %s %s",this.updateFlag,this.updateListFlag);
 // TODO
 assert storagePattern != null;
       command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST maxCount=%d pattern=%'S",
-                                                         storageMaxCount,
+100,//                                                         storageMaxCount,
                                                          storagePattern
                                                         ),
                                      0
@@ -2003,9 +1983,6 @@ assert storagePattern != null;
               {
                 uuidTreeItems.add(uuidTreeItem);
               }
-
-              // update view
-              uuidIndexData.update();
             }
           });
 
@@ -2131,9 +2108,6 @@ assert storagePattern != null;
               {
                 entityTreeItems.add(entityTreeItem);
               }
-
-              // update view
-              entityIndexData.update();
             }
           });
         }
@@ -2208,9 +2182,8 @@ assert storagePattern != null;
       // update storage list
 // TODO
 assert storagePattern != null;
-      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
+      command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
                                                          entityIndexData[0].entityId,
-                                                         storageMaxCount,
                                                          storagePattern,
                                                          "*",
                                                          storageIndexStateSet.nameList("|")
@@ -2275,9 +2248,6 @@ assert storagePattern != null;
                 // keep tree item
                 removeStorageTreeItemSet.remove(storageTreeItem);
               }
-
-              // update view
-              storageIndexData.update();
             }
           });
         }
@@ -2362,7 +2332,6 @@ assert storagePattern != null;
          )
       {
         count = valueMap.getInt("count");
-Dprintf.dprintf("count=%d",count);
       }
 
       // set count
@@ -2414,9 +2383,8 @@ Dprintf.dprintf("updateStorageTable list %d %d",offset,limit);
 // TODO
 assert storagePattern != null;
 Dprintf.dprintf("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj");
-      Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=%d limit=%d",
+      Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=%d limit=%d",
                                                                  (storageEntityState != EntityStates.NONE) ? "*" : "0",
-                                                                 storageMaxCount,
                                                                  storagePattern,
                                                                  storageIndexStateSet.nameList("|"),
                                                                  "*",
@@ -2471,7 +2439,6 @@ Dprintf.dprintf("i=%d",i);
                                                                                         errorMessage_
                                                                                        );
 
-Dprintf.dprintf("INDEX_STORAGE_LIST %d",i);
           display.syncExec(new Runnable()
           {
             public void run()
@@ -2479,38 +2446,11 @@ Dprintf.dprintf("INDEX_STORAGE_LIST %d",i);
               TableItem tableItem = widgetStorageTable.getItem(i);
 
               Widgets.updateTableItem(tableItem,
-                                      (Object)storageIndexData,
-                                      storageIndexData.name
+                                      (Object)storageIndexData
                                      );
               storageIndexData.setTableItem(tableItem);
             }
           });
-/*
-          // insert/update table item
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              TableItem tableItem = Widgets.getTableItem(widgetStorageTable,(Object)storageIndexData);
-              if (tableItem == null)
-              {
-                // insert table item
-                tableItem = Widgets.insertTableItem(widgetStorageTable,
-                                                    findStorageTableIndex(storageIndexData),
-                                                    (Object)storageIndexData
-                                                   );
-                storageIndexData.setTableItem(tableItem);
-              }
-              else
-              {
-                // keep table item
-                removeTableItemSet.remove(tableItem);
-              }
-
-              // update view
-              storageIndexData.update();
-            }
-          });*/
         }
         catch (IllegalArgumentException exception)
         {
@@ -3169,7 +3109,6 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     private boolean    updateFlag        = false;
     private boolean    updateListFlag    = false;
 
-    private int        entryMaxCount     = 100;
     private int        offset            = 0;
     private int        count             = 0;
 //    private EntryTypes entryType         = EntryTypes.ANY;
@@ -3288,22 +3227,19 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      * @param entryPattern new entry pattern or null
      * @param type type or *
      * @param newestEntriesOnly flag for newest entries only or null
-     * @param entryMaxCount max. entries in list or null
      */
-    public void triggerUpdate(String entryPattern, String type, boolean newestEntriesOnly, int entryMaxCount)
+    public void triggerUpdate(String entryPattern, String type, boolean newestEntriesOnly)
     {
       synchronized(trigger)
       {
         if (   (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
             || (entryType != this.entryType)
             || (this.newestEntriesOnly != newestEntriesOnly)
-            || (this.entryMaxCount != entryMaxCount)
            )
         {
           this.entryPattern       = entryPattern;
           this.entryType          = entryType;
           this.newestEntriesOnly  = newestEntriesOnly;
-          this.entryMaxCount      = entryMaxCount;
 
           updateFlag = true;
           trigger.notify();
@@ -3402,7 +3338,7 @@ Dprintf.dprintf("obsolete~~~~~~~!!!!!!!!!!");
                                                                  entryType.toString(),
                                                                  newestEntriesOnly,
                                                                  0, // entryCountOffset
-                                                                 entryMaxCount
+100//                                                                 entryMaxCount
                                                                 ),
                                              0
                                             );
@@ -3762,7 +3698,6 @@ if (false) {
          )
       {
         count = valueMap.getInt("count");
-Dprintf.dprintf("count=%d",count);
       }
 
       // set count
@@ -3874,6 +3809,7 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
                   public void run()
                   {
                     TableItem tableItem = widgetEntryTable.getItem(i);
+
                     Widgets.updateTableItem(tableItem,
                                             (Object)entryData,
                                             entryData.storageName,
@@ -3903,6 +3839,7 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
                   public void run()
                   {
                     TableItem tableItem = widgetEntryTable.getItem(i);
+
                     Widgets.updateTableItem(tableItem,
                                             (Object)entryData,
                                             entryData.storageName,
@@ -3933,6 +3870,7 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
                   public void run()
                   {
                     TableItem tableItem = widgetEntryTable.getItem(i);
+
                     Widgets.updateTableItem(tableItem,
                                             (Object)entryData,
                                             entryData.storageName,
@@ -3965,6 +3903,7 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
                   public void run()
                   {
                     TableItem tableItem = widgetEntryTable.getItem(i);
+
                     Widgets.updateTableItem(tableItem,
                                             (Object)entryData,
                                             entryData.storageName,
@@ -3995,6 +3934,7 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
                   public void run()
                   {
                     TableItem tableItem = widgetEntryTable.getItem(i);
+
                     Widgets.updateTableItem(tableItem,
                                             (Object)entryData,
                                             entryData.storageName,
@@ -4062,7 +4002,6 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
   private Menu                 widgetStorageTableAssignToMenu;
   private Text                 widgetStoragePattern;
   private Combo                widgetStorageState;
-  private Combo                widgetStorageMaxCount;
   private WidgetEvent          checkedStorageEvent = new WidgetEvent();       // triggered when some checked storage changed
 
   private Label                widgetEntryTableTitle;
@@ -4494,7 +4433,7 @@ Dprintf.dprintf("updateEntryTable list %d %d",offset,limit);
                       8
                      );
 
-          text = String.format("%d",updateStorageTreeTableThread.getCount());
+          text = String.format(BARControl.tr("Count: %6d"),updateStorageTreeTableThread.getCount());
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
                       bounds.width-size.x-8,
@@ -5407,41 +5346,10 @@ Dprintf.dprintf("");
         });
         updateStorageTreeTableThread.triggerUpdateStorageState(INDEX_STATE_SET_ALL,EntityStates.ANY);
 
-        label = Widgets.newLabel(composite,BARControl.tr("Max")+":");
-        Widgets.layout(label,0,5,TableLayoutData.W);
-
-        widgetStorageMaxCount = Widgets.newOptionMenu(composite);
-        widgetStorageMaxCount.setToolTipText(BARControl.tr("Max. number of entries in list."));
-        widgetStorageMaxCount.setItems(new String[]{"10","50","100","500","1000"});
-        widgetStorageMaxCount.setText("100");
-        Widgets.layout(widgetStorageMaxCount,0,6,TableLayoutData.W);
-        widgetStorageMaxCount.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Combo widget = (Combo)selectionEvent.widget;
-            try
-            {
-              int storageMaxCount = Integer.parseInt(widget.getText());
-              updateStorageTreeTableThread.triggerUpdateStorageMaxCount(storageMaxCount);
-            }
-            catch (NumberFormatException exception)
-            {
-              // ignored
-            }
-          }
-        });
-        updateStorageTreeTableThread.triggerUpdateStorageMaxCount(100);
-
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
-        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
+        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
         {
           @Override
@@ -5499,7 +5407,7 @@ Dprintf.dprintf("");
                       (bounds.height-size.y)/2
                      );
 
-          text = String.format("%d",updateEntryTableThread.getCount());
+          text = String.format(BARControl.tr("Count: %6d"),updateEntryTableThread.getCount());
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
                       bounds.width-size.x-8,
@@ -6409,9 +6317,6 @@ Dprintf.dprintf("");
                     // keep tree item
                     removeEntityTreeItemSet.remove(entityTreeItem);
                   }
-
-                  // update view
-                  entityIndexData.update();
                 }
               });
             }
@@ -6529,9 +6434,6 @@ assert storagePattern != null;
                     // keep tree item
                     removeStorageTreeItemSet.remove(storageTreeItem);
                   }
-
-                  // update view
-                  storageIndexData.update();
                 }
               });
             }

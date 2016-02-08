@@ -384,7 +384,7 @@ class Command
   {
     if (errorCode == Errors.NONE)
     {
-      result[0] = (this.result.size() > 0) ? this.result.pollFirst() : "";
+      result[0] = (this.result.size() > 0) ? this.getNextResult() : "";
     }
     else
     {
@@ -404,6 +404,7 @@ class Command
     {
       result.clear();
       result.addAll(this.result);
+      this.result.clear();
     }
     else
     {
@@ -434,7 +435,7 @@ class Command
       // parse next line
       if (result.size() > 0)
       {
-        String line = result.pollFirst();
+        String line = getNextResult();
         if ((valueMap != null) && !line.isEmpty())
         {
           valueMap.clear();
@@ -508,13 +509,11 @@ class Command
    */
   public synchronized int getResult(String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
   {
-    valueMapList.clear();
-    if (unknownValueMap != null) unknownValueMap.clear();
-
     if (errorCode == Errors.NONE)
     {
-      for (String line : result)
+      while (!result.isEmpty())
       {
+        String line = getNextResult();
         if (!line.isEmpty())
         {
           ValueMap valueMap = new ValueMap();
@@ -1427,21 +1426,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       public int handleResult(Command command)
       {
-        int error;
-
-//        if (!command.endOfData())
-//        {
-          ValueMap valueMap = new ValueMap();
-          error = command.getNextResult(errorMessage,valueMap);
-          if (error == Errors.NONE)
-          {
-            error = commandResultHandler.handleResult(valueMap);
-          }
-//        }
-//        else
-//        {
-//          error = Errors.NONE;
-//        }
+        ValueMap valueMap = new ValueMap();
+        int error = command.getNextResult(errorMessage,valueMap);
+        if (error == Errors.NONE)
+        {
+          error = commandResultHandler.handleResult(valueMap);
+        }
 
         return error;
       }
@@ -1540,6 +1530,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, final List<ValueMap> valueMapList, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
   {
+    valueMapList.clear();
+    if (unknownValueMap != null) unknownValueMap.clear();
+
     return executeCommand(commandString,
                           debugLevel,
                           busyIndicator,
@@ -2951,18 +2944,25 @@ Dprintf.dprintf("");
       }
     }
 
-    // wait until completed, aborted or timeout
-    while (   (!command.endOfData() || !command.waitCompleted(250))
-           && (errorCode == Errors.NONE)
-           && ((busyIndicator == null) || !busyIndicator.isAborted())
-          )
+    // process results until completed or aborted
+    do
     {
-      errorCode = commandHandler.handleResult(command);
-      if (busyIndicator != null)
+      while (   (errorCode == Errors.NONE)
+             && ((busyIndicator == null) || !busyIndicator.isAborted())
+             && !command.endOfData()
+            )
       {
-        busyIndicator.busy(0);
+        errorCode = commandHandler.handleResult(command);
+        if (busyIndicator != null)
+        {
+          busyIndicator.busy(0);
+        }
       }
     }
+    while (   (errorCode == Errors.NONE)
+           && ((busyIndicator == null) || !busyIndicator.isAborted())
+           && !command.waitCompleted(250)
+          );
 
     // free command
     readThread.commandRemove(command);
