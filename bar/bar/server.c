@@ -14944,7 +14944,6 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 *            entryPattern=<text>
 *            indexType=<text>
 *            newestEntriesOnly=yes|no
-*            entryMaxCount=<n>|0
 *          Result:
 *            count=<n>
 \***********************************************************************/
