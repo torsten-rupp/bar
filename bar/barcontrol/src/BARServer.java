@@ -378,7 +378,7 @@ class Command
 
   /** get result string array
    * @param result result string array to fill
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getResult(String result[])
   {
@@ -396,7 +396,7 @@ class Command
 
   /** get result string list array
    * @param result string list array
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getResult(ArrayList<String> result)
   {
@@ -419,7 +419,7 @@ class Command
    * @param valueMap value map
    * @param unknownValueMap unknown values map or null
    * @param timeout timeout or WAIT_FOREVER [ms]
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap, int timeout)
   {
@@ -457,7 +457,7 @@ class Command
    * @param errorMessage error message
    * @param valueMap value map
    * @param unknownValueMap unknown values map or null
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getResult(String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
   {
@@ -469,7 +469,7 @@ class Command
    * @param errorMessage error message
    * @param valueMap value map
    * @param timeout timeout or WAIT_FOREVER [ms]
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, int timeout)
   {
@@ -480,7 +480,7 @@ class Command
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap)
   {
@@ -492,7 +492,7 @@ class Command
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getResult(String[] errorMessage, ValueMap valueMap)
   {
@@ -504,7 +504,7 @@ class Command
    * @param errorMessage error message
    * @param valueMapList value map list
    * @param unknownValueMap unknown values map or null
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getResult(String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
   {
@@ -536,7 +536,7 @@ class Command
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMapList value map list
-   * @return error code
+   * @return Errors.NONE or error code
    */
   public synchronized int getResult(String[] errorMessage, List<ValueMap> valueMapList)
   {
@@ -1427,12 +1427,21 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       public int handleResult(Command command)
       {
-        ValueMap valueMap = new ValueMap();
-        int      error    = command.getNextResult(errorMessage,valueMap);
-        if (error == Errors.NONE)
-        {
-          error = commandResultHandler.handleResult(valueMap);
-        }
+        int error;
+
+//        if (!command.endOfData())
+//        {
+          ValueMap valueMap = new ValueMap();
+          error = command.getNextResult(errorMessage,valueMap);
+          if (error == Errors.NONE)
+          {
+            error = commandResultHandler.handleResult(valueMap);
+          }
+//        }
+//        else
+//        {
+//          error = Errors.NONE;
+//        }
 
         return error;
       }
@@ -2901,8 +2910,9 @@ Dprintf.dprintf("");
     final int TIMEOUT = 120*1000; // total timeout [ms]
 
     Command command;
-    int     errorCode;
+    int     errorCode = Errors.NONE;
 
+    // send commadn
     synchronized(output)
     {
       if (busyIndicator != null)
@@ -2942,29 +2952,30 @@ Dprintf.dprintf("");
     }
 
     // wait until completed, aborted or timeout
-    while (   !command.waitCompleted(250)
+    while (   (!command.endOfData() || !command.waitCompleted(250))
+           && (errorCode == Errors.NONE)
            && ((busyIndicator == null) || !busyIndicator.isAborted())
           )
     {
+      errorCode = commandHandler.handleResult(command);
       if (busyIndicator != null)
       {
         busyIndicator.busy(0);
       }
     }
+
+    // free command
+    readThread.commandRemove(command);
+
+    // check if aborted
     if (busyIndicator != null)
     {
       if (busyIndicator.isAborted())
       {
         command.abort();
-        return command.getErrorCode();
+        errorCode = command.getErrorCode();
       }
     }
-
-    // get result
-    errorCode = commandHandler.handleResult(command);
-
-    // free command
-    readThread.commandRemove(command);
 
     return errorCode;
   }
