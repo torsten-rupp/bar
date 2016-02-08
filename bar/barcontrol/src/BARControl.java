@@ -2105,6 +2105,15 @@ public class BARControl
           ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
 
           // list storage index
+          System.out.println(String.format("%-12s %-19s %-5s %-5s %s",
+                                           "Size",
+                                           "Date/Time",
+                                           "State",
+                                           "Mode",
+                                           "Name"
+                                          )
+                            );
+          System.out.println(StringUtils.repeat("-",12+1+19+1+5+1+5+40));
           if (BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
                                                            0L,
                                                            "*",
@@ -2124,7 +2133,7 @@ public class BARControl
                                            IndexStates state  = resultMap.getEnum  ("indexState",IndexStates.class);
                                            IndexModes mode    = resultMap.getEnum  ("indexMode",IndexModes.class  );
 
-                                           System.out.println(String.format("%12d %5s %5s %s %s",
+                                           System.out.println(String.format("%12d %-19s %-5s %-5s %s",
                                                                             size,
                                                                             DATE_FORMAT.format(new Date(dateTime*1000)),
                                                                             state,
@@ -2149,6 +2158,15 @@ public class BARControl
           String[] errorMessage = new String[1];
 
           // list storage index
+          System.out.println(String.format("%-40s %-8s %-12s %-19s %s",
+                                           "Storage",
+                                           "Type",
+                                           "Size",
+                                           "Date/Time",
+                                           "Name"
+                                          )
+                            );
+          System.out.println(StringUtils.repeat("-",40+1+8+1+12+1+19+40));
           if (BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S newestEntriesOnly=%y",
                                                            Settings.indexDatabaseEntriesListPattern,
                                                            false
@@ -2171,7 +2189,7 @@ public class BARControl
                                                  long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
                                                  long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
 
-                                                 System.out.println(String.format("%-40s %-8s %12d %-32s %s",
+                                                 System.out.println(String.format("%-40s %-8s %12d %-19s %s",
                                                                                   storageName,
                                                                                   "FILE",
                                                                                   size,
@@ -2190,7 +2208,7 @@ public class BARControl
                                                  long   blockOffset     = resultMap.getLong  ("blockOffset"    );
                                                  long   blockCount      = resultMap.getLong  ("blockCount"     );
 
-                                                 System.out.println(String.format("%-40s %-8s %12d %-32s %s",
+                                                 System.out.println(String.format("%-40s %-8s %12d %-19s %s",
                                                                                   storageName,
                                                                                   "IMAGE",
                                                                                   size,
@@ -2207,7 +2225,7 @@ public class BARControl
                                                  String directoryName   = resultMap.getString("name"           );
                                                  long   dateTime        = resultMap.getLong  ("dateTime"       );
 
-                                                 System.out.println(String.format("%-40s %-8s %12s %-32s %s",
+                                                 System.out.println(String.format("%-40s %-8s %12s %-19s %s",
                                                                                   storageName,
                                                                                   "DIR",
                                                                                   "",
@@ -2225,7 +2243,7 @@ public class BARControl
                                                  String destinationName = resultMap.getString("destinationName");
                                                  long   dateTime        = resultMap.getLong  ("dateTime"       );
 
-                                                 System.out.println(String.format("%-40s %-8s %12d %-32s %s -> %s",
+                                                 System.out.println(String.format("%-40s %-8s %12d %-19s %s -> %s",
                                                                                   storageName,
                                                                                   "LINK",
                                                                                   DATE_FORMAT.format(new Date(dateTime*1000)),
@@ -2245,7 +2263,7 @@ public class BARControl
                                                  long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
                                                  long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
 
-                                                 System.out.println(String.format("%-40s %-8s %12d %-32s %s",
+                                                 System.out.println(String.format("%-40s %-8s %12d %-19s %s",
                                                                                   storageName,
                                                                                   "HARDLINK",
                                                                                   size,
@@ -2262,7 +2280,7 @@ public class BARControl
                                                  String name            = resultMap.getString("name"           );
                                                  long   dateTime        = resultMap.getLong  ("dateTime"       );
 
-                                                 System.out.println(String.format("%-40s %-8s %12s %-32s %s",
+                                                 System.out.println(String.format("%-40s %-8s %12s %-19s %s",
                                                                                   storageName,
                                                                                   "SPECIAL",
                                                                                   "",
