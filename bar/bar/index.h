@@ -32,6 +32,8 @@
 /***************************** Constants *******************************/
 #define INDEX_STORAGE_ID_NONE -1LL
 
+#define INDEX_UNLIMITED MAX_UINT64
+
 // index states
 typedef enum
 {
@@ -556,6 +558,9 @@ Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
 *          indexStateSet    - index state set
 *          storageIds       - storage ids or NULL
 *          storageIdCount   - storage id count or 0
+*          offset           - offset or 0
+*          limit            - numer of entries to list or
+*                             DATABASE_UNLIMITED
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -573,7 +578,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               ConstString      fileName,
                               IndexStateSet    indexStateSet,
                               const DatabaseId storageIds[],
-                              uint             storageIdCount
+                              uint             storageIdCount,
+                              uint64           offset,
+                              uint64           limit
                              );
 
 /***********************************************************************\
@@ -747,7 +754,8 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
 *          pattern          - name pattern (glob, can be NULL)
 *          offset           - offset or 0
-*          limit            - numer of entries to list
+*          limit            - numer of entries to list or
+*                             DATABASE_UNLIMITED
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -761,8 +769,8 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              String           pattern,
-                             uint             offset,
-                             uint             limit
+                             uint64           offset,
+                             uint64           limit
                             );
 
 /***********************************************************************\

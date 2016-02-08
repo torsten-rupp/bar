@@ -3418,7 +3418,9 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,   // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -3604,7 +3606,9 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,   // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -4090,7 +4094,9 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
                                        storageMsg.archiveName,
                                        INDEX_STATE_SET_ALL,
                                        NULL,  // storageIds
-                                       0   // storageIdCount
+                                       0,  // storageIdCount
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
                                       );
         while (Index_getNextStorage(&indexQueryHandle,
                                     &oldStorageId,

@@ -334,7 +334,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // create entity
+                             // pre: copy storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -354,7 +354,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // copy files, images, directories, links, special entries
+                             // post: copy files, images, directories, links, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                DatabaseId fromStorageId;
@@ -496,7 +496,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // create entity
+                             // pre: copy storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -516,7 +516,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // copy files, images, directories, links, hardlinks, special entries
+                             // post: copy files, images, directories, links, hardlinks, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                DatabaseId fromStorageId;
@@ -685,7 +685,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // create entity
+                             // pre: copy storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -705,7 +705,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // copy files, images, directories, links, hardlinks, special entries
+                             // post: copy files, images, directories, links, hardlinks, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                DatabaseId fromStorageId;
@@ -972,7 +972,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // create entity
+                             // pre: copy storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -992,7 +992,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // copy files, images, directories, links, special entries
+                             // post: copy files, images, directories, links, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                DatabaseId fromStorageId;
@@ -1152,7 +1152,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // create entity
+                             // pre: copy storage and create entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -1172,7 +1172,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // copy files, images, directories, links, special entries
+                             // post: copy files, images, directories, links, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                DatabaseId fromStorageId;
@@ -1947,7 +1947,9 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  NULL, // fileName
                                  INDEX_STATE_SET_ALL,
                                  NULL, // storageIds
-                                 0  // storageIdCount
+                                 0,  // storageIdCount,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
                                 );
   if (error == ERROR_NONE)
   {
@@ -2228,7 +2230,9 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL, // storageIds
-                                   0  // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -2266,7 +2270,9 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                      NULL, // fileName
                                      INDEX_STATE_SET_ALL,
                                      NULL, // storageIds
-                                     0  // storageIdCount
+                                     0,  // storageIdCount
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
                                     );
       if (error != ERROR_NONE)
       {
@@ -2934,7 +2940,9 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                                  NULL, // fileName
                                  INDEX_STATE_SET_ALL,
                                  NULL, // storageIds
-                                 0  // storageIdCount
+                                 0,  // storageIdCount
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
                                 );
   if (error != ERROR_NONE)
   {
@@ -4428,7 +4436,7 @@ Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
 
   (*count) = 0;
 
-//Database_debugEnable(1);
+Database_debugEnable(1);
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -4457,7 +4465,7 @@ Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
                             count
                            );
   Database_finalize(&databaseQueryHandle);
-//Database_debugEnable(0);
+Database_debugEnable(0);
 
   // free resources
   String_delete(storageIdsString);
@@ -4479,9 +4487,13 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               ConstString      fileName,
                               IndexStateSet    indexStateSet,
                               const DatabaseId storageIds[],
-                              uint             storageIdCount
+                              uint             storageIdCount,
+                              uint64           offset,
+                              uint64           limit
                              )
 {
+  String regexpStorageName;
+
   Errors error;
   String indexStateSetString;
   String storageIdsString;
@@ -4504,21 +4516,20 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   if (deviceName  != NULL) indexQueryHandle->storage.deviceNamePattern  = Pattern_new(deviceName, PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
   if (fileName    != NULL) indexQueryHandle->storage.fileNamePattern    = Pattern_new(fileName,   PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
 
-  indexStateSetString = String_new();
+  regexpStorageName = getREGEXPString2(String_new(),storageName);
+
+  storageIdsString = String_new();
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(storage.id IN (");
     for (i = 0; i < storageIdCount; i++)
     {
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
-    String_appendCString(storageIdsString,"))");
   }
-  else
-  {
-    storageIdsString = String_newCString("1");
-  }
+
+  indexStateSetString = String_new();
+Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -4573,24 +4584,40 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                             WHERE     (%d OR (entities.jobUUID='%S')) \
                                   AND (%d OR (storage.entityId=%lld)) \
                                   AND (storage.state IN (%S)) \
-                                  AND %S \
+                                  AND (%d OR (storage.id IN (%S))) \
+\
+                                  AND (entities.type!=%d OR (    (%d OR (entities.type=%d)) \
+                                                             AND (%d OR REGEXP(%S,0,storage.name)) \
+                                                            ) \
+                                      ) \
                             ORDER BY storage.created DESC \
+                            LIMIT %llu,%llu \
                            ",
 #endif
-                           String_isEmpty(jobUUID) ? 1 : 0,
-                           jobUUID,
-                           (entityId == DATABASE_ID_ANY) ? 1 : 0,
-                           entityId,
+                           String_isEmpty(jobUUID) ? 1 : 0, jobUUID,
+                           (entityId == DATABASE_ID_ANY) ? 1 : 0, entityId,
                            getIndexStateSetString(indexStateSetString,indexStateSet),
-                           storageIdsString
+                           (storageIds == NULL) ? 1 : 0,storageIdsString,
+
+                           STORAGE_TYPE_FILESYSTEM,
+                           (storageType == STORAGE_TYPE_ANY) ? 1 : 0, STORAGE_TYPE_FILESYSTEM,
+                           (storageName == NULL            ) ? 1 : 0, regexpStorageName,
+
+                           offset,
+                           limit
                           );
-  String_delete(storageIdsString);
-  String_delete(indexStateSetString);
+Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
+    String_delete(indexStateSetString);
+    String_delete(storageIdsString);
+    String_delete(regexpStorageName);
     return error;
   }
+  String_delete(indexStateSetString);
+  String_delete(storageIdsString);
+  String_delete(regexpStorageName);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -4668,6 +4695,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 #endif
         )
   {
+fprintf(stderr,"%s, %d: storageName_=%s\n",__FILE__,__LINE__,String_cString(storageName_));
     if (Storage_parseName(&storageSpecifier,storageName_) == ERROR_NONE)
     {
       switch (storageSpecifier.type)
@@ -5251,8 +5279,8 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              String           pattern,
-                             uint             offset,
-                             uint             limit
+                             uint64           offset,
+                             uint64           limit
                             )
 {
   Errors error;
@@ -5306,6 +5334,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     String_appendCString(entryIdsString,"0");
   }
 
+Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "  SELECT files.id, \
@@ -5445,7 +5474,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                     AND (%d OR (special.storageId IN (%S))) \
                                     AND (%d OR (special.id IN (%S))) \
                            "
-                           "LIMIT %d,%d",
+                           "LIMIT %llu,%llu",
                            INDEX_TYPE_FILE,
                            IN_SET(indexTypeSet,INDEX_TYPE_FILE),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
@@ -5491,6 +5520,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
+Database_debugEnable(0);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
@@ -7085,7 +7115,9 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
                                  NULL, // fileName
                                  INDEX_STATE_SET_ALL,
                                  NULL,  // storageIds
-                                 0   // storageIdCount
+                                 0,   // storageIdCount
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
                                 );
   if (error != ERROR_NONE)
   {

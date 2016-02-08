@@ -4090,7 +4090,9 @@ LOCAL Errors deleteEntity(DatabaseId entityId)
                                  NULL, // fileName
                                  INDEX_STATE_SET_ALL,
                                  NULL,  // storageIds
-                                 0   // storageIdCount
+                                 0,  // storageIdCount
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
                                 );
   if (error != ERROR_NONE)
   {
@@ -4312,7 +4314,7 @@ LOCAL void purgeExpiredEntities(void)
                                 "INDEX",
                                 "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                 String_cString(jobName),
-                                ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL),
+                                ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                                 String_cString(dateTime),
                                 totalEntries,
                                 BYTES_SHORT(totalSize),
@@ -4360,7 +4362,7 @@ LOCAL void purgeExpiredEntities(void)
                               "INDEX",
                               "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                               String_cString(jobName),
-                              ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL),
+                              ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                               String_cString(dateTime),
                               totalEntries,
                               BYTES_SHORT(totalSize),
@@ -5147,7 +5149,9 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error == ERROR_NONE)
     {
@@ -12571,7 +12575,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -12615,7 +12621,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -12892,7 +12900,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                        NULL,  // fileName,
                                        INDEX_STATE_SET_ALL,
                                        Array_cArray(&clientInfo->storageIdArray),
-                                       Array_length(&clientInfo->storageIdArray)
+                                       Array_length(&clientInfo->storageIdArray),
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
                                       );
         if (error != ERROR_NONE)
         {
@@ -13575,7 +13585,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
                      entityId,
                      jobUUID,
                      scheduleUUID,
-                     (archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL) : "NONE",
+                     ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                      createdDateTime,
                      totalEntries,
                      totalSize,
@@ -13854,10 +13864,11 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 * Return : -
 * Notes  : Arguments:
 *            entityId=<id>|0|*
-*            maxCount=<n>|0
 *            storagePattern=<text>
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
+*            offset=<n>
+*            limit=<n>
 *          Result:
 *            storageId=<id>
 *            entityId=<id>
@@ -13877,9 +13888,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 {
   uint64           n;
   DatabaseId       entityId;
-  uint             maxCount;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
+  uint64           offset;
+  uint64           limit;
   String           storagePatternString;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -13903,7 +13915,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get entity id, max. count, filter storage pattern, index state set, index mode set
+  // get entity id, filter storage pattern, index state set, index mode set, offset, limit
   if   (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
     entityId = DATABASE_ID_ANY;
@@ -13917,7 +13929,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     }
     entityId = (DatabaseId)n;
   }
-  StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
   storagePatternString = String_new();
   if (!StringMap_getString(argumentMap,"storagePattern",storagePatternString,NULL))
   {
@@ -13934,6 +13945,18 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   if (!StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    String_delete(storagePatternString);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"offset",&offset,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
+    String_delete(storagePatternString);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"limit",&limit,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected limit=<n>");
     String_delete(storagePatternString);
     return;
   }
@@ -13966,7 +13989,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  NULL, // fileName
                                  indexStateSet,
                                  NULL,  // storageIds
-                                 0   // storageIdCount
+                                 0,  // storageIdCount
+                                 offset,
+                                 limit
                                 );
   if (error != ERROR_NONE)
   {
@@ -13982,8 +14007,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     return;
   }
   count = 0;
-  while (   ((maxCount == 0) || (count < maxCount))
-         && !isCommandAborted(clientInfo,id)
+fprintf(stderr,"%s, %d: ---------------------\n",__FILE__,__LINE__);
+  while (   !isCommandAborted(clientInfo,id)
          && Index_getNextStorage(&indexQueryHandle,
                                  &storageId,
                                  &entityId,
@@ -14030,7 +14055,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(printableStora
                      jobUUID,
                      scheduleUUID,
                      jobName,
-                     (archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL) : "NONE",
+                     ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                      printableStorageName,
                      dateTime,
                      entries,
@@ -14043,6 +14068,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(printableStora
     count++;
   }
   Index_doneList(&indexQueryHandle);
+fprintf(stderr,"%s, %d: done\n",__FILE__,__LINE__);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
@@ -14502,7 +14528,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -14557,7 +14585,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -14608,7 +14638,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -14670,7 +14702,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -14800,7 +14834,9 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
                                    NULL, // fileName
                                    INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
-                                   0   // storageIdCount
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -14929,7 +14965,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   bool       indexTypeAny;
   IndexTypes indexType;
   bool       newestEntriesOnly;
-  uint       entryCount;
+  uint       count;
   Errors     error;
 
   assert(clientInfo != NULL);
@@ -14981,7 +15017,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
                                0,  // entryIdCount
                                indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
                                entryPatternString,
-                               &entryCount
+                               &count
                               );
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
@@ -14992,7 +15028,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entryCount=%u",entryCount);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%u",count);
 
   // free resources
   String_delete(entryPatternString);
@@ -15343,8 +15379,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
   bool              indexTypeAny;
   IndexTypes        indexType;
   bool              newestEntriesOnly;
-  ulong             offset;
-  uint              limit;
+  uint64            offset;
+  uint64            limit;
   uint              entryCount;
   IndexList         indexList;
   IndexNode         *indexNode;
@@ -15370,7 +15406,7 @@ uint64 t[100];
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // entry pattern, get max. count, new entries only
+  // filter entry pattern, index type, new entries only, offset, limit
   entryPatternString = String_new();
   if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
   {
@@ -15398,13 +15434,13 @@ uint64 t[100];
     String_delete(entryPatternString);
     return;
   }
-  if (!StringMap_getULong(argumentMap,"offset",&offset,0))
+  if (!StringMap_getUInt64(argumentMap,"offset",&offset,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
     String_delete(entryPatternString);
     return;
   }
-  if (!StringMap_getULong(argumentMap,"limit",&limit,0))
+  if (!StringMap_getUInt64(argumentMap,"limit",&limit,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected limit=<n>");
     String_delete(entryPatternString);
