@@ -12662,6 +12662,97 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 }
 
 /***********************************************************************\
+* Name   : serverCommand_entryListClear
+* Purpose: clear entry list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  Array_clear(&clientInfo->fileIdArray);
+  Array_clear(&clientInfo->imageIdArray);
+  Array_clear(&clientInfo->directoryIdArray);
+  Array_clear(&clientInfo->linkIdArray);
+  Array_clear(&clientInfo->hardLinkIdArray);
+  Array_clear(&clientInfo->specialIdArray);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_entryListAdd
+* Purpose: add to storage list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            archiveEntryType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
+*            entryId=<id>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  ArchiveEntryTypes archiveEntryType;
+  DatabaseId        entryId;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get type, entry id
+  if (!StringMap_getEnum(argumentMap,"archiveEntryType",&archiveEntryType,(StringMapParseEnumFunction)Archive_parseArchiveEntryType,ARCHIVE_ENTRY_TYPE_UNKNOWN))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveEntryType=FILE|IMAGE|DIRECTORY|LINK|HARDLINKE|SPECIAL");
+    return;
+  }
+  if (!StringMap_getInt64(argumentMap,"entryId",&entryId,DATABASE_ID_NONE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
+    return;
+  }
+
+  // check if index database is available, check if index database is ready
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // add to id array
+  switch (archiveEntryType)
+  {
+    case ARCHIVE_ENTRY_TYPE_FILE     : Array_append(&clientInfo->fileIdArray,     &entryId); break;
+    case ARCHIVE_ENTRY_TYPE_IMAGE    : Array_append(&clientInfo->imageIdArray,    &entryId); break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY: Array_append(&clientInfo->directoryIdArray,&entryId); break;
+    case ARCHIVE_ENTRY_TYPE_LINK     : Array_append(&clientInfo->linkIdArray,     &entryId); break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK : Array_append(&clientInfo->hardLinkIdArray, &entryId); break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL  : Array_append(&clientInfo->specialIdArray,  &entryId); break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : serverCommand_storageDelete
 * Purpose: delete storage and remove database index
 * Input  : clientInfo    - client info
@@ -16354,6 +16445,8 @@ SERVER_COMMANDS[] =
 
   { "STORAGE_LIST_CLEAR",          serverCommand_storageListClear,         AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_ADD",            serverCommand_storageListAdd,           AUTHORIZATION_STATE_OK      },
+  { "ENTRY_LIST_CLEAR",            serverCommand_entryListClear,           AUTHORIZATION_STATE_OK      },
+  { "ENTRY_LIST_ADD",              serverCommand_entryListAdd,             AUTHORIZATION_STATE_OK      },
 
   { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_OK      },
 
