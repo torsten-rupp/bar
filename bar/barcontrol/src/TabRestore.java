@@ -1898,7 +1898,7 @@ System.exit(1);
      */
     private boolean isUpdateTriggered()
     {
-      return updateFlag;// || !updateOffsets.isEmpty();
+      return updateFlag || !updateOffsets.isEmpty();
     }
 
     /** update UUID tree items
@@ -3302,342 +3302,7 @@ System.exit(1);
      */
     private boolean isUpdateTriggered()
     {
-//TODO
-      return updateFlag;// || !updateOffsets.isEmpty();
-    }
-
-    private void XupdateEntryList()
-    {
-Dprintf.dprintf("obsolete~~~~~~~!!!!!!!!!!");
-      Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y offset=%d limit=%d",
-                                                                 entryPattern,
-                                                                 entryType.toString(),
-                                                                 newestEntriesOnly,
-                                                                 0, // entryCountOffset
-100//                                                                 entryMaxCount
-                                                                ),
-                                             0
-                                            );
-Dprintf.dprintf("");
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-widgetEntryTable.setItemCount(1000);
-}
-});
-if (false) {
-      final String[] errorMessage = new String[1];
-      ValueMap       valueMap     = new ValueMap();
-      while (   !isUpdateTriggered()
-             && !command.endOfData()
-             && command.getNextResult(errorMessage,
-                                      valueMap,
-                                      Command.TIMEOUT
-                                     ) == Errors.NONE
-            )
-      {
-        try
-        {
-          switch (valueMap.getEnum("entryType",EntryTypes.class))
-          {
-            case FILE:
-              {
-                long   entryId         = valueMap.getLong  ("entryId"        );
-                String storageName     = valueMap.getString("storageName"    );
-                long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                String fileName        = valueMap.getString("name"           );
-                long   dateTime        = valueMap.getLong  ("dateTime"       );
-                long   size            = valueMap.getLong  ("size"           );
-                long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
-
-                // add/update entry data map
-                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.FILE,fileName,dateTime,size);
-
-                // update/insert table item
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                    if (tableItem == null)
-                    {
-                      // insert tree item
-                      tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                          findEntryListIndex(entryData),
-                                                          (Object)entryData
-                                                         );
-                    }
-                    else
-                    {
-                      assert tableItem.getData() instanceof EntryData;
-
-                      // keep tree item
-//                      removeTableItemSet.remove(tableItem);
-                    }
-
-                    // update view
-                    Widgets.updateTableItem(tableItem,
-                                            (Object)entryData,
-                                            entryData.storageName,
-                                            entryData.name,
-                                            "FILE",
-                                            Units.formatByteSize(entryData.size),
-                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                           );
-                  }
-                });
-              }
-              break;
-            case IMAGE:
-              {
-                long   entryId         = valueMap.getLong  ("entryId"        );
-                String storageName     = valueMap.getString("storageName"    );
-                long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                String imageName       = valueMap.getString("name"           );
-                long   size            = valueMap.getLong  ("size"           );
-                long   blockOffset     = valueMap.getLong  ("blockOffset"    );
-                long   blockCount      = valueMap.getLong  ("blockCount"     );
-
-                // add/update entry data map
-                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.IMAGE,imageName,0L,size);
-
-                // update/insert table item
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                    if (tableItem == null)
-                    {
-                      // insert tree item
-                      tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                          findEntryListIndex(entryData),
-                                                          (Object)entryData
-                                                         );
-                    }
-                    else
-                    {
-                      assert tableItem.getData() instanceof EntryData;
-
-                      // keep tree item
-//                      removeTableItemSet.remove(tableItem);
-                    }
-
-                    // update view
-                    Widgets.updateTableItem(tableItem,
-                                            (Object)entryData,
-                                            entryData.storageName,
-                                            entryData.name,
-                                            "IMAGE",
-                                            Units.formatByteSize(entryData.size),
-                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                           );
-                  }
-                });
-              }
-              break;
-            case DIRECTORY:
-              {
-                long   entryId         = valueMap.getLong  ("entryId"        );
-                String storageName     = valueMap.getString("storageName"    );
-                long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                String directoryName   = valueMap.getString("name"           );
-                long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                // add/update entry data map
-                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.DIRECTORY,directoryName,dateTime);
-
-                // update/insert table item
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                    if (tableItem == null)
-                    {
-                      // insert tree item
-                      tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                          findEntryListIndex(entryData),
-                                                          (Object)entryData
-                                                         );
-                    }
-                    else
-                    {
-                      assert tableItem.getData() instanceof EntryData;
-
-                      // keep tree item
-//                      removeTableItemSet.remove(tableItem);
-                    }
-
-                    // update view
-                    Widgets.updateTableItem(tableItem,
-                                            (Object)entryData,
-                                            entryData.storageName,
-                                            entryData.name,
-                                            "DIR",
-                                            "",
-                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                           );
-                  }
-                });
-              }
-              break;
-            case LINK:
-              {
-                long   entryId         = valueMap.getLong  ("entryId"        );
-                String storageName     = valueMap.getString("storageName"    );
-                long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                String linkName        = valueMap.getString("name"           );
-                String destinationName = valueMap.getString("destinationName");
-                long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                // add/update entry data map
-                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.LINK,linkName,dateTime);
-
-                // update/insert table item
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                    if (tableItem == null)
-                    {
-                      // insert tree item
-                      tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                          findEntryListIndex(entryData),
-                                                          (Object)entryData
-                                                         );
-                    }
-                    else
-                    {
-                      assert tableItem.getData() instanceof EntryData;
-
-                      // keep tree item
-//                      removeTableItemSet.remove(tableItem);
-                    }
-
-                    // update view
-                    Widgets.updateTableItem(tableItem,
-                                            (Object)entryData,
-                                            entryData.storageName,
-                                            entryData.name,
-                                            "LINK",
-                                            "",
-                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                           );
-                  }
-                });
-              }
-              break;
-            case HARDLINK:
-              {
-                long   entryId         = valueMap.getLong  ("entryId"        );
-                String storageName     = valueMap.getString("storageName"    );
-                long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                String fileName        = valueMap.getString("name"           );
-                long   dateTime        = valueMap.getLong  ("dateTime"       );
-                long   size            = valueMap.getLong  ("size"           );
-                long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
-
-                // add/update entry data map
-                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.HARDLINK,fileName,dateTime,size);
-
-                // update/insert table item
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                    if (tableItem == null)
-                    {
-                      // insert tree item
-                      tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                          findEntryListIndex(entryData),
-                                                          (Object)entryData
-                                                         );
-                    }
-                    else
-                    {
-                      assert tableItem.getData() instanceof EntryData;
-
-                      // keep tree item
-//                      removeTableItemSet.remove(tableItem);
-                    }
-
-                    // update view
-                    Widgets.updateTableItem(tableItem,
-                                            (Object)entryData,
-                                            entryData.storageName,
-                                            entryData.name,
-                                            "HARDLINK",
-                                            Units.formatByteSize(entryData.size),
-                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                           );
-                  }
-                });
-              }
-              break;
-            case SPECIAL:
-              {
-
-                long   entryId         = valueMap.getLong  ("entryId"        );
-                String storageName     = valueMap.getString("storageName"    );
-                long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                String name            = valueMap.getString("name"           );
-                long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                // add/update entry data map
-                final EntryData entryData = entryDataMap.update(entryId,storageName,storageDateTime,EntryTypes.SPECIAL,name,dateTime);
-
-                // update/insert table item
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    TableItem tableItem = Widgets.getTableItem(widgetEntryTable,entryData);
-                    if (tableItem == null)
-                    {
-                      // insert tree item
-                      tableItem = Widgets.insertTableItem(widgetEntryTable,
-                                                          findEntryListIndex(entryData),
-                                                          (Object)entryData
-                                                         );
-                    }
-                    else
-                    {
-                      assert tableItem.getData() instanceof EntryData;
-
-                      // keep tree item
-//                      removeTableItemSet.remove(tableItem);
-                    }
-
-                    // update view
-                    Widgets.updateTableItem(tableItem,
-                                            (Object)entryData,
-                                            entryData.storageName,
-                                            entryData.name,
-                                            "DEVICE",
-                                            Units.formatByteSize(entryData.size),
-                                            simpleDateFormat.format(new Date(entryData.dateTime*1000L))
-                                           );
-                  }
-                });
-              }
-              break;
-          }
-        }
-        catch (IllegalArgumentException exception)
-        {
-          if (Settings.debugLevel > 0)
-          {
-            System.err.println("ERROR: "+exception.getMessage());
-          }
-        }
-      }
-}
+      return updateFlag || !updateOffsets.isEmpty();
     }
 
     /** refresh entry table display count
@@ -3675,7 +3340,7 @@ if (false) {
           widgetEntryTable.setTopIndex(0);
         }
       });
-      
+
       // reset
       updateFlag = false;
     }
@@ -5357,7 +5022,6 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
     composite.setLayout(new TableLayout(1.0,1.0));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
 
-//    group = Widgets.newGroup(composite,BARControl.tr("Entries"));
     group = Widgets.newGroup(composite);  // Note: no title; title is drawn in label below together with number of entries
     group.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,4));
     Widgets.layout(group,0,0,TableLayoutData.NSWE);
@@ -5374,6 +5038,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           String    text;
           Point     size;
 
+          // title
           text = BARControl.tr("Entries");
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
@@ -5381,6 +5046,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
                       (bounds.height-size.y)/2
                      );
 
+          // number of entries
           text = String.format(BARControl.tr("Count: %6d"),updateEntryTableThread.getCount());
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
@@ -5476,6 +5142,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           if (tableItem != null)
           {
             EntryData entryData = (EntryData)tableItem.getData();
+Dprintf.dprintf("");
             entryData.setChecked(tableItem.getChecked());
           }
 
