@@ -2896,6 +2896,36 @@ assert storagePattern != null;
 
   /** entry data map
    */
+  class EntryDataSet extends HashSet<EntryData>
+  {
+    EntryDataSet()
+    {
+    }
+
+    public void setChecked(EntryData entryData, boolean checked)
+    {
+Dprintf.dprintf("setChecked");
+      if (checked)
+      {
+        add(entryData);
+      }
+      else
+      {
+        remove(entryData);
+      }
+
+
+    }
+
+    public void remove(EntryData entryData)
+    {
+      super.remove(entryData);
+Dprintf.dprintf("");
+    }
+  }
+
+  /** entry data map
+   */
   class EntryDataMap extends HashMap<String,WeakReference<EntryData>>
   {
     /** update entry data
@@ -3659,12 +3689,13 @@ System.exit(1);
   private Button               widgetOverwriteEntries;
   private WidgetEvent          selectRestoreToEvent = new WidgetEvent();
 
-  UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
+  private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
   private IndexDataMap         indexDataMap        = new IndexDataMap();
   private IndexData            selectedIndexData   = null;
 
-  UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
+  private UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
   private EntryDataMap         entryDataMap          = new EntryDataMap();
+  private EntryDataSet         selectedEntryData   = new EntryDataSet();
 
   // ------------------------ native functions ----------------------------
 
@@ -5123,7 +5154,8 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             tableItem.setChecked(!tableItem.getChecked());
 
             EntryData entryData = (EntryData)tableItem.getData();
-            entryData.setChecked(tableItem.getChecked());
+//            entryData.setChecked(tableItem.getChecked());
+            selectedEntryData.setChecked(entryData,tableItem.getChecked());
 
             checkedEntryEvent.trigger();
           }
@@ -5144,6 +5176,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             EntryData entryData = (EntryData)tableItem.getData();
 Dprintf.dprintf("");
             entryData.setChecked(tableItem.getChecked());
+            selectedEntryData.setChecked(entryData,tableItem.getChecked());
           }
 
           // update checked entry list
