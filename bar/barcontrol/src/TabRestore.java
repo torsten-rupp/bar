@@ -1651,8 +1651,8 @@ public class TabRestore
      */
     public void run()
     {
-      boolean          updateFlag    = false;
-      HashSet<Integer> updateOffsets = null;
+      boolean          updateFlag    = true;
+      HashSet<Integer> updateOffsets = new HashSet<Integer>();
       try
       {
         for (;;)
@@ -1666,7 +1666,6 @@ public class TabRestore
             {
               public void run()
               {
-Dprintf.dprintf("");
                 BARControl.waitCursor();
                 widgetStorageTree.setForeground(COLOR_MODIFIED);
                 widgetStorageTable.setForeground(COLOR_MODIFIED);
@@ -1695,19 +1694,13 @@ Dprintf.dprintf("");
               updateStorageTreeItems(entityTreeItems);
             }
 
-Dprintf.dprintf("updateFlag=%s",updateFlag);
             if (updateFlag)
             {
               updateStorageTableCount();
-              updateFlag = false;
             }
-            if (updateOffsets != null)
+            if (updateOffsets.size() > 0)
             {
-              for (Integer offset : updateOffsets)
-              {
-                updateStorageTable(offset);
-              }
-              updateOffsets = null;
+              updateStorageTable(updateOffsets);
             }
           }
           catch (CommunicationError error)
@@ -1756,7 +1749,6 @@ System.exit(1);
               {
                 widgetStorageTree.setForeground(null);
                 widgetStorageTable.setForeground(null);
-Dprintf.dprintf("");
                 BARControl.resetCursor();
               }
             });
@@ -1775,11 +1767,14 @@ Dprintf.dprintf("");
             if (!this.updateFlag && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
 
             // save flag and offsets, reset
-            updateFlag    = this.updateFlag;
-            updateOffsets = this.updateOffsets;
-            this.updateFlag    = false;
-            this.updateOffsets = new HashSet<Integer>();
-Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOffsets.size());
+            updateFlag = this.updateFlag;
+            for (Integer offset : this.updateOffsets)
+            {
+              updateOffsets.add(offset);
+            }
+            this.updateFlag = false;
+            this.updateOffsets.clear();
+//Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOffsets.size());
           }
         }
       }
@@ -1876,7 +1871,7 @@ Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOff
     {
       synchronized(trigger)
       {
-        int offset = (index / PAGE_SIZE)*PAGE_SIZE;
+        int offset = (index/PAGE_SIZE)*PAGE_SIZE;
         if (!updateOffsets.contains(offset))
         {
           updateOffsets.add(offset);
@@ -1896,6 +1891,14 @@ Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOff
         updateFlag = true;
         trigger.notify();
       }
+    }
+
+    /** check if update triggered
+     * @return true iff update triggered
+     */
+    private boolean isUpdateTriggered()
+    {
+      return updateFlag;// || !updateOffsets.isEmpty();
     }
 
     /** update UUID tree items
@@ -1921,7 +1924,7 @@ Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOff
           }
         }
       });
-      if (updateFlag || !updateOffsets.isEmpty()) return;
+      if (isUpdateTriggered()) return;
 
       // update UUID list
 // TODO
@@ -1932,9 +1935,8 @@ assert storagePattern != null;
                                                         ),
                                      0
                                     );
-      while (   !command.endOfData()
-             && !updateFlag
-             && !updateOffsets.isEmpty()
+      while (   !isUpdateTriggered()
+             && !command.endOfData()
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -1998,7 +2000,7 @@ assert storagePattern != null;
           }
         }
       }
-      if (updateFlag || !updateOffsets.isEmpty()) return;
+      if (isUpdateTriggered()) return;
 
       // remove not existing entries
       display.syncExec(new Runnable()
@@ -2046,7 +2048,7 @@ assert storagePattern != null;
           uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
         }
       });
-      if (updateFlag || !updateOffsets.isEmpty()) return;
+      if (isUpdateTriggered()) return;
 
       // update entity list
 // TODO
@@ -2180,7 +2182,7 @@ assert storagePattern != null;
           entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
         }
       });
-      if (updateFlag || !updateOffsets.isEmpty()) return;
+      if (isUpdateTriggered()) return;
 
       // update storage list
 // TODO
@@ -2310,16 +2312,6 @@ assert storagePattern != null;
     {
       assert storagePattern != null;
 
-      // reset count
-Dprintf.dprintf("");
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-//          widgetStorageTable.setItemCount(0);
-        }
-      });
-
       // get storages info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
@@ -2346,43 +2338,27 @@ Dprintf.dprintf("");
           widgetStorageTable.clearAll();
           widgetStorageTable.setItemCount(count);
           widgetStorageTable.setTopIndex(0);
-Dprintf.dprintf("");
         }
       });
+
+      // reset
+      updateFlag = false;
     }
 
     /** refresh storage table items
      * @param offset refresh offset
+     * @return true iff update done
      */
-    private void updateStorageTable(int offset)
+    private boolean updateStorageTable(int offset)
     {
+      assert storagePattern != null;
       assert offset >= 0;
       assert count >= 0;
 
       // get limit
-      int limit = ((offset+128) < count) ? 128 : count-offset;
-Dprintf.dprintf("updateStorageTable list %d %d",offset,limit);
-
-/*
-      // get current storage index data
-      final HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-          for (TableItem tableItem : widgetStorageTable.getItems())
-          {
-            removeTableItemSet.add(tableItem);
-          }
-        }
-      });
-      if (updateFlag || !updateOffsets.isEmpty()) return;
-*/
+      int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
 
       // update storage table segment
-// TODO
-assert storagePattern != null;
-Dprintf.dprintf("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj");
       Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=%d limit=%d",
                                                                  (storageEntityState != EntityStates.NONE) ? "*" : "0",
                                                                  storagePattern,
@@ -2396,10 +2372,9 @@ Dprintf.dprintf("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj");
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
       int            n            = 0;
-      while (   (n < limit)
+      while (   !isUpdateTriggered()
+             && (n < limit)
              && !command.endOfData()
-             && !updateFlag
-             && !updateOffsets.isEmpty()
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -2407,7 +2382,6 @@ Dprintf.dprintf("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj");
             )
       {
         final int i = offset+n;
-Dprintf.dprintf("i=%d",i);
 
         try
         {
@@ -2462,33 +2436,23 @@ Dprintf.dprintf("i=%d",i);
 
         n++;
       }
-Dprintf.dprintf("%s %s %s %s",
-(n < limit),
-command.endOfData(),
-updateFlag,
-!updateOffsets.isEmpty()
-);
-      if (updateFlag || !updateOffsets.isEmpty()) return;
 
-      // remove not existing entries
-/*
-      display.syncExec(new Runnable()
+      return n >= limit;
+    }
+
+    /** refresh storage table items
+     * @param updateOffsets segment offsets to update
+     */
+    private void updateStorageTable(HashSet<Integer> updateOffsets)
+    {
+      Integer offsets[] = updateOffsets.toArray(new Integer[updateOffsets.size()]);
+      for (Integer offset : offsets)
       {
-        public void run()
+        if (updateStorageTable(offset))
         {
-          for (TableItem tableItem : removeTableItemSet)
-          {
-            if (!tableItem.isDisposed())
-            {
-              IndexData indexData = (IndexData)tableItem.getData();
-Dprintf.dprintf("");
-//              Widgets.removeTableItem(widgetStorageTable,tableItem);
-//              indexData.clearTableItem();
-            }
-          }
+          updateOffsets.remove(offset);
         }
-      });
-*/
+      }
     }
 
     /** update UUID menus
@@ -2518,15 +2482,14 @@ Dprintf.dprintf("");
           }
         }
       });
-      if (updateFlag || !updateOffsets.isEmpty()) return;
+      if (isUpdateTriggered()) return;
 
       // update UUIDs
       command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST pattern=*"),
                                      0
                                     );
-      while (   !command.endOfData()
-             && !updateFlag
-             && !updateOffsets.isEmpty()
+      while (   !isUpdateTriggered()
+             && !command.endOfData()
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -2660,7 +2623,7 @@ Dprintf.dprintf("");
           }
         }
       }
-      if (updateFlag || !updateOffsets.isEmpty()) return;
+      if (isUpdateTriggered()) return;
 
       // remove not existing UUID menus
       display.syncExec(new Runnable()
@@ -2698,7 +2661,7 @@ Dprintf.dprintf("");
           }
         }
       });
-      if (updateFlag || !updateOffsets.isEmpty()) return;
+      if (isUpdateTriggered()) return;
 
       // update entities
       for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
@@ -2710,9 +2673,8 @@ Dprintf.dprintf("");
                                                           ),
                                        0
                                       );
-        while (   !command.endOfData()
-               && !updateFlag
-               && !updateOffsets.isEmpty()
+        while (   !isUpdateTriggered()
+               && !command.endOfData()
                && command.getNextResult(errorMessage,
                                         valueMap,
                                         Command.TIMEOUT
@@ -2787,7 +2749,7 @@ Dprintf.dprintf("");
             }
           }
         }
-        if (updateFlag || !updateOffsets.isEmpty()) return;
+        if (isUpdateTriggered()) return;
       }
 
       // remove not existing entity menu items
@@ -3132,8 +3094,8 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      */
     public void run()
     {
-      boolean          updateFlag    = false;
-      HashSet<Integer> updateOffsets = null;
+      boolean          updateFlag    = true;
+      HashSet<Integer> updateOffsets = new HashSet<Integer>();
       try
       {
         for (;;)
@@ -3143,30 +3105,22 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           {
             public void run()
             {
-Dprintf.dprintf("");
               BARControl.waitCursor();
               widgetEntryTable.setForeground(COLOR_MODIFIED);
             }
           });
 
           // update table count, table segment
-Dprintf.dprintf("updateFlag=%s",updateFlag);
           try
           {
             if (updateFlag)
             {
               updateEntryTableCount();
-              updateFlag = false;
             }
-            if (updateOffsets != null)
+            if (updateOffsets.size() > 0)
             {
-              for (Integer offset : updateOffsets)
-              {
-                updateEntryTable(offset);
-              }
-              updateOffsets = null;
+              updateEntryTable(updateOffsets);
             }
-Dprintf.dprintf("");
           }
           catch (CommunicationError error)
           {
@@ -3191,7 +3145,6 @@ System.exit(1);
             public void run()
             {
               widgetEntryTable.setForeground(null);
-Dprintf.dprintf("");
               BARControl.resetCursor();
             }
           });
@@ -3199,9 +3152,8 @@ Dprintf.dprintf("");
           // wait for trigger
           synchronized(trigger)
           {
-Dprintf.dprintf("wait...");
             // wait for refresh request trigger or timeout
-            while (!this.updateFlag && this.updateOffsets.isEmpty())
+            while (!this.updateFlag && (this.updateOffsets.size() == 0))
             {
 //TODO
 //              try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
@@ -3209,11 +3161,14 @@ Dprintf.dprintf("wait...");
             }
 
             // save trigger flag and offsets, reset
-            updateFlag    = this.updateFlag;
-            updateOffsets = this.updateOffsets;
-            this.updateFlag    = false;
-            this.updateOffsets = new HashSet<Integer>();
-Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOffsets.size());
+            updateFlag = this.updateFlag;
+            for (Integer offset : this.updateOffsets)
+            {
+              updateOffsets.add(offset);
+            }
+            this.updateFlag = false;
+            this.updateOffsets.clear();
+//Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOffsets.size());
           }
         }
       }
@@ -3322,7 +3277,7 @@ Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOff
     {
       synchronized(trigger)
       {
-        int offset = (index / PAGE_SIZE)*PAGE_SIZE;
+        int offset = (index/PAGE_SIZE)*PAGE_SIZE;
         if (!updateOffsets.contains(offset))
         {
           updateOffsets.add(offset);
@@ -3340,6 +3295,15 @@ Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOff
         updateFlag = true;
         trigger.notify();
       }
+    }
+
+    /** check if update triggered
+     * @return true iff update triggered
+     */
+    private boolean isUpdateTriggered()
+    {
+//TODO
+      return updateFlag;// || !updateOffsets.isEmpty();
     }
 
     private void XupdateEntryList()
@@ -3365,9 +3329,8 @@ widgetEntryTable.setItemCount(1000);
 if (false) {
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      while (   !command.endOfData()
-             && !updateFlag
-             && updateOffsets.isEmpty()
+      while (   !isUpdateTriggered()
+             && !command.endOfData()
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -3677,24 +3640,11 @@ if (false) {
 }
     }
 
-
     /** refresh entry table display count
      */
     private void updateEntryTableCount()
     {
       assert entryPattern != null;
-
-      // reset count
-Dprintf.dprintf("updateEntryTableCount");
-//      offset = -1;
-//      count  = -1;
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-//          widgetEntryTable.setItemCount(0);
-        }
-      });
 
       // get entries info
       final String[] errorMessage = new String[1];
@@ -3723,22 +3673,25 @@ Dprintf.dprintf("updateEntryTableCount");
           widgetEntryTable.clearAll();
           widgetEntryTable.setItemCount(count);
           widgetEntryTable.setTopIndex(0);
-Dprintf.dprintf("coun=%d",count);
         }
       });
+      
+      // reset
+      updateFlag = false;
     }
 
     /** refresh entry table items
      * @param offset refresh offset
+     * @return true iff update done
      */
-    private void updateEntryTable(int offset)
+    private boolean updateEntryTable(int offset)
     {
+      assert entryPattern != null;
       assert offset >= 0;
       assert count >= 0;
 
       // get limit
-      int limit = ((offset+128) < count) ? 128 : count-offset;
-Dprintf.dprintf("%d updateEntryTable list offset=%d limit=%d",Thread.currentThread().hashCode(),offset,limit);
+      int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
 
       // update entry table segment
       Command command = BARServer.runCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y offset=%d limit=%d",
@@ -3753,10 +3706,9 @@ Dprintf.dprintf("%d updateEntryTable list offset=%d limit=%d",Thread.currentThre
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
       int            n            = 0;
-      while (   (n < limit)
+      while (   !isUpdateTriggered()
+             && (n < limit)
              && !command.endOfData()
-             && !updateFlag
-             && updateOffsets.isEmpty()
              && command.getNextResult(errorMessage,
                                       valueMap,
                                       Command.TIMEOUT
@@ -3969,6 +3921,23 @@ Dprintf.dprintf("%d updateEntryTable list offset=%d limit=%d",Thread.currentThre
         }
 
         n++;
+      }
+
+      return n >= limit;
+    }
+
+    /** refresh entry table items
+     * @param updateOffsets segment offsets to update
+     */
+    private void updateEntryTable(HashSet<Integer> updateOffsets)
+    {
+      Integer offsets[] = updateOffsets.toArray(new Integer[updateOffsets.size()]);
+      for (Integer offset : offsets)
+      {
+        if (updateEntryTable(offset))
+        {
+          updateOffsets.remove(offset);
+        }
       }
     }
   }
@@ -4496,10 +4465,7 @@ Dprintf.dprintf("%d updateEntryTable list offset=%d limit=%d",Thread.currentThre
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-Dprintf.dprintf("-----------------------------------------");
           updateCheckedStorageList();
-          updateStorageTreeTableThread.triggerUpdate();
-          updateEntryTableThread.triggerUpdate();
         }
       });
       widgetStorageTree.addListener(SWT.Expand,new Listener()
@@ -4852,7 +4818,6 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           TableItem tableItem = (TableItem)event.item;
 
           int i = widgetStorageTable.indexOf(tableItem);
-Dprintf.dprintf("widgetStorageTable setdata i=%d",i);
           updateStorageTreeTableThread.triggerUpdate(i);
         }
       });
@@ -4880,7 +4845,6 @@ Dprintf.dprintf("widgetStorageTable setdata i=%d",i);
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-Dprintf.dprintf("");
           TableItem tabletem = (TableItem)selectionEvent.item;
           if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
           {
@@ -4941,7 +4905,6 @@ Dprintf.dprintf("");
         @Override
         public void keyReleased(KeyEvent keyEvent)
         {
-Dprintf.dprintf("");
           if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
           {
             refreshStorageIndex();
@@ -5480,7 +5443,6 @@ Dprintf.dprintf("");
           TableItem tableItem = (TableItem)event.item;
 
           int i = widgetEntryTable.indexOf(tableItem);
-Dprintf.dprintf("%d widgetEntryTable setdata i=%d",Thread.currentThread().hashCode(),i);
           updateEntryTableThread.triggerUpdate(i);
         }
       });
@@ -5941,6 +5903,7 @@ Dprintf.dprintf("%d widgetEntryTable setdata i=%d",Thread.currentThread().hashCo
    */
   private void updateCheckedStorageList()
   {
+Dprintf.dprintf("updateCheckedStorageList");
     BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
@@ -7863,8 +7826,8 @@ boolean overwriteFiles = false;
    */
   private void updateCheckedEntryList()
   {
-    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
 Dprintf.dprintf("");
+    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
 /*
     for (TableItem tableItem : widgetEntryTable.getItems())
     {
