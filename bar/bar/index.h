@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: index database functions
+* Contents: index functions
 * Systems: all
 *
 \***********************************************************************/
@@ -32,7 +32,10 @@
 /***************************** Constants *******************************/
 #define INDEX_STORAGE_ID_NONE -1LL
 
+// max. limit value
 #define INDEX_UNLIMITED 9223372036854775807LL
+
+/***************************** Datatypes *******************************/
 
 // index states
 typedef enum
@@ -71,8 +74,6 @@ typedef uint64 IndexModeSet;
 #define INDEX_MODE_SET_NONE 0
 #define INDEX_MODE_SET_ALL  (INDEX_MODE_MANUAL|INDEX_MODE_AUTO)
 
-/***************************** Datatypes *******************************/
-
 // index handle
 typedef struct
 {
@@ -101,17 +102,23 @@ typedef struct
 // index types
 typedef enum
 {
+  INDEX_TYPE_NONE,
+
+  INDEX_TYPE_STORAGE,
+  INDEX_TYPE_ENTITY,
   INDEX_TYPE_FILE,
   INDEX_TYPE_IMAGE,
   INDEX_TYPE_DIRECTORY,
   INDEX_TYPE_LINK,
   INDEX_TYPE_HARDLINK,
-  INDEX_TYPE_SPECIAL,
+  INDEX_TYPE_SPECIAL
 } IndexTypes;
 
 #define INDEX_TYPE_SET_NONE 0
 #define INDEX_TYPE_SET_ANY \
-  (  SET_VALUE(INDEX_TYPE_FILE) \
+  (  SET_VALUE(INDEX_TYPE_STORAGE) \
+   | SET_VALUE(INDEX_TYPE_ENTITY) \
+   | SET_VALUE(INDEX_TYPE_FILE) \
    | SET_VALUE(INDEX_TYPE_IMAGE) \
    | SET_VALUE(INDEX_TYPE_DIRECTORY) \
    | SET_VALUE(INDEX_TYPE_LINK) \
@@ -121,11 +128,34 @@ typedef enum
 
 typedef ulong IndexTypeSet;
 
+// index id
+typedef int64 IndexId;
+
+// internal usage only!
+typedef union
+{
+  struct
+  {
+    IndexTypes type : 4;
+    DatabaseId databaseId : 60;
+  };
+  IndexId data;
+} __IndexId;
+
+// special index ids
+#define INDEX_ID_NONE  0LL
+#define INDEX_ID_ANY  -1LL
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
 
+// create index state set value
 #define INDEX_STATE_SET(indexState) (1 << indexState)
+
+// get type, database id from index id
+#define INDEX_TYPE_(indexId)             (((__IndexId)(indexId)).type                   )
+#define INDEX_DATABASE_ID_(indexId)      (((__IndexId)(indexId)).databaseId             )
 
 #ifndef NDEBUG
   #define Index_done(...) __Index_done(__FILE__,__LINE__,__VA_ARGS__)
@@ -250,14 +280,23 @@ void __Index_done(const char  *__fileName__,
                  );
 #endif /* NDEBUG */
 
+INLINE IndexTypes Index_getType(IndexId indexId);
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENATION__)
+INLINE IndexTypes Index_getType(IndexId indexId)
+{
+  return INDEX_TYPE_(indexId);
+}
+#endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
+
+
 /***********************************************************************\
 * Name   : Index_findById
 * Purpose: find storage by id
 * Input  : indexHandle - index handle
-*          storageId   - database id of storage
+*          storageId   - index id of storage
 * Output : jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
-*          entityId            - database id of entity (can be NULL)
+*          entityId            - index id of entity (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          indexState          - index state (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
@@ -267,10 +306,10 @@ void __Index_done(const char  *__fileName__,
 \***********************************************************************/
 
 bool Index_findById(IndexHandle *indexHandle,
-                    DatabaseId  storageId,
+                    IndexId     storageId,
                     String      jobUUID,
                     String      scheduleUUID,
-                    DatabaseId  *entityId,
+                    IndexId     *entityId,
                     String      storageName,
                     IndexStates *indexState,
                     uint64      *lastCheckedDateTime
@@ -287,8 +326,8 @@ bool Index_findById(IndexHandle *indexHandle,
 *          findFileName    - file name to find or NULL
 * Output : jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
-*          entityId            - database id of entity (can be NULL)
-*          storageId           - database id of storage (can be NULL)
+*          entityId            - index id of entity (can be NULL)
+*          storageId           - index id of storage (can be NULL)
 *          indexState          - index state (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
 *                                be NULL)
@@ -304,8 +343,8 @@ bool Index_findByName(IndexHandle  *indexHandle,
                       ConstString  findFileName,
                       String       jobUUID,
                       String       scheduleUUID,
-                      DatabaseId   *entityId,
-                      DatabaseId   *storageId,
+                      IndexId      *entityId,
+                      IndexId      *storageId,
                       IndexStates  *indexState,
                       uint64       *lastCheckedDateTime
                      );
@@ -317,8 +356,8 @@ bool Index_findByName(IndexHandle  *indexHandle,
 *          indexState  - index state
 * Output : jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
-*          entityId            - database id of entity (can be NULL)
-*          storageId           - database id of storage (can be NULL)
+*          entityId            - index id of entity (can be NULL)
+*          storageId           - index id of storage (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
 *                                be NULL)
@@ -330,8 +369,8 @@ bool Index_findByState(IndexHandle   *indexHandle,
                        IndexStateSet indexStateSet,
                        String        jobUUID,
                        String        scheduleUUID,
-                       DatabaseId    *entityId,
-                       DatabaseId    *storageId,
+                       IndexId       *entityId,
+                       IndexId       *storageId,
                        String        storageName,
                        uint64        *lastCheckedDateTime
                       );
@@ -340,7 +379,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
 * Name   : Index_getState
 * Purpose: get index state
 * Input  : indexHandle - index handle
-*          storageId   - database id of storage
+*          storageId   - index id of storage
 * Output : indexState          - index state; see IndexStates
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
 *                                be NULL)
@@ -349,18 +388,18 @@ bool Index_findByState(IndexHandle   *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_getState(IndexHandle  *indexHandle,
-                      DatabaseId   storageId,
-                      IndexStates  *indexState,
-                      uint64       *lastCheckedDateTime,
-                      String       errorMessage
+Errors Index_getState(IndexHandle *indexHandle,
+                      IndexId     storageId,
+                      IndexStates *indexState,
+                      uint64      *lastCheckedDateTime,
+                      String      errorMessage
                      );
 
 /***********************************************************************\
 * Name   : Index_setState
 * Purpose: set storage index state
 * Input  : indexHandle         - index handle
-*          storageId           - database id of storage
+*          storageId           - index id of storage
 *          indexState          - index state; see IndexStates
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
 *                                be 0LL)
@@ -372,7 +411,7 @@ Errors Index_getState(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 Errors Index_setState(IndexHandle *indexHandle,
-                      DatabaseId  storageId,
+                      IndexId     storageId,
                       IndexStates indexState,
                       uint64      lastCheckedDateTime,
                       const char  *errorMessage,
@@ -465,7 +504,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextEntity
 * Purpose: get next index entity entry
 * Input  : IndexQueryHandle - index query handle
-* Output : databaseId       - database id of entry
+* Output : indexId          - index id of entry
 *          jobUUID          - unique job id (can be NULL)
 *          scheduleUUID     - unique schedule id (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
@@ -478,7 +517,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
-                         DatabaseId       *databaseId,
+                         IndexId          *indexId,
                          String           jobUUID,
                          String           scheduleUUID,
                          uint64           *createdDateTime,
@@ -495,7 +534,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 *          jobUUID      - unique job id (can be NULL)
 *          scheduleUUID - unique schedule id (can be NULL)
 *          archiveType  - archive type
-* Output : entityId - database id of new entity index
+* Output : entityId - index id of new entity index
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -504,20 +543,20 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        ConstString  jobUUID,
                        ConstString  scheduleUUID,
                        ArchiveTypes archiveType,
-                       DatabaseId   *entityId
+                       IndexId     *entityId
                       );
 
 /***********************************************************************\
 * Name   : Index_deleteEntity
 * Purpose: delete entity index including entries for attached storages
 * Input  : indexQueryHandle - index query handle
-*          entityId         - database id of entity index
+*          entityId         - index id of entity index
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteEntity(IndexHandle *indexHandle,
-                          DatabaseId  entityId
+                          IndexId     entityId
                          );
 
 /***********************************************************************\
@@ -534,12 +573,12 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
-                             const DatabaseId storageIds[],
-                             uint             storageIdCount,
-                             IndexStateSet    indexStateSet,
-                             String           pattern,
-                             ulong            *count
+Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
+                             const IndexId storageIds[],
+                             uint          storageIdCount,
+                             IndexStateSet indexStateSet,
+                             String        pattern,
+                             ulong         *count
                             );
 
 /***********************************************************************\
@@ -569,7 +608,7 @@ Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
 Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
                               ConstString      uuid,
-                              DatabaseId       entityId,
+                              IndexId          entityId,
                               StorageTypes     storageType,
                               ConstString      storageName,
                               ConstString      hostName,
@@ -577,7 +616,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               ConstString      deviceName,
                               ConstString      fileName,
                               IndexStateSet    indexStateSet,
-                              const DatabaseId storageIds[],
+                              const IndexId    storageIds[],
                               uint             storageIdCount,
                               uint64           offset,
                               uint64           limit
@@ -605,8 +644,8 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          DatabaseId       *storageId,
-                          DatabaseId       *entityId,
+                          IndexId          *storageId,
+                          IndexId          *entityId,
                           String           jobUUID,
                           String           scheduleUUID,
                           ArchiveTypes     *archiveType,
@@ -624,21 +663,21 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_newStorage
 * Purpose: create new storage index
 * Input  : indexHandle - index handle
-*          entityId    - database id of entity
+*          entityId    - index id of entity
 *          storageName - storage name
 *          indexState  - index state
 *          indexMode   - index mode
-* Output : databaseId - storageId id of new storage index
+* Output : indexId - storageId id of new storage index
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_newStorage(IndexHandle *indexHandle,
-                        DatabaseId  entityId,
+                        IndexId     entityId,
                         ConstString storageName,
                         IndexStates indexState,
                         IndexModes  indexMode,
-                        DatabaseId  *storageId
+                        IndexId     *storageId
                        );
 
 /***********************************************************************\
@@ -646,34 +685,34 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 * Purpose: delete storage index including entries for attached files,
 *          image, directories, link, hard link, special entries
 * Input  : indexQueryHandle - index query handle
-*          databaseId       - database id of storage index
+*          IndexId          - index id of storage index
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteStorage(IndexHandle *indexHandle,
-                           DatabaseId  databaseId
+                           IndexId     indexId
                           );
 
 /***********************************************************************\
 * Name   : Index_clearStorage
 * Purpose: clear index storage content
 * Input  : indexHandle - index handle
-*          storageId   - database id of storage index
+*          storageId   - index id of storage index
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_clearStorage(IndexHandle *indexHandle,
-                          DatabaseId  storageId
+                          IndexId     storageId
                          );
 
 /***********************************************************************\
 * Name   : Index_getStorage
 * Purpose: get storage index name/entries/size
 * Input  : indexHandle - index handle
-*          storageId   - database id of storage index
+*          storageId   - index id of storage index
 * Output:  storageName         - storage name (can be NULL)
 *          createdDateTime     - created date/time (can be NULL)
 *          entries             - number of entries (can be NULL)
@@ -687,7 +726,7 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_getStorage(IndexHandle *indexHandle,
-                        DatabaseId  storageId,
+                        IndexId     storageId,
                         String      storageName,
                         uint64      *createdDateTime,
                         uint64      *entries,
@@ -702,7 +741,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 * Name   : Index_storageUpdate
 * Purpose: update storage index name/entries/size
 * Input  : indexHandle - index handle
-*          storageId   - database id of storage index
+*          storageId   - index id of storage index
 *          storageName - storage name (can be NULL)
 *          storageSize - storage size [bytes] (can be 0)
 * Output : -
@@ -711,7 +750,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_storageUpdate(IndexHandle *indexHandle,
-                           DatabaseId  storageId,
+                           IndexId     storageId,
                            ConstString storageName,
                            uint64      storageSize
                           );
@@ -732,14 +771,14 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
-                            const DatabaseId storageIds[],
-                            uint             storageIdCount,
-                            const DatabaseId entryIds[],
-                            uint             entryIdCount,
-                            IndexTypeSet     indexTypeSet,
-                            String           pattern,
-                            ulong            *count
+Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
+                            const IndexId storageIds[],
+                            uint          storageIdCount,
+                            const IndexId entryIds[],
+                            uint          entryIdCount,
+                            IndexTypeSet  indexTypeSet,
+                            String        pattern,
+                            ulong         *count
                            );
 
 /***********************************************************************\
@@ -763,9 +802,9 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
 
 Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
-                             const DatabaseId storageIds[],
+                             const IndexId    storageIds[],
                              uint             storageIdCount,
-                             const DatabaseId entryIds[],
+                             const IndexId    entryIds[],
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              String           pattern,
@@ -777,10 +816,9 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNext
 * Purpose: get next entry
 * Input  : indexQueryHandle - index query handle
-* Output : databaseId                  - database id of entry
+* Output : indexId                     - index id of entry
 *          storageName                 - storage name (can be NULL)
 *          storageDateTime             - storage date/time stamp [s]
-*          indexType                   - index type
 *          name                        - entry name
 *          destinationName             - destination name (for link
 *                                        entries)
@@ -799,10 +837,9 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
-                   DatabaseId        *databaseId,
+                   IndexId           *indexId,
                    String            storageName,
                    uint64            *storageDateTime,
-                   IndexTypes        *type,
                    String            name,
                    String            destinationName,
                    FileSystemTypes   *fileSystemType,
@@ -832,9 +869,9 @@ bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
 
 Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
-                           const DatabaseId storageIds[],
+                           const IndexId    storageIds[],
                            uint             storageIdCount,
-                           const DatabaseId entryIds[],
+                           const IndexId    entryIds[],
                            uint             entryIdCount,
                            String           pattern
                           );
@@ -843,7 +880,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextFile
 * Purpose: get next file entry
 * Input  : indexQueryHandle - index query handle
-* Output : databaseId     - database id of entry
+* Output : indexId        - index id of entry
 *          storageName    - storage name (can be NULL)
 *          fileName       - name
 *          size           - size [bytes]
@@ -858,7 +895,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
-                       DatabaseId       *databaseId,
+                       IndexId          *indexId,
                        String           storageName,
                        uint64           *storageDateTime,
                        String           fileName,
@@ -875,13 +912,13 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_deleteFile
 * Purpose: delete file entry
 * Input  : indexHandle - index handle
-*          databaseId  - database id of entry
+*          indexId     - index id of entry
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteFile(IndexHandle *indexHandle,
-                        DatabaseId  databaseId
+                        IndexId     indexId
                        );
 
 /***********************************************************************\
@@ -900,9 +937,9 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 
 Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             IndexHandle      *indexHandle,
-                            const DatabaseId *storageIds,
+                            const IndexId    *storageIds,
                             uint             storageIdCount,
-                            const DatabaseId entryIds[],
+                            const IndexId    entryIds[],
                             uint             entryIdCount,
                             String           pattern
                            );
@@ -911,7 +948,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextImage
 * Purpose: get next image entry
 * Input  : indexQueryHandle - index query handle
-* Output : databaseId   - database id of entry
+* Output : indexId   - index id of entry
 *          storageName  - storage name
 *          imageName    - image name
 *          size         - size [bytes]
@@ -922,7 +959,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
-                        DatabaseId       *databaseId,
+                        IndexId          *indexId,
                         String           storageName,
                         uint64           *storageDateTime,
                         String           imageName,
@@ -936,13 +973,13 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_deleteImage
 * Purpose: delete image entry
 * Input  : indexHandle - index handle
-*          databaseId  - database id of entry
+*          indexId     - index id of entry
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteImage(IndexHandle *indexHandle,
-                         DatabaseId  databaseId
+                         IndexId     indexId
                         );
 
 /***********************************************************************\
@@ -961,9 +998,9 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 
 Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  IndexHandle      *indexHandle,
-                                 const DatabaseId *storageIds,
+                                 const IndexId    *storageIds,
                                  uint             storageIdCount,
-                                 const DatabaseId entryIds[],
+                                 const IndexId    entryIds[],
                                  uint             entryIdCount,
                                  String           pattern
                                 );
@@ -972,7 +1009,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextDirectory
 * Purpose: get next directory entry
 * Input  : indexQueryHandle - index query handle
-* Output : databaseId    - database id of entry
+* Output : indexId       - index id of entry
 *          storageName   - storage name
 *          directoryName - directory name
 *          timeModified  - modified date/time stamp [s]
@@ -984,7 +1021,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
-                            DatabaseId       *databaseId,
+                            IndexId          *indexId,
                             String           storageName,
                             uint64           *storageDateTime,
                             String           directoryName,
@@ -998,13 +1035,13 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_deleteDirectory
 * Purpose: delete directory entry
 * Input  : indexHandle - index handle
-*          databaseId  - database id of entry
+*          indexId     - index id of entry
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteDirectory(IndexHandle *indexHandle,
-                             DatabaseId  databaseId
+                             IndexId     indexId
                             );
 
 /***********************************************************************\
@@ -1023,9 +1060,9 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
 
 Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
-                           const DatabaseId *storageIds,
+                           const IndexId    *storageIds,
                            uint             storageIdCount,
-                           const DatabaseId entryIds[],
+                           const IndexId    entryIds[],
                            uint             entryIdCount,
                            String           pattern
                           );
@@ -1034,7 +1071,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextLink
 * Purpose: get next link entry
 * Input  : indexQueryHandle - index query handle
-* Output : databaseId      - database id of entry
+* Output : indexId         - index id of entry
 *          storageName     - storage name
 *          linkName        - link name
 *          destinationName - destination name
@@ -1047,7 +1084,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
-                       DatabaseId       *databaseId,
+                       IndexId          *indexId,
                        String           storageName,
                        uint64           *storageDateTime,
                        String           name,
@@ -1062,13 +1099,13 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_deleteLink
 * Purpose: delete link entry
 * Input  : indexHandle - index handle
-*          databaseId  - database id of entry
+*          indexId     - index id of entry
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteLink(IndexHandle *indexHandle,
-                        DatabaseId  databaseId
+                        IndexId     indexId
                        );
 
 /***********************************************************************\
@@ -1087,9 +1124,9 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 
 Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                IndexHandle      *indexHandle,
-                               const DatabaseId *storageIds,
+                               const IndexId    *storageIds,
                                uint             storageIdCount,
-                               const DatabaseId entryIds[],
+                               const IndexId    entryIds[],
                                uint             entryIdCount,
                                String           pattern
                                );
@@ -1098,7 +1135,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextHardLink
 * Purpose: get next hard link entry
 * Input  : indexQueryHandle - index query handle
-* Output : databaseId          - database id of entry
+* Output : indexId             - index id of entry
 *          storageName         - storage name
 *          fileName            - file name
 *          destinationFileName - destination file name
@@ -1114,7 +1151,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
-                           DatabaseId       *databaseId,
+                           IndexId          *indexId,
                            String           storageName,
                            uint64           *storageDateTime,
                            String           fileName,
@@ -1131,13 +1168,13 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_deleteHardLink
 * Purpose: delete hard link entry
 * Input  : indexHandle - index handle
-*          databaseId  - database id of entry
+*          indexId     - index id of entry
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteHardLink(IndexHandle *indexHandle,
-                            DatabaseId  databaseId
+                            IndexId     indexId
                            );
 
 /***********************************************************************\
@@ -1156,9 +1193,9 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 
 Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
-                             const DatabaseId *storageIds,
+                             const IndexId    *storageIds,
                              uint             storageIdCount,
-                             const DatabaseId entryIds[],
+                             const IndexId    entryIds[],
                              uint             entryIdCount,
                              String           pattern
                             );
@@ -1167,7 +1204,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextSpecial
 * Purpose: get next special entry
 * Input  : indexQueryHandle - index query handle
-* Output : databaseId   - database id of entry
+* Output : indexId      - index id of entry
 *          storageName  - storage name
 *          name         - name
 *          timeModified - modified date/time stamp [s]
@@ -1179,7 +1216,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
-                          DatabaseId       *databaseId,
+                          IndexId          *indexId,
                           String           storageName,
                           uint64           *storageDateTime,
                           String           name,
@@ -1193,13 +1230,13 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_deleteSpecial
 * Purpose: delete special entry
 * Input  : indexHandle - index handle
-*          databaseId  - database id of entry
+*          indexId     - index id of entry
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteSpecial(IndexHandle *indexHandle,
-                           DatabaseId  databaseId
+                           IndexId     indexId
                           );
 
 /***********************************************************************\
@@ -1217,7 +1254,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 * Name   : Index_addFile
 * Purpose: add file entry
 * Input  : indexHandle     - index handle
-*          storageId       - database id of index
+*          storageId       - index id of index
 *          name            - name
 *          size            - size [bytes]
 *          timeLastAccess  - last access date/time stamp [s]
@@ -1234,7 +1271,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 \***********************************************************************/
 
 Errors Index_addFile(IndexHandle *indexHandle,
-                     DatabaseId  storageId,
+                     IndexId     storageId,
                      ConstString fileName,
                      uint64      size,
                      uint64      timeLastAccess,
@@ -1251,7 +1288,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 * Name   : Index_addImage
 * Purpose: add image entry
 * Input  : indexHandle    - index handle
-*          storageId      - database id of index
+*          storageId      - index id of index
 *          imageName      - image name
 *          fileSystemType - file system type
 *          size           - size [bytes]
@@ -1264,7 +1301,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addImage(IndexHandle     *indexHandle,
-                      DatabaseId      storageId,
+                      IndexId         storageId,
                       ConstString     imageName,
                       FileSystemTypes fileSystemType,
                       int64           size,
@@ -1277,7 +1314,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 * Name   : Index_addDirectory
 * Purpose: add directory entry
 * Input  : indexHandle     - index handle
-*          storageId       - database id of index
+*          storageId       - index id of index
 *          directoryName   - name
 *          timeLastAccess  - last access date/time stamp [s]
 *          timeModified    - modified date/time stamp [s]
@@ -1291,7 +1328,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 \***********************************************************************/
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
-                          DatabaseId  storageId,
+                          IndexId     storageId,
                           String      directoryName,
                           uint64      timeLastAccess,
                           uint64      timeModified,
@@ -1305,7 +1342,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 * Name   : Index_addLink
 * Purpose: add link entry
 * Input  : indexHandle     - index handle
-*          storageId       - database id of index
+*          storageId       - index id of index
 *          name            - linkName
 *          destinationName - destination name
 *          timeLastAccess  - last access date/time stamp [s]
@@ -1320,7 +1357,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addLink(IndexHandle *indexHandle,
-                     DatabaseId  storageId,
+                     IndexId     storageId,
                      ConstString linkName,
                      ConstString destinationName,
                      uint64      timeLastAccess,
@@ -1335,7 +1372,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 * Name   : Index_addHardLink
 * Purpose: add hard link entry
 * Input  : indexHandle     - index handle
-*          storageId       - database id of index
+*          storageId       - index id of index
 *          name            - name
 *          size            - size [bytes]
 *          timeLastAccess  - last access date/time stamp [s]
@@ -1352,7 +1389,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addHardLink(IndexHandle *indexHandle,
-                         DatabaseId  storageId,
+                         IndexId     storageId,
                          ConstString fileName,
                          uint64      size,
                          uint64      timeLastAccess,
@@ -1369,7 +1406,7 @@ Errors Index_addHardLink(IndexHandle *indexHandle,
 * Name   : Index_addSpecial
 * Purpose: add special entry
 * Input  : indexHandle     - index handle
-*          storageId       - database id of index
+*          storageId       - index id of index
 *          name            - name
 *          specialType     - special type; see FileSpecialTypes
 *          timeLastAccess  - last access date/time stamp [s]
@@ -1385,7 +1422,7 @@ Errors Index_addHardLink(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
-                        DatabaseId       storageId,
+                        IndexId          storageId,
                         ConstString      name,
                         FileSpecialTypes specialType,
                         uint64           timeLastAccess,
@@ -1403,12 +1440,12 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 * Purpose: assign job/entity/storage to other entity/storage
 * Input  : indexHandle   - index handle
 *          jobUUID       - job UUID (can be NULL)
-*          entityId      - database id of entity index (can be
-*                          DATABASE_ID_NONE)
-*          storageId     - database id of storage index (can be
-*                          DATABASE_ID_NONE)
-*          toEntityId    - to entity id (can be DATABASE_ID_NONE)
-*          toStorageId   - to storage id (can be DATABASE_ID_NONE)
+*          entityId      - index id of entity index (can be
+*                          INDEX_ID_NONE)
+*          storageId     - index id of storage index (can be
+*                          INDEX_ID_NONE)
+*          toEntityId    - to entity id (can be INDEX_ID_NONE)
+*          toStorageId   - to storage id (can be INDEX_ID_NONE)
 *          toArchiveType - to archive type (can be ARCHIVE_TYPE_NONE)
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1417,10 +1454,10 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 
 Errors Index_assignTo(IndexHandle  *indexHandle,
                       ConstString  jobUUID,
-                      DatabaseId   entityId,
-                      DatabaseId   storageId,
-                      DatabaseId   toEntityId,
-                      DatabaseId   toStorageId,
+                      IndexId      entityId,
+                      IndexId      storageId,
+                      IndexId      toEntityId,
+                      IndexId      toStorageId,
                       ArchiveTypes toArchiveType
                      );
 
@@ -1435,7 +1472,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 Errors Index_pruneStorage(IndexHandle *indexHandle,
-                          DatabaseId  storageId
+                          IndexId     storageId
                          );
 
 /***********************************************************************\
@@ -1449,7 +1486,7 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_pruneEntity(IndexHandle *indexHandle,
-                         DatabaseId  entityId
+                         IndexId     entityId
                         );
 
 #ifdef __cplusplus
