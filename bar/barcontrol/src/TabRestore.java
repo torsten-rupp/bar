@@ -446,6 +446,9 @@ public class TabRestore
       this.menuItem = null;
     }
 
+    abstract public long getEntries();
+    abstract public long getSize();
+
     /** set index state
      * @param indexState index state
      */
@@ -828,6 +831,18 @@ public class TabRestore
       setMenuItem(menuItem,menuItemUpdateRunnable);
     }
 
+    public long getEntries()
+    {
+      return totalEntries;
+    }
+
+    public long getSize()
+    {
+Dprintf.dprintf("");
+//      return totalSize;
+return 0;
+    }
+
     /** compare index data
      * @return <0/=0/>0 if name </=/> indexData.name
      */
@@ -967,6 +982,18 @@ public class TabRestore
     public void setMenuItem(MenuItem menuItem)
     {
       setMenuItem(menuItem,menuItemUpdateRunnable);
+    }
+
+    public long getEntries()
+    {
+      return totalEntries;
+    }
+
+    public long getSize()
+    {
+Dprintf.dprintf("");
+//      return totalSize;
+return 0;
     }
 
     /** compare index data
@@ -1209,6 +1236,19 @@ public class TabRestore
     {
       setTableItem(tableItem,tableItemUpdateRunnable);
     }
+
+    public long getEntries()
+    {
+      return entries;
+    }
+
+    public long getSize()
+    {
+Dprintf.dprintf("");
+//      return totalSize;
+return 0;
+    }
+
 
     /** compare index data
      * @return <0/=0/>0 if name </=/> indexData.name
@@ -1517,6 +1557,48 @@ public class TabRestore
       else if (indexData instanceof StorageIndexData)
       {
         storageIndexDataMap.remove((StorageIndexData)indexData);
+      }
+    }
+  }
+
+  /** uuid hash set
+   */
+  class UUIDHashSet extends HashSet<String>
+  {
+    /** add/remove uuid
+     * @param uuid uuid
+     * @param enabled true to add, false to remove
+     */
+    public void set(String uuid, boolean enabled)
+    {
+      if (enabled)
+      {
+        add(uuid);
+      }
+      else
+      {
+        remove(uuid);
+      }
+    }
+  }
+
+  /** index hash map
+   */
+  class IndexHashMap extends HashMap<Long,IndexData>
+  {
+    /** add/remove id
+     * @param id id
+     * @param enabled true to add, false to remove
+     */
+    public void set(long id, IndexData indexData, boolean enabled)
+    {
+      if (enabled)
+      {
+        add(id,indexData);
+      }
+      else
+      {
+        remove(id);
       }
     }
   }
@@ -3660,13 +3742,16 @@ System.exit(1);
   private WidgetEvent                  selectRestoreToEvent = new WidgetEvent();
 
   private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
-  private IndexDataMap                 indexDataMap        = new IndexDataMap();
-  private IndexData                    selectedIndexData   = null;
-  private HashSet<Long>                selectedStorageIds  = new HashSet<Long>();
+//TODO remove
+  private IndexDataMap                 indexDataMap = new IndexDataMap();
+  private IndexData                    selectedIndexData = null;
+  private UUIDHashSet                  selectedJobUUIDHashSet = new UUIDHashSet();
+  private IndexHashMap                 selectedIndexHashMap = new IndexHashMap();
 
   private UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
-  private EntryDataMap                 entryDataMap          = new EntryDataMap();
-  private HashSet<Long>                selectedEntryIds    = new HashSet<Long>();
+//TODO remove
+  private EntryDataMap                 entryDataMap = new EntryDataMap();
+  private IndexHashMap                 selectedEntryIdHashMap = new IndexHashMap();
 
   // ------------------------ native functions ----------------------------
 
@@ -4125,6 +4210,7 @@ System.exit(1);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
 
+//TODO remove
       widgetStorageTabFolder.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4132,7 +4218,6 @@ System.exit(1);
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          updateCheckedStorageList();
         }
       });
       widgetStorageTree.addListener(SWT.Expand,new Listener()
@@ -4185,17 +4270,7 @@ System.exit(1);
             {
               // toggle check
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-Dprintf.dprintf("");
-//              storageIndexData.setChecked(!storageIndexData.isChecked());
-              if (treeItem.getChecked())
-              {
-                selectedStorageIds.add(storageIndexData.storageId);
-              }
-              else
-              {
-                selectedStorageIds.remove(storageIndexData.storageId);
-              }
-
+              selectedIndexHashMap.set(storageIndexData.storageId,storageIndexData,treeItem.getChecked());
               checkedStorageEvent.trigger();
             }
           }
@@ -4215,30 +4290,31 @@ Dprintf.dprintf("");
           {
             if (selectionEvent.detail == SWT.CHECK)
             {
+              boolean   isChecked = treeItem.getChecked();
               IndexData indexData = (IndexData)treeItem.getData();
 
-              // set checked
-Dprintf.dprintf("");
-//              indexData.setChecked(treeItem.getChecked());
-
-              // set checked for sub-items: jobs, storage
+              // set checked for sub-items: jobs, entity, storage
               if      (indexData instanceof UUIDIndexData)
               {
+                UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
+                selectedJobUUIDHashSet.set(uuidIndexData.jobUUID,isChecked);
+
                 if (treeItem.getExpanded())
                 {
+                  // check/uncheck all entities
                   for (TreeItem entityTreeItem : treeItem.getItems())
                   {
+                    entityTreeItem.setChecked(isChecked);
+
                     EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-Dprintf.dprintf("");
-//                    entityIndexData.setChecked(indexData.isChecked());
+                    selectedIndexHashMap.set(entityIndexData.entityId,entityIndexData,isChecked);
 
                     if (entityTreeItem.getExpanded())
                     {
+                      // check/uncheck all storages
                       for (TreeItem storageTreeItem : entityTreeItem.getItems())
                       {
-                        StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-Dprintf.dprintf("");
-//                        storageIndexData.setChecked(indexData.isChecked());
+                        storageTreeItem.setChecked(isChecked);
                       }
                     }
                   }
@@ -4246,19 +4322,18 @@ Dprintf.dprintf("");
               }
               else if (indexData instanceof EntityIndexData)
               {
+                EntityIndexData entityIndexData = (EntityIndexData)indexData;
+                selectedIndexHashMap.set(entityIndexData.entityId,entityIndexData,isChecked);
+
                 if (treeItem.getExpanded())
                 {
+                  // check/uncheck all storages
                   for (TreeItem storageTreeItem : treeItem.getItems())
                   {
-                    StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-Dprintf.dprintf("");
-//                    storageIndexData.setChecked(indexData.isChecked());
+                    storageTreeItem.setChecked(isChecked);
                   }
                 }
               }
-
-              // update checked storage list
-              updateCheckedStorageList();
 
               // trigger update checked
               checkedStorageEvent.trigger();
@@ -4511,15 +4586,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           if (tabletem != null)
           {
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
-            if (tabletem.getChecked())
-            {
-              selectedStorageIds.add(storageIndexData.storageId);
-            }
-            else
-            {
-              selectedStorageIds.remove(storageIndexData.storageId);
-            }
-
+            selectedIndexHashMap.set(storageIndexData.storageId,storageIndexData,tabletem.getChecked());
             checkedStorageEvent.trigger();
           }
         }
@@ -4536,21 +4603,8 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           TableItem tabletem = (TableItem)selectionEvent.item;
           if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
           {
-            // set checked
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
-            if (tabletem.getChecked())
-            {
-              selectedStorageIds.add(storageIndexData.storageId);
-            }
-            else
-            {
-              selectedStorageIds.remove(storageIndexData.storageId);
-            }
-
-            // update checked storage list
-            updateCheckedStorageList();
-
-            // trigger update checked
+            selectedIndexHashMap.set(storageIndexData.storageId,storageIndexData,tabletem.getChecked());
             checkedStorageEvent.trigger();
           }
         }
@@ -4818,7 +4872,7 @@ Dprintf.dprintf("");
           @Override
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(!selectedStorageIds.isEmpty());
+            menuItem.setEnabled(!selectedIndexHashMap.isEmpty());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -4830,12 +4884,7 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-            getCheckedIndexData(indexDataHashSet);
-            getSelectedIndexData(indexDataHashSet);
-
-            restoreArchives(indexDataHashSet);
+            restoreArchives(selectedIndexHashMap);
           }
         });
 
@@ -4892,7 +4941,7 @@ Dprintf.dprintf("");
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (!selectedStorageIds.isEmpty())
+            if (!selectedIndexHashMap.isEmpty())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
@@ -4914,7 +4963,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (!selectedStorageIds.isEmpty())
+            if (!selectedIndexHashMap.isEmpty())
             {
               setCheckedAllStorage(false);
               button.setImage(IMAGE_MARK_ALL);
@@ -5026,7 +5075,7 @@ Dprintf.dprintf("");
           @Override
           public void trigger(Control control)
           {
-            control.setEnabled(!selectedStorageIds.isEmpty());
+            control.setEnabled(!selectedIndexHashMap.isEmpty());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -5038,12 +5087,11 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+Dprintf.dprintf("remove");
+//            getCheckedIndexData(indexDataHashSet);
+//            getSelectedIndexData(indexDataHashSet);
 
-            getCheckedIndexData(indexDataHashSet);
-            getSelectedIndexData(indexDataHashSet);
-
-            restoreArchives(indexDataHashSet);
+            restoreArchives(selectedIndexHashMap);
           }
         });
       }
@@ -5157,11 +5205,11 @@ Dprintf.dprintf("");
             EntryData entryData = (EntryData)tableItem.getData();
             if (tableItem.getChecked())
             {
-              selectedEntryIds.add(entryData.entryId);
+              selectedEntryIdHashMap.add(entryData.entryId);
             }
             else
             {
-              selectedEntryIds.remove(entryData.entryId);
+              selectedEntryIdHashMap.remove(entryData.entryId);
             }
 //            entryData.setChecked(tableItem.getChecked());
 
@@ -5183,14 +5231,7 @@ Dprintf.dprintf("");
           {
             EntryData entryData = (EntryData)tableItem.getData();
             tableItem.setChecked(!tableItem.getChecked());
-            if (tableItem.getChecked())
-            {
-              selectedEntryIds.add(entryData.entryId);
-            }
-            else
-            {
-              selectedEntryIds.remove(entryData.entryId);
-            }
+            selectedEntryIdHashMap.set(entryData.entryId,entryData,tableItem.getChecked());
           }
 
           // trigger update checked
@@ -5283,7 +5324,7 @@ Dprintf.dprintf("");
           @Override
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(!selectedEntryIds.isEmpty());
+            menuItem.setEnabled(!selectedEntryIdHashMap.isEmpty());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -5336,7 +5377,7 @@ Dprintf.dprintf("");
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (!selectedEntryIds.isEmpty())
+            if (!selectedEntryIdHashMap.isEmpty())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
@@ -5358,7 +5399,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (!selectedEntryIds.isEmpty())
+            if (!selectedEntryIdHashMap.isEmpty())
             {
               setCheckedAllEntries(false);
               button.setImage(IMAGE_MARK_ALL);
@@ -5479,7 +5520,7 @@ Dprintf.dprintf("");
           @Override
           public void trigger(Control control)
           {
-            control.setEnabled(!selectedEntryIds.isEmpty());
+            control.setEnabled(!selectedEntryIdHashMap.isEmpty());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -5759,6 +5800,7 @@ Dprintf.dprintf("");
    */
   private HashSet<IndexData> getCheckedIndexData(HashSet<IndexData> indexDataHashSet)
   {
+Dprintf.dprintf("remove");
     IndexData indexData;
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
@@ -5825,6 +5867,8 @@ Dprintf.dprintf("");
    */
   private HashSet<IndexData> getSelectedIndexData(HashSet<IndexData> indexDataHashSet)
   {
+Dprintf.dprintf("");
+
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
@@ -6764,7 +6808,7 @@ assert storagePattern != null;
       // get number of indizes with error state
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand("INDEX_STORAGES_INFO storagePattern='' indexStateSet=ERROR",
+      if (BARServer.executeCommand("INDEX_STORAGES_INFO storagePattern='*' indexStateSet=ERROR",
                                    0,
                                    errorMessage,
                                    valueMap
@@ -7088,16 +7132,23 @@ assert storagePattern != null;
 
   /** restore archives
    */
-  private void restoreArchives(HashSet<IndexData> indexDataHashSet)
+  private void restoreArchives(IndexHashMap indexHashMap)
   {
     Label      label;
     Composite  composite,subComposite;
     Button     button;
 
-    // get number entries, size
+    // set ids to restore
+    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+    for (Long indexId : indexHashMap.keySet())
+    {
+//      BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobUUID=%'S",uuidIndexData.jobUUID),0);
+    }
+
+    // get number total entries and size
     long entries = 0;
     long size    = 0;
-    for (IndexData indexData : indexDataHashSet)
+    for (IndexData indexData : indexHashMap.values())
     {
       if      (indexData instanceof UUIDIndexData)
       {
