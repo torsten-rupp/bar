@@ -55,8 +55,8 @@ typedef enum
 } DatabaseTypes;
 
 // special database ids
-#define DATABASE_ID_NONE 0LL
-#define DATABASE_ID_ANY -1LL
+#define DATABASE_ID_NONE  0LL
+#define DATABASE_ID_ANY  -1LL
 
 // ordering mode
 typedef enum
@@ -90,6 +90,7 @@ typedef struct
 // execute row callback function
 typedef bool(*DatabaseRowFunction)(void *userData, uint count, const char* names[], const char* vales[]);
 
+// database id
 typedef int64 DatabaseId;
 
 // table column definition list
