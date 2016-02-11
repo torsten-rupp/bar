@@ -13829,6 +13829,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 *            indexStateSet=<state set>|*
 *          Result:
 *            count=<n>
+*            size=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
