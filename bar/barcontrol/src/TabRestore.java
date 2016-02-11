@@ -480,7 +480,7 @@ public class TabRestore
     /** set checked state
      * @param checked checked state
      */
-    public void setChecked(boolean checked)
+    public void XsetChecked(boolean checked)
     {
       this.checked = checked;
       if ((treeItem != null) && !treeItem.isDisposed())
@@ -1044,7 +1044,7 @@ public class TabRestore
   class EntityIndexDataMap extends HashMap<Long,EntityIndexData>
   {
     /** get job data from map
-     * @param entityId database id
+     * @param entityId entry id
      * @return job data
      */
     public EntityIndexData get(long entityId)
@@ -1087,7 +1087,7 @@ public class TabRestore
    */
   class StorageIndexData extends IndexData implements Serializable
   {
-    public long                  storageId;                // database storage id
+    public long                  storageId;                // index storage id
     public String                jobName;                  // job name or null
     public Settings.ArchiveTypes archiveType;              // archive type
     public long                  entries;                  // number of entries
@@ -1277,7 +1277,7 @@ public class TabRestore
   class StorageIndexDataMap extends HashMap<Long,StorageIndexData>
   {
     /** get storage data from map
-     * @param storageId database id
+     * @param storageId entry id
      * @return storage data
      */
     public StorageIndexData get(long storageId)
@@ -2816,7 +2816,7 @@ assert storagePattern != null;
    */
   class EntryData
   {
-    long          databaseId;
+    long          entryId;                                  // index entry id
     String        storageName;
     long          storageDateTime;
     EntryTypes    entryType;
@@ -2827,7 +2827,7 @@ assert storagePattern != null;
     RestoreStates restoreState;
 
     /** create entry data
-     * @param databaseId database id
+     * @param entryId entry id
      * @param storageName storage archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
@@ -2835,9 +2835,9 @@ assert storagePattern != null;
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    EntryData(long databaseId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    EntryData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
-      this.databaseId      = databaseId;
+      this.entryId         = entryId;
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
       this.entryType       = entryType;
@@ -2849,16 +2849,16 @@ assert storagePattern != null;
     }
 
     /** create entry data
-     * @param databaseId database id
+     * @param entryId entry id
      * @param storageName archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    EntryData(long databaseId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    EntryData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
-      this(databaseId,storageName,storageDateTime,entryType,name,dateTime,0L);
+      this(entryId,storageName,storageDateTime,entryType,name,dateTime,0L);
     }
 
     /** set restore state of entry
@@ -2880,7 +2880,7 @@ assert storagePattern != null;
     /** set checked state
      * @param checked checked state
      */
-    public void setChecked(boolean checked)
+    public void XsetChecked(boolean checked)
     {
       this.checked = checked;
     }
@@ -2896,40 +2896,10 @@ assert storagePattern != null;
 
   /** entry data map
    */
-  class EntryDataSet extends HashSet<EntryData>
-  {
-    EntryDataSet()
-    {
-    }
-
-    public void setChecked(EntryData entryData, boolean checked)
-    {
-Dprintf.dprintf("setChecked");
-      if (checked)
-      {
-        add(entryData);
-      }
-      else
-      {
-        remove(entryData);
-      }
-
-
-    }
-
-    public void remove(EntryData entryData)
-    {
-      super.remove(entryData);
-Dprintf.dprintf("");
-    }
-  }
-
-  /** entry data map
-   */
   class EntryDataMap extends HashMap<String,WeakReference<EntryData>>
   {
     /** update entry data
-     * @param databaseId database id
+     * @param entryId entry id
      * @param storageName archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
@@ -2937,7 +2907,7 @@ Dprintf.dprintf("");
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    synchronized public EntryData update(long databaseId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    synchronized public EntryData update(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
       String hashKey = getHashKey(storageName,entryType,name);
 
@@ -2945,7 +2915,7 @@ Dprintf.dprintf("");
       EntryData entryData = (reference != null) ? get(hashKey).get() : null;
       if (entryData != null)
       {
-        entryData.databaseId      = databaseId;
+        entryData.entryId         = entryId;
         entryData.storageName     = storageName;
         entryData.storageDateTime = storageDateTime;
         entryData.entryType       = entryType;
@@ -2955,7 +2925,7 @@ Dprintf.dprintf("");
       }
       else
       {
-        entryData = new EntryData(databaseId,
+        entryData = new EntryData(entryId,
                                   storageName,
                                   storageDateTime,
                                   entryType,
@@ -2976,7 +2946,7 @@ Dprintf.dprintf("");
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    synchronized public EntryData update(long databaseId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    synchronized public EntryData update(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
       String hashKey = getHashKey(storageName,entryType,name);
 
@@ -2984,7 +2954,7 @@ Dprintf.dprintf("");
       EntryData entryData = (reference != null) ? get(hashKey).get() : null;
       if (entryData != null)
       {
-        entryData.databaseId      = databaseId;
+        entryData.entryId         = entryId;
         entryData.storageName     = storageName;
         entryData.storageDateTime = storageDateTime;
         entryData.entryType       = entryType;
@@ -2993,7 +2963,7 @@ Dprintf.dprintf("");
       }
       else
       {
-        entryData = new EntryData(databaseId,
+        entryData = new EntryData(entryId,
                                   storageName,
                                   storageDateTime,
                                   entryType,
@@ -3659,43 +3629,44 @@ System.exit(1);
   // --------------------------- variables --------------------------------
 
   // global variable references
-  private Shell                shell;
-  private Display              display;
+  private Shell                        shell;
+  private Display                      display;
 
   // widgets
-  public  Composite            widgetTab;
-  private TabFolder            widgetTabFolder;
+  public  Composite                    widgetTab;
+  private TabFolder                    widgetTabFolder;
 
-  private TabFolder            widgetStorageTabFolderTitle;
-  private TabFolder            widgetStorageTabFolder;
-  private Tree                 widgetStorageTree;
-  private Shell                widgetStorageTreeToolTip = null;
-  private Menu                 widgetStorageTreeAssignToMenu;
-  private Table                widgetStorageTable;
-  private Shell                widgetStorageTableToolTip = null;
+  private TabFolder                    widgetStorageTabFolderTitle;
+  private TabFolder                    widgetStorageTabFolder;
+  private Tree                         widgetStorageTree;
+  private Shell                        widgetStorageTreeToolTip = null;
+  private Menu                         widgetStorageTreeAssignToMenu;
+  private Table                        widgetStorageTable;
+  private Shell                        widgetStorageTableToolTip = null;
 //TODO: NYI
-  private Menu                 widgetStorageTableAssignToMenu;
-  private Text                 widgetStoragePattern;
-  private Combo                widgetStorageState;
-  private WidgetEvent          checkedStorageEvent = new WidgetEvent();       // triggered when some checked storage changed
+  private Menu                         widgetStorageTableAssignToMenu;
+  private Text                         widgetStoragePattern;
+  private Combo                        widgetStorageState;
+  private WidgetEvent                  checkedStorageEvent = new WidgetEvent();     // triggered when some checked storage changed
 
-  private Label                widgetEntryTableTitle;
-  private Table                widgetEntryTable;
-  private Shell                widgetEntryTableToolTip = null;
-  private WidgetEvent          checkedEntryEvent = new WidgetEvent();         // triggered when some checked entry changed
+  private Label                        widgetEntryTableTitle;
+  private Table                        widgetEntryTable;
+  private Shell                        widgetEntryTableToolTip = null;
+  private WidgetEvent                  checkedEntryEvent = new WidgetEvent();       // triggered when some checked entry changed
 
-  private Button               widgetRestoreTo;
-  private Text                 widgetRestoreToDirectory;
-  private Button               widgetOverwriteEntries;
-  private WidgetEvent          selectRestoreToEvent = new WidgetEvent();
+  private Button                       widgetRestoreTo;
+  private Text                         widgetRestoreToDirectory;
+  private Button                       widgetOverwriteEntries;
+  private WidgetEvent                  selectRestoreToEvent = new WidgetEvent();
 
   private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
-  private IndexDataMap         indexDataMap        = new IndexDataMap();
-  private IndexData            selectedIndexData   = null;
+  private IndexDataMap                 indexDataMap        = new IndexDataMap();
+  private IndexData                    selectedIndexData   = null;
+  private HashSet<Long>                selectedStorageIds  = new HashSet<Long>();
 
   private UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
-  private EntryDataMap         entryDataMap          = new EntryDataMap();
-  private EntryDataSet         selectedEntryData   = new EntryDataSet();
+  private EntryDataMap                 entryDataMap          = new EntryDataMap();
+  private HashSet<Long>                selectedEntryIds    = new HashSet<Long>();
 
   // ------------------------ native functions ----------------------------
 
@@ -4214,7 +4185,16 @@ System.exit(1);
             {
               // toggle check
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-              storageIndexData.setChecked(!storageIndexData.isChecked());
+Dprintf.dprintf("");
+//              storageIndexData.setChecked(!storageIndexData.isChecked());
+              if (treeItem.getChecked())
+              {
+                selectedStorageIds.add(storageIndexData.storageId);
+              }
+              else
+              {
+                selectedStorageIds.remove(storageIndexData.storageId);
+              }
 
               checkedStorageEvent.trigger();
             }
@@ -4238,7 +4218,8 @@ System.exit(1);
               IndexData indexData = (IndexData)treeItem.getData();
 
               // set checked
-              indexData.setChecked(treeItem.getChecked());
+Dprintf.dprintf("");
+//              indexData.setChecked(treeItem.getChecked());
 
               // set checked for sub-items: jobs, storage
               if      (indexData instanceof UUIDIndexData)
@@ -4248,14 +4229,16 @@ System.exit(1);
                   for (TreeItem entityTreeItem : treeItem.getItems())
                   {
                     EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-                    entityIndexData.setChecked(indexData.isChecked());
+Dprintf.dprintf("");
+//                    entityIndexData.setChecked(indexData.isChecked());
 
                     if (entityTreeItem.getExpanded())
                     {
                       for (TreeItem storageTreeItem : entityTreeItem.getItems())
                       {
                         StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                        storageIndexData.setChecked(indexData.isChecked());
+Dprintf.dprintf("");
+//                        storageIndexData.setChecked(indexData.isChecked());
                       }
                     }
                   }
@@ -4268,7 +4251,8 @@ System.exit(1);
                   for (TreeItem storageTreeItem : treeItem.getItems())
                   {
                     StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                    storageIndexData.setChecked(indexData.isChecked());
+Dprintf.dprintf("");
+//                    storageIndexData.setChecked(indexData.isChecked());
                   }
                 }
               }
@@ -4373,7 +4357,8 @@ System.exit(1);
             for (TreeItem treeItem : widgetStorageTree.getSelection())
             {
               IndexData indexData = (IndexData)treeItem.getData();
-              indexData.setChecked(!indexData.isChecked());
+Dprintf.dprintf("");
+//              indexData.setChecked(!indexData.isChecked());
 
               Event treeEvent = new Event();
               treeEvent.item   = treeItem;
@@ -4525,8 +4510,15 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           TableItem tabletem = widgetStorageTable.getItem(new Point(event.x,event.y));
           if (tabletem != null)
           {
-            tabletem.setChecked(!tabletem.getChecked());
-            ((StorageIndexData)tabletem.getData()).setChecked(tabletem.getChecked());
+            StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
+            if (tabletem.getChecked())
+            {
+              selectedStorageIds.add(storageIndexData.storageId);
+            }
+            else
+            {
+              selectedStorageIds.remove(storageIndexData.storageId);
+            }
 
             checkedStorageEvent.trigger();
           }
@@ -4545,7 +4537,15 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
           {
             // set checked
-            ((StorageIndexData)tabletem.getData()).setChecked(tabletem.getChecked());
+            StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
+            if (tabletem.getChecked())
+            {
+              selectedStorageIds.add(storageIndexData.storageId);
+            }
+            else
+            {
+              selectedStorageIds.remove(storageIndexData.storageId);
+            }
 
             // update checked storage list
             updateCheckedStorageList();
@@ -4615,7 +4615,8 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             for (TableItem tableItem : widgetStorageTable.getSelection())
             {
               IndexData indexData = (IndexData)tableItem.getData();
-              indexData.setChecked(!indexData.isChecked());
+Dprintf.dprintf("");
+//              indexData.setChecked(!indexData.isChecked());
 
               Event treeEvent = new Event();
               treeEvent.item   = tableItem;
@@ -4817,7 +4818,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           @Override
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(isStorageChecked());
+            menuItem.setEnabled(!selectedStorageIds.isEmpty());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -4891,7 +4892,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (isStorageChecked())
+            if (!selectedStorageIds.isEmpty())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
@@ -4913,7 +4914,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (isStorageChecked())
+            if (!selectedStorageIds.isEmpty())
             {
               setCheckedAllStorage(false);
               button.setImage(IMAGE_MARK_ALL);
@@ -5025,7 +5026,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           @Override
           public void trigger(Control control)
           {
-            control.setEnabled(isStorageChecked());
+            control.setEnabled(!selectedStorageIds.isEmpty());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -5154,8 +5155,15 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             tableItem.setChecked(!tableItem.getChecked());
 
             EntryData entryData = (EntryData)tableItem.getData();
+            if (tableItem.getChecked())
+            {
+              selectedEntryIds.add(entryData.entryId);
+            }
+            else
+            {
+              selectedEntryIds.remove(entryData.entryId);
+            }
 //            entryData.setChecked(tableItem.getChecked());
-            selectedEntryData.setChecked(entryData,tableItem.getChecked());
 
             checkedEntryEvent.trigger();
           }
@@ -5174,13 +5182,16 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           if (tableItem != null)
           {
             EntryData entryData = (EntryData)tableItem.getData();
-Dprintf.dprintf("");
-            entryData.setChecked(tableItem.getChecked());
-            selectedEntryData.setChecked(entryData,tableItem.getChecked());
+            tableItem.setChecked(!tableItem.getChecked());
+            if (tableItem.getChecked())
+            {
+              selectedEntryIds.add(entryData.entryId);
+            }
+            else
+            {
+              selectedEntryIds.remove(entryData.entryId);
+            }
           }
-
-          // update checked entry list
-          updateCheckedEntryList();
 
           // trigger update checked
           checkedEntryEvent.trigger();
@@ -5272,7 +5283,7 @@ Dprintf.dprintf("");
           @Override
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(isSomeEntryChecked());
+            menuItem.setEnabled(!selectedEntryIds.isEmpty());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -5325,7 +5336,7 @@ Dprintf.dprintf("");
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (isSomeEntryChecked())
+            if (!selectedEntryIds.isEmpty())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
@@ -5347,7 +5358,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (isSomeEntryChecked())
+            if (!selectedEntryIds.isEmpty())
             {
               setCheckedAllEntries(false);
               button.setImage(IMAGE_MARK_ALL);
@@ -5468,7 +5479,7 @@ Dprintf.dprintf("");
           @Override
           public void trigger(Control control)
           {
-            control.setEnabled(isSomeEntryChecked());
+            control.setEnabled(!selectedEntryIds.isEmpty());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -5677,21 +5688,24 @@ Dprintf.dprintf("");
           if      (indexData instanceof UUIDIndexData)
           {
             UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
-            uuidIndexData.setChecked(checked);
+Dprintf.dprintf("");
+//            uuidIndexData.setChecked(checked);
 
             if (treeItem.getExpanded())
             {
               for (TreeItem entityTreeItem : treeItem.getItems())
               {
                 EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-                entityIndexData.setChecked(checked);
+Dprintf.dprintf("");
+//                entityIndexData.setChecked(checked);
 
                 if (entityTreeItem.getExpanded())
                 {
                   for (TreeItem storageTreeItem : entityTreeItem.getItems())
                   {
                     StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                    storageIndexData.setChecked(checked);
+Dprintf.dprintf("");
+//                    storageIndexData.setChecked(checked);
                   }
                 }
               }
@@ -5700,21 +5714,24 @@ Dprintf.dprintf("");
           else if (indexData instanceof EntityIndexData)
           {
             EntityIndexData entityIndexData = (EntityIndexData)indexData;
-            entityIndexData.setChecked(checked);
+Dprintf.dprintf("");
+//            entityIndexData.setChecked(checked);
 
             if (treeItem.getExpanded())
             {
               for (TreeItem storageTreeItem : treeItem.getItems())
               {
                 StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                storageIndexData.setChecked(checked);
+Dprintf.dprintf("");
+//                storageIndexData.setChecked(checked);
               }
             }
           }
           else if (indexData instanceof StorageIndexData)
           {
             StorageIndexData storageIndexData = (StorageIndexData)indexData;
-            storageIndexData.setChecked(checked);
+Dprintf.dprintf("");
+//            storageIndexData.setChecked(checked);
           }
         }
         break;
@@ -5723,7 +5740,8 @@ Dprintf.dprintf("");
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-          storageIndexData.setChecked(checked);
+Dprintf.dprintf("");
+//          storageIndexData.setChecked(checked);
         }
         break;
     }
@@ -5851,52 +5869,6 @@ Dprintf.dprintf("");
   private HashSet<IndexData> getSelectedIndexData()
   {
     return getSelectedIndexData(new HashSet<IndexData>());
-  }
-
-  /** check if some uuid/job/storage entries are checked
-   * @return true iff some entry is checked
-   */
-  private boolean isStorageChecked()
-  {
-    switch (widgetStorageTabFolder.getSelectionIndex())
-    {
-      case 0:
-        // tree view
-        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
-        {
-          if (!uuidTreeItem.getGrayed() && uuidTreeItem.getChecked()) return true;
-
-          if (uuidTreeItem.getExpanded())
-          {
-            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
-            {
-              if (!entityTreeItem.getGrayed() && entityTreeItem.getChecked()) return true;
-
-              if (entityTreeItem.getExpanded())
-              {
-                for (TreeItem storageTreeItem : entityTreeItem.getItems())
-                {
-                  if (!storageTreeItem.getGrayed() && storageTreeItem.getChecked()) return true;
-                }
-              }
-            }
-          }
-        }
-        break;
-      case 1:
-        // table view
-        for (TableItem tableItem : widgetStorageTable.getItems())
-        {
-          IndexData indexData = (IndexData)tableItem.getData();
-          if ((indexData != null) && !tableItem.getGrayed() && tableItem.getChecked())
-          {
-            return true;
-          }
-        }
-        break;
-    }
-
-    return false;
   }
 
   /** update storage tree item
@@ -7536,7 +7508,7 @@ Dprintf.dprintf("");
       {
         BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD archiveEntryType=%s entryId=%d",
                                                      entryData.entryType,
-                                                     entryData.databaseId
+                                                     entryData.entryId
                                                     ),
                                  0
                                 );
@@ -7556,7 +7528,7 @@ Dprintf.dprintf("");
       tableItem.setChecked(checked);
 
       EntryData entryData = (EntryData)tableItem.getData();
-      entryData.setChecked(checked);
+//      entryData.setChecked(checked);
     }
 
     // update checked entry list
@@ -7583,23 +7555,6 @@ Dprintf.dprintf("");
     }
 
     return entryDataArray.toArray(new EntryData[entryDataArray.size()]);
-  }
-
-  /** check if some data entry is checked
-   * @return tree iff some entry is checked
-   */
-  private boolean isSomeEntryChecked()
-  {
-Dprintf.dprintf("");
-    for (TableItem tableItem : widgetEntryTable.getItems())
-    {
-//      if (tableItem.getChecked())
-//      {
-//        return true;
-//      }
-    }
-
-    return false;
   }
 
   /** find index for insert of item in sorted entry data list
