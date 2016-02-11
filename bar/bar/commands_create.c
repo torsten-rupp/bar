@@ -156,8 +156,8 @@ typedef struct
 //  String      jobUUID;
 //  String      scheduleUUID;
 //  ArchiveTypes archiveType;
-//  DatabaseId  entityId;                                           // database entity id
-  DatabaseId  storageId;                                          // database storage id
+//  IndexId      entityId;                                           // index entity id
+  IndexId     storageId;                                          // index storage id
   String      fileName;                                           // intermediate archive file name
   uint64      fileSize;                                           // intermediate archive size [bytes]
   String      archiveName;                                        // destination archive name
@@ -3178,7 +3178,7 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 * Purpose: call back for init archive file
 * Input  : userData    - user data
 *          indexHandle - index handle or NULL if no index
-*          storageId   - database id of storage
+*          storageId   - index id of storage
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
 * Output : -
@@ -3188,8 +3188,8 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 
 LOCAL uint64 getArchiveSize(void        *userData,
                             IndexHandle *indexHandle,
-//                            DatabaseId  entityId,
-                            DatabaseId  storageId,
+//                            IndexId     entityId,
+                            IndexId     storageId,
                             int         partNumber
                            )
 {
@@ -3246,10 +3246,10 @@ UNUSED_VARIABLE(storageId);
 * Purpose: call back to store archive file
 * Input  : userData     - user data
 *          indexHandle  - index handle or NULL if no index
-*          entityId     - database id of entity
+*          entityId     - index id of entity
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
-*          storageId    - database id of storage
+*          storageId    - index id of storage
 *          tmpFileName  - intermediate archive file name
 *          tmpFileSize  - intermediate archive size [bytes]
 * Output : -
@@ -3262,8 +3262,8 @@ LOCAL Errors storeArchiveFile(void        *userData,
 ConstString jobUUID,
 ConstString scheduleUUID,
 ArchiveTypes archiveType,
-//                              DatabaseId  entityId,
-                              DatabaseId  storageId,
+//                              IndexId     entityId,
+                              IndexId     storageId,
                               int         partNumber,
                               String      intermediateFileName,
                               uint64      intermediateFileSize
@@ -3372,14 +3372,14 @@ LOCAL void purgeStorageByJobUUID(ConstString jobUUID, uint64 maxStorageSize, Log
   StorageSpecifier storageSpecifier;
   Errors           error;
   uint64           totalStorageSize;
-  DatabaseId       oldestStorageId;
-  DatabaseId       oldestEntityId;
+  IndexId          oldestStorageId;
+  IndexId          oldestEntityId;
   String           oldestStorageName;
   uint64           oldestCreatedDateTime;
   uint64           oldestSize;
   IndexQueryHandle indexQueryHandle;
-  DatabaseId       storageId;
-  DatabaseId       entityId;
+  IndexId          storageId;
+  IndexId          entityId;
   uint64           createdDateTime;
   uint64           size;
   StorageHandle    storageHandle;
@@ -3399,15 +3399,15 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
   {
     // get total storage size, find oldest storage entry
     totalStorageSize      = 0LL;
-    oldestStorageId       = DATABASE_ID_NONE;
-    oldestEntityId        = DATABASE_ID_NONE;
+    oldestStorageId       = INDEX_ID_NONE;
+    oldestEntityId        = INDEX_ID_NONE;
     String_clear(oldestStorageName);
     oldestCreatedDateTime = MAX_UINT64;
     oldestSize            = 0LL;
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
                                    jobUUID,
-                                   DATABASE_ID_ANY,  // entityId
+                                   INDEX_ID_ANY,  // entityId
                                    STORAGE_TYPE_ANY,  // storageType
                                    NULL,  // storageName
                                    NULL,  // hostName
@@ -3434,7 +3434,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                &entityId,//NULL,  //DatabaseId       *entityId,
+                                &entityId,
                                 NULL,  //String           jobUUID,
                                 NULL,  //String           scheduleUUID,
                                 NULL,  //ArchiveTypes     *archiveType,
@@ -3462,7 +3462,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
     }
     Index_doneList(&indexQueryHandle);
 
-    if ((totalStorageSize > maxStorageSize) && (oldestStorageId != DATABASE_ID_NONE))
+    if ((totalStorageSize > maxStorageSize) && (oldestStorageId != INDEX_ID_NONE))
     {
 fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
       // delete oldest storage entry
@@ -3528,7 +3528,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
     }
   }
   while (   (totalStorageSize > maxStorageSize)
-         && (oldestStorageId != DATABASE_ID_NONE)
+         && (oldestStorageId != INDEX_ID_NONE)
         );
 fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
 
@@ -3557,14 +3557,14 @@ LOCAL void purgeStorageByServer(const Server *server, uint64 maxStorageSize, Log
   StorageSpecifier storageSpecifier;
   Errors           error;
   uint64           totalStorageSize;
-  DatabaseId       oldestStorageId;
-  DatabaseId       oldestEntityId;
+  IndexId          oldestStorageId;
+  IndexId          oldestEntityId;
   String           oldestStorageName;
   uint64           oldestCreatedDateTime;
   uint64           oldestSize;
   IndexQueryHandle indexQueryHandle;
-  DatabaseId       storageId;
-  DatabaseId       entityId;
+  IndexId          storageId;
+  IndexId          entityId;
   uint64           createdDateTime;
   uint64           size;
   StorageHandle    storageHandle;
@@ -3587,15 +3587,15 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
   {
     // get total storage size, find oldest storage entry
     totalStorageSize      = 0LL;
-    oldestStorageId       = DATABASE_ID_NONE;
-    oldestEntityId        = DATABASE_ID_NONE;
+    oldestStorageId       = INDEX_ID_NONE;
+    oldestEntityId        = INDEX_ID_NONE;
     String_clear(oldestStorageName);
     oldestCreatedDateTime = MAX_UINT64;
     oldestSize            = 0LL;
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
                                    NULL,  // jobUUID,
-                                   DATABASE_ID_ANY,  // entityId
+                                   INDEX_ID_ANY,  // entityId
                                    STORAGE_TYPE_ANY,  // storageType
                                    storagePattern,  // storageName
                                    NULL,  // hostName
@@ -3622,7 +3622,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &storageId,
-                                &entityId,//NULL,  //DatabaseId       *entityId,
+                                &entityId,
                                 NULL,  //String           jobUUID,
                                 NULL,  //String           scheduleUUID,
                                 NULL,  //ArchiveTypes     *archiveType,
@@ -3650,7 +3650,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
     }
     Index_doneList(&indexQueryHandle);
 
-    if ((totalStorageSize > maxStorageSize) && (oldestStorageId != DATABASE_ID_NONE))
+    if ((totalStorageSize > maxStorageSize) && (oldestStorageId != INDEX_ID_NONE))
     {
 fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
       // delete oldest storage entry
@@ -3716,7 +3716,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
     }
   }
   while (   (totalStorageSize > maxStorageSize)
-         && (oldestStorageId != DATABASE_ID_NONE)
+         && (oldestStorageId != INDEX_ID_NONE)
         );
 fprintf(stderr,"%s, %d: done purgeStorageByServer\n",__FILE__,__LINE__);
 
@@ -3760,10 +3760,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   String                     pattern;
 
   IndexQueryHandle           indexQueryHandle;
-  DatabaseId                 oldStorageId;
-  DatabaseId                 oldEntityId;
-  DatabaseId                 entityId;
-  DatabaseId                 storageId;
+  IndexId                    oldStorageId;
+  IndexId                    oldEntityId;
+  IndexId                    entityId;
+  IndexId                    storageId;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -3817,7 +3817,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  {
                    storageInfoDecrement(createInfo,storageMsg.fileSize);
                    File_delete(storageMsg.fileName,FALSE);
-                   if (storageMsg.storageId != DATABASE_ID_NONE) Index_deleteStorage(indexHandle,storageMsg.storageId);
+                   if (storageMsg.storageId != INDEX_ID_NONE) Index_deleteStorage(indexHandle,storageMsg.storageId);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
@@ -4039,7 +4039,7 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
     logMessage(createInfo->logHandle,LOG_TYPE_STORAGE,"Stored '%s'\n",String_cString(printableStorageName));
 
     // update index database and set state
-    if (storageMsg.storageId != DATABASE_ID_NONE)
+    if (storageMsg.storageId != INDEX_ID_NONE)
     {
       if (   appendFlag
           && Index_findByName(indexHandle,
@@ -4061,9 +4061,9 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
 fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
         error = Index_assignTo(indexHandle,
                                NULL,  // jobUUID
-                               DATABASE_ID_NONE,  // enityId
+                               INDEX_ID_NONE,  // enityId
                                storageMsg.storageId,
-                               DATABASE_ID_NONE,  // toEnityId
+                               INDEX_ID_NONE,  // toEnityId
                                storageId,
                                ARCHIVE_TYPE_NONE
                               );
@@ -4085,7 +4085,7 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
         error = Index_initListStorages(&indexQueryHandle,
                                        indexHandle,
                                        NULL, // jobUUID,
-                                       DATABASE_ID_ANY, // entityId
+                                       INDEX_ID_ANY, // entityId
                                        STORAGE_TYPE_ANY,  // storageType
                                        NULL, // storageName
                                        createInfo->storageSpecifier->hostName,
@@ -4175,10 +4175,10 @@ fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
         // assign storage to new entity
         error = Index_assignTo(indexHandle,
                                NULL,  // jobUUID
-                               DATABASE_ID_NONE,  // enityId
+                               INDEX_ID_NONE,  // enityId
                                storageMsg.storageId,
                                entityId,
-                               DATABASE_ID_NONE,  // toStorageId
+                               INDEX_ID_NONE,  // toStorageId
                                ARCHIVE_TYPE_NONE
                               );
         if (error != ERROR_NONE)
@@ -4295,7 +4295,7 @@ fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
   // delete old storage files if no database
   if (   !isAborted(createInfo)
       && (createInfo->failError == ERROR_NONE)
-      && (storageMsg.storageId != DATABASE_ID_NONE)
+      && (storageMsg.storageId != INDEX_ID_NONE)
      )
   {
     if (globalOptions.deleteOldArchiveFilesFlag)

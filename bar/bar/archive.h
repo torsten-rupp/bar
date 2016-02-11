@@ -83,8 +83,8 @@ typedef Errors(*ArchiveInitFunction)(void        *userData,
                                      ConstString jobUUID,
                                      ConstString scheduleUUID,
                                      ArchiveTypes archiveType,
-//                                     DatabaseId  entityId,
-                                     DatabaseId  storageId,
+//                                     IndexId     entityId,
+                                     IndexId     storageId,
                                      int         partNumber
                                     );
 
@@ -107,8 +107,8 @@ typedef Errors(*ArchiveDoneFunction)(void        *userData,
                                      ConstString jobUUID,
                                      ConstString scheduleUUID,
                                      ArchiveTypes archiveType,
-//                                     DatabaseId  entityId,
-                                     DatabaseId  storageId,
+//                                     IndexId     entityId,
+                                     IndexId     storageId,
                                      int         partNumber
                                     );
 
@@ -128,8 +128,8 @@ typedef Errors(*ArchiveDoneFunction)(void        *userData,
 
 typedef uint64(*ArchiveGetSizeFunction)(void        *userData,
                                         IndexHandle *indexHandle,
-//                                        DatabaseId  entityId,
-                                        DatabaseId  storageId,
+//                                        IndexId     entityId,
+                                        IndexId     storageId,
                                         int         partNumber
                                        );
 
@@ -154,8 +154,8 @@ typedef Errors(*ArchiveStoreFunction)(void        *userData,
                                      ConstString jobUUID,
                                      ConstString scheduleUUID,
                                      ArchiveTypes archiveType,
-//                                      DatabaseId  entityId,
-                                      DatabaseId  storageId,
+//                                      IndexId     entityId,
+                                      IndexId     storageId,
                                       int         partNumber,
                                       String      fileName,
                                       uint64      fileSize
@@ -240,8 +240,8 @@ typedef struct
   String                          jobUUID;
   String                          scheduleUUID;
   ArchiveTypes                    archiveType;
-//  DatabaseId                      entityId;                            // database id of entity
-  DatabaseId                      storageId;                           // database id of storage
+//  IndexId                         entityId;                            // index id of entity
+  IndexId                         storageId;                           // index id of storage
 
   uint64                          entries;                             // number of entries
   uint64                          archiveFileSize;                     // size of current archive file part
@@ -1395,7 +1395,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 \***********************************************************************/
 
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
-                           DatabaseId                   storageId,
+                           IndexId                      storageId,
                            StorageHandle                *storageHandle,
                            ConstString                  storageName,
                            const JobOptions             *jobOptions,
@@ -1420,7 +1420,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 \***********************************************************************/
 
 Errors Archive_remIndex(IndexHandle *indexHandle,
-                        DatabaseId  storageId
+                        IndexId     storageId
                        );
 
 #if 0

@@ -10373,8 +10373,8 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           LogHandle        *logHandle
                          )
 {
-  Errors     error;
-  DatabaseId storageId;
+  Errors  error;
+  IndexId storageId;
 
   assert(indexHandle != NULL);
   assert(storageName != NULL);
@@ -10415,7 +10415,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 }
 
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
-                           DatabaseId                   storageId,
+                           IndexId                      storageId,
                            StorageHandle                *storageHandle,
                            ConstString                  storageName,
                            const JobOptions             *jobOptions,
@@ -11037,7 +11037,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 }
 
 Errors Archive_remIndex(IndexHandle *indexHandle,
-                        DatabaseId  storageId
+                        IndexId     storageId
                        )
 {
   Errors error;
