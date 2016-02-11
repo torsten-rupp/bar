@@ -308,6 +308,7 @@ public class TabRestore
       public abstract void update(MenuItem menuItem, IndexData indexData);
     }
 
+    final public long id;
     public String                   name;                     // name
     public long                     dateTime;                 // date/time when storage was created or last time some storage was created
     public long                     size;                     // storage size or total size [bytes]
@@ -329,8 +330,9 @@ public class TabRestore
      * @param size size of storage [byte]
      * @param errorMessage error message text
      */
-    IndexData(String name, long dateTime, long size, String errorMessage)
+    IndexData(long id, String name, long dateTime, long size, String errorMessage)
     {
+      this.id            = id;
       this.name          = name;
       this.dateTime      = dateTime;
       this.size          = size;
@@ -348,18 +350,18 @@ public class TabRestore
      * @param dateTime date/time (timestamp) when storage was created
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    IndexData(String name, long dateTime)
+    IndexData(long id, String name, long dateTime)
     {
-      this(name,dateTime,0L,null);
+      this(id,name,dateTime,0L,null);
     }
 
     /** create index data
      * @param name name of storage
      * @param uuid uuid
      */
-    IndexData(String name)
+    IndexData(long id, String name)
     {
-      this(name,0L);
+      this(id,name,0L);
     }
 
     /** get tree item reference
@@ -446,8 +448,8 @@ public class TabRestore
       this.menuItem = null;
     }
 
-    abstract public long getEntries();
-    abstract public long getSize();
+    public long getEntries() { return 0; };
+    public long getSize() { return 0; };
 
     /** set index state
      * @param indexState index state
@@ -761,6 +763,27 @@ public class TabRestore
     }
   }
 
+  /** index hash map
+   */
+  class IndexDataMap<T> extends HashMap<Long,T>
+  {
+    /** add/remove id
+     * @param id id
+     * @param enabled true to add, false to remove
+     */
+    public void set(long id, T indexData, boolean enabled)
+    {
+      if (enabled)
+      {
+        put(id,indexData);
+      }
+      else
+      {
+        remove(id);
+      }
+    }
+  }
+
   /** UUID index data
    */
   class UUIDIndexData extends IndexData
@@ -810,7 +833,7 @@ public class TabRestore
                   String lastErrorMessage
                  )
     {
-      super(name,lastDateTime,totalSize,lastErrorMessage);
+      super(/*TODO*/0,name,lastDateTime,totalSize,lastErrorMessage);
       this.jobUUID      = jobUUID;
       this.totalEntries = totalEntries;
     }
@@ -962,7 +985,7 @@ return 0;
                     String                lastErrorMessage
                    )
     {
-      super("",lastDateTime,totalSize,lastErrorMessage);
+      super(entityId,"",lastDateTime,totalSize,lastErrorMessage);
       this.entityId     = entityId;
       this.archiveType  = archiveType;
       this.totalEntries = totalEntries;
@@ -1068,7 +1091,7 @@ return 0;
 
   /** entity index data map
    */
-  class EntityIndexDataMap extends HashMap<Long,EntityIndexData>
+  class EntityIndexDataMap extends IndexDataMap<EntityIndexData>
   {
     /** get job data from map
      * @param entityId entry id
@@ -1179,7 +1202,7 @@ return 0;
                      String                errorMessage
                     )
     {
-      super(name,dateTime,size,errorMessage);
+      super(storageId,name,dateTime,size,errorMessage);
       this.storageId           = storageId;
       this.jobName             = jobName;
       this.archiveType         = archiveType;
@@ -1314,7 +1337,7 @@ return 0;
 
   /** storage index data map
    */
-  class StorageIndexDataMap extends HashMap<Long,StorageIndexData>
+  class StorageIndexDataMap extends IndexDataMap<StorageIndexData>
   {
     /** get storage data from map
      * @param storageId entry id
@@ -1358,7 +1381,7 @@ return 0;
 
   /** index data map
    */
-  class IndexDataMap
+  class IndexDataMapX
   {
     private HashMap<String,UUIDIndexData>  uuidIndexDataMap;
     private HashMap<Long,EntityIndexData>  entityIndexDataMap;
@@ -1366,7 +1389,7 @@ return 0;
 
     /** constructor
      */
-    public IndexDataMap()
+    public IndexDataMapX()
     {
       this.uuidIndexDataMap    = new HashMap<String,UUIDIndexData>();
       this.entityIndexDataMap  = new HashMap<Long,EntityIndexData>();
@@ -1578,27 +1601,6 @@ return 0;
       else
       {
         remove(uuid);
-      }
-    }
-  }
-
-  /** index hash map
-   */
-  class IndexHashMap extends HashMap<Long,IndexData>
-  {
-    /** add/remove id
-     * @param id id
-     * @param enabled true to add, false to remove
-     */
-    public void set(long id, IndexData indexData, boolean enabled)
-    {
-      if (enabled)
-      {
-        add(id,indexData);
-      }
-      else
-      {
-        remove(id);
       }
     }
   }
@@ -2035,13 +2037,20 @@ assert storagePattern != null;
           String lastErrorMessage = valueMap.getString("lastErrorMessage");
 
           // add/update index map
+/*
           final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
                                                                                name,
                                                                                lastDateTime,
                                                                                totalEntries,
                                                                                totalSize,
                                                                                lastErrorMessage
-                                                                              );
+                                                                              );*/
+final UUIDIndexData uuidIndexData = new UUIDIndexData(jobUUID,
+name,
+lastDateTime,
+totalEntries,
+totalSize,
+lastErrorMessage);
 
           // update/insert tree item
           display.syncExec(new Runnable()
@@ -2160,7 +2169,14 @@ assert storagePattern != null;
           String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
 
           // add/update job data index
-          final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+/*          final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                     archiveType,
+                                                                                     lastDateTime,
+                                                                                     totalEntries,
+                                                                                     totalSize,
+                                                                                     lastErrorMessage
+                                                                                    );*/
+final EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                                      archiveType,
                                                                                      lastDateTime,
                                                                                      totalEntries,
@@ -2301,7 +2317,20 @@ assert storagePattern != null;
           String                errorMessage_       = valueMap.getString("errorMessage"                           );
 
           // add/update storage data
-          final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+Dprintf.dprintf("");
+/*          final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+                                                                                        jobName,
+                                                                                        archiveType,
+                                                                                        name,
+                                                                                        dateTime,
+                                                                                        entries,
+                                                                                        size,
+                                                                                        indexState,
+                                                                                        indexMode,
+                                                                                        lastCheckedDateTime,
+                                                                                        errorMessage_
+                                                                                       );*/
+final StorageIndexData storageIndexData = new StorageIndexData(storageId,
                                                                                         jobName,
                                                                                         archiveType,
                                                                                         name,
@@ -2482,7 +2511,20 @@ assert storagePattern != null;
           String                errorMessage_       = valueMap.getString("errorMessage");
 
           // add/update to index map
-          final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+Dprintf.dprintf("");
+/*          final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+                                                                                        jobName,
+                                                                                        archiveType,
+                                                                                        name,
+                                                                                        dateTime,
+                                                                                        entries,
+                                                                                        size,
+                                                                                        indexState,
+                                                                                        indexMode,
+                                                                                        lastCheckedDateTime,
+                                                                                        errorMessage_
+                                                                                       );*/
+final StorageIndexData storageIndexData = new StorageIndexData(storageId,
                                                                                         jobName,
                                                                                         archiveType,
                                                                                         name,
@@ -2588,7 +2630,14 @@ assert storagePattern != null;
           String lastErrorMessage = valueMap.getString("lastErrorMessage");
 
           // add/update index map
-          final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
+/*          final UUIDIndexData uuidIndexData = indexDataMap.updateUUIDIndexData(jobUUID,
+                                                                               name,
+                                                                               lastDateTime,
+                                                                               totalEntries,
+                                                                               totalSize,
+                                                                               lastErrorMessage
+                                                                              );*/
+final UUIDIndexData uuidIndexData = new UUIDIndexData(jobUUID,
                                                                                name,
                                                                                lastDateTime,
                                                                                totalEntries,
@@ -2775,7 +2824,16 @@ assert storagePattern != null;
             String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
 
             // add/update job data index
+Dprintf.dprintf("");
+/*
             final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+                                                                                       archiveType,
+                                                                                       lastDateTime,
+                                                                                       totalEntries,
+                                                                                       totalSize,
+                                                                                       lastErrorMessage
+                                                                                      );*/
+final EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                                        archiveType,
                                                                                        lastDateTime,
                                                                                        totalEntries,
@@ -2896,7 +2954,7 @@ assert storagePattern != null;
 
   /** entry data
    */
-  class EntryData
+  class EntryData extends IndexData
   {
     long          entryId;                                  // index entry id
     String        storageName;
@@ -2919,6 +2977,7 @@ assert storagePattern != null;
      */
     EntryData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
+      super(entryId,storageName);
       this.entryId         = entryId;
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
@@ -3746,12 +3805,12 @@ System.exit(1);
   private IndexDataMap                 indexDataMap = new IndexDataMap();
   private IndexData                    selectedIndexData = null;
   private UUIDHashSet                  selectedJobUUIDHashSet = new UUIDHashSet();
-  private IndexHashMap                 selectedIndexHashMap = new IndexHashMap();
+  private IndexDataMap                 selectedIndexHashMap = new IndexDataMap();
 
   private UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
 //TODO remove
   private EntryDataMap                 entryDataMap = new EntryDataMap();
-  private IndexHashMap                 selectedEntryIdHashMap = new IndexHashMap();
+  private IndexDataMap                 selectedEntryIdHashMap = new IndexDataMap();
 
   // ------------------------ native functions ----------------------------
 
@@ -5203,15 +5262,7 @@ Dprintf.dprintf("remove");
             tableItem.setChecked(!tableItem.getChecked());
 
             EntryData entryData = (EntryData)tableItem.getData();
-            if (tableItem.getChecked())
-            {
-              selectedEntryIdHashMap.add(entryData.entryId);
-            }
-            else
-            {
-              selectedEntryIdHashMap.remove(entryData.entryId);
-            }
-//            entryData.setChecked(tableItem.getChecked());
+            selectedEntryIdHashMap.set(entryData.entryId,entryData,tableItem.getChecked());
 
             checkedEntryEvent.trigger();
           }
@@ -5975,13 +6026,19 @@ Dprintf.dprintf("");
               String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
 
               // add/update job data index
-              final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
+/*              final EntityIndexData entityIndexData = indexDataMap.updateEntityIndexData(entityId,
                                                                                          archiveType,
                                                                                          lastDateTime,
                                                                                          totalEntries,
                                                                                          totalSize,
                                                                                          lastErrorMessage
-                                                                                        );
+                                                                                        );*/
+final EntityIndexData entityIndexData = new EntityIndexData(entityId,
+                                                                                         archiveType,
+                                                                                         lastDateTime,
+                                                                                         totalEntries,
+                                                                                         totalSize,
+                                                                                         lastErrorMessage);
 
               // insert/update tree item
               display.syncExec(new Runnable()
@@ -6089,7 +6146,21 @@ assert storagePattern != null;
               String                errorMessage_       = valueMap.getString("errorMessage"                           );
 
               // add/update storage data
+Dprintf.dprintf("");
+/*
               final StorageIndexData storageIndexData = indexDataMap.updateStorageIndexData(storageId,
+                                                                                            jobName,
+                                                                                            archiveType,
+                                                                                            name,
+                                                                                            dateTime,
+                                                                                            entries,
+                                                                                            size,
+                                                                                            indexState,
+                                                                                            indexMode,
+                                                                                            lastCheckedDateTime,
+                                                                                            errorMessage_
+                                                                                           );*/
+final StorageIndexData storageIndexData = new StorageIndexData(storageId,
                                                                                             jobName,
                                                                                             archiveType,
                                                                                             name,
@@ -7132,7 +7203,7 @@ assert storagePattern != null;
 
   /** restore archives
    */
-  private void restoreArchives(IndexHashMap indexHashMap)
+  private void restoreArchives(IndexDataMap<IndexData> indexDataMap)
   {
     Label      label;
     Composite  composite,subComposite;
@@ -7140,7 +7211,7 @@ assert storagePattern != null;
 
     // set ids to restore
     BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
-    for (Long indexId : indexHashMap.keySet())
+    for (Long indexId : indexDataMap.keySet())
     {
 //      BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobUUID=%'S",uuidIndexData.jobUUID),0);
     }
@@ -7148,7 +7219,7 @@ assert storagePattern != null;
     // get number total entries and size
     long entries = 0;
     long size    = 0;
-    for (IndexData indexData : indexHashMap.values())
+    for (IndexData indexData : indexDataMap.values())
     {
       if      (indexData instanceof UUIDIndexData)
       {
