@@ -104,8 +104,9 @@ typedef enum
 {
   INDEX_TYPE_NONE,
 
-  INDEX_TYPE_STORAGE,
+  INDEX_TYPE_UUID,
   INDEX_TYPE_ENTITY,
+  INDEX_TYPE_STORAGE,
   INDEX_TYPE_FILE,
   INDEX_TYPE_IMAGE,
   INDEX_TYPE_DIRECTORY,
@@ -388,11 +389,11 @@ bool Index_findByState(IndexHandle   *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_getState(IndexHandle *indexHandle,
-                      IndexId     storageId,
-                      IndexStates *indexState,
-                      uint64      *lastCheckedDateTime,
-                      String      errorMessage
+Errors Index_getState(IndexHandle  *indexHandle,
+                      IndexId      storageId,
+                      IndexStates  *indexState,
+                      uint64       *lastCheckedDateTime,
+                      String       errorMessage
                      );
 
 /***********************************************************************\
@@ -451,7 +452,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextUUID
 * Purpose: get next index uuid entry
 * Input  : IndexQueryHandle - index query handle
-* Output : jobUUID             - unique job id (can be NULL)
+* Output : indexId             - index id of UUID
+*          jobUUID             - unique job id (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
 *          totalEntries        - total number of entries (can be NULL)
 *          totalSize           - total storage size [bytes] (can be NULL)
@@ -461,6 +463,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
+                       IndexId          *indexId,
                        String           jobUUID,
                        uint64           *lastCreatedDateTime,
                        uint64           *totalEntries,
@@ -504,7 +507,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextEntity
 * Purpose: get next index entity entry
 * Input  : IndexQueryHandle - index query handle
-* Output : indexId          - index id of entry
+* Output : entityId         - index id of entity
 *          jobUUID          - unique job id (can be NULL)
 *          scheduleUUID     - unique schedule id (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
@@ -517,7 +520,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
-                         IndexId          *indexId,
+                         IndexId          *entityId,
                          String           jobUUID,
                          String           scheduleUUID,
                          uint64           *createdDateTime,
@@ -543,7 +546,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        ConstString  jobUUID,
                        ConstString  scheduleUUID,
                        ArchiveTypes archiveType,
-                       IndexId     *entityId
+                       IndexId      *entityId
                       );
 
 /***********************************************************************\
@@ -587,7 +590,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
 *          uuid             - unique job id or NULL
-*          entityId         - entity id or DATABASE_ID_ANY
+*          entityId         - entity id or INDEX_ID_ANY
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
 *          hostName         - host name pattern (glob) or NULL
@@ -599,7 +602,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 *          storageIdCount   - storage id count or 0
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
-*                             DATABASE_UNLIMITED
+*                             INDEX_UNLIMITED
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -626,8 +629,8 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextStorage
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
-* Output : storageId           - database storage id of entry
-*          entityId            - database entity id (can be NULL)
+* Output : storageId           - index storage id of entry
+*          entityId            - index entity id (can be NULL)
 *          jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
 *          archiveType         - archive type (can be NULL)
@@ -691,7 +694,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_deleteStorage(IndexHandle *indexHandle,
-                           IndexId     indexId
+                           IndexId     storageId
                           );
 
 /***********************************************************************\
@@ -705,7 +708,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_clearStorage(IndexHandle *indexHandle,
-                          IndexId     storageId
+                          IndexId    storageId
                          );
 
 /***********************************************************************\
@@ -794,7 +797,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          pattern          - name pattern (glob, can be NULL)
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
-*                             DATABASE_UNLIMITED
+*                             INDEX_UNLIMITED
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -948,7 +951,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextImage
 * Purpose: get next image entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId   - index id of entry
+* Output : indexId      - index id of entry
 *          storageName  - storage name
 *          imageName    - image name
 *          size         - size [bytes]

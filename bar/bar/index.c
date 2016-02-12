@@ -3933,7 +3933,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                             GROUP BY entities.jobUUID; \
                            "
 #else
-                           "SELECT entities1.jobUUID, \
+                           "SELECT entities.id, \
+                                   entities1.jobUUID, \
                                    STRFTIME('%%s',(SELECT MAX(created) FROM storage WHERE storage.entityId=entities1.id)), \
                                    ( \
                                       (SELECT COUNT(id) FROM files WHERE storageId IN \
@@ -4002,6 +4003,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
+                       IndexId          *indexId,
                        String           jobUUID,
                        uint64           *lastCreatedDateTime,
                        uint64           *totalEntries,
@@ -4009,10 +4011,12 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           lastErrorMessage
                       )
 {
-  double totalSize_;
+  DatabaseId databaseId;
+  double     totalSize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -4031,7 +4035,8 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                             );
 #else
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%S %llu %llu %lf %S",
+                           "%llu %S %llu %llu %lf %S",
+                           &databaseId,
                            jobUUID,
                            lastCreatedDateTime,
                            totalEntries,
@@ -4042,6 +4047,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
+  (*indexId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
   if (totalSize != NULL) (*totalSize) = (uint64)totalSize_;
 
   return TRUE;
