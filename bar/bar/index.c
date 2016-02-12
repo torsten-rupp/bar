@@ -4402,12 +4402,13 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   return error;
 }
 
-Errors Index_getStoragesInfo(IndexHandle      *indexHandle,
-                             const IndexId    storageIds[],
-                             uint             storageIdCount,
-                             IndexStateSet    indexStateSet,
-                             String           pattern,
-                             ulong            *count
+Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
+                             const IndexId storageIds[],
+                             uint          storageIdCount,
+                             IndexStateSet indexStateSet,
+                             String        pattern,
+                             ulong         *count,
+                             uint64        *size
                             )
 {
   String              regexpString;
@@ -5096,14 +5097,15 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
-                            const IndexId    storageIds[],
-                            uint             storageIdCount,
-                            const IndexId    entryIds[],
-                            uint             entryIdCount,
-                            IndexTypeSet     indexTypeSet,
-                            String           pattern,
-                            ulong            *count
+Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
+                            const IndexId storageIds[],
+                            uint          storageIdCount,
+                            const IndexId entryIds[],
+                            uint          entryIdCount,
+                            IndexTypeSet  indexTypeSet,
+                            String        pattern,
+                            ulong         *count,
+                            uint64        *size
                            )
 {
   DatabaseQueryHandle databaseQueryHandle;
@@ -5111,8 +5113,10 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
   String              regexpString;
   String              ftsString;
   String              storageIdsString;
-  String              entryIdsString;
+  String              fileIdsString,imageIdsString,directoryIdsString,linkIdsString,hardlinkIdsString,specialIdsString;
   uint                i;
+  ulong               count_;
+  double              size_;
 
   assert(indexHandle != NULL);
   assert((storageIdCount == 0) || (storageIds != NULL));
@@ -5142,137 +5146,192 @@ Errors Index_getEntriesInfo(IndexHandle      *indexHandle,
     String_appendCString(storageIdsString,"0");
   }
 
-  entryIdsString = String_new();
+  fileIdsString      = String_new();
+  imageIdsString     = String_new();
+  directoryIdsString = String_new();
+  linkIdsString      = String_new();
+  hardlinkIdsString  = String_new();
+  specialIdsString   = String_new();
   if (entryIds != NULL)
   {
     for (i = 0; i < entryIdCount; i++)
     {
-      if (i > 0) String_appendChar(entryIdsString,',');
-      String_format(entryIdsString,"%d",entryIds[i]);
+      switch (Index_getType(entryIds[i]))
+      {
+        case INDEX_TYPE_FILE:
+          if (!String_isEmpty(fileIdsString)) String_appendChar(fileIdsString,',');
+          String_format(fileIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          break;
+        case INDEX_TYPE_IMAGE:
+          if (!String_isEmpty(imageIdsString)) String_appendChar(imageIdsString,',');
+          String_format(imageIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          break;
+        case INDEX_TYPE_DIRECTORY:
+          if (!String_isEmpty(directoryIdsString)) String_appendChar(directoryIdsString,',');
+          String_format(directoryIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          break;
+        case INDEX_TYPE_LINK:
+          if (!String_isEmpty(linkIdsString)) String_appendChar(linkIdsString,',');
+          String_format(linkIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          break;
+        case INDEX_TYPE_HARDLINK:
+          if (!String_isEmpty(hardlinkIdsString)) String_appendChar(hardlinkIdsString,',');
+          String_format(hardlinkIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          break;
+        case INDEX_TYPE_SPECIAL:
+          if (!String_isEmpty(specialIdsString)) String_appendChar(specialIdsString,',');
+          String_format(specialIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          break;
+        default:
+          // ignore other types
+          break;
+      }
     }
   }
   else
   {
-    String_appendCString(entryIdsString,"0");
+    String_appendCString(fileIdsString,"0");
+    String_appendCString(imageIdsString,"0");
+    String_appendCString(directoryIdsString,"0");
+    String_appendCString(linkIdsString,"0");
+    String_appendCString(hardlinkIdsString,"0");
+    String_appendCString(specialIdsString,"0");
   }
 
-  (*count) = 0;
+  if (count != NULL) (*count) = 0;
+  if (size != NULL) (*size) = 0LL;
 
+Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT " \
-                           "(SELECT COUNT(files.id) \
-                             FROM files \
-                               LEFT JOIN storage ON storage.id=files.storageId \
-                             WHERE     %d \
-                                   AND (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
-                                   AND (%d OR REGEXP(%S,0,files.name)) \
-                                   AND (%d OR (files.storageId IN (%S))) \
-                                   AND (%d OR (files.id IN (%S))) \
-                            )+ \
+                           "  SELECT COUNT(files.id),TOTAL(files.size) \
+                                FROM files \
+                                  LEFT JOIN storage ON storage.id=files.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,files.name)) \
+                                      AND (%d OR (files.storageId IN (%S))) \
+                                      AND (%d OR (files.id IN (%S))) \
                            "
-                           "(SELECT COUNT(images.id) \
-                             FROM images \
-                               LEFT JOIN storage ON storage.id=images.storageId \
-                             WHERE     %d \
-                                   AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
-                                   AND (%d OR REGEXP(%S,0,images.name)) \
-                                   AND (%d OR (images.storageId IN (%S))) \
-                                   AND (%d OR (images.id IN (%S))) \
-                            )+ \
+                           "UNION"
+                           "  SELECT COUNT(images.id),TOTAL(images.size) \
+                                FROM images \
+                                  LEFT JOIN storage ON storage.id=images.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,images.name)) \
+                                      AND (%d OR (images.storageId IN (%S))) \
+                                      AND (%d OR (images.id IN (%S))) \
                            "
-                           "(SELECT COUNT(directories.id) \
-                             FROM directories \
-                               LEFT JOIN storage ON storage.id=directories.storageId \
-                             WHERE     %d \
-                                   AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
-                                   AND (%d OR REGEXP(%S,0,directories.name)) \
-                                   AND (%d OR (directories.storageId IN (%S))) \
-                                   AND (%d OR (directories.id IN (%S))) \
-                            )+ \
+                           "UNION"
+                           "  SELECT COUNT(directories.id),0.0 \
+                                FROM directories \
+                                  LEFT JOIN storage ON storage.id=directories.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,directories.name)) \
+                                      AND (%d OR (directories.storageId IN (%S))) \
+                                      AND (%d OR (directories.id IN (%S))) \
                            "
-                           "(SELECT COUNT(links.id) \
-                             FROM links \
-                               LEFT JOIN storage ON storage.id=links.storageId \
-                             WHERE     %d \
-                                   AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
-                                   AND (%d OR REGEXP(%S,0,links.name)) \
-                                   AND (%d OR (links.storageId IN (%S))) \
-                                   AND (%d OR (links.id IN (%S))) \
-                            )+ \
+                           "UNION"
+                           "  SELECT COUNT(links.id),0.0 \
+                                FROM links \
+                                  LEFT JOIN storage ON storage.id=links.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,links.name)) \
+                                      AND (%d OR (links.storageId IN (%S))) \
+                                      AND (%d OR (links.id IN (%S))) \
                            "
-                           "(SELECT COUNT(hardlinks.id) \
-                             FROM hardlinks \
-                               LEFT JOIN storage ON storage.id=hardlinks.storageId \
-                             WHERE     %d \
-                                   AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
-                                   AND (%d OR REGEXP(%S,0,hardlinks.name)) \
-                                   AND (%d OR (hardlinks.storageId IN (%S))) \
-                                   AND (%d OR (hardlinks.id IN (%S))) \
-                            )+ \
+                           "UNION"
+                           "  SELECT COUNT(hardlinks.id),TOTAL(hardlinks.size) \
+                                FROM hardlinks \
+                                  LEFT JOIN storage ON storage.id=hardlinks.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,hardlinks.name)) \
+                                      AND (%d OR (hardlinks.storageId IN (%S))) \
+                                      AND (%d OR (hardlinks.id IN (%S))) \
                            "
-                           "(SELECT COUNT(special.id) \
-                             FROM special \
-                               LEFT JOIN storage ON storage.id=special.storageId \
-                             WHERE     %d \
-                                   AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
-                                   AND (%d OR REGEXP(%S,0,special.name)) \
-                                   AND (%d OR (special.storageId IN (%S))) \
-                                   AND (%d OR (special.id IN (%S))) \
-                            ) \
+                           "UNION"
+                           "  SELECT COUNT(special.id),0.0 \
+                                FROM special \
+                                  LEFT JOIN storage ON storage.id=special.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,special.name)) \
+                                      AND (%d OR (special.storageId IN (%S))) \
+                                      AND (%d OR (special.id IN (%S))) \
                            ",
                            IN_SET(indexTypeSet,INDEX_TYPE_FILE),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
                            (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,fileIdsString,
 
                            IN_SET(indexTypeSet,INDEX_TYPE_IMAGE),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
                            (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,imageIdsString,
 
                            IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
                            (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,directoryIdsString,
 
                            IN_SET(indexTypeSet,INDEX_TYPE_LINK),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
                            (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,linkIdsString,
 
                            IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
                            (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,hardlinkIdsString,
 
                            IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
                            (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString
+                           (entryIdCount   == 0  ) ? 1 : 0,specialIdsString
                           );
+Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
-    String_delete(entryIdsString);
+    String_delete(specialIdsString);
+    String_delete(hardlinkIdsString);
+    String_delete(linkIdsString);
+    String_delete(directoryIdsString);
+    String_delete(imageIdsString);
+    String_delete(fileIdsString);
     String_delete(storageIdsString);
     String_delete(ftsString);
     String_delete(regexpString);
     return error;
   }
-  (void)Database_getNextRow(&databaseQueryHandle,
-                            "%lu",
-                            count
-                           );
+  while (Database_getNextRow(&databaseQueryHandle,
+                             "%lu %lf",
+                             &count_,
+                             &size_
+                            )
+        )
+  {
+    if (count != NULL) (*count) += count_;
+    if (size != NULL) (*size) += size_;
+  }
   Database_finalize(&databaseQueryHandle);
 
   // free resources
-  String_delete(entryIdsString);
+  String_delete(specialIdsString);
+  String_delete(hardlinkIdsString);
+  String_delete(linkIdsString);
+  String_delete(directoryIdsString);
+  String_delete(imageIdsString);
+  String_delete(fileIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
   String_delete(regexpString);
@@ -6204,18 +6263,18 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
-  if (! Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                            "%lld %S %llu %S %S %llu %d %d %d",
-                            &databaseId,
-                            storageName,
-                            storageDateTime,
-                            linkName,
-                            destinationName,
-                            timeModified,
-                            userId,
-                            groupId,
-                            permission
-                           )
+  if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
+                           "%lld %S %llu %S %S %llu %d %d %d",
+                           &databaseId,
+                           storageName,
+                           storageDateTime,
+                           linkName,
+                           destinationName,
+                           timeModified,
+                           userId,
+                           groupId,
+                           permission
+                          )
      )
   {
     return FALSE;

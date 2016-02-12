@@ -281,6 +281,15 @@ void __Index_done(const char  *__fileName__,
                  );
 #endif /* NDEBUG */
 
+/***********************************************************************\
+* Name   : Index_getType
+* Purpose: get index type
+* Input  : indexId - index id
+* Output : -
+* Return : index type
+* Notes  : -
+\***********************************************************************/
+
 INLINE IndexTypes Index_getType(IndexId indexId);
 #if defined(NDEBUG) || defined(__INDEX_IMPLEMENATION__)
 INLINE IndexTypes Index_getType(IndexId indexId)
@@ -288,7 +297,6 @@ INLINE IndexTypes Index_getType(IndexId indexId)
   return INDEX_TYPE_(indexId);
 }
 #endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
-
 
 /***********************************************************************\
 * Name   : Index_findById
@@ -571,7 +579,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 *          storageIdCount   - storage id count or 0
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          pattern          - name pattern (glob, can be NULL)
-* Output : count - entry count
+* Output : count - entry count (can be NULL)
+*          size  - size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -581,7 +590,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              uint          storageIdCount,
                              IndexStateSet indexStateSet,
                              String        pattern,
-                             ulong         *count
+                             ulong         *count,
+                             uint64        *size
                             );
 
 /***********************************************************************\
@@ -769,7 +779,8 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 *          entryIdCount     - entry id count or 0
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
 *          pattern          - name pattern (glob, can be NULL)
-* Output : count - entry count
+* Output : count - entry count (can be NULL)
+*          size  - size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -781,7 +792,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             uint          entryIdCount,
                             IndexTypeSet  indexTypeSet,
                             String        pattern,
-                            ulong         *count
+                            ulong         *count,
+                            uint64        *size
                            );
 
 /***********************************************************************\
