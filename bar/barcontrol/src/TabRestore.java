@@ -308,10 +308,12 @@ public class TabRestore
       public abstract void update(MenuItem menuItem, IndexData indexData);
     }
 
-    final public long id;
+    public long                     indexId;
+    public long                     entries;                  // number of entries
+    public long                     size;                     // total size [bytes]
+
     public String                   name;                     // name
     public long                     dateTime;                 // date/time when storage was created or last time some storage was created
-    public long                     size;                     // storage size or total size [bytes]
     public IndexStates              indexState;               // state of index
     public String                   errorMessage;             // last error message
 
@@ -325,19 +327,17 @@ public class TabRestore
     private boolean                 checked;                  // true iff storage entry is tagged
 
     /** create index data
-     * @param name name of storage
-     * @param dateTime date/time (timestamp) when storage was created
-     * @param size size of storage [byte]
-     * @param errorMessage error message text
+     * @param indexId index id
+     * @param entries number of entries
+     * @param size total size [byte]
      */
-    IndexData(long id, String name, long dateTime, long size, String errorMessage)
+    IndexData(long indexId, long entries, long size)
     {
-      this.id            = id;
-      this.name          = name;
-      this.dateTime      = dateTime;
+      this.indexId       = indexId;
+      this.entries       = entries;
       this.size          = size;
+
       this.indexState    = IndexStates.NONE;
-      this.errorMessage  = errorMessage;
       this.treeItem      = null;
       this.tableItem     = null;
       this.subMenu       = null;
@@ -346,22 +346,12 @@ public class TabRestore
     }
 
     /** create index data
-     * @param name name of storage
-     * @param dateTime date/time (timestamp) when storage was created
-     * @param lastCheckedDateTime last checked date/time (timestamp)
+     * @param indexId index id
+     * @param size total size [byte]
      */
-    IndexData(long id, String name, long dateTime)
+    IndexData(long indexId, long size)
     {
-      this(id,name,dateTime,0L,null);
-    }
-
-    /** create index data
-     * @param name name of storage
-     * @param uuid uuid
-     */
-    IndexData(long id, String name)
-    {
-      this(id,name,0L);
+      this(indexId,1L,size);
     }
 
     /** get tree item reference
@@ -448,8 +438,21 @@ public class TabRestore
       this.menuItem = null;
     }
 
-    public long getEntries() { return 0; };
-    public long getSize() { return 0; };
+    /** get number of entries
+     * @return entries
+     */
+    public long getEntries()
+    {
+      return entries;
+    }
+
+    /** get size
+     * @return size [bytes]
+     */
+    public long getSize()
+    {
+      return size;
+    }
 
     /** set index state
      * @param indexState index state
@@ -788,8 +791,7 @@ public class TabRestore
    */
   class UUIDIndexData extends IndexData
   {
-    public String jobUUID;                       // job UUID
-    public long   totalEntries;                  // total number of entries
+    public  String jobUUID;                       // job UUID
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -818,6 +820,7 @@ public class TabRestore
     };
 
     /** create UUID data index
+     * @param indexId index id
      * @param jobUUID job uuid
      * @param name job name
      * @param lastDateTime last date/time (timestamp) when storage was created
@@ -825,7 +828,8 @@ public class TabRestore
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    UUIDIndexData(String jobUUID,
+    UUIDIndexData(long   indexId,
+                  String jobUUID,
                   String name,
                   long   lastDateTime,
                   long   totalEntries,
@@ -833,9 +837,8 @@ public class TabRestore
                   String lastErrorMessage
                  )
     {
-      super(/*TODO*/0,name,lastDateTime,totalSize,lastErrorMessage);
+      super(indexId,totalEntries,totalSize);
       this.jobUUID      = jobUUID;
-      this.totalEntries = totalEntries;
     }
 
     /** set tree item reference
@@ -852,18 +855,6 @@ public class TabRestore
     public void setMenuItem(MenuItem menuItem)
     {
       setMenuItem(menuItem,menuItemUpdateRunnable);
-    }
-
-    public long getEntries()
-    {
-      return totalEntries;
-    }
-
-    public long getSize()
-    {
-Dprintf.dprintf("");
-//      return totalSize;
-return 0;
     }
 
     /** compare index data
@@ -939,9 +930,7 @@ return 0;
    */
   class EntityIndexData extends IndexData implements Serializable
   {
-    public long                  entityId;
     public Settings.ArchiveTypes archiveType;
-    public long                  totalEntries;
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -985,10 +974,8 @@ return 0;
                     String                lastErrorMessage
                    )
     {
-      super(entityId,"",lastDateTime,totalSize,lastErrorMessage);
-      this.entityId     = entityId;
-      this.archiveType  = archiveType;
-      this.totalEntries = totalEntries;
+      super(entityId,totalEntries,totalSize);
+      this.archiveType = archiveType;
     }
 
     /** set tree item reference
@@ -1005,18 +992,6 @@ return 0;
     public void setMenuItem(MenuItem menuItem)
     {
       setMenuItem(menuItem,menuItemUpdateRunnable);
-    }
-
-    public long getEntries()
-    {
-      return totalEntries;
-    }
-
-    public long getSize()
-    {
-Dprintf.dprintf("");
-//      return totalSize;
-return 0;
     }
 
     /** compare index data
@@ -1048,7 +1023,7 @@ return 0;
      */
     public String getInfo()
     {
-      return String.format("%d: %s",entityId,archiveType.toString());
+      return String.format("%d: %s",indexId,archiveType.toString());
     }
 
     /** write storage index data object to object stream
@@ -1060,9 +1035,9 @@ return 0;
       throws IOException
     {
       super.writeObject(out);
-      out.writeObject(entityId);
+      out.writeObject(indexId);
       out.writeObject(archiveType);
-      out.writeObject(totalEntries);
+      out.writeObject(entries);
     }
 
     /** read storage index data object from object stream
@@ -1075,9 +1050,9 @@ return 0;
       throws IOException, ClassNotFoundException
     {
       super.readObject(in);
-      entityId     = (Long)in.readObject();
-      archiveType  = (Settings.ArchiveTypes)in.readObject();
-      totalEntries = (Long)in.readObject();
+      indexId     = (Long)in.readObject();
+      archiveType = (Settings.ArchiveTypes)in.readObject();
+      entries     = (Long)in.readObject();
     }
 
     /** convert data to string
@@ -1085,7 +1060,7 @@ return 0;
      */
     public String toString()
     {
-      return "EntityIndexData {"+entityId+", type="+archiveType.toString()+", created="+dateTime+", size="+size+" bytes, checked="+isChecked()+"}";
+      return "EntityIndexData {"+indexId+", type="+archiveType.toString()+", created="+dateTime+", size="+size+" bytes, checked="+isChecked()+"}";
     }
   }
 
@@ -1121,7 +1096,7 @@ return 0;
      */
     public void put(EntityIndexData entityIndexData)
     {
-      put(entityIndexData.entityId,entityIndexData);
+      put(entityIndexData.indexId,entityIndexData);
     }
 
     /** remove job data from map
@@ -1129,7 +1104,7 @@ return 0;
      */
     public void remove(EntityIndexData entityIndexData)
     {
-      remove(entityIndexData.entityId);
+      remove(entityIndexData.indexId);
     }
   }
 
@@ -1140,7 +1115,6 @@ return 0;
     public long                  storageId;                // index storage id
     public String                jobName;                  // job name or null
     public Settings.ArchiveTypes archiveType;              // archive type
-    public long                  entries;                  // number of entries
     public IndexModes            indexMode;                // mode of index
     public long                  lastCheckedDateTime;      // last checked date/time
 
@@ -1202,11 +1176,10 @@ return 0;
                      String                errorMessage
                     )
     {
-      super(storageId,name,dateTime,size,errorMessage);
+      super(storageId,entries,size);
       this.storageId           = storageId;
       this.jobName             = jobName;
       this.archiveType         = archiveType;
-      this.entries             = entries;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
       this.lastCheckedDateTime = lastCheckedDateTime;
@@ -1229,6 +1202,7 @@ return 0;
                     )
     {
       this(storageId,jobName,archiveType,name,dateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+Dprintf.dprintf("");
     }
 
     /** create storage data
@@ -1237,7 +1211,6 @@ return 0;
      * @param jobName job name
      * @param archiveType archive type
      * @param name name of storage
-     * @param uuid uuid
      */
     StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name)
     {
@@ -1259,19 +1232,6 @@ return 0;
     {
       setTableItem(tableItem,tableItemUpdateRunnable);
     }
-
-    public long getEntries()
-    {
-      return entries;
-    }
-
-    public long getSize()
-    {
-Dprintf.dprintf("");
-//      return totalSize;
-return 0;
-    }
-
 
     /** compare index data
      * @return <0/=0/>0 if name </=/> indexData.name
@@ -1421,20 +1381,22 @@ return 0;
      * @param totalSize total size of storage [byte]
      * @param lastErrorMessage last error message text
      */
-    synchronized public UUIDIndexData updateUUIDIndexData(String jobUUID, String name, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
+    synchronized public UUIDIndexData updateUUIDIndexData(long indexId, String jobUUID, String name, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
     {
       UUIDIndexData uuidIndexData = uuidIndexDataMap.get(jobUUID);
       if (uuidIndexData != null)
       {
+Dprintf.dprintf("");
         uuidIndexData.name         = name;
         uuidIndexData.dateTime     = lastDateTime;
-        uuidIndexData.totalEntries = totalEntries;
-        uuidIndexData.size         = totalSize;
+//        uuidIndexData.totalEntries = totalEntries;
+//        uuidIndexData.size         = totalSize;
         uuidIndexData.errorMessage = lastErrorMessage;
       }
       else
       {
-        uuidIndexData = new UUIDIndexData(jobUUID,
+        uuidIndexData = new UUIDIndexData(indexId,
+                                          jobUUID,
                                           name,
                                           lastDateTime,
                                           totalEntries,
@@ -1483,11 +1445,12 @@ return 0;
       EntityIndexData entityIndexData = entityIndexDataMap.get(entityId);
       if (entityIndexData != null)
       {
-        entityIndexData.entityId     = entityId;
+//        entityIndexData.entityId     = entityId;
         entityIndexData.archiveType  = archiveType;
         entityIndexData.dateTime     = lastDateTime;
-        entityIndexData.totalEntries = totalEntries;
-        entityIndexData.size         = totalSize;
+Dprintf.dprintf("");
+//        entityIndexData.totalEntries = totalEntries;
+//        entityIndexData.size         = totalSize;
         entityIndexData.errorMessage = lastErrorMessage;
       }
       else
@@ -2029,6 +1992,7 @@ assert storagePattern != null;
       {
         try
         {
+          long   indexId          = valueMap.getLong  ("indexId"         );
           String jobUUID          = valueMap.getString("jobUUID"         );
           String name             = valueMap.getString("name"            );
           long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
@@ -2045,7 +2009,8 @@ assert storagePattern != null;
                                                                                totalSize,
                                                                                lastErrorMessage
                                                                               );*/
-final UUIDIndexData uuidIndexData = new UUIDIndexData(jobUUID,
+final UUIDIndexData uuidIndexData = new UUIDIndexData(indexId,
+jobUUID,
 name,
 lastDateTime,
 totalEntries,
@@ -2286,7 +2251,7 @@ final EntityIndexData entityIndexData = new EntityIndexData(entityId,
 // TODO
 assert storagePattern != null;
       command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
-                                                         entityIndexData[0].entityId,
+                                                         entityIndexData[0].indexId,
                                                          storagePattern,
                                                          "*",
                                                          storageIndexStateSet.nameList("|")
@@ -2622,6 +2587,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
       {
         try
         {
+          long   indexId          = valueMap.getLong  ("indexId"         );
           String jobUUID          = valueMap.getString("jobUUID"         );
           String name             = valueMap.getString("name"            );
           long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
@@ -2637,7 +2603,8 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
                                                                                totalSize,
                                                                                lastErrorMessage
                                                                               );*/
-final UUIDIndexData uuidIndexData = new UUIDIndexData(jobUUID,
+final UUIDIndexData uuidIndexData = new UUIDIndexData(indexId,
+                                                      jobUUID,
                                                                                name,
                                                                                lastDateTime,
                                                                                totalEntries,
@@ -2977,14 +2944,12 @@ final EntityIndexData entityIndexData = new EntityIndexData(entityId,
      */
     EntryData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
-      super(entryId,storageName);
-      this.entryId         = entryId;
+      super(entryId,size);
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
       this.entryType       = entryType;
       this.name            = name;
       this.dateTime        = dateTime;
-      this.size            = size;
       this.checked         = false;
       this.restoreState    = RestoreStates.UNKNOWN;
     }
@@ -3031,7 +2996,7 @@ final EntityIndexData entityIndexData = new EntityIndexData(entityId,
      */
     public String toString()
     {
-      return "Entry {"+storageName+", "+name+", "+entryType+", dateTime="+dateTime+", "+size+" bytes, checked="+checked+", state="+restoreState+"}";
+      return "Entry {"+storageName+", "+name+", "+entryType+", dateTime="+dateTime+", "+getSize()+" bytes, checked="+checked+", state="+restoreState+"}";
     }
   };
 
@@ -3985,7 +3950,7 @@ System.exit(1);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,2,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.totalEntries));
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.getEntries()));
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -3995,7 +3960,7 @@ System.exit(1);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,3,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entityIndexData.size),entityIndexData.size));
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entityIndexData.size),entityIndexData.getSize()));
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -4366,7 +4331,7 @@ System.exit(1);
                     entityTreeItem.setChecked(isChecked);
 
                     EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-                    selectedIndexHashMap.set(entityIndexData.entityId,entityIndexData,isChecked);
+                    selectedIndexHashMap.set(entityIndexData.indexId,entityIndexData,isChecked);
 
                     if (entityTreeItem.getExpanded())
                     {
@@ -4382,7 +4347,7 @@ System.exit(1);
               else if (indexData instanceof EntityIndexData)
               {
                 EntityIndexData entityIndexData = (EntityIndexData)indexData;
-                selectedIndexHashMap.set(entityIndexData.entityId,entityIndexData,isChecked);
+                selectedIndexHashMap.set(entityIndexData.indexId,entityIndexData,isChecked);
 
                 if (treeItem.getExpanded())
                 {
@@ -5727,7 +5692,7 @@ Dprintf.dprintf("updateCheckedStorageList");
               EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
               if (entityIndexData.isChecked())
               {
-                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD entityId=%d",entityIndexData.entityId),0);
+                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD entityId=%d",entityIndexData.indexId),0);
               }
 
               if (entityTreeItem.getExpanded())
@@ -5737,7 +5702,7 @@ Dprintf.dprintf("updateCheckedStorageList");
                   StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
                   if (storageIndexData.isChecked())
                   {
-                    BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageIndexData.storageId),0);
+                    BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageIndexData.indexId),0);
                   }
                 }
               }
@@ -6114,7 +6079,7 @@ final EntityIndexData entityIndexData = new EntityIndexData(entityId,
 // TODO
 assert storagePattern != null;
           Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
-                                                                     entityIndexData.entityId,
+                                                                     entityIndexData.indexId,
                                                                      -1,
                                                                      storagePattern,
                                                                      "*",
@@ -6290,7 +6255,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
               error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
                                                                    toUUIDIndexData.jobUUID,
                                                                    archiveType.toString(),
-                                                                   ((EntityIndexData)indexData).entityId
+                                                                   indexData.indexId
                                                                   ),
                                                0,
                                                errorMessage
@@ -6301,7 +6266,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
               error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
                                                                    toUUIDIndexData.jobUUID,
                                                                    archiveType.toString(),
-                                                                   ((StorageIndexData)indexData).storageId
+                                                                   indexData.indexId
                                                                   ),
                                                0,
                                                errorMessage
@@ -6371,7 +6336,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
           if      (indexData instanceof UUIDIndexData)
           {
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld jobUUID=%'S",
-                                                                 toEntityIndexData.entityId,
+                                                                 toEntityIndexData.indexId,
                                                                  ((UUIDIndexData)indexData).jobUUID
                                                                 ),
                                              0,
@@ -6381,8 +6346,8 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
           else if (indexData instanceof EntityIndexData)
           {
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld entityId=%lld",
-                                                                 toEntityIndexData.entityId,
-                                                                 ((EntityIndexData)indexData).entityId
+                                                                 toEntityIndexData.indexId,
+                                                                 indexData.indexId
                                                                 ),
                                              0,
                                              errorMessage
@@ -6391,8 +6356,8 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
           else if (indexData instanceof StorageIndexData)
           {
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
-                                                                 toEntityIndexData.entityId,
-                                                                 ((StorageIndexData)indexData).storageId
+                                                                 toEntityIndexData.indexId,
+                                                                 indexData.indexId
                                                                 ),
                                              0,
                                              errorMessage
@@ -6474,9 +6439,9 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
             EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
             error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
-                                                                 entityIndexData.entityId,
+                                                                 entityIndexData.indexId,
                                                                  archiveType.toString(),
-                                                                 entityIndexData.entityId
+                                                                 entityIndexData.indexId
                                                                 ),
                                              0,
                                              errorMessage
@@ -6562,7 +6527,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s entityId=%d",
                                                                    "*",
-                                                                   ((EntityIndexData)indexData).entityId
+                                                                   indexData.indexId
                                                                   ),
                                                0,
                                                errorMessage
@@ -6572,7 +6537,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%d",
                                                                    "*",
-                                                                   ((StorageIndexData)indexData).storageId
+                                                                   indexData.indexId
                                                                   ),
                                                0,
                                                errorMessage
@@ -6791,7 +6756,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
                 else if (indexData instanceof EntityIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%d",
-                                                                        ((EntityIndexData)indexData).entityId
+                                                                        indexData.indexId
                                                                        ),
                                                     0,
                                                     errorMessage
@@ -6800,7 +6765,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
                 else if (indexData instanceof StorageIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%d",
-                                                                       ((StorageIndexData)indexData).storageId
+                                                                        indexData.indexId
                                                                       ),
                                                    0,
                                                    errorMessage
@@ -7024,21 +6989,8 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
       long size    = 0L;
       for (IndexData indexData : indexDataHashSet)
       {
-        if      (indexData instanceof UUIDIndexData)
-        {
-          entries += ((UUIDIndexData)indexData).totalEntries;
-          size    += ((UUIDIndexData)indexData).size;
-        }
-        else if (indexData instanceof EntityIndexData)
-        {
-          entries += ((EntityIndexData)indexData).totalEntries;
-          size    += ((EntityIndexData)indexData).size;
-        }
-        else if (indexData instanceof StorageIndexData)
-        {
-          entries += ((StorageIndexData)indexData).entries;
-          size    += ((StorageIndexData)indexData).size;
-        }
+        entries += indexData.getEntries();
+        size    += indexData.getSize();
       }
 
       // confirm
@@ -7082,7 +7034,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
                 else if (indexData instanceof EntityIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%d",
-                                                                       ((EntityIndexData)indexData).entityId
+                                                                       indexData.indexId
                                                                       ),
                                                    0,
                                                    errorMessage
@@ -7091,7 +7043,7 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
                 else if (indexData instanceof StorageIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%d",
-                                                                        ((StorageIndexData)indexData).storageId
+                                                                        indexData.indexId
                                                                        ),
                                                     0,
                                                     errorMessage
@@ -7221,19 +7173,8 @@ final StorageIndexData storageIndexData = new StorageIndexData(storageId,
     long size    = 0;
     for (IndexData indexData : indexDataMap.values())
     {
-      if      (indexData instanceof UUIDIndexData)
-      {
-        entries += ((UUIDIndexData)indexData).totalEntries;
-      }
-      else if (indexData instanceof EntityIndexData)
-      {
-        entries += ((EntityIndexData)indexData).totalEntries;
-      }
-      else if (indexData instanceof StorageIndexData)
-      {
-        entries += ((StorageIndexData)indexData).entries;
-      }
-      size += indexData.size;
+      entries += indexData.getEntries();
+      size    += indexData.getSize();
     }
 
     // create dialog
