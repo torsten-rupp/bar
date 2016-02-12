@@ -13300,6 +13300,7 @@ restoreCommandInfo.clientInfo->abortFlag = FALSE;
 *            maxCount=<n>|0
 *            pattern=<text>
 *          Result:
+*            indexId=<n>
 *            jobUUID=<uuid> \
 *            name=<name> \
 *            lastDateTime=<created date/time [s]> \
@@ -13316,12 +13317,13 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   {
     LIST_NODE_HEADER(struct UUIDDataNode);
 
-    String jobUUID;
-    String name;
-    uint64 lastCreatedDateTime;
-    uint64 totalEntries;
-    uint64 totalSize;
-    String lastErrorMessage;
+    IndexId indexId;
+    String  jobUUID;
+    String  name;
+    uint64  lastCreatedDateTime;
+    uint64  totalEntries;
+    uint64  totalSize;
+    String  lastErrorMessage;
   } UUIDDataNode;
 
   typedef struct
@@ -13408,6 +13410,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   UUIDDataList     uuidDataList;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
+  IndexId          indexId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   uint64           lastCreatedDateTime;
   uint64           totalEntries,totalSize;
@@ -13469,6 +13472,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
           String_delete(patternString);
           return;
         }
+        uuidDataNode->indexId             = INDEX_ID_NONE;
         uuidDataNode->jobUUID             = String_duplicate(jobNode->uuid);
         uuidDataNode->name                = String_duplicate(jobNode->uuid);
         uuidDataNode->lastCreatedDateTime = 0LL;
@@ -13504,6 +13508,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   while (   !isCommandAborted(clientInfo,id)
          && ((maxCount == 0) || (List_count(&uuidDataList) < maxCount))
          && Index_getNextUUID(&indexQueryHandle,
+                              &indexId,
                               jobUUID,
                               &lastCreatedDateTime,
                               &totalEntries,
@@ -13528,6 +13533,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
         String_delete(patternString);
         return;
       }
+      uuidDataNode->indexId             = indexId;
       uuidDataNode->jobUUID             = String_duplicate(jobUUID);
       uuidDataNode->name                = String_duplicate(jobUUID);
       uuidDataNode->lastCreatedDateTime = 0LL;
@@ -13564,7 +13570,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "jobUUID=%S name=%'S lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
+                     "indexId=%llu jobUUID=%S name=%'S lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
+                     uuidDataNode->indexId,
                      uuidDataNode->jobUUID,
                      uuidDataNode->name,
                      uuidDataNode->lastCreatedDateTime,
