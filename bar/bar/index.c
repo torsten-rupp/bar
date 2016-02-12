@@ -4447,13 +4447,16 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   }
 #warning entryIds not used
 
-  (*count) = 0;
+  if (count != NULL) (*count) = 0L;
+  if (size != NULL) (*size) = 0LL;
 
 Database_debugEnable(1);
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT COUNT(id) \
+#warnign TODO
+//TODO
+                           "SELECT COUNT(id),0.0 \
                             FROM storage \
                             WHERE     (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
                                   AND (%d OR REGEXP(%S,0,storage.name)) \
@@ -4473,10 +4476,16 @@ Database_debugEnable(1);
     return -1L;
   }
   String_delete(indexStateSetString);
-  (void)Database_getNextRow(&databaseQueryHandle,
-                            "%lu",
-                            count
-                           );
+  if (Database_getNextRow(&databaseQueryHandle,
+                          "%lu %lf",
+                          &count_,
+                          &size_
+                         )
+        )
+  {
+    if (count != NULL) (*count) = count_;
+    if (size != NULL) (*size) = (uint64)size_;
+  }
   Database_finalize(&databaseQueryHandle);
 Database_debugEnable(0);
 
@@ -5198,7 +5207,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     String_appendCString(specialIdsString,"0");
   }
 
-  if (count != NULL) (*count) = 0;
+  if (count != NULL) (*count) = 0L;
   if (size != NULL) (*size) = 0LL;
 
 Database_debugEnable(1);
@@ -5321,7 +5330,7 @@ Database_debugEnable(0);
         )
   {
     if (count != NULL) (*count) += count_;
-    if (size != NULL) (*size) += size_;
+    if (size != NULL) (*size) += (uint64)size_;
   }
   Database_finalize(&databaseQueryHandle);
 
