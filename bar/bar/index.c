@@ -4417,6 +4417,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   String              indexStateSetString;
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
+  ulong               count_;
+  double              size_;
   uint                i;
 
   assert(indexHandle != NULL);
@@ -4454,7 +4456,7 @@ Database_debugEnable(1);
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-#warnign TODO
+#warning TODO
 //TODO
                            "SELECT COUNT(id),0.0 \
                             FROM storage \
