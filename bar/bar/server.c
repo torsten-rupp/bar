@@ -430,6 +430,7 @@ bool abortFlag;
   DirectoryInfoList   directoryInfoList;
 
   Array               storageIdArray;                      // ids of storage archives to list/restore
+  Array               entryIdArray;                        // ids of entries to restore
   Array               fileIdArray;                         // ids of file entries to restore
   Array               imageIdArray;                        // ids of image entries to restore
   Array               directoryIdArray;                    // ids of directory entries to restore
@@ -12661,6 +12662,151 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 }
 
 /***********************************************************************\
+* Name   : serverCommand_storageListAdd
+* Purpose: add to restore storage list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            entries=<n>
+*            size=<n [bytes]>
+\***********************************************************************/
+
+LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  IndexId          entityId;
+  IndexId          storageId;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job UUID, entity id, or storage id
+  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+     )
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    return;
+  }
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  if (!String_isEmpty(jobUUID))
+  {
+//????
+    // add all storage ids with specified uuid
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   jobUUID,
+                                   DATABASE_ID_ANY, // entity id
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
+                                  );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
+                                NULL, // archive type
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // entries
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      Array_append(&clientInfo->storageIdArray,&storageId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (entityId != DATABASE_ID_NONE)
+  {
+    // add all storage ids with entity id
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   NULL, // uuid
+                                   entityId,
+                                   STORAGE_TYPE_ANY,
+                                   NULL, // storageName
+                                   NULL, // hostName
+                                   NULL, // loginName
+                                   NULL, // deviceName
+                                   NULL, // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
+                                  );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      return;
+    }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                &storageId,
+                                NULL, // entity id
+                                NULL, // job UUID
+                                NULL, // schedule UUID
+                                NULL, // archive type
+                                NULL, // storageName
+                                NULL, // createdDateTime
+                                NULL, // entries
+                                NULL, // size
+                                NULL, // indexState
+                                NULL, // indexMode
+                                NULL, // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      Array_append(&clientInfo->storageIdArray,&storageId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+
+  if (storageId != DATABASE_ID_NONE)
+  {
+    // add to storage id array
+    Array_append(&clientInfo->storageIdArray,&storageId);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : serverCommand_entryListClear
 * Purpose: clear restore entry list
 * Input  : clientInfo    - client info
@@ -12680,6 +12826,7 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, uint id, const S
 
   UNUSED_VARIABLE(argumentMap);
 
+  Array_clear(&clientInfo->entryIdArray);
   Array_clear(&clientInfo->fileIdArray);
   Array_clear(&clientInfo->imageIdArray);
   Array_clear(&clientInfo->directoryIdArray);
@@ -12727,6 +12874,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
 
   // add to id array
 #warning TODO: single array
+  Array_append(&clientInfo->entryIdArray,&entryId);
   switch (Index_getType(entryId))
   {
     case ARCHIVE_ENTRY_TYPE_FILE     : Array_append(&clientInfo->fileIdArray,     &entryId); break;
@@ -12743,6 +12891,56 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_entryListInfo
+* Purpose: get restore entry list info
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            entries=<n>
+*            size=<n [bytes]>
+\***********************************************************************/
+
+LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  Errors error;
+  ulong  count;
+  uint64 size;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // check if index database is available, check if index database is ready
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  error = Index_getEntriesInfo(indexHandle,
+                               NULL,  // storageIds
+                               0,  // storageIdCount
+                               Array_cArray(&clientInfo->entryIdArray),
+                               Array_length(&clientInfo->entryIdArray),
+                               INDEX_TYPE_SET_ANY,
+                               NULL,
+                               &count,
+                               &size
+                              );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"get entries info from index database fail");
+    return;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
 }
 
 /***********************************************************************\
@@ -13853,6 +14051,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   long          storageEntryErrorCount;
 #else
   ulong         count;
+  uint64        size;
 #endif
 
   assert(clientInfo != NULL);
@@ -13927,12 +14126,13 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
                                 Array_length(&clientInfo->storageIdArray),
                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                 storagePatternString,
-                                &count
+                                &count,
+                                &size
                               );
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"index database fail");
+    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail");
     String_delete(storagePatternString);
     return;
   }
@@ -15046,8 +15246,9 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   bool       indexTypeAny;
   IndexTypes indexType;
   bool       newestEntriesOnly;
-  uint       count;
   Errors     error;
+  ulong      count;
+  uint64     size;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -15098,18 +15299,19 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
                                0,  // entryIdCount
                                indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
                                entryPatternString,
-                               &count
+                               &count,
+                               &size
                               );
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"index database fail");
+    sendClientResult(clientInfo,id,TRUE,error,"get entries info index database fail");
     String_delete(entryPatternString);
     return;
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%u",count);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
 
   // free resources
   String_delete(entryPatternString);
@@ -16443,8 +16645,10 @@ SERVER_COMMANDS[] =
 
   { "STORAGE_LIST_CLEAR",          serverCommand_storageListClear,         AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_ADD",            serverCommand_storageListAdd,           AUTHORIZATION_STATE_OK      },
+  { "STORAGE_LIST_INFO",           serverCommand_storageListInfo,          AUTHORIZATION_STATE_OK      },
   { "ENTRY_LIST_CLEAR",            serverCommand_entryListClear,           AUTHORIZATION_STATE_OK      },
   { "ENTRY_LIST_ADD",              serverCommand_entryListAdd,             AUTHORIZATION_STATE_OK      },
+  { "ENTRY_LIST_INFO",             serverCommand_entryListInfo,            AUTHORIZATION_STATE_OK      },
 
   { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_OK      },
 
@@ -16731,6 +16935,7 @@ clientInfo->abortFlag = FALSE;
   initJobOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
   Array_init(&clientInfo->storageIdArray,  sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->entryIdArray,    sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   Array_init(&clientInfo->fileIdArray,     sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   Array_init(&clientInfo->imageIdArray,    sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   Array_init(&clientInfo->directoryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
@@ -16863,6 +17068,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   Array_done(&clientInfo->directoryIdArray);
   Array_done(&clientInfo->imageIdArray);
   Array_done(&clientInfo->fileIdArray);
+  Array_done(&clientInfo->entryIdArray);
   Array_done(&clientInfo->storageIdArray);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   doneJobOptions(&clientInfo->jobOptions);
