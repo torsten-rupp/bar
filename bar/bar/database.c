@@ -600,7 +600,7 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
                                )
 {
   Errors              error;
-  DatabaseQueryHandle databaseQueryHandle1,databaseQueryHandle2;
+  DatabaseQueryHandle databaseQueryHandle1;
   const char          *name,*type;
   bool                primaryKey;
   DatabaseColumnNode  *columnNode;
@@ -675,8 +675,6 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
     }
 
     List_append(columnList,columnNode);
-
-    Database_finalize(&databaseQueryHandle2);
   }
   Database_finalize(&databaseQueryHandle1);
 
