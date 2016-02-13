@@ -5961,6 +5961,34 @@ e composite widget
     }
   }
 
+  /** refresh virtual table
+   * @param table table
+   */
+  public static void refreshVirtualTable(final Table table)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          table.setRedraw(false);
+
+          int count    = table.getItemCount();
+          int topIndex = table.getTopIndex();
+
+          table.setItemCount(0);
+          table.clearAll();
+
+          table.setItemCount(count);
+          table.setTopIndex(topIndex);
+
+          table.setRedraw(true);
+        }
+      });
+    }
+  }
+
   /** get table items data
    * @param table table
    * @param entries array
