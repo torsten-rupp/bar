@@ -587,21 +587,24 @@ class Command
 abstract class CommandHandler
 {
   /** handle command result
+   * @param i result counter [0..n-1]
    * @param command command
    * @return Errors.NONE or error code
    */
-  abstract public int handleResult(Command command);
+  abstract public int handleResult(int i, Command command);
 }
 
 abstract class CommandResultHandler
 {
   /** handle command result
+   * @param i result counter [0..n-1]
    * @param valueMap value map
    * @return Errors.NONE or error code
    */
-  abstract public int handleResult(ValueMap valueMap);
+  abstract public int handleResult(int i, ValueMap valueMap);
 }
 
+//TODO
 class ResultTypes extends HashMap<String,Class>
 {
 }
@@ -1417,25 +1420,31 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, final CommandResultHandler commandResultHandler, BusyIndicator busyIndicator)
+  public static int executeCommand(String                     commandString,
+                                   int                        debugLevel,
+                                   final String[]             errorMessage,
+                                   final CommandResultHandler commandResultHandler,
+                                   BusyIndicator              busyIndicator
+                                  )
   {
     return executeCommand(commandString,
                           debugLevel,
                           busyIndicator,
                           new CommandHandler()
-    {
-      public int handleResult(Command command)
-      {
-        ValueMap valueMap = new ValueMap();
-        int error = command.getNextResult(errorMessage,valueMap);
-        if (error == Errors.NONE)
-        {
-          error = commandResultHandler.handleResult(valueMap);
-        }
+                          {
+                            public int handleResult(int i, Command command)
+                            {
+                              ValueMap valueMap = new ValueMap();
+                              int error = command.getNextResult(errorMessage,valueMap);
+                              if (error == Errors.NONE)
+                              {
+                                error = commandResultHandler.handleResult(i,valueMap);
+                              }
 
-        return error;
-      }
-    });
+                              return error;
+                            }
+                          }
+                         );
   }
 
   /** execute command
@@ -1445,9 +1454,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param commandResultHandler command result handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, CommandResultHandler commandResultHandler)
+  public static int executeCommand(String               commandString,
+                                   int                  debugLevel,
+                                   final String[]       errorMessage,
+                                   CommandResultHandler commandResultHandler
+                                  )
   {
     return executeCommand(commandString,debugLevel,errorMessage,commandResultHandler,(BusyIndicator)null);
+  }
+
+  /** execute command
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param commandResultHandler command result handler
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String               commandString,
+                                   int                  debugLevel,
+                                   CommandResultHandler commandResultHandler
+                                  )
+  {
+    return executeCommand(commandString,debugLevel,(String[])null,commandResultHandler);
   }
 
   /** execute command
@@ -1459,14 +1486,20 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, final ValueMap valueMap, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
+  public static int executeCommand(String         commandString,
+                                   int            debugLevel,
+                                   final String[] errorMessage,
+                                   final ValueMap valueMap,
+                                   final ValueMap unknownValueMap,
+                                   BusyIndicator  busyIndicator
+                                  )
   {
     return executeCommand(commandString,
                           debugLevel,
                           busyIndicator,
                           new CommandHandler()
     {
-      public int handleResult(Command command)
+      public int handleResult(int i, Command command)
       {
         return command.getResult(errorMessage,valueMap,unknownValueMap);
       }
@@ -1481,7 +1514,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param unknownValueMap unknown values map or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
+  public static int executeCommand(String   commandString,
+                                   int      debugLevel,
+                                   String[] errorMessage,
+                                   ValueMap valueMap,
+                                   ValueMap unknownValueMap
+                                  )
   {
     return executeCommand(commandString,debugLevel,errorMessage,valueMap,unknownValueMap,(BusyIndicator)null);
   }
@@ -1493,7 +1531,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param valueMap value map
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage, ValueMap valueMap)
+  public static int executeCommand(String   commandString,
+                                   int      debugLevel,
+                                   String[] errorMessage,
+                                   ValueMap valueMap
+                                  )
   {
     return executeCommand(commandString,debugLevel,errorMessage,valueMap,(ValueMap)null);
   }
@@ -1502,9 +1544,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param commandString command to send to BAR server
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or ""
+   * @param valueMap value map
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage)
+  public static int executeCommand(String   commandString,
+                                   int      debugLevel,
+                                   ValueMap valueMap
+                                  )
+  {
+    return executeCommand(commandString,debugLevel,(String[])null,valueMap);
+  }
+
+  /** execute command
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String   commandString,
+                                   int      debugLevel,
+                                   String[] errorMessage
+                                  )
   {
     return executeCommand(commandString,debugLevel,errorMessage,(ValueMap)null);
   }
@@ -1514,7 +1574,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param debugLevel debug level (0..n)
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel)
+  public static int executeCommand(String commandString,
+                                   int    debugLevel
+                                  )
   {
     return executeCommand(commandString,debugLevel,(String[])null);
   }
@@ -1528,7 +1590,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, final String[] errorMessage, final List<ValueMap> valueMapList, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
+  public static int executeCommand(String               commandString,
+                                   int                  debugLevel,
+                                   final String[]       errorMessage,
+                                   final List<ValueMap> valueMapList,
+                                   final ValueMap       unknownValueMap,
+                                   BusyIndicator        busyIndicator)
   {
     valueMapList.clear();
     if (unknownValueMap != null) unknownValueMap.clear();
@@ -1538,7 +1605,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                           busyIndicator,
                           new CommandHandler()
     {
-      public int handleResult(Command command)
+      public int handleResult(int i, Command command)
       {
         return command.getResult(errorMessage,valueMapList,unknownValueMap);
       }
@@ -1553,7 +1620,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param unknownValueMap unknown values map or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
+  public static int executeCommand(String         commandString,
+                                   int            debugLevel,
+                                   String[]       errorMessage,
+                                   List<ValueMap> valueMapList,
+                                   ValueMap       unknownValueMap
+                                  )
   {
     return executeCommand(commandString,debugLevel,errorMessage,valueMapList,unknownValueMap,(BusyIndicator)null);
   }
@@ -1565,7 +1637,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param valueMapList value map list
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, int debugLevel, String[] errorMessage, List<ValueMap> valueMapList)
+  public static int executeCommand(String         commandString,
+                                   int            debugLevel,
+                                   String[]       errorMessage,
+                                   List<ValueMap> valueMapList
+                                  )
   {
     return executeCommand(commandString,debugLevel,errorMessage,valueMapList,(ValueMap)null);
   }
@@ -2945,6 +3021,7 @@ Dprintf.dprintf("");
     }
 
     // process results until completed or aborted
+    int i = 0;
     do
     {
       while (   (errorCode == Errors.NONE)
@@ -2952,11 +3029,12 @@ Dprintf.dprintf("");
              && !command.endOfData()
             )
       {
-        errorCode = commandHandler.handleResult(command);
+        errorCode = commandHandler.handleResult(i,command);
         if (busyIndicator != null)
         {
           busyIndicator.busy(0);
         }
+        i++;
       }
     }
     while (   (errorCode == Errors.NONE)
