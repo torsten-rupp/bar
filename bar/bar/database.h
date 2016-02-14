@@ -83,7 +83,9 @@ typedef struct
   DatabaseHandle *databaseHandle;
   sqlite3_stmt   *handle;
   #ifndef NDEBUG
-    String     sqlString;
+    String sqlString;
+    uint64 t0,t1;
+    uint64 dt;
   #endif /* not NDEBUG */
 } DatabaseQueryHandle;
 
@@ -187,6 +189,28 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
                         DatabaseHandle *databaseHandle
                        );
 #endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Database_lock
+* Purpose: lock database
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_lock(DatabaseHandle *databaseHandle);
+
+/***********************************************************************\
+* Name   : Database_unlock
+* Purpose: unlock database
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_unlock(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_setEnabledSync

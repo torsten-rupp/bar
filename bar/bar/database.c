@@ -71,7 +71,7 @@ typedef union
 /***************************** Variables *******************************/
 
 #ifndef NDEBUG
-  LOCAL uint databaseDebugCounter = 0;
+  LOCAL uint databaseDebugCounter = 1;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -112,6 +112,8 @@ typedef union
   #define DATABASE_DEBUG_SQL(databaseHandle,sqlString) \
     do \
     { \
+      assert(databaseHandle != NULL); \
+      \
       if (databaseDebugCounter > 0) \
       { \
         fprintf(stderr,"DEBUG database: execute command: %s: %s\n",(databaseHandle)->fileName,String_cString(sqlString)); \
@@ -121,9 +123,59 @@ typedef union
   #define DATABASE_DEBUG_SQLX(databaseHandle,text,sqlString) \
     do \
     { \
+      assert(databaseHandle != NULL); \
+      \
       if (databaseDebugCounter > 0) \
       { \
         fprintf(stderr,"DEBUG database: " text ": %s: %s\n",(databaseHandle)->fileName,String_cString(sqlString)); \
+      } \
+    } \
+    while (0)
+  #define DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString) \
+    do \
+    { \
+      assert(databaseHandle != NULL); \
+      \
+      if (databaseDebugCounter > 0) \
+      { \
+        String s = String_new(); \
+        String_format(s,"EXPLAIN QUERY PLAN %s",String_cString(sqlString)); \
+        fprintf(stderr,"DEBUG database: query plan\n"); \
+        sqlite3_exec(databaseHandle->handle, \
+                     String_cString(s), \
+                     debugPrintQueryPlanCallback, \
+                     NULL, /* userData */ \
+                     NULL /* errorMsg */ \
+                    ); \
+        String_delete(s); \
+      } \
+    } \
+    while (0)
+  #define DATABASE_DEBUG_TIME_START(databaseQueryHandle) \
+    do \
+    { \
+      assert(databaseQueryHandle != NULL); \
+      \
+      databaseQueryHandle->t0 = Misc_getTimestamp(); \
+    } \
+    while (0)
+  #define DATABASE_DEBUG_TIME_END(databaseQueryHandle) \
+    do \
+    { \
+      assert(databaseQueryHandle != NULL); \
+      \
+      databaseQueryHandle->t1 = Misc_getTimestamp(); \
+      databaseQueryHandle->dt += (databaseQueryHandle->t1-databaseQueryHandle->t0); \
+    } \
+    while (0)
+  #define DATABASE_DEBUG_TIME(databaseQueryHandle) \
+    do \
+    { \
+      assert(databaseQueryHandle != NULL); \
+      \
+      if (databaseDebugCounter > 0) \
+      { \
+        fprintf(stderr,"DEBUG database: execution time=%llums\n",databaseQueryHandle->dt/1000LL); \
       } \
     } \
     while (0)
@@ -138,6 +190,16 @@ typedef union
     { \
     } \
     while (0)
+  #define DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString) \
+    do \
+    { \
+    } \
+    while (0)
+  #define DATABASE_DEBUG_TIME(databaseQueryHandle) \
+    do \
+    { \
+    } \
+    while (0)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -146,6 +208,36 @@ typedef union
 
 #ifdef __cplusplus
   extern "C" {
+#endif
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : debugPrintQueryPlanCallback
+* Purpose: print query plan output
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], char *columns[])
+{
+  int i;
+
+  assert(argc >= 0);
+  assert(argv != NULL);
+  assert(columns != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  for (i = 0; i < argc; i++)
+  {
+    fprintf(stderr,"  %s=%s",columns[i],argv[i]);
+  }
+  fprintf(stderr," \n");
+
+  return 0;
+}
 #endif
 
 /***********************************************************************\
@@ -681,12 +773,30 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void freeTableColumnList(DatabaseColumnList *columnList)
 {
   assert(columnList != NULL);
 
   List_done(columnList,CALLBACK((ListNodeFreeFunction)freeColumnNode,NULL));
 }
+
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 LOCAL DatabaseColumnNode *findTableColumnNode(const DatabaseColumnList *columnList, const char *columnName)
 {
@@ -699,6 +809,15 @@ LOCAL DatabaseColumnNode *findTableColumnNode(const DatabaseColumnList *columnLi
 
   return NULL;
 }
+
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
 {
@@ -860,6 +979,21 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
 
   // close database
   sqlite3_close(databaseHandle->handle);
+}
+
+void Database_lock(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+
+  DATABASE_LOCK(databaseHandle);
+}
+void Database_unlock(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+
+  DATABASE_UNLOCK(databaseHandle);
 }
 
 Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
@@ -1704,20 +1838,6 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   return ERROR_NONE;
 }
 
-#if 0
-int XXX(void*userdata,int argc,const char *argv[], const char *columns[])
-{
-int i;
-//fprintf(stderr,"%s, %d:\n",__FILE__,__LINE__);
-for (i = 0; i < argc; i++)
-{
-fprintf(stderr,"  %s=%s",columns[i],argv[i]);
-}
-fprintf(stderr," \n");
-return 0;
-}
-#endif
-
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
                           DatabaseHandle      *databaseHandle,
@@ -1756,6 +1876,7 @@ return 0;
   va_end(arguments);
   #ifndef NDEBUG
     databaseQueryHandle->sqlString = String_duplicate(sqlString);
+    databaseQueryHandle->dt        = 0LL;
   #endif /* not NDEBUG */
 
   // prepare SQL command execution
@@ -1764,27 +1885,18 @@ return 0;
            DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-#if 0
-{
-String s = String_new();
-String_format(s,"EXPLAIN QUERY PLAN %s",String_cString(sqlString));
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(s));
-sqlite3_exec(databaseHandle->handle,
-                                String_cString(s),
-                                XXX,
-                                NULL,
-                                NULL
-                               );
-String_delete(s);
-//exit(1);
-}
-#endif
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
-                                      String_cString(sqlString),
-                                      -1,
-                                      &databaseQueryHandle->handle,
-                                      NULL
-                                     );
+//    DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString);
+
+    DATABASE_DEBUG_TIME_START(databaseQueryHandle);
+    {
+      sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                        String_cString(sqlString),
+                                        -1,
+                                        &databaseQueryHandle->handle,
+                                        NULL
+                                       );
+    }
+    DATABASE_DEBUG_TIME_END(databaseQueryHandle);
     if (sqliteResult == SQLITE_OK)
     {
       error = ERROR_NONE;
@@ -1852,6 +1964,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
             DATABASE_LOCK(databaseQueryHandle->databaseHandle),
             DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
+    DATABASE_DEBUG_TIME_START(databaseQueryHandle);
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
       // get data
@@ -2066,6 +2179,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     {
       return FALSE;
     }
+    DATABASE_DEBUG_TIME_END(databaseQueryHandle);
   });
   va_end(arguments);
 
@@ -2094,9 +2208,14 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle),
            DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
-    sqlite3_finalize(databaseQueryHandle->handle);
+    DATABASE_DEBUG_TIME_START(databaseQueryHandle);
+    {
+      sqlite3_finalize(databaseQueryHandle->handle);
+    }
+    DATABASE_DEBUG_TIME_END(databaseQueryHandle);
   });
   #ifndef NDEBUG
+    DATABASE_DEBUG_TIME(databaseQueryHandle);
     String_delete(databaseQueryHandle->sqlString);
   #endif /* not NDEBUG */
 }
