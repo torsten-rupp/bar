@@ -4217,7 +4217,7 @@ UNUSED_VARIABLE(jobOptions);
   assert(jobName != NULL);
   assert(jobOptions != NULL);
 
-  if (logPostCommand != NULL)
+  if (!stringIsEmpty(logPostCommand))
   {
     if (logHandle != NULL)
     {
