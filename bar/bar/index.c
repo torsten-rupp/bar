@@ -1305,6 +1305,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              NULL  // filter
                             );
 
+#warning remove auto-trigger in sql
+#if 0
   // create full-text-search indizes
   error = Database_execute(&newIndexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -1362,6 +1364,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
   {
     return error;
   }
+#endif
 
   return ERROR_NONE;
 }
@@ -3921,6 +3924,9 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+Database_lock(&indexHandle->databaseHandle);
+Database_debugEnable(1);
+uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -3933,7 +3939,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                             GROUP BY entities.jobUUID; \
                            "
 #else
-                           "SELECT entities.id, \
+                           "SELECT entities1.id, \
                                    entities1.jobUUID, \
                                    STRFTIME('%%s',(SELECT MAX(created) FROM storage WHERE storage.entityId=entities1.id)), \
                                    ( \
@@ -3996,6 +4002,10 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
+uint64 t1=Misc_getTimestamp();
+fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
+Database_debugEnable(0);
+Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -4016,7 +4026,6 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -4047,7 +4056,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
   if (totalSize != NULL) (*totalSize) = (uint64)totalSize_;
 
   return TRUE;
@@ -4154,6 +4163,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+Database_lock(&indexHandle->databaseHandle);
+Database_debugEnable(1);
+uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -4232,6 +4244,10 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
+uint64 t1=Misc_getTimestamp();
+fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
+Database_debugEnable(0);
+Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -4254,7 +4270,6 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -4290,7 +4305,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
   if (totalSize != NULL) (*totalSize) = (uint64)totalSize_;
 
   return TRUE;
@@ -4403,8 +4418,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 }
 
 Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
-                             const IndexId storageIds[],
-                             uint          storageIdCount,
+                             const IndexId indexIds[],
+                             uint          indexIdCount,
                              IndexStateSet indexStateSet,
                              String        pattern,
                              ulong         *count,
@@ -4413,16 +4428,16 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 {
   String              regexpString;
   String              ftsString;
-  String              storageIdsString;
+  String              uuidIdsString,entityIdsString,storageIdsString;
+  uint                i;
   String              indexStateSetString;
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
   ulong               count_;
-  double              size_;
-  uint                i;
+  double              totalEntriesCount_,totalEntriesSize_;
 
   assert(indexHandle != NULL);
-  assert((storageIdCount == 0) || (storageIds != NULL));
+  assert((indexIdCount == 0) || (indexIds != NULL));
   assert(count != NULL);
 
   // check init error
@@ -4434,18 +4449,38 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   regexpString = getREGEXPString2(String_new(),pattern);
   ftsString    = getFTSString2   (String_new(),pattern);
 
+  uuidIdsString    = String_new();
+  entityIdsString  = String_new();
   storageIdsString = String_new();
-  if (storageIds != NULL)
+  if (indexIds != NULL)
   {
-    for (i = 0; i < storageIdCount; i++)
+    for (i = 0; i < indexIdCount; i++)
     {
-      if (i > 0) String_appendChar(storageIdsString,',');
-      String_format(storageIdsString,"%d",storageIds[i]);
+      switch (Index_getType(indexIds[i]))
+      {
+        case INDEX_TYPE_UUID:
+          if (i > 0) String_appendChar(uuidIdsString,',');
+          String_format(uuidIdsString,"%d",indexIds[i]);
+          break;
+        case INDEX_TYPE_ENTITY:
+          if (i > 0) String_appendChar(entityIdsString,',');
+          String_format(entityIdsString,"%d",indexIds[i]);
+          break;
+        case INDEX_TYPE_STORAGE:
+          if (i > 0) String_appendChar(storageIdsString,',');
+          String_format(storageIdsString,"%d",indexIds[i]);
+          break;
+        default:
+          // ignore other types
+          break;
+      }
     }
   }
   else
   {
-    String_appendCString(storageIdsString,"0");
+//    String_appendCString(uuidIdsString,"0");
+//    String_appendCString(entityIdsString,"0");
+//    String_appendCString(storageIdsString,"0");
   }
 #warning entryIds not used
 
@@ -4454,23 +4489,244 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 
 Database_debugEnable(1);
   indexStateSetString = String_new();
+
+  #define STORAGE_IDS "  SELECT storage.id FROM storage where storage.id IN (%S) \
+                       UNION \
+                         SELECT storage.id FROM storage WHERE storage.entityId IN ($S) \
+                       UNION \
+                         SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN ($S))) \
+                      "
+
+
+Database_lock(&indexHandle->databaseHandle);
+Database_debugEnable(1);
+// -------------------------------
+fprintf(stderr,"%s, %d:++++++++++++++++++++++++++++++++++++++++++++++++++ \n",__FILE__,__LINE__);
+{
+uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-#warning TODO
-//TODO
-                           "SELECT COUNT(id),0.0 \
-                            FROM storage \
-                            WHERE     (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                                  AND (%d OR REGEXP(%S,0,storage.name)) \
-                                  AND (state IN (%S)) \
+#if 1
+                           "  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
+                                                                   AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                                                   AND (%d OR REGEXP(%S,0,storage.name)) \
+                            UNION ALL \
+                              SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (%S))) \
+                            UNION ALL \
+                              SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))))) \
                            ",
+#elif 0
+                           "  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
+                                                                   AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                                                   AND (%d OR REGEXP(%S,0,storage.name)) \
+                            UNION ALL \
+                              SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (%S))) \
+                           ",
+#elif 0
+                           "  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
+                                                                   AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                                                   AND (%d OR REGEXP(%S,0,storage.name)) \
+                           ",
+#elif 0
+                           "  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
+                                                                   AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                           ",
+#else
+                           "  SELECT COUNT(storage.id),\
+                                     TOTAL(storage.totalEntriesCount), \
+                                     TOTAL(storage.totalEntriesSize) \
+                                FROM storage \
+                                  LEFT JOIN entities ON storage.entityId=entities.id \
+                                WHERE     (   %d \
+                                           OR (storage.id IN (%S)) \
+                                           OR (storage.entityId IN (%S)) \
+                                           OR (entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))) \
+                                          ) \
+                                      AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,storage.name)) \
+                           ",
+#endif
+#if 1
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           getIndexStateSetString(indexStateSetString,indexStateSet)
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(entityIdsString ) ? 1 : 0,entityIdsString,
+                           String_isEmpty(uuidIdsString   ) ? 1 : 0,uuidIdsString
+#elif 0
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(entityIdsString ) ? 1 : 0,entityIdsString
+#elif 0
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString
+#else
+                           String_isEmpty(storageIdsString) && String_isEmpty(entityIdsString) && String_isEmpty(uuidIdsString) ? 1 : 0,
+                             storageIdsString,
+                             entityIdsString,
+                             uuidIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString
+#endif
+                          );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+exit(1);
+  }
+/*
+  if (Database_getNextRow(&databaseQueryHandle,
+                          "%lu",
+                          &count_
+                         )
+        )
+  {
+  }*/
+  Database_finalize(&databaseQueryHandle);
+uint64 t1=Misc_getTimestamp();
+fprintf(stderr,"%s, %d: dt=%llu\n",__FILE__,__LINE__,t1-t0);
+//exit(1);
+}
+// -------------------------------
+
+
+uint64 t0=Misc_getTimestamp();
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+#if 1
+                           "  SELECT COUNT(storage.id),\
+                                     TOTAL(storage.totalEntriesCount), \
+                                     TOTAL(storage.totalEntriesSize) \
+                                FROM storage \
+                                WHERE storage.id IN (  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
+                                                                                            AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                                                                            AND (%d OR REGEXP(%S,0,storage.name)) \
+                                                     UNION ALL \
+                                                       SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (%S))) \
+                                                     UNION ALL \
+                                                       SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))))) \
+                                                    ) \
+                           ",
+#else
+                           "  SELECT COUNT(storage.id),\
+                                     TOTAL(storage.totalEntriesCount), \
+                                     TOTAL(storage.totalEntriesSize) \
+                                FROM storage \
+                                  LEFT JOIN entities ON storage.entityId=entities.id \
+                                WHERE     (   %d \
+                                           OR (storage.id IN (%S)) \
+                                           OR (storage.entityId IN (%S)) \
+                                           OR (entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))) \
+                                          ) \
+                                      AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,storage.name)) \
+                           ",
+#endif
+#if 0
+                           "UNION ALL"
+                           "  SELECT COUNT(images.id),TOTAL(images.size) \
+                                FROM images \
+                                  LEFT JOIN storage ON storage.id=images.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,images.name)) \
+                                      AND (%d OR (images.storageId IN (%S))) \
+                                      AND (%d OR (images.id IN (%S))) \
+                           "
+                           "UNION ALL"
+                           "  SELECT COUNT(directories.id),0.0 \
+                                FROM directories \
+                                  LEFT JOIN storage ON storage.id=directories.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,directories.name)) \
+                                      AND (%d OR (directories.storageId IN (%S))) \
+                                      AND (%d OR (directories.id IN (%S))) \
+                           "
+                           "UNION ALL"
+                           "  SELECT COUNT(links.id),0.0 \
+                                FROM links \
+                                  LEFT JOIN storage ON storage.id=links.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,links.name)) \
+                                      AND (%d OR (links.storageId IN (%S))) \
+                                      AND (%d OR (links.id IN (%S))) \
+                           "
+                           "UNION ALL"
+                           "  SELECT COUNT(hardlinks.id),TOTAL(hardlinks.size) \
+                                FROM hardlinks \
+                                  LEFT JOIN storage ON storage.id=hardlinks.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,hardlinks.name)) \
+                                      AND (%d OR (hardlinks.storageId IN (%S))) \
+                                      AND (%d OR (hardlinks.id IN (%S))) \
+                           "
+                           "UNION ALL"
+                           "  SELECT COUNT(special.id),0.0 \
+                                FROM special \
+                                  LEFT JOIN storage ON storage.id=special.storageId \
+                                WHERE     %d \
+                                      AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
+                                      AND (%d OR REGEXP(%S,0,special.name)) \
+                                      AND (%d OR (special.storageId IN (%S))) \
+                                      AND (%d OR (special.id IN (%S))) \
+                           ",
+#endif
+#if 1
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(entityIdsString ) ? 1 : 0,entityIdsString,
+                           String_isEmpty(uuidIdsString   ) ? 1 : 0,uuidIdsString
+#else
+                           String_isEmpty(storageIdsString) && String_isEmpty(entityIdsString) && String_isEmpty(uuidIdsString) ? 1 : 0,
+                             storageIdsString,
+                             entityIdsString,
+                             uuidIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString
+#endif
+
+#if 0
+                           IN_SET(indexTypeSet,INDEX_TYPE_IMAGE),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,imageIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,directoryIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_LINK),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,linkIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,hardlinkIdsString,
+
+                           IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL),
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
+                           (entryIdCount   == 0  ) ? 1 : 0,specialIdsString
+#endif
                           );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+exit(1);
     String_delete(indexStateSetString);
     String_delete(storageIdsString);
     String_delete(ftsString);
@@ -4479,17 +4735,23 @@ Database_debugEnable(1);
   }
   String_delete(indexStateSetString);
   if (Database_getNextRow(&databaseQueryHandle,
-                          "%lu %lf",
+                          "%lu %lf %lf",
                           &count_,
-                          &size_
+                          &totalEntriesCount_,
+                          &totalEntriesSize_
                          )
         )
   {
     if (count != NULL) (*count) = count_;
-    if (size != NULL) (*size) = (uint64)size_;
+    if (size != NULL) (*size) = (uint64)totalEntriesSize_;
   }
   Database_finalize(&databaseQueryHandle);
+uint64 t1=Misc_getTimestamp();
 Database_debugEnable(0);
+fprintf(stderr,"%s, %d: Index_getStoragesInfo count=%lu totalCount=%lf totalSize=%lf dt=%llu\n",__FILE__,__LINE__,count_,totalEntriesCount_,totalEntriesSize_,t1-t0);
+
+Database_debugEnable(0);
+Database_unlock(&indexHandle->databaseHandle);
 
   // free resources
   String_delete(storageIdsString);
@@ -4553,7 +4815,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   }
 
   indexStateSetString = String_new();
-Database_debugEnable(1);
+//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -4578,7 +4840,7 @@ Database_debugEnable(1);
                                   AND %S \
                             ORDER BY storage.created DESC \
                            ",
-#else
+#elif 0
                            "SELECT storage.id, \
                                    storage.entityId, \
                                    entities.jobUUID, \
@@ -4604,7 +4866,32 @@ Database_debugEnable(1);
                                    STRFTIME('%%s',storage.lastChecked), \
                                    storage.errorMessage \
                             FROM storage \
-                            LEFT JOIN entities ON entities.id=storage.entityId \
+                              LEFT JOIN entities ON entities.id=storage.entityId \
+                            WHERE     (%d OR (entities.jobUUID='%S')) \
+                                  AND (%d OR (storage.entityId=%lld)) \
+                                  AND (storage.state IN (%S)) \
+                                  AND (%d OR (storage.id IN (%S))) \
+                                  AND (%d OR (entities.type!=%d)) \
+                                  AND (%d OR REGEXP(%S,0,storage.name)) \
+                            ORDER BY storage.created DESC \
+                            LIMIT %llu,%llu \
+                           ",
+#else
+                           "SELECT storage.id, \
+                                   storage.entityId, \
+                                   entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   entities.type, \
+                                   storage.name, \
+                                   STRFTIME('%%s',storage.created), \
+                                   storage.totalEntriesCount, \
+                                   storage.totalEntriesSize, \
+                                   storage.state, \
+                                   storage.mode, \
+                                   STRFTIME('%%s',storage.lastChecked), \
+                                   storage.errorMessage \
+                            FROM storage \
+                              LEFT JOIN entities ON entities.id=storage.entityId \
                             WHERE     (%d OR (entities.jobUUID='%S')) \
                                   AND (%d OR (storage.entityId=%lld)) \
                                   AND (storage.state IN (%S)) \
@@ -4627,7 +4914,7 @@ Database_debugEnable(1);
                            offset,
                            limit
                           );
-Database_debugEnable(0);
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -4675,6 +4962,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
+#warning storageName_
   Storage_initSpecifier(&storageSpecifier);
   storageName_ = String_new();
   foundFlag    = FALSE;
@@ -4716,7 +5004,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 #endif
         )
   {
-fprintf(stderr,"%s, %d: storageName_=%s\n",__FILE__,__LINE__,String_cString(storageName_));
+//fprintf(stderr,"%s, %d: storageName_=%s\n",__FILE__,__LINE__,String_cString(storageName_));
     if (Storage_parseName(&storageSpecifier,storageName_) == ERROR_NONE)
     {
       switch (storageSpecifier.type)
@@ -5212,9 +5500,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   if (count != NULL) (*count) = 0L;
   if (size != NULL) (*size) = 0LL;
 
+Database_lock(&indexHandle->databaseHandle);
 Database_debugEnable(1);
+uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
+#if 1
                            "  SELECT COUNT(files.id),TOTAL(files.size) \
                                 FROM files \
                                   LEFT JOIN storage ON storage.id=files.storageId \
@@ -5224,7 +5515,7 @@ Database_debugEnable(1);
                                       AND (%d OR (files.storageId IN (%S))) \
                                       AND (%d OR (files.id IN (%S))) \
                            "
-                           "UNION"
+                           "UNION ALL"
                            "  SELECT COUNT(images.id),TOTAL(images.size) \
                                 FROM images \
                                   LEFT JOIN storage ON storage.id=images.storageId \
@@ -5234,7 +5525,7 @@ Database_debugEnable(1);
                                       AND (%d OR (images.storageId IN (%S))) \
                                       AND (%d OR (images.id IN (%S))) \
                            "
-                           "UNION"
+                           "UNION ALL"
                            "  SELECT COUNT(directories.id),0.0 \
                                 FROM directories \
                                   LEFT JOIN storage ON storage.id=directories.storageId \
@@ -5244,7 +5535,7 @@ Database_debugEnable(1);
                                       AND (%d OR (directories.storageId IN (%S))) \
                                       AND (%d OR (directories.id IN (%S))) \
                            "
-                           "UNION"
+                           "UNION ALL"
                            "  SELECT COUNT(links.id),0.0 \
                                 FROM links \
                                   LEFT JOIN storage ON storage.id=links.storageId \
@@ -5254,7 +5545,7 @@ Database_debugEnable(1);
                                       AND (%d OR (links.storageId IN (%S))) \
                                       AND (%d OR (links.id IN (%S))) \
                            "
-                           "UNION"
+                           "UNION ALL"
                            "  SELECT COUNT(hardlinks.id),TOTAL(hardlinks.size) \
                                 FROM hardlinks \
                                   LEFT JOIN storage ON storage.id=hardlinks.storageId \
@@ -5264,7 +5555,7 @@ Database_debugEnable(1);
                                       AND (%d OR (hardlinks.storageId IN (%S))) \
                                       AND (%d OR (hardlinks.id IN (%S))) \
                            "
-                           "UNION"
+                           "UNION ALL"
                            "  SELECT COUNT(special.id),0.0 \
                                 FROM special \
                                   LEFT JOIN storage ON storage.id=special.storageId \
@@ -5274,6 +5565,8 @@ Database_debugEnable(1);
                                       AND (%d OR (special.storageId IN (%S))) \
                                       AND (%d OR (special.id IN (%S))) \
                            ",
+#else
+#endif
                            IN_SET(indexTypeSet,INDEX_TYPE_FILE),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
@@ -5310,7 +5603,6 @@ Database_debugEnable(1);
                            (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
                            (entryIdCount   == 0  ) ? 1 : 0,specialIdsString
                           );
-Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     String_delete(specialIdsString);
@@ -5324,6 +5616,7 @@ Database_debugEnable(0);
     String_delete(regexpString);
     return error;
   }
+uint64 t1=Misc_getTimestamp();
   while (Database_getNextRow(&databaseQueryHandle,
                              "%lu %lf",
                              &count_,
@@ -5335,6 +5628,9 @@ Database_debugEnable(0);
     if (size != NULL) (*size) += (uint64)size_;
   }
   Database_finalize(&databaseQueryHandle);
+Database_debugEnable(0);
+fprintf(stderr,"%s, %d: Index_getEntriesInfo count=%lu size=%lf dt=%llu\n",__FILE__,__LINE__,count_,size_,t1-t0);
+Database_unlock(&indexHandle->databaseHandle);
 
   // free resources
   String_delete(specialIdsString);
@@ -5413,7 +5709,9 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     String_appendCString(entryIdsString,"0");
   }
 
+Database_lock(&indexHandle->databaseHandle);
 Database_debugEnable(1);
+uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "  SELECT files.id, \
@@ -5438,7 +5736,7 @@ Database_debugEnable(1);
                                     AND (%d OR (files.storageId IN (%S))) \
                                     AND (%d OR (files.id IN (%S))) \
                            "
-                           "UNION "
+                           "UNION ALL"
                            "  SELECT images.id, \
                                      storage.name, \
                                      STRFTIME('%%s',storage.created), \
@@ -5461,7 +5759,7 @@ Database_debugEnable(1);
                                     AND (%d OR (images.storageId IN (%S))) \
                                     AND (%d OR (images.id IN (%S))) \
                            "
-                           "UNION "
+                           "UNION ALL"
                            "  SELECT directories.id, \
                                      storage.name, \
                                      STRFTIME('%%s',storage.created), \
@@ -5484,7 +5782,7 @@ Database_debugEnable(1);
                                     AND (%d OR (directories.storageId IN (%S))) \
                                     AND (%d OR (directories.id IN (%S))) \
                            "
-                           "UNION "
+                           "UNION ALL"
                            "  SELECT links.id, \
                                      storage.name, \
                                      STRFTIME('%%s',storage.created), \
@@ -5507,7 +5805,7 @@ Database_debugEnable(1);
                                     AND (%d OR (links.storageId IN (%S))) \
                                     AND (%d OR (links.id IN (%S))) \
                            "
-                           "UNION "
+                           "UNION ALL"
                            "  SELECT hardlinks.id, \
                                      storage.name, \
                                      STRFTIME('%%s',storage.created), \
@@ -5530,7 +5828,7 @@ Database_debugEnable(1);
                                     AND (%d OR (hardlinks.storageId IN (%S))) \
                                     AND (%d OR (hardlinks.id IN (%S))) \
                            "
-                           "UNION "
+                           "UNION ALL"
                            "  SELECT special.id, \
                                      storage.name, \
                                      STRFTIME('%%s',storage.created), \
@@ -5599,7 +5897,6 @@ Database_debugEnable(1);
                            offset,
                            limit
                           );
-Database_debugEnable(0);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(ftsString);
@@ -5610,6 +5907,10 @@ Database_debugEnable(0);
     return error;
   }
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+uint64 t1=Misc_getTimestamp();
+fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
+Database_debugEnable(0);
+Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -5637,7 +5938,6 @@ bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -5666,7 +5966,7 @@ bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(indexType,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(indexType,databaseId);
 
   return TRUE;
 }
@@ -5787,7 +6087,6 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -5813,7 +6112,7 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+ if (indexId != NULL)  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
 
   return TRUE;
 }
@@ -5948,7 +6247,6 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -5971,7 +6269,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
 
   return TRUE;
 }
@@ -6106,7 +6404,6 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -6129,7 +6426,7 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
 
   return TRUE;
 }
@@ -6266,7 +6563,6 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -6290,7 +6586,7 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
 
   return TRUE;
 }
@@ -6432,7 +6728,6 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -6458,7 +6753,7 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
 
   return TRUE;
 }
@@ -6593,7 +6888,6 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
-  assert(indexId != NULL);
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -6616,7 +6910,7 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
 
   return TRUE;
 }

@@ -12526,8 +12526,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 * Return : -
 * Notes  : Arguments:
 *            uuid=<uuid>|* and/or
-*            entityId=<id>|0
-*            storageId=<id>|0
+*            indexId=<id>|0
 *          Result:
 \***********************************************************************/
 
@@ -12543,6 +12542,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   assert(argumentMap != NULL);
 
   // get job UUID, entity id, or storage id
+#warning TODO: replace by indexId
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
@@ -12662,8 +12662,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 }
 
 /***********************************************************************\
-* Name   : serverCommand_storageListAdd
-* Purpose: add to restore storage list
+* Name   : serverCommand_storageListInfo
+* Purpose: get restore storage list info
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -12678,15 +12678,41 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  IndexId          entityId;
-  IndexId          storageId;
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
+  Errors error;
+  ulong  count;
+  uint64 size;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  error = Index_getStoragesInfo(indexHandle,
+                                Array_cArray(&clientInfo->storageIdArray),
+                                Array_length(&clientInfo->storageIdArray),
+                                INDEX_STATE_SET_ALL,
+                                NULL,
+                                &count,
+                                &size
+                               );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail");
+    return;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
+
+#if 0
+  IndexQueryHandle indexQueryHandle;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  IndexId          entityId;
+  IndexId          storageId;
   // get job UUID, entity id, or storage id
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
@@ -12697,12 +12723,6 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
 
   if (!String_isEmpty(jobUUID))
   {
@@ -12804,6 +12824,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+#endif
 }
 
 /***********************************************************************\
@@ -12858,7 +12879,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get type, entry id
+  // get entry ids
   if (!StringMap_getInt64(argumentMap,"entryId",&entryId,DATABASE_ID_NONE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
@@ -12877,13 +12898,14 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
   Array_append(&clientInfo->entryIdArray,&entryId);
   switch (Index_getType(entryId))
   {
-    case ARCHIVE_ENTRY_TYPE_FILE     : Array_append(&clientInfo->fileIdArray,     &entryId); break;
-    case ARCHIVE_ENTRY_TYPE_IMAGE    : Array_append(&clientInfo->imageIdArray,    &entryId); break;
-    case ARCHIVE_ENTRY_TYPE_DIRECTORY: Array_append(&clientInfo->directoryIdArray,&entryId); break;
-    case ARCHIVE_ENTRY_TYPE_LINK     : Array_append(&clientInfo->linkIdArray,     &entryId); break;
-    case ARCHIVE_ENTRY_TYPE_HARDLINK : Array_append(&clientInfo->hardLinkIdArray, &entryId); break;
-    case ARCHIVE_ENTRY_TYPE_SPECIAL  : Array_append(&clientInfo->specialIdArray,  &entryId); break;
+    case INDEX_TYPE_FILE     : Array_append(&clientInfo->fileIdArray,     &entryId); break;
+    case INDEX_TYPE_IMAGE    : Array_append(&clientInfo->imageIdArray,    &entryId); break;
+    case INDEX_TYPE_DIRECTORY: Array_append(&clientInfo->directoryIdArray,&entryId); break;
+    case INDEX_TYPE_LINK     : Array_append(&clientInfo->linkIdArray,     &entryId); break;
+    case INDEX_TYPE_HARDLINK : Array_append(&clientInfo->hardLinkIdArray, &entryId); break;
+    case INDEX_TYPE_SPECIAL  : Array_append(&clientInfo->specialIdArray,  &entryId); break;
     default:
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Index_getType(entryId));
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
@@ -14138,7 +14160,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu",count);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
 #endif
 
   // free resources
