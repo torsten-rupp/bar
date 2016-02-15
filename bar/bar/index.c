@@ -1305,67 +1305,6 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              NULL  // filter
                             );
 
-#warning remove auto-trigger in sql
-#if 0
-  // create full-text-search indizes
-  error = Database_execute(&newIndexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO FTS_storage SELECT id,name FROM storage;"
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&newIndexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO FTS_files SELECT id,name FROM files;"
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&newIndexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO FTS_images SELECT id,name FROM images;"
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&newIndexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO FTS_directories SELECT id,name FROM directories;"
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&newIndexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO FTS_links SELECT id,name FROM links;"
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&newIndexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO FTS_hardlinks SELECT id,name FROM hardlinks;"
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&newIndexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO FTS_special SELECT id,name FROM special;"
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-#endif
-
   return ERROR_NONE;
 }
 
@@ -3515,8 +3454,9 @@ bool Index_findById(IndexHandle *indexHandle,
                                    storage.state, \
                                    STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
-                            LEFT JOIN entities ON storage.entityId=entities.id \
+                              LEFT JOIN entities ON storage.entityId=entities.id \
                             WHERE storage.id=%lld \
+                            LIMIT 0,1 \
                            ",
                            storageId
                           );
@@ -3569,6 +3509,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
     return FALSE;
   }
 
+Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entities.id, \
@@ -3579,7 +3520,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
                                    storage.state, \
                                    STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
-                            LEFT JOIN entities ON storage.entityId=entities.id \
+                              LEFT JOIN entities ON storage.entityId=entities.id \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3668,6 +3609,7 @@ bool Index_findByName(IndexHandle  *indexHandle,
   String_delete(storageName);
 
   Database_finalize(&databaseQueryHandle);
+Database_debugEnable(0);
 
   return foundFlag;
 }
@@ -3710,8 +3652,9 @@ bool Index_findByState(IndexHandle   *indexHandle,
                                    storage.name, \
                                    STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
-                            LEFT JOIN entities ON storage.entityId=entities.id \
+                              LEFT JOIN entities ON storage.entityId=entities.id \
                             WHERE (storage.state IN (%S)) \
+                            LIMIT 0,1 \
                            ",
                            getIndexStateSetString(indexStateSetString,indexStateSet)
                           );
@@ -4189,7 +4132,7 @@ uint64 t0=Misc_getTimestamp();
                            scheduleUUID,
                            getOrderingString(ordering),
                            offset
-#else
+#elif 0
                            "SELECT entities.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
@@ -4226,6 +4169,25 @@ uint64 t0=Misc_getTimestamp();
                                         (SELECT id FROM storage WHERE entityId=entities.id) \
                                       ) \
                                    ), \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                            FROM entities \
+                            WHERE     (%d OR jobUUID=%'S) \
+                                  AND (%d OR scheduleUUID=%'S) \
+                            ORDER BY entities.created %s \
+                            LIMIT -1 OFFSET %lu \
+                           ",
+                           String_isEmpty(jobUUID     ) ? 1 : 0, jobUUID,
+                           String_isEmpty(scheduleUUID) ? 1 : 0, scheduleUUID,
+                           getOrderingString(ordering),
+                           offset
+#else
+                           "SELECT entities.id, \
+                                   entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   STRFTIME('%%s',entities.created), \
+                                   entities.type, \
+                                   entities.totalEntriesCount, \
+                                   entities.totalEntriesSize, \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
                             FROM entities \
                             WHERE     (%d OR jobUUID=%'S) \

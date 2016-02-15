@@ -77,25 +77,42 @@ typedef union
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define DATABASE_LOCK(databaseHandle) \
+  #define DATABASE_LOCK(databaseHandle,text) \
     do \
     { \
+      assert(databaseHandle != NULL); \
+      \
       sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
-      databaseHandle->lockedLineNb = __LINE__; \
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,databaseHandle->locked.lineNb); \
+      assert(databaseHandle->locked.lineNb == 0); \
+      databaseHandle->locked.lineNb = __LINE__; \
+      databaseHandle->locked.t0     = Misc_getTimestamp(); \
+fprintf(stderr,"%s, %d: locked %s\n",__FILE__,__LINE__,text); \
     } \
     while (0)
 
   #define DATABASE_UNLOCK(databaseHandle) \
     do \
     { \
-      databaseHandle->lockedLineNb = 0; \
+fprintf(stderr,"%s, %d: unlocked\n",__FILE__,__LINE__); \
+      assert(databaseHandle != NULL); \
+      \
+      assert(databaseHandle->locked.lineNb != 0); \
+      databaseHandle->locked.t1     = Misc_getTimestamp(); \
+      databaseHandle->locked.lineNb = 0; \
+fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,databaseHandle->locked.t0,databaseHandle->locked.t1); \
+assert(databaseHandle->locked.t1 >= databaseHandle->locked.t0); \
+fprintf(stderr,"%s, %d: t=%llums\n",__FILE__,__LINE__,(databaseHandle->locked.t1-databaseHandle->locked.t0)/1000LL); \
+      assert(((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000LL) < 1000LL); \
       sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)); \
     } \
     while (0)
 #else /* NDEBUG */
-  #define DATABASE_LOCK(databaseHandle) \
+  #define DATABASE_LOCK(databaseHandle,text) \
     do \
     { \
+      assert(databaseHandle != NULL); \
+      \
       sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
     } \
     while (0)
@@ -103,10 +120,29 @@ typedef union
   #define DATABASE_UNLOCK(databaseHandle) \
     do \
     { \
+      assert(databaseHandle != NULL); \
+      \
       sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)); \
     } \
     while (0)
 #endif /* not NDEBUG */
+
+#define DATABASE_QUERY_LOCK(databaseQueryHandle) \
+  do \
+  { \
+    assert(databaseQueryHandle != NULL); \
+    \
+    DATABASE_LOCK(databaseQueryHandle->databaseHandle,String_cString(databaseQueryHandle->sqlString)); \
+  } \
+  while (0)
+#define DATABASE_QUERY_UNLOCK(databaseQueryHandle) \
+  do \
+  { \
+    assert(databaseQueryHandle != NULL); \
+    \
+    DATABASE_UNLOCK(databaseQueryHandle->databaseHandle); \
+  } \
+  while (0)
 
 #ifndef NDEBUG
   #define DATABASE_DEBUG_SQL(databaseHandle,sqlString) \
@@ -890,6 +926,9 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   databaseHandle->handle = NULL;
   #ifndef NDEBUG
     stringClear(databaseHandle->fileName);
+    databaseHandle->locked.lineNb = 0;
+    databaseHandle->locked.t0     = 0ULL;
+    databaseHandle->locked.t1     = 0ULL;
   #endif /* not NDEBUG */
 
   if (fileName != NULL)
@@ -996,14 +1035,16 @@ void Database_lock(DatabaseHandle *databaseHandle)
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-  DATABASE_LOCK(databaseHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  DATABASE_LOCK(databaseHandle,"");
 }
 void Database_unlock(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-  DATABASE_UNLOCK(databaseHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  DATABASE_UNLOCK(databaseHandle);
 }
 
 Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
@@ -1141,8 +1182,8 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
 
   // select rows in from-table
   BLOCK_DOX(error,
-            { DATABASE_LOCK(fromDatabaseHandle);
-              DATABASE_LOCK(toDatabaseHandle);
+            { DATABASE_LOCK(fromDatabaseHandle,tableName);
+              DATABASE_LOCK(toDatabaseHandle,tableName);
             },
             { DATABASE_UNLOCK(fromDatabaseHandle);
               DATABASE_UNLOCK(toDatabaseHandle);
@@ -1612,7 +1653,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   sqlString = String_new();
   value     = String_new();
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle),
+            DATABASE_LOCK(databaseHandle,"remove column"),
             DATABASE_UNLOCK(databaseHandle),
   {
     // create new table
@@ -1808,8 +1849,9 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   va_end(arguments);
 
   // execute SQL command
+fprintf(stderr,"%s, %d: command=%s\n",__FILE__,__LINE__,command);
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle),
+            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
@@ -1891,8 +1933,8 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
 
   // prepare SQL command execution
   error = ERROR_NONE;
-  BLOCK_DO(DATABASE_LOCK(databaseHandle),
-           DATABASE_UNLOCK(databaseHandle),
+  BLOCK_DO(DATABASE_QUERY_LOCK(databaseQueryHandle),
+           DATABASE_QUERY_UNLOCK(databaseQueryHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
 //    DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString);
@@ -1971,9 +2013,23 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 
   va_start(arguments,format);
   BLOCK_DOX(result,
-            DATABASE_LOCK(databaseQueryHandle->databaseHandle),
-            DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
+            DATABASE_QUERY_LOCK(databaseQueryHandle),
+            DATABASE_QUERY_UNLOCK(databaseQueryHandle),
   {
+fprintf(stderr,"%s, %d: //////////\n",__FILE__,__LINE__);
+asm("nop");
+asm("nop");
+asm("nop");
+asm("nop");
+uint64 t2;
+uint64 t=Misc_getTimestamp2(&t2);
+asm("nop");
+asm("nop");
+asm("nop");
+asm("nop");
+fprintf(stderr,"%s, %d: a t=%016llx %016llx %016llx %016llx\n",__FILE__,__LINE__,t,t,t2,t2);
+assert((t & 0x8000000000000000ULL) == 0x0000000000000000ULL);
+assert(t == t2);
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
@@ -1981,6 +2037,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
       column = 0;
       while ((*format) != '\0')
       {
+fprintf(stderr,"%s, %d: b %llums\n",__FILE__,__LINE__,Misc_getTimestamp()/1000ULL);
         // find next format specifier
         while (((*format) != '\0') && ((*format) != '%'))
         {
@@ -2182,6 +2239,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
           column++;
         }
       }
+fprintf(stderr,"%s, %d: c %llu\n",__FILE__,__LINE__,Misc_getTimestamp()/1000ULL);
 
       return TRUE;
     }
@@ -2192,6 +2250,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     DATABASE_DEBUG_TIME_END(databaseQueryHandle);
   });
   va_end(arguments);
+fprintf(stderr,"%s, %d: format done=%s\n",__FILE__,__LINE__,format);
 
   return result;
 }
@@ -2215,8 +2274,8 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,sizeof(DatabaseQueryHandle));
   #endif /* NDEBUG */
 
-  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle),
-           DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
+  BLOCK_DO(DATABASE_QUERY_LOCK(databaseQueryHandle),
+           DATABASE_QUERY_UNLOCK(databaseQueryHandle),
   {
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
     {
@@ -2272,7 +2331,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(existsFlag,
-            DATABASE_LOCK(databaseHandle),
+            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     bool existsFlag = FALSE;
@@ -2345,7 +2404,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle),
+            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
@@ -2426,7 +2485,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     va_end(arguments);
   }
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle),
+            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
@@ -2464,7 +2523,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                     value
                    );
     BLOCK_DOX(error,
-              DATABASE_LOCK(databaseHandle),
+              DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
               DATABASE_UNLOCK(databaseHandle),
     {
       DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
@@ -2543,7 +2602,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle),
+            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"get string",sqlString);
@@ -2623,7 +2682,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle),
+            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"set string",sqlString);
@@ -2668,7 +2727,7 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
   assert(databaseHandle->handle != NULL);
 
   databaseId = DATABASE_ID_NONE;
-  BLOCK_DO(DATABASE_LOCK(databaseHandle),
+  BLOCK_DO(DATABASE_LOCK(databaseHandle,"last row id"),
            DATABASE_UNLOCK(databaseHandle),
   {
     databaseId = (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);

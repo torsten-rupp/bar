@@ -564,7 +564,30 @@ uint64 Misc_getTimestamp(void)
 
   if (gettimeofday(&tv,NULL) == 0)
   {
-    return (uint64)tv.tv_usec+(uint64)tv.tv_sec*1000000LL;
+//    return (uint64)tv.tv_usec+((uint64)tv.tv_sec)*1000000ULL;
+uint64 t= (uint64)tv.tv_usec+((uint64)tv.tv_sec)*1000000ULL;
+fprintf(stderr,"%s, %d: %016llu %016llx\n",__FILE__,__LINE__,t,t);
+assert((t & 0x8000000000000000ULL) == 0x0000000000000000ULL);
+return t;
+  }
+  else
+  {
+    return 0LL;
+  }
+}
+
+uint64 Misc_getTimestamp2(uint64 *t2)
+{
+  struct timeval tv;
+
+  if (gettimeofday(&tv,NULL) == 0)
+  {
+//    return (uint64)tv.tv_usec+((uint64)tv.tv_sec)*1000000ULL;
+uint64 t= (uint64)tv.tv_usec+((uint64)tv.tv_sec)*1000000ULL;
+fprintf(stderr,"%s, %d: %016llu %016llx\n",__FILE__,__LINE__,t,t);
+assert((t & 0x8000000000000000ULL) == 0x0000000000000000ULL);
+(*t2) = t;
+return t;
   }
   else
   {

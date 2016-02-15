@@ -73,7 +73,11 @@ typedef struct
   sqlite3    *handle;
   #ifndef NDEBUG
     char fileName[256];
-    uint lockedLineNb;
+    struct
+    {
+      uint   lineNb;
+      uint64 t0,t1;
+    } locked;
   #endif /* not NDEBUG */
 } DatabaseHandle;
 
