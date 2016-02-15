@@ -56,7 +56,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define _SERVER_DEBUG
+#define SERVER_DEBUG
 #define _NO_SESSION_ID
 #define _SIMULATOR
 
@@ -5247,7 +5247,7 @@ LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
   assert(data != NULL);
 
   #ifdef SERVER_DEBUG
-    fprintf(stderr,"%s,%d: result=%s",__FILE__,__LINE__,String_cString(data));
+    fprintf(stderr,"DEBUG: result=%s",String_cString(data));
   #endif /* SERVER_DEBUG */
 
   switch (clientInfo->type)
@@ -15272,9 +15272,12 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   ulong      count;
   uint64     size;
 
+uint64 t0,t1,t2,t3,t4;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+t0 = Misc_getTimestamp();
   // entry pattern, get max. count, new entries only
   entryPatternString = String_new();
   if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
@@ -15311,6 +15314,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
     String_delete(entryPatternString);
     return;
   }
+t1 = Misc_getTimestamp();
 
   // get index info
 //Database_debugEnable(1);
@@ -15324,6 +15328,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
                                &count,
                                &size
                               );
+t2 = Misc_getTimestamp();
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
@@ -15334,6 +15339,8 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
 
   // send data
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
+t3 = Misc_getTimestamp();
+fprintf(stderr,"%s, %d: %llu %llu %llu\n",__FILE__,__LINE__,t1-t0,t2-t1,t3-t0);
 
   // free resources
   String_delete(entryPatternString);
@@ -16811,6 +16818,9 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 {
   CommandMsg commandMsg;
   String     result;
+  #ifdef SERVER_DEBUG
+    uint64 t0,t1;
+  #endif /* SERVER_DEBUG */
 
   assert(clientInfo != NULL);
 
@@ -16823,10 +16833,17 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
     {
       // execute command
+      #ifdef SERVER_DEBUG
+        t0 = Misc_getTimestamp();
+      #endif /* SERVER_DEBUG */
       commandMsg.serverCommandFunction(clientInfo,
                                        commandMsg.id,
                                        commandMsg.argumentMap
                                       );
+      #ifdef SERVER_DEBUG
+        t1 = Misc_getTimestamp();
+        fprintf(stderr,"DEBUG: time=%llums\n",(t1-t0)/1000LL);
+      #endif /* SERVER_DEBUG */
     }
     else
     {
@@ -17265,7 +17282,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
   assert(clientInfo != NULL);
 
   #ifdef SERVER_DEBUG
-    fprintf(stderr,"%s,%d: command=%s\n",__FILE__,__LINE__,String_cString(command));
+    fprintf(stderr,"DEBUG: command=%s\n",String_cString(command));
   #endif // SERVER_DEBUG
 
   // parse command

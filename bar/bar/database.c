@@ -71,7 +71,7 @@ typedef union
 /***************************** Variables *******************************/
 
 #ifndef NDEBUG
-  LOCAL uint databaseDebugCounter = 1;
+  LOCAL uint databaseDebugCounter = 0;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -191,6 +191,16 @@ typedef union
     } \
     while (0)
   #define DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString) \
+    do \
+    { \
+    } \
+    while (0)
+  #define DATABASE_DEBUG_TIME_START(databaseQueryHandle) \
+    do \
+    { \
+    } \
+    while (0)
+  #define DATABASE_DEBUG_TIME_END(databaseQueryHandle) \
     do \
     { \
     } \
@@ -2667,10 +2677,11 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
   return databaseId;
 }
 
-#ifndef NDEBUG
+//#ifndef NDEBUG
 
 void Database_debugEnable(bool enabled)
 {
+#if 0
   if (enabled)
   {
     databaseDebugCounter++;
@@ -2681,16 +2692,17 @@ void Database_debugEnable(bool enabled)
 
     databaseDebugCounter--;
   }
+#endif
 }
 
 void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle)
 {
   assert(databaseQueryHandle != NULL);
 
-  DATABASE_DEBUG_SQLX(databaseQueryHandle->databaseHandle,"SQL query",databaseQueryHandle->sqlString);
+//  DATABASE_DEBUG_SQLX(databaseQueryHandle->databaseHandle,"SQL query",databaseQueryHandle->sqlString);
 }
 
-#endif /* not NDEBUG */
+//#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }

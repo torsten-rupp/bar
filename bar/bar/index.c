@@ -4440,6 +4440,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   assert((indexIdCount == 0) || (indexIds != NULL));
   assert(count != NULL);
 
+uint64 t0=Misc_getTimestamp();
+
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
@@ -4591,7 +4593,6 @@ fprintf(stderr,"%s, %d: dt=%llu\n",__FILE__,__LINE__,t1-t0);
 // -------------------------------
 
 
-uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 1
@@ -4746,9 +4747,7 @@ exit(1);
     if (size != NULL) (*size) = (uint64)totalEntriesSize_;
   }
   Database_finalize(&databaseQueryHandle);
-uint64 t1=Misc_getTimestamp();
 Database_debugEnable(0);
-fprintf(stderr,"%s, %d: Index_getStoragesInfo count=%lu totalCount=%lf totalSize=%lf dt=%llu\n",__FILE__,__LINE__,count_,totalEntriesCount_,totalEntriesSize_,t1-t0);
 
 Database_debugEnable(0);
 Database_unlock(&indexHandle->databaseHandle);
@@ -4757,6 +4756,9 @@ Database_unlock(&indexHandle->databaseHandle);
   String_delete(storageIdsString);
   String_delete(ftsString);
   String_delete(regexpString);
+
+uint64 t1=Misc_getTimestamp();
+fprintf(stderr,"%s, %d: Index_getStoragesInfo count=%lu totalCount=%lf totalSize=%lf dt=%lluus\n",__FILE__,__LINE__,count_,totalEntriesCount_,totalEntriesSize_,t1-t0);
 
   return ERROR_NONE;
 }
@@ -5501,8 +5503,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   if (size != NULL) (*size) = 0LL;
 
 Database_lock(&indexHandle->databaseHandle);
-Database_debugEnable(1);
 uint64 t0=Misc_getTimestamp();
+Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 1
@@ -5627,10 +5629,12 @@ uint64 t1=Misc_getTimestamp();
     if (count != NULL) (*count) += count_;
     if (size != NULL) (*size) += (uint64)size_;
   }
+uint64 t2=Misc_getTimestamp();
   Database_finalize(&databaseQueryHandle);
+uint64 t3=Misc_getTimestamp();
 Database_debugEnable(0);
-fprintf(stderr,"%s, %d: Index_getEntriesInfo count=%lu size=%lf dt=%llu\n",__FILE__,__LINE__,count_,size_,t1-t0);
 Database_unlock(&indexHandle->databaseHandle);
+fprintf(stderr,"%s, %d: Index_getEntriesInfo count=%lu size=%llu dt=%lluus dt=%lluus\n",__FILE__,__LINE__,*count,*size,t1-t0,t2-t1);
 
   // free resources
   String_delete(specialIdsString);
@@ -5642,6 +5646,7 @@ Database_unlock(&indexHandle->databaseHandle);
   String_delete(storageIdsString);
   String_delete(ftsString);
   String_delete(regexpString);
+
 
   return ERROR_NONE;
 }
