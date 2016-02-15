@@ -347,6 +347,15 @@ uint64 Misc_makeDateTime(uint year,
                          uint second
                         );
 
+/***********************************************************************\
+* Name   : Misc_parseDateTime
+* Purpose: parse known date/time string
+* Input  : string - string to parse
+* Output : -
+* Return : date/time (seconds since 1970-1-1 00:00:00)
+* Notes  : -
+\***********************************************************************/
+
 uint64 Misc_parseDateTime(const char *string);
 
 /***********************************************************************\
