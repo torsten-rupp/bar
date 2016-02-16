@@ -1497,7 +1497,7 @@ static inline bool stringIsEmpty(const char *s)
 * Notes  : -
 \***********************************************************************/
 
-static inline char stringCopy(char *destination, const char *source, size_t n)
+static inline char* stringCopy(char *destination, const char *source, size_t n)
 {
   assert(n > 0);
 
