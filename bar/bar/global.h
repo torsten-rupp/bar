@@ -1486,6 +1486,36 @@ static inline bool stringIsEmpty(const char *s)
   return (s == NULL) || (s[0] =='\0');
 }
 
+/***********************************************************************\
+* Name   : stringCopy
+* Purpose: copy string
+* Input  : destination - destination string
+*          source      - source string
+*          n           - size of destination string
+* Output : -
+* Return : destination string
+* Notes  : -
+\***********************************************************************/
+
+static inline char stringCopy(char *destination, const char *source, size_t n)
+{
+  assert(n > 0);
+
+  if (destination != NULL)
+  {
+    if (source != NULL)
+    {
+      strncpy(destination,source,n); destination[n-1] = '\0';
+    }
+    else
+    {
+      destination[0] = '\0';
+    }
+  }
+
+  return destination;
+}
+
 /*---------------------------------------------------------------------*/
 
 #ifdef __cplusplus
