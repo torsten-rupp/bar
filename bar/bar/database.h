@@ -75,7 +75,7 @@ typedef struct
     char fileName[256];
     struct
     {
-      char   text[1024];
+      char   text[8*1024];
       uint   lineNb;
       uint64 t0,t1;
     } locked;

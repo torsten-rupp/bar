@@ -40,7 +40,11 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DEBUG_MAX_LOCK_TIME 500ULL    // max. lock time [ms]
+#if 0
+#define DEBUG_MAX_LOCK_TIME 30000ULL    // DEBUG only: max. lock time [ms]
+#else
+#define DEBUG_MAX_LOCK_TIME MAX_UINT64
+#endif
 
 /***************************** Datatypes *******************************/
 
@@ -73,10 +77,18 @@ typedef union
 /***************************** Variables *******************************/
 
 #ifndef NDEBUG
-  LOCAL uint databaseDebugCounter = 0;
+  LOCAL uint  databaseDebugCounter = 0;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
+
+#if 0
+if (databaseHandle->locked.lineNb != 0) fprintf(stderr,"%s, %d: databaseHandle->locked.lineNb=%d %s\n",__FILE__,__LINE__,databaseHandle->locked.lineNb,databaseHandle->locked.text); \
+      assert(databaseHandle->locked.lineNb == 0); \
+
+      assert(databaseHandle->locked.lineNb != 0); \
+
+#endif
 
 #ifndef NDEBUG
   #define DATABASE_LOCK(databaseHandle,text_) \
@@ -85,7 +97,6 @@ typedef union
       assert(databaseHandle != NULL); \
       \
       sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
-      assert(databaseHandle->locked.lineNb == 0); \
       stringCopy(databaseHandle->locked.text,text_,sizeof(databaseHandle->locked.text)); \
       databaseHandle->locked.lineNb = __LINE__; \
       databaseHandle->locked.t0     = Misc_getTimestamp(); \
@@ -95,17 +106,12 @@ typedef union
       } \
     } \
     while (0)
-
-//fprintf(stderr,"%s, %d: %llu %llu -> %lluus\n",__FILE__,__LINE__,databaseHandle->locked.t0,databaseHandle->locked.t1,databaseHandle->locked.t1-databaseHandle->locked.t0); \
-
-
   #define DATABASE_UNLOCK(databaseHandle) \
     do \
     { \
       assert(databaseHandle != NULL); \
       \
-      assert(databaseHandle->locked.lineNb != 0); \
-      databaseHandle->locked.t1     = Misc_getTimestamp(); \
+      databaseHandle->locked.t1 = Misc_getTimestamp(); \
       assert(databaseHandle->locked.t1 >= databaseHandle->locked.t0); \
       if (databaseDebugCounter > 0) \
       { \
@@ -128,7 +134,7 @@ typedef union
     } \
     while (0)
 #else /* NDEBUG */
-  #define DATABASE_LOCK(databaseHandle,text) \
+  #define DATABASE_LOCK(databaseHandle,text_) \
     do \
     { \
       assert(databaseHandle != NULL); \
@@ -1852,7 +1858,6 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   va_end(arguments);
 
   // execute SQL command
-fprintf(stderr,"%s, %d: command=%s\n",__FILE__,__LINE__,command);
   BLOCK_DOX(error,
             DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
