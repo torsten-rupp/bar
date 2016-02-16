@@ -40,6 +40,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define DEBUG_MAX_LOCK_TIME 500ULL    // max. lock time [ms]
 
 /***************************** Datatypes *******************************/
 
@@ -78,33 +79,51 @@ typedef union
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define DATABASE_LOCK(databaseHandle,text) \
+  #define DATABASE_LOCK(databaseHandle,text_) \
     do \
     { \
       assert(databaseHandle != NULL); \
       \
       sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,databaseHandle->locked.lineNb); \
       assert(databaseHandle->locked.lineNb == 0); \
+      stringCopy(databaseHandle->locked.text,text_,sizeof(databaseHandle->locked.text)); \
       databaseHandle->locked.lineNb = __LINE__; \
       databaseHandle->locked.t0     = Misc_getTimestamp(); \
-fprintf(stderr,"%s, %d: locked %s\n",__FILE__,__LINE__,text); \
+      if (databaseDebugCounter > 0) \
+      { \
+        fprintf(stderr,"DEBUG database: locked for '%s'\n\n",text_); \
+      } \
     } \
     while (0)
+
+//fprintf(stderr,"%s, %d: %llu %llu -> %lluus\n",__FILE__,__LINE__,databaseHandle->locked.t0,databaseHandle->locked.t1,databaseHandle->locked.t1-databaseHandle->locked.t0); \
+
 
   #define DATABASE_UNLOCK(databaseHandle) \
     do \
     { \
-fprintf(stderr,"%s, %d: unlocked\n",__FILE__,__LINE__); \
       assert(databaseHandle != NULL); \
       \
       assert(databaseHandle->locked.lineNb != 0); \
       databaseHandle->locked.t1     = Misc_getTimestamp(); \
+      assert(databaseHandle->locked.t1 >= databaseHandle->locked.t0); \
+      if (databaseDebugCounter > 0) \
+      { \
+        fprintf(stderr, \
+                "DEBUG database: unlocked %llums: %s\n", \
+                (databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL, \
+                databaseHandle->locked.text \
+               ); \
+      } \
+      if (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_MAX_LOCK_TIME) \
+      { \
+        HALT(128, \
+             "Database lock time exceeded %llums: %s\n", \
+             (databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL, \
+             databaseHandle->locked.text \
+            ); \
+      } \
       databaseHandle->locked.lineNb = 0; \
-fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,databaseHandle->locked.t0,databaseHandle->locked.t1); \
-assert(databaseHandle->locked.t1 >= databaseHandle->locked.t0); \
-fprintf(stderr,"%s, %d: t=%llums\n",__FILE__,__LINE__,(databaseHandle->locked.t1-databaseHandle->locked.t0)/1000LL); \
-      assert(((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000LL) < 1000LL); \
       sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)); \
     } \
     while (0)
@@ -127,23 +146,6 @@ fprintf(stderr,"%s, %d: t=%llums\n",__FILE__,__LINE__,(databaseHandle->locked.t1
     } \
     while (0)
 #endif /* not NDEBUG */
-
-#define DATABASE_QUERY_LOCK(databaseQueryHandle) \
-  do \
-  { \
-    assert(databaseQueryHandle != NULL); \
-    \
-    DATABASE_LOCK(databaseQueryHandle->databaseHandle,String_cString(databaseQueryHandle->sqlString)); \
-  } \
-  while (0)
-#define DATABASE_QUERY_UNLOCK(databaseQueryHandle) \
-  do \
-  { \
-    assert(databaseQueryHandle != NULL); \
-    \
-    DATABASE_UNLOCK(databaseQueryHandle->databaseHandle); \
-  } \
-  while (0)
 
 #ifndef NDEBUG
   #define DATABASE_DEBUG_SQL(databaseHandle,sqlString) \
@@ -212,7 +214,7 @@ fprintf(stderr,"%s, %d: t=%llums\n",__FILE__,__LINE__,(databaseHandle->locked.t1
       \
       if (databaseDebugCounter > 0) \
       { \
-        fprintf(stderr,"DEBUG database: execution time=%llums\n",databaseQueryHandle->dt/1000LL); \
+        fprintf(stderr,"DEBUG database: execution time=%llums\n",databaseQueryHandle->dt/1000ULL); \
       } \
     } \
     while (0)
@@ -659,8 +661,8 @@ LOCAL int busyHandlerCallback(void *userData, int n)
 
   #if defined(PLATFORM_LINUX)
     #if   defined(HAVE_NANOSLEEP)
-      ts.tv_sec  = (ulong)(SLEEP_TIME/1000LL);
-      ts.tv_nsec = (ulong)((SLEEP_TIME%1000LL)*1000000);
+      ts.tv_sec  = (ulong)(SLEEP_TIME/1000ULL);
+      ts.tv_nsec = (ulong)((SLEEP_TIME%1000ULL)*1000000);
       while (   (nanosleep(&ts,&ts) == -1)
              && (errno == EINTR)
             )
@@ -1934,8 +1936,8 @@ fprintf(stderr,"%s, %d: command=%s\n",__FILE__,__LINE__,command);
 
   // prepare SQL command execution
   error = ERROR_NONE;
-  BLOCK_DO(DATABASE_QUERY_LOCK(databaseQueryHandle),
-           DATABASE_QUERY_UNLOCK(databaseQueryHandle),
+  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle,String_cString(databaseQueryHandle->sqlString)),
+           DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
 //    DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString);
@@ -2012,11 +2014,10 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle->databaseHandle->handle != NULL);
   assert(format != NULL);
 
-fprintf(stderr,"%s, %d: a %llums\n",__FILE__,__LINE__,Misc_getTimestamp()/1000ULL);
   va_start(arguments,format);
   BLOCK_DOX(result,
-            DATABASE_QUERY_LOCK(databaseQueryHandle),
-            DATABASE_QUERY_UNLOCK(databaseQueryHandle),
+            DATABASE_LOCK(databaseQueryHandle->databaseHandle,String_cString(databaseQueryHandle->sqlString)),
+            DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
@@ -2025,7 +2026,6 @@ fprintf(stderr,"%s, %d: a %llums\n",__FILE__,__LINE__,Misc_getTimestamp()/1000UL
       column = 0;
       while ((*format) != '\0')
       {
-fprintf(stderr,"%s, %d: b %llums\n",__FILE__,__LINE__,Misc_getTimestamp()/1000ULL);
         // find next format specifier
         while (((*format) != '\0') && ((*format) != '%'))
         {
@@ -2227,7 +2227,6 @@ fprintf(stderr,"%s, %d: b %llums\n",__FILE__,__LINE__,Misc_getTimestamp()/1000UL
           column++;
         }
       }
-fprintf(stderr,"%s, %d: c %llu\n",__FILE__,__LINE__,Misc_getTimestamp()/1000ULL);
 
       return TRUE;
     }
@@ -2238,7 +2237,6 @@ fprintf(stderr,"%s, %d: c %llu\n",__FILE__,__LINE__,Misc_getTimestamp()/1000ULL)
     DATABASE_DEBUG_TIME_END(databaseQueryHandle);
   });
   va_end(arguments);
-fprintf(stderr,"%s, %d: format done=%s\n",__FILE__,__LINE__,format);
 
   return result;
 }
@@ -2262,8 +2260,8 @@ fprintf(stderr,"%s, %d: format done=%s\n",__FILE__,__LINE__,format);
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,sizeof(DatabaseQueryHandle));
   #endif /* NDEBUG */
 
-  BLOCK_DO(DATABASE_QUERY_LOCK(databaseQueryHandle),
-           DATABASE_QUERY_UNLOCK(databaseQueryHandle),
+  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle,String_cString(databaseQueryHandle->sqlString)),
+           DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
     {
