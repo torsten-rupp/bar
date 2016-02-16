@@ -266,7 +266,6 @@ uint64 Misc_getRandom(uint64 min, uint64 max);
 \***********************************************************************/
 
 uint64 Misc_getTimestamp(void);
-uint64 Misc_getTimestamp2(uint64 *t2);
 
 /***********************************************************************\
 * Name   : Misc_getCurrentDateTime
