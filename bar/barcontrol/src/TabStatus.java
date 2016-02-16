@@ -1646,8 +1646,8 @@ public class TabStatus
       return;
     }
 
-    String type = resultMap.getString("type");
-    if      (type.equals("pause"))
+    String statusText = resultMap.getString("status");
+    if      (statusText.equals("pause"))
     {
       final long pauseTime = resultMap.getLong("time");
 
@@ -1661,7 +1661,7 @@ public class TabStatus
         }
       });
     }
-    else if (type.equals("suspended"))
+    else if (statusText.equals("suspended"))
     {
       status = States.SUSPEND;
       display.syncExec(new Runnable()
