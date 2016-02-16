@@ -1447,7 +1447,7 @@ public class TabStatus
         String[]                  resultErrorMessage = new String[1];
         final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
         int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                             2,
+                                             3,  // debugLevel
                                              resultErrorMessage,
                                              resultMapList
                                             );
@@ -1637,7 +1637,7 @@ public class TabStatus
     String[] resultErrorMessage = new String[1];
     ValueMap resultMap          = new ValueMap();
     int error = BARServer.executeCommand(StringParser.format("STATUS"),
-                                         2,
+                                         3,  // debugLevel
                                          resultErrorMessage,
                                          resultMap
                                         );
@@ -1754,7 +1754,7 @@ public class TabStatus
       final String resultErrorMessage[] = new String[1];
       final ValueMap resultMap          = new ValueMap();
       int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",selectedJobData.uuid),
-                                           1,
+                                           1,  // debugLevel
                                            resultErrorMessage,
                                            resultMap
                                           );
@@ -1879,7 +1879,7 @@ public class TabStatus
                                                             BARServer.getPasswordEncryptType(),
                                                             BARServer.encryptPassword(password)
                                                            ),
-                                       0,
+                                       0,  // debugLevel
                                        resultErrorMessage
                                       );
       if (error != Errors.NONE)
@@ -1940,7 +1940,7 @@ public class TabStatus
             // abort job
             final String[] resultErrorMessage = new String[1];
             int error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",selectedJobData.uuid),
-                                                 0,
+                                                 0,  // debugLevel
                                                  resultErrorMessage
                                                 );
             if (error == Errors.NONE)
@@ -2007,7 +2007,7 @@ public class TabStatus
                                                                pauseTime,
                                                                buffer.toString()
                                                               ),
-                                           0,
+                                           0,  // debugLevel
                                            resultErrorMessage
                                           );
       if (error != Errors.NONE)
