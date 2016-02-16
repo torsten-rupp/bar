@@ -30,6 +30,7 @@
 #include "strings.h"
 #include "lists.h"
 #include "files.h"
+#include "misc.h"
 #include "errors.h"
 
 #include "sqlite3.h"
@@ -2011,25 +2012,12 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle->databaseHandle->handle != NULL);
   assert(format != NULL);
 
+fprintf(stderr,"%s, %d: a %llums\n",__FILE__,__LINE__,Misc_getTimestamp()/1000ULL);
   va_start(arguments,format);
   BLOCK_DOX(result,
             DATABASE_QUERY_LOCK(databaseQueryHandle),
             DATABASE_QUERY_UNLOCK(databaseQueryHandle),
   {
-fprintf(stderr,"%s, %d: //////////\n",__FILE__,__LINE__);
-asm("nop");
-asm("nop");
-asm("nop");
-asm("nop");
-uint64 t2;
-uint64 t=Misc_getTimestamp2(&t2);
-asm("nop");
-asm("nop");
-asm("nop");
-asm("nop");
-fprintf(stderr,"%s, %d: a t=%016llx %016llx %016llx %016llx\n",__FILE__,__LINE__,t,t,t2,t2);
-assert((t & 0x8000000000000000ULL) == 0x0000000000000000ULL);
-assert(t == t2);
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
