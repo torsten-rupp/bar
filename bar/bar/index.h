@@ -589,7 +589,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              const IndexId storageIds[],
                              uint          storageIdCount,
                              IndexStateSet indexStateSet,
-                             String        pattern,
+                             ConstString   pattern,
                              ulong         *count,
                              uint64        *size
                             );
@@ -791,7 +791,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             const IndexId entryIds[],
                             uint          entryIdCount,
                             IndexTypeSet  indexTypeSet,
-                            String        pattern,
+                            ConstString   pattern,
                             ulong         *count,
                             uint64        *size
                            );
@@ -822,7 +822,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
-                             String           pattern,
+                             ConstString      pattern,
                              uint64           offset,
                              uint64           limit
                             );
@@ -888,7 +888,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            uint             storageIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
-                           String           pattern
+                           ConstString      pattern
                           );
 
 /***********************************************************************\
@@ -956,7 +956,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             uint             storageIdCount,
                             const IndexId    entryIds[],
                             uint             entryIdCount,
-                            String           pattern
+                            ConstString      pattern
                            );
 
 /***********************************************************************\
@@ -1017,7 +1017,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  uint             storageIdCount,
                                  const IndexId    entryIds[],
                                  uint             entryIdCount,
-                                 String           pattern
+                                 ConstString      pattern
                                 );
 
 /***********************************************************************\
@@ -1079,7 +1079,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            uint             storageIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
-                           String           pattern
+                           ConstString      pattern
                           );
 
 /***********************************************************************\
@@ -1143,7 +1143,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                uint             storageIdCount,
                                const IndexId    entryIds[],
                                uint             entryIdCount,
-                               String           pattern
+                               ConstString      pattern
                                );
 
 /***********************************************************************\
@@ -1212,7 +1212,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              uint             storageIdCount,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
-                             String           pattern
+                             ConstString      pattern
                             );
 
 /***********************************************************************\

@@ -4383,7 +4383,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              const IndexId indexIds[],
                              uint          indexIdCount,
                              IndexStateSet indexStateSet,
-                             String        pattern,
+                             ConstString   pattern,
                              ulong         *count,
                              uint64        *size
                             )
@@ -5366,7 +5366,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             const IndexId entryIds[],
                             uint          entryIdCount,
                             IndexTypeSet  indexTypeSet,
-                            String        pattern,
+                            ConstString   pattern,
                             ulong         *count,
                             uint64        *size
                            )
@@ -5620,7 +5620,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
-                             String           pattern,
+                             ConstString      pattern,
                              uint64           offset,
                              uint64           limit
                             )
@@ -5944,7 +5944,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            uint             storageIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
-                           String           pattern
+                           ConstString      pattern
                           )
 {
   Errors error;
@@ -5965,35 +5965,25 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString(String_new(),"files.name",pattern);
-  ftsString    = getFTSString   (String_new(),"FTS_files",pattern);
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
+  storageIdsString = String_new();
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(files.storageId IN (");
     for (i = 0; i < storageIdCount; i++)
     {
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
-    String_appendCString(storageIdsString,"))");
   }
-  else
-  {
-    storageIdsString = String_newCString("1");
-  }
+  entryIdsString = String_new();
   if (entryIds != NULL)
   {
-    entryIdsString = String_newCString("(files.id IN (");
     for (i = 0; i < entryIdCount; i++)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
       String_format(entryIdsString,"%d",entryIds[i]);
     }
-    String_appendCString(entryIdsString,"))");
-  }
-  else
-  {
-    entryIdsString = String_newCString("1");
   }
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
@@ -6011,15 +6001,15 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                                    files.fragmentSize\
                             FROM files \
                               LEFT JOIN storage ON storage.id=files.storageId \
-                            WHERE     (files.id IN (SELECT fileId FROM FTS_files WHERE %S)) \
-                                  AND (%S) \
-                                  AND (%S) \
-                                  AND (%S) \
+                            WHERE     (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
+                                  AND (%d OR REGEXP(%S,0,files.name)) \
+                                  AND (%d OR (files.storageId IN (%S))) \
+                                  AND (%d OR (files.id IN (%S))) \
                            ",
-                           ftsString,
-                           regexpString,
-                           storageIdsString,
-                           entryIdsString
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString
                           );
   String_delete(entryIdsString);
   String_delete(storageIdsString);
@@ -6110,7 +6100,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             uint             storageIdCount,
                             const IndexId    entryIds[],
                             uint             entryIdCount,
-                            String           pattern
+                            ConstString      pattern
                            )
 {
   String regexpString;
@@ -6133,33 +6123,23 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   regexpString = getREGEXPString(String_new(),"images.name",pattern);
   ftsString    = getFTSString   (String_new(),"FTS_images",pattern);
+  storageIdsString = String_new();
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(images.storageId IN (");
     for (i = 0; i < storageIdCount; i++)
     {
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
-    String_appendCString(storageIdsString,"))");
   }
-  else
-  {
-    storageIdsString = String_newCString("1");
-  }
+  entryIdsString = String_new();
   if (entryIds != NULL)
   {
-    entryIdsString = String_newCString("(images.id IN (");
     for (i = 0; i < entryIdCount; i++)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
       String_format(entryIdsString,"%d",entryIds[i]);
     }
-    String_appendCString(entryIdsString,"))");
-  }
-  else
-  {
-    entryIdsString = String_newCString("1");
   }
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
@@ -6174,15 +6154,15 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                                    images.blockCount \
                             FROM images \
                               LEFT JOIN storage ON storage.id=images.storageId \
-                            WHERE     (images.id IN (SELECT imageId FROM FTS_images WHERE %S)) \
-                                  AND (%S) \
-                                  AND (%S) \
-                                  AND (%S) \
+                            WHERE     (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
+                                  AND (%d OR REGEXP(%S,0,images.name)) \
+                                  AND (%d OR (images.storageId IN (%S))) \
+                                  AND (%d OR (images.id IN (%S))) \
                            ",
-                           ftsString,
-                           regexpString,
-                           storageIdsString,
-                           entryIdsString
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString
                           );
   String_delete(entryIdsString);
   String_delete(storageIdsString);
@@ -6267,7 +6247,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  uint             storageIdCount,
                                  const IndexId    entryIds[],
                                  uint             entryIdCount,
-                                 String           pattern
+                                 ConstString      pattern
                                 )
 {
   String regexpString;
@@ -6290,33 +6270,23 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   regexpString = getREGEXPString(String_new(),"directories.name",pattern);
   ftsString    = getFTSString   (String_new(),"FTS_directories",pattern);
+  storageIdsString = String_new();
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(directories.storageId IN (");
     for (i = 0; i < storageIdCount; i++)
     {
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
-    String_appendCString(storageIdsString,"))");
   }
-  else
-  {
-    storageIdsString = String_newCString("1");
-  }
+  entryIdsString = String_new();
   if (entryIds != NULL)
   {
-    entryIdsString = String_newCString("(directories.id IN (");
     for (i = 0; i < entryIdCount; i++)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
       String_format(entryIdsString,"%d",entryIds[i]);
     }
-    String_appendCString(entryIdsString,"))");
-  }
-  else
-  {
-    entryIdsString = String_newCString("1");
   }
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
@@ -6331,15 +6301,15 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                    directories.permission \
                             FROM directories \
                               LEFT JOIN storage ON storage.id=directories.storageId \
-                            WHERE     (directories.id IN (SELECT directoryId FROM FTS_directories WHERE %S)) \
-                                  AND (%S) \
-                                  AND (%S) \
-                                  AND (%S) \
+                            WHERE     (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
+                                  AND (%d OR REGEXP(%S,0,directories.name)) \
+                                  AND (%d OR (directories.storageId IN (%S))) \
+                                  AND (%d OR (directories.id IN (%S))) \
                            ",
-                           ftsString,
-                           regexpString,
-                           storageIdsString,
-                           entryIdsString
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString
                           );
   String_delete(entryIdsString);
   String_delete(storageIdsString);
@@ -6424,7 +6394,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            uint             storageIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
-                           String           pattern
+                           ConstString      pattern
                           )
 {
   String regexpString;
@@ -6447,20 +6417,16 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   regexpString = getREGEXPString(String_new(),"links.name",pattern);
   ftsString    = getFTSString   (String_new(),"FTS_links",pattern);
+  storageIdsString = String_new();
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(links.storageId IN (");
     for (i = 0; i < storageIdCount; i++)
     {
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
-    String_appendCString(storageIdsString,"))");
   }
-  else
-  {
-    storageIdsString = String_newCString("1");
-  }
+  entryIdsString = String_new();
   if (entryIds != NULL)
   {
     entryIdsString = String_newCString("(links.id IN (");
@@ -6470,10 +6436,6 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
       String_format(entryIdsString,"%d",entryIds[i]);
     }
     String_appendCString(entryIdsString,"))");
-  }
-  else
-  {
-    entryIdsString = String_newCString("1");
   }
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
@@ -6489,15 +6451,15 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                                    links.permission \
                             FROM links \
                               LEFT JOIN storage ON storage.id=links.storageId \
-                            WHERE     (links.id IN (SELECT linkId FROM FTS_links WHERE %S)) \
-                                  AND (%S) \
-                                  AND (%S) \
-                                  AND (%S) \
+                            WHERE     (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
+                                  AND (%d OR REGEXP(%S,0,links.name)) \
+                                  AND (%d OR (links.storageId IN (%S))) \
+                                  AND (%d OR (links.id IN (%S))) \
                            ",
-                           ftsString,
-                           regexpString,
-                           storageIdsString,
-                           entryIdsString
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString
                           );
   String_delete(entryIdsString);
   String_delete(storageIdsString);
@@ -6584,7 +6546,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                uint             storageIdCount,
                                const IndexId    entryIds[],
                                uint             entryIdCount,
-                               String           pattern
+                               ConstString      pattern
                               )
 {
   String regexpString;
@@ -6607,33 +6569,23 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   regexpString = getREGEXPString(String_new(),"hardlinks.name",pattern);
   ftsString    = getFTSString   (String_new(),"FTS_hardlinks",pattern);
+  storageIdsString = String_new();
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(hardlinks.storageId IN (");
     for (i = 0; i < storageIdCount; i++)
     {
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
-    String_appendCString(storageIdsString,"))");
   }
-  else
-  {
-    storageIdsString = String_newCString("1");
-  }
+  entryIdsString = String_new();
   if (entryIds != NULL)
   {
-    entryIdsString = String_newCString("(hardlinks.id IN (");
     for (i = 0; i < entryIdCount; i++)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
       String_format(entryIdsString,"%d",entryIds[i]);
     }
-    String_appendCString(entryIdsString,"))");
-  }
-  else
-  {
-    entryIdsString = String_newCString("1");
   }
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
@@ -6651,15 +6603,15 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                    hardlinks.fragmentSize\
                             FROM hardlinks \
                               LEFT JOIN storage ON storage.id=hardlinks.storageId \
-                            WHERE     (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE %S)) \
-                                  AND (%S) \
-                                  AND (%S) \
-                                  AND (%S) \
+                            WHERE     (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
+                                  AND (%d OR REGEXP(%S,0,hardlinks.name)) \
+                                  AND (%d OR (hardlinks.storageId IN (%S))) \
+                                  AND (%d OR (hardlinks.id IN (%S))) \
                            ",
-                           ftsString,
-                           regexpString,
-                           storageIdsString,
-                           entryIdsString
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString
                           );
   String_delete(entryIdsString);
   String_delete(storageIdsString);
@@ -6751,7 +6703,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              uint             storageIdCount,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
-                             String           pattern
+                             ConstString      pattern
                             )
 {
   String regexpString;
@@ -6774,6 +6726,8 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   regexpString = getREGEXPString(String_new(),"special.name",pattern);
   ftsString    = getFTSString   (String_new(),"FTS_special",pattern);
+  storageIdsString = String_new();
+  entryIdsString = String_new();
   if (storageIds != NULL)
   {
     storageIdsString = String_newCString("(special.storageId IN (");
@@ -6815,15 +6769,15 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                                    special.permission \
                             FROM special \
                               LEFT JOIN storage ON storage.id=special.storageId \
-                            WHERE     (special.id IN (SELECT specialId FROM FTS_special WHERE %S)) \
-                                  AND (%S) \
-                                  AND (%S) \
-                                  AND (%S) \
+                            WHERE     (%d OR (special.id IN (SELECT specialId FROM FTS_specialWHERE FTS_special MATCH %S))) \
+                                  AND (%d OR REGEXP(%S,0,special.name)) \
+                                  AND (%d OR (special.storageId IN (%S))) \
+                                  AND (%d OR (special.id IN (%S))) \
                            ",
-                           ftsString,
-                           regexpString,
-                           storageIdsString,
-                           entryIdsString
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString
                           );
   String_delete(entryIdsString);
   String_delete(storageIdsString);
