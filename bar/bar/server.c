@@ -56,7 +56,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define SERVER_DEBUG
+#define _SERVER_DEBUG
 #define _NO_SESSION_ID
 #define _SIMULATOR
 
@@ -6968,7 +6968,7 @@ clientInfo->abortFlag = TRUE;
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            type=<status>
+*            status=<status>
 *            time=<pause time [s]>
 \***********************************************************************/
 
@@ -6987,14 +6987,14 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const StringMap
     switch (serverState)
     {
       case SERVER_STATE_RUNNING:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"type=running");
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"status=running");
         break;
       case SERVER_STATE_PAUSE:
         nowTimestamp = Misc_getCurrentDateTime();
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"type=pause time=%llu",(pauseEndTimestamp > nowTimestamp) ? pauseEndTimestamp-nowTimestamp : 0LL);
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"status=pause time=%llu",(pauseEndTimestamp > nowTimestamp) ? pauseEndTimestamp-nowTimestamp : 0LL);
         break;
       case SERVER_STATE_SUSPENDED:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"type=suspended");
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"status=suspended");
         break;
     }
   }
@@ -7389,15 +7389,15 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, uint id, const StringM
 * Notes  : Arguments:
 *            storageDirectory=<name>
 *          Result:
-*            type=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            type=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
-*            type=LINK name=<name> dateTime=<time stamp> noDump=yes|no
-*            type=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            type=DEVICE CHARACTER name=<name> dateTime=<time stamp> noDump=yes|no
-*            type=DEVICE BLOCK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            type=FIFO name=<name> dateTime=<time stamp> noDump=yes|no
-*            type=SOCKET name=<name> dateTime=<time stamp> noDump=yes|no
-*            type=SPECIAL name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            fileType=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
+*            fileType=LINK name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            fileType=DEVICE CHARACTER name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=DEVICE BLOCK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            fileType=FIFO name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=SOCKET name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=SPECIAL name=<name> dateTime=<time stamp> noDump=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -12027,23 +12027,23 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 * Notes  : Arguments:
 *            name=<storage name>
 *          Result:
-*            type=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
+*            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
 *            byteCompressAlgorithm=<n> cryptAlgorithm=<n> cryptType=<n> deltaSourceName=<name> \
 *            deltaSourceSize=<n [bytes]> fragmentOffset=<n> fragmentSize=<n [bytes]>
 *
-*            type=IMAGE name=<name> size=<n [bytes]> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
+*            fileType=IMAGE name=<name> size=<n [bytes]> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
 *            byteCompressAlgorithm=<n> cryptAlgorithm=<n> cryptType=<n> deltaSourceName=<name> \
 *            deltaSourceSize=<n [bytes]> blockSize=<n [bytes]> blockOffset=<n> blockCount=<n>
 *
-*            type=DIRECTORY name=<name> dateTime=<time stamp> cryptAlgorithm=<n> cryptType=<n>
+*            fileType=DIRECTORY name=<name> dateTime=<time stamp> cryptAlgorithm=<n> cryptType=<n>
 *
-*            type=LINK linkName=<link name> name=<name> cryptAlgorithm=<n> cryptType=<n>
+*            fileType=LINK linkName=<link name> name=<name> cryptAlgorithm=<n> cryptType=<n>
 *
-*            type=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
+*            fileType=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
 *            byteCompressAlgorithm=<n> cryptAlgorithm=<n> cryptType=<n> deltaSourceName=<name> \
 *            deltaSourceSize=<n [bytes]> fragmentOffset=<n> fragmentSize=<n [bytes]>
 *
-*            type=SPECIAL name=<name> cryptAlgorithm=<n> cryptType=<n> fileSpecialType=<n> major=<n> minor=<n>
+*            fileType=SPECIAL name=<name> cryptAlgorithm=<n> cryptType=<n> fileSpecialType=<n> major=<n> minor=<n>
 *            ...
 \***********************************************************************/
 
@@ -12175,7 +12175,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "type=FILE name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
+                               "fileType=FILE name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
                                fileName,
                                fileInfo.size,
                                fileInfo.timeModified,
@@ -12241,7 +12241,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "type=IMAGE name=%'S size=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fileSystemType=%s blockSize=%u blockOffset=%llu blockCount=%llu",
+                               "fileType=IMAGE name=%'S size=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fileSystemType=%s blockSize=%u blockOffset=%llu blockCount=%llu",
                                imageName,
                                deviceInfo.size,
                                archiveEntryInfo.image.chunkImageData.info.size,
@@ -12294,7 +12294,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "type=DIRECTORY name=%'S dateTime=%llu cryptAlgorithm=%d cryptType=%d",
+                               "fileType=DIRECTORY name=%'S dateTime=%llu cryptAlgorithm=%d cryptType=%d",
                                directoryName,
                                fileInfo.timeModified,
                                cryptAlgorithm,
@@ -12340,7 +12340,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "type=LINK linkName=%'S name=%'S cryptAlgorithm=%d cryptType=%d",
+                               "fileType=LINK linkName=%'S name=%'S cryptAlgorithm=%d cryptType=%d",
                                linkName,
                                name,
                                cryptAlgorithm,
@@ -12397,7 +12397,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "type=HARDLINK name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
+                               "fileType=HARDLINK name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
                                StringList_first(&fileNameList,NULL),
                                fileInfo.size,
                                fileInfo.timeModified,
@@ -12449,7 +12449,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "type=SPECIAL name=%'S cryptAlgorithm=%d cryptType=%d fileSpecialType=%d major=%d minor=%d",
+                               "fileType=SPECIAL name=%'S cryptAlgorithm=%d cryptType=%d fileSpecialType=%d major=%d minor=%d",
                                name,
                                cryptAlgorithm,
                                cryptType,
