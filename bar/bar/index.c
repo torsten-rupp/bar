@@ -2517,7 +2517,7 @@ LOCAL String getIndexStateSetString(String string, IndexStateSet indexStateSet)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String getREGEXPString(String string, const char *columnName, ConstString patternText)
+LOCAL String XgetREGEXPString(String string, const char *columnName, ConstString patternText)
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -2667,7 +2667,7 @@ LOCAL String getREGEXPString2(String string, ConstString patternText)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String getFTSString(String string, const char *tableName, ConstString patternText)
+LOCAL String XgetFTSString(String string, const char *tableName, ConstString patternText)
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -5464,15 +5464,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   if (count != NULL) (*count) = 0L;
   if (size != NULL) (*size) = 0LL;
 
-Database_lock(&indexHandle->databaseHandle);
-uint64 t0=Misc_getTimestamp();
-Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 1
                            "  SELECT COUNT(files.id),TOTAL(files.size) \
                                 FROM files \
-                                  LEFT JOIN storage ON storage.id=files.storageId \
                                 WHERE     %d \
                                       AND (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
                                       AND (%d OR REGEXP(%S,0,files.name)) \
@@ -5482,7 +5478,6 @@ Database_debugEnable(1);
                            "UNION ALL"
                            "  SELECT COUNT(images.id),TOTAL(images.size) \
                                 FROM images \
-                                  LEFT JOIN storage ON storage.id=images.storageId \
                                 WHERE     %d \
                                       AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
                                       AND (%d OR REGEXP(%S,0,images.name)) \
@@ -5492,7 +5487,6 @@ Database_debugEnable(1);
                            "UNION ALL"
                            "  SELECT COUNT(directories.id),0.0 \
                                 FROM directories \
-                                  LEFT JOIN storage ON storage.id=directories.storageId \
                                 WHERE     %d \
                                       AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
                                       AND (%d OR REGEXP(%S,0,directories.name)) \
@@ -5502,7 +5496,6 @@ Database_debugEnable(1);
                            "UNION ALL"
                            "  SELECT COUNT(links.id),0.0 \
                                 FROM links \
-                                  LEFT JOIN storage ON storage.id=links.storageId \
                                 WHERE     %d \
                                       AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
                                       AND (%d OR REGEXP(%S,0,links.name)) \
@@ -5512,7 +5505,6 @@ Database_debugEnable(1);
                            "UNION ALL"
                            "  SELECT COUNT(hardlinks.id),TOTAL(hardlinks.size) \
                                 FROM hardlinks \
-                                  LEFT JOIN storage ON storage.id=hardlinks.storageId \
                                 WHERE     %d \
                                       AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
                                       AND (%d OR REGEXP(%S,0,hardlinks.name)) \
@@ -5522,7 +5514,6 @@ Database_debugEnable(1);
                            "UNION ALL"
                            "  SELECT COUNT(special.id),0.0 \
                                 FROM special \
-                                  LEFT JOIN storage ON storage.id=special.storageId \
                                 WHERE     %d \
                                       AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
                                       AND (%d OR REGEXP(%S,0,special.name)) \
@@ -5580,7 +5571,6 @@ Database_debugEnable(1);
     String_delete(regexpString);
     return error;
   }
-uint64 t1=Misc_getTimestamp();
   while (Database_getNextRow(&databaseQueryHandle,
                              "%lu %lf",
                              &count_,
@@ -5591,12 +5581,7 @@ uint64 t1=Misc_getTimestamp();
     if (count != NULL) (*count) += count_;
     if (size != NULL) (*size) += (uint64)size_;
   }
-uint64 t2=Misc_getTimestamp();
   Database_finalize(&databaseQueryHandle);
-uint64 t3=Misc_getTimestamp();
-Database_debugEnable(0);
-Database_unlock(&indexHandle->databaseHandle);
-fprintf(stderr,"%s, %d: Index_getEntriesInfo count=%lu size=%llu dt=%lluus dt=%lluus\n",__FILE__,__LINE__,*count,*size,t1-t0,t2-t1);
 
   // free resources
   String_delete(specialIdsString);
@@ -6121,8 +6106,8 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString(String_new(),"images.name",pattern);
-  ftsString    = getFTSString   (String_new(),"FTS_images",pattern);
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -6268,8 +6253,8 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString(String_new(),"directories.name",pattern);
-  ftsString    = getFTSString   (String_new(),"FTS_directories",pattern);
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -6415,8 +6400,8 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString(String_new(),"links.name",pattern);
-  ftsString    = getFTSString   (String_new(),"FTS_links",pattern);
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -6567,8 +6552,8 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString(String_new(),"hardlinks.name",pattern);
-  ftsString    = getFTSString   (String_new(),"FTS_hardlinks",pattern);
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -6724,8 +6709,8 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString(String_new(),"special.name",pattern);
-  ftsString    = getFTSString   (String_new(),"FTS_special",pattern);
+  regexpString = getREGEXPString2(String_new(),pattern);
+  ftsString    = getFTSString2   (String_new(),pattern);
   storageIdsString = String_new();
   entryIdsString = String_new();
   if (storageIds != NULL)
