@@ -40,10 +40,12 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#if 0
-#define DEBUG_MAX_LOCK_TIME 30000ULL    // DEBUG only: max. lock time [ms]
+#if 1
+#define DEBUG_WARNING_LOCK_TIME  5ULL*1000ULL    // DEBUG only: warning lock time [ms]
+#define DEBUG_MAX_LOCK_TIME     60ULL*1000ULL    // DEBUG only: max. lock time [ms]
 #else
-#define DEBUG_MAX_LOCK_TIME MAX_UINT64
+#define DEBUG_WARNING_LOCK_TIME MAX_UINT64
+#define DEBUG_MAX_LOCK_TIME     MAX_UINT64
 #endif
 
 /***************************** Datatypes *******************************/
@@ -116,15 +118,23 @@ if (databaseHandle->locked.lineNb != 0) fprintf(stderr,"%s, %d: databaseHandle->
       if (databaseDebugCounter > 0) \
       { \
         fprintf(stderr, \
-                "DEBUG database: unlocked %llums: %s\n", \
+                "DEBUG database: locked time %llums: %s\n", \
                 (databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL, \
                 databaseHandle->locked.text \
                ); \
       } \
-      if (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_MAX_LOCK_TIME) \
+      if      (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_WARNING_LOCK_TIME) \
+      { \
+        fprintf(stderr, \
+                "DEBUG database: long locked time %llums: %s\n", \
+                (databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL, \
+                databaseHandle->locked.text \
+               ); \
+      } \
+      else if (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_MAX_LOCK_TIME) \
       { \
         HALT(128, \
-             "Database lock time exceeded %llums: %s\n", \
+             "DEBUG database: lock time exceeded %llums: %s\n", \
              (databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL, \
              databaseHandle->locked.text \
             ); \
@@ -1448,7 +1458,25 @@ uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList,
   }
 }
 
-const char *Database_getTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, const char *defaultValue)
+String Database_getTableColumnList(const DatabaseColumnList *columnList, const char *columnName, String value, const char *defaultValue)
+{
+  DatabaseColumnNode *columnNode;
+
+  columnNode = findTableColumnNode(columnList,columnName);
+  if (columnNode != NULL)
+  {
+    assert(columnNode->type == DATABASE_TYPE_TEXT);
+    return String_set(value,columnNode->value.text);
+  }
+  else
+  {
+    return String_setCString(value,defaultValue);
+  }
+
+  return value;
+}
+
+const char *Database_getTableColumnListCString(const DatabaseColumnList *columnList, const char *columnName, const char *defaultValue)
 {
   DatabaseColumnNode *columnNode;
 
@@ -1534,12 +1562,12 @@ bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, c
   }
 }
 
-bool Database_setTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, ConstString value)
+bool Database_setTableColumnList(const DatabaseColumnList *columnList, const char *columnName, ConstString value)
 {
-  return Database_setTableColumnListTextCString(columnList,columnName,String_cString(value));
+  return Database_setTableColumnListCString(columnList,columnName,String_cString(value));
 }
 
-bool Database_setTableColumnListTextCString(const DatabaseColumnList *columnList, const char *columnName, const char *value)
+bool Database_setTableColumnListCString(const DatabaseColumnList *columnList, const char *columnName, const char *value)
 {
   DatabaseColumnNode *columnNode;
 

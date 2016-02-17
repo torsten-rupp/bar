@@ -270,14 +270,15 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
 int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 defaultValue);
 double Database_getTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double defaultValue);
 uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 defaultValue);
-const char *Database_getTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, const char *defaultValue);
+String Database_getTableColumnList(const DatabaseColumnList *columnList, const char *columnName, String value, const char *defaultValue);
+const char *Database_getTableColumnListCString(const DatabaseColumnList *columnList, const char *columnName, const char *defaultValue);
 void Database_getTableColumnListBlob(const DatabaseColumnList *columnList, const char *columnName, void *data, uint length);
 
 bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 value);
 bool Database_setTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double value);
 bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 value);
-bool Database_setTableColumnListText(const DatabaseColumnList *columnList, const char *columnName, ConstString value);
-bool Database_setTableColumnListTextCString(const DatabaseColumnList *columnList, const char *columnName, const char *value);
+bool Database_setTableColumnList(const DatabaseColumnList *columnList, const char *columnName, ConstString value);
+bool Database_setTableColumnListCString(const DatabaseColumnList *columnList, const char *columnName, const char *value);
 bool Database_setTableColumnListBlob(const DatabaseColumnList *columnList, const char *columnName, const void *data, uint length);
 
 /***********************************************************************\
