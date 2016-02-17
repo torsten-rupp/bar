@@ -299,8 +299,35 @@ INLINE IndexTypes Index_getType(IndexId indexId)
 #endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
 
 /***********************************************************************\
+* Name   : Index_findEntityByUUID
+* Purpose: find entity by UUID
+* Input  : indexHandle      - index handle
+*          jobUUID          - unique job id (can be NULL)
+*          scheduleUUID     - unique schedule id (can be NULL)
+* Output : entityId         - entity id
+*          createdDateTime  - created date/time stamp [s] (can be NULL)
+*          archiveType      - archive type (can be NULL)
+*          totalEntries     - total number of entries (can be NULL)
+*          totalSize        - total size [bytes] (can be NULL)
+*          lastErrorMessage - last error message (can be NULL)
+* Return : TRUE if index found, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_findByUUID(IndexHandle  *indexHandle,
+                      ConstString  jobUUID,
+                      ConstString  scheduleUUID,
+                      IndexId      *entityId,
+                      uint64       *createdDateTime,
+                      ArchiveTypes *archiveType,
+                      uint64       *totalEntries,
+                      uint64       *totalSize,
+                      String       lastErrorMessage
+                     );
+
+/***********************************************************************\
 * Name   : Index_findById
-* Purpose: find storage by id
+* Purpose: find entity by id
 * Input  : indexHandle - index handle
 *          storageId   - index id of storage
 * Output : jobUUID             - unique job id (can be NULL)
