@@ -3516,8 +3516,11 @@ System.exit(1);
           widgetEntryTable.setItemCount(0);
           widgetEntryTable.clearAll();
 
-          widgetEntryTable.setItemCount(count);
+Dprintf.dprintf("error=%d",count);
           widgetEntryTable.setTopIndex(0);
+          widgetEntryTable.setItemCount(count);
+Dprintf.dprintf("");
+Dprintf.dprintf("");
         }
       });
 
