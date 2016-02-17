@@ -1301,13 +1301,18 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
       // call pre-copy callback (if defined)
       if (preCopyTableFunction != NULL)
       {
-        error = preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
+        BLOCK_DO(DATABASE_UNLOCK(toDatabaseHandle),
+                 DATABASE_LOCK(toDatabaseHandle,tableName),
+        {
+          error = preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
+        });
         if (error != ERROR_NONE)
         {
           sqlite3_finalize(toHandle);
           sqlite3_finalize(fromHandle);
           return error;
         }
+
       }
 
       // set to value
@@ -1377,7 +1382,11 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
       // call post-copy callback (if defined)
       if (postCopyTableFunction != NULL)
       {
-        error = postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
+        BLOCK_DO(DATABASE_UNLOCK(toDatabaseHandle),
+                 DATABASE_LOCK(toDatabaseHandle,tableName),
+        {
+          error = postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
+        });
         if (error != ERROR_NONE)
         {
           sqlite3_finalize(toHandle);
