@@ -499,6 +499,9 @@ public class Settings
   public static boolean               continueFlag                    = false;
   public static boolean               listFlag                        = false;
 
+  // flags
+  public static boolean               showEntriesExceededInfo         = true;
+
   // debug
   public static int                   debugLevel                      = 0;
   public static boolean               debugQuitServerFlag             = false;

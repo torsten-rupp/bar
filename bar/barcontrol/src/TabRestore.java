@@ -79,6 +79,7 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TabFolder;
+import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
@@ -145,6 +146,9 @@ abstract class BackgroundTask
  */
 public class TabRestore
 {
+  // max. shown entries in tree/tables
+  final int MAX_SHOWN_ENTRIES = 100000;
+
   /** index states
    */
   enum IndexStates
@@ -2447,8 +2451,8 @@ assert storagePattern != null;
           widgetStorageTable.setItemCount(0);
           widgetStorageTable.clearAll();
 
-          widgetStorageTable.setItemCount(count);
           widgetStorageTable.setTopIndex(0);
+          widgetStorageTable.setItemCount(count);
         }
       });
 
@@ -3516,11 +3520,8 @@ System.exit(1);
           widgetEntryTable.setItemCount(0);
           widgetEntryTable.clearAll();
 
-Dprintf.dprintf("error=%d",count);
+          widgetEntryTable.setItemCount(Math.min(count,MAX_SHOWN_ENTRIES));
           widgetEntryTable.setTopIndex(0);
-          widgetEntryTable.setItemCount(count);
-Dprintf.dprintf("");
-Dprintf.dprintf("");
         }
       });
 
@@ -4259,7 +4260,7 @@ Dprintf.dprintf("");
    * @param parentTabFolder parent tab folder
    * @param accelerator keyboard shortcut to select tab
    */
-  TabRestore(TabFolder parentTabFolder, int accelerator)
+  TabRestore(final TabFolder parentTabFolder, int accelerator)
   {
     TabFolder   tabFolder;
     Composite   tab;
@@ -4299,6 +4300,38 @@ Dprintf.dprintf("");
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
     widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
+    parentTabFolder.addSelectionListener(new SelectionListener()
+    {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        TabItem tabItem = (TabItem)selectionEvent.item;
+        TabItem[] tabItems = parentTabFolder.getItems();
+        if (tabItem == tabItems[2])
+        {
+          if (updateEntryTableThread.getCount() >= MAX_SHOWN_ENTRIES)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                Dialogs.warning(shell,
+                                Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                                BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
+                                              updateEntryTableThread.getCount(),
+                                              MAX_SHOWN_ENTRIES
+                                             )
+                               );
+              }
+            });
+          }
+        }
+      }
+    });
 
     // create pane
     pane = Widgets.newPane(widgetTab,2,SWT.HORIZONTAL);
