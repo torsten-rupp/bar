@@ -5565,13 +5565,11 @@ Database_debugEnable(1);
   // files
   if (error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
     {
 fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(fileIdsString));
       if (String_isEmpty(pattern) && String_isEmpty(fileIdsString))
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(totalFileCount),TOTAL(totalFileSize) \
@@ -5673,7 +5671,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // directories
   if (error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
     {
 fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(directoryIdsString));
@@ -6010,6 +6007,7 @@ Database_debugEnable(0);
   String_delete(ftsString);
   String_delete(regexpString);
 
+fprintf(stderr,"%s, %d: %x %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
   return error;
 }
