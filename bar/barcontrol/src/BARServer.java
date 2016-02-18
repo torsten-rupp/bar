@@ -596,25 +596,28 @@ abstract class CommandHandler
 
 abstract class CommandResultHandler
 {
+  private boolean aborted = false;
+
   /** handle command result
    * @param i result counter [0..n-1]
    * @param valueMap value map
    * @return Errors.NONE or error code
    */
   abstract public int handleResult(int i, ValueMap valueMap);
-}
 
-//TODO
-class ResultTypes extends HashMap<String,Class>
-{
-}
-
-class Result extends HashMap<String,Object>
-{
-  Result(String errorText)
+  /** check if aborted
+   * @return true iff aborted
+   */
+  public boolean isAborted()
   {
-    super();
-    put("error",errorText);
+    return aborted;
+  }
+
+  /** abort command
+   */
+  public void abort()
+  {
+    aborted = true;
   }
 }
 
@@ -739,7 +742,6 @@ class ReadThread extends Thread
             {
               // result for unknown command -> currently ignored
               if (Settings.debugLevel > 0) System.err.println("Network: received unknown command result '"+line+"'");
-System.exit(1);
             }
           }
         }
@@ -1193,7 +1195,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         throw new ConnectionError("Authorization fail");
       }
-//System.exit(1);
 
       // get version
       if (syncExecuteCommand(input,
@@ -1440,6 +1441,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                               if (error == Errors.NONE)
                               {
                                 error = commandResultHandler.handleResult(i,valueMap);
+                              }
+
+                              if (commandResultHandler.isAborted())
+                              {
+                                abortCommand(command);
                               }
 
                               return error;

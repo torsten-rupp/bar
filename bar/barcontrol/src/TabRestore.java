@@ -3844,12 +3844,10 @@ Dprintf.dprintf("wait done");
                                    // check if aborted
                                    if (isUpdateTriggered() || (n[0] >= limit))
                                    {
-                                     return Errors.INTERRUPTED;
+                                     abort();
                                    }
-                                   else
-                                   {
-                                     return Errors.NONE;
-                                   }
+
+                                   return Errors.NONE;
                                  }
                                }
                               );
