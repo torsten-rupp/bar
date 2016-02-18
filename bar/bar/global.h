@@ -1516,6 +1516,33 @@ static inline char* stringCopy(char *destination, const char *source, size_t n)
   return destination;
 }
 
+/***********************************************************************\
+* Name   : stringFormat
+* Purpose: format string
+* Input  : string - string
+*          n      - size of string
+*          format - format string
+*          ...    - optional arguments
+* Output : -
+* Return : destination string
+* Notes  : -
+\***********************************************************************/
+
+static inline char* stringFormat(char *string, size_t n, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(n > 0);
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  vsnprintf(string,n,format,arguments); string[n-1] = '\0';
+  va_end(arguments);
+
+  return string;
+}
+
 /*---------------------------------------------------------------------*/
 
 #ifdef __cplusplus
