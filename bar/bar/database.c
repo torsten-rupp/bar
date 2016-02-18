@@ -93,18 +93,18 @@ if (databaseHandle->locked.lineNb != 0) fprintf(stderr,"%s, %d: databaseHandle->
 #endif
 
 #ifndef NDEBUG
-  #define DATABASE_LOCK(databaseHandle,text_) \
+  #define DATABASE_LOCK(databaseHandle,format,...) \
     do \
     { \
       assert(databaseHandle != NULL); \
       \
       sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
-      stringCopy(databaseHandle->locked.text,text_,sizeof(databaseHandle->locked.text)); \
+      stringFormat(databaseHandle->locked.text,sizeof(databaseHandle->locked.text),format, ## __VA_ARGS__); \
       databaseHandle->locked.lineNb = __LINE__; \
       databaseHandle->locked.t0     = Misc_getTimestamp(); \
       if (databaseDebugCounter > 0) \
       { \
-        fprintf(stderr,"DEBUG database: locked for '%s'\n\n",text_); \
+        fprintf(stderr,"DEBUG database: locked for '%s'\n\n",databaseHandle->locked.text); \
       } \
     } \
     while (0)
@@ -126,7 +126,7 @@ if (databaseHandle->locked.lineNb != 0) fprintf(stderr,"%s, %d: databaseHandle->
       if      (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_WARNING_LOCK_TIME) \
       { \
         fprintf(stderr, \
-                "DEBUG database: long locked time %llums: %s\n", \
+                "DEBUG database: warning long locked time %llums: %s\n", \
                 (databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL, \
                 databaseHandle->locked.text \
                ); \
@@ -1201,8 +1201,8 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
 
   // select rows in from-table
   BLOCK_DOX(error,
-            { DATABASE_LOCK(fromDatabaseHandle,tableName);
-              DATABASE_LOCK(toDatabaseHandle,tableName);
+            { DATABASE_LOCK(fromDatabaseHandle,"copy table from '%s'",tableName);
+              DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName);
             },
             { DATABASE_UNLOCK(fromDatabaseHandle);
               DATABASE_UNLOCK(toDatabaseHandle);
@@ -1302,7 +1302,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
       if (preCopyTableFunction != NULL)
       {
         BLOCK_DO(DATABASE_UNLOCK(toDatabaseHandle),
-                 DATABASE_LOCK(toDatabaseHandle,tableName),
+                 DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName),
         {
           error = preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
         });
@@ -1383,7 +1383,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
       if (postCopyTableFunction != NULL)
       {
         BLOCK_DO(DATABASE_UNLOCK(toDatabaseHandle),
-                 DATABASE_LOCK(toDatabaseHandle,tableName),
+                 DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName),
         {
           error = postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
         });
@@ -1896,7 +1896,7 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
@@ -1978,7 +1978,7 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
 
   // prepare SQL command execution
   error = ERROR_NONE;
-  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle,String_cString(databaseQueryHandle->sqlString)),
+  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle,"%s",String_cString(databaseQueryHandle->sqlString)),
            DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
@@ -2058,7 +2058,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 
   va_start(arguments,format);
   BLOCK_DOX(result,
-            DATABASE_LOCK(databaseQueryHandle->databaseHandle,String_cString(databaseQueryHandle->sqlString)),
+            DATABASE_LOCK(databaseQueryHandle->databaseHandle,"%s",String_cString(databaseQueryHandle->sqlString)),
             DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
@@ -2302,7 +2302,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseQueryHandle,sizeof(DatabaseQueryHandle));
   #endif /* NDEBUG */
 
-  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle,String_cString(databaseQueryHandle->sqlString)),
+  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle,"%s",String_cString(databaseQueryHandle->sqlString)),
            DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
@@ -2359,7 +2359,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(existsFlag,
-            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     bool existsFlag = FALSE;
@@ -2432,7 +2432,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
@@ -2513,7 +2513,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     va_end(arguments);
   }
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
@@ -2551,7 +2551,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                     value
                    );
     BLOCK_DOX(error,
-              DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
+              DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
               DATABASE_UNLOCK(databaseHandle),
     {
       DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
@@ -2630,7 +2630,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"get string",sqlString);
@@ -2710,7 +2710,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle,String_cString(sqlString)),
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQLX(databaseHandle,"set string",sqlString);
