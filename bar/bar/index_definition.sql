@@ -81,7 +81,6 @@ CREATE VIRTUAL TABLE FTS_storage USING FTS4(
   storageId,
   name,
 
-  notindexed=storageId,
 //  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
   tokenize=unicode61
 );
@@ -125,7 +124,7 @@ CREATE TRIGGER storageDelete BEFORE DELETE ON storage
           totalHardlinkSize  =totalHardlinkSize  -OLD.totalHardlinkSize,
           totalSpecialCount  =totalSpecialCount  -OLD.totalSpecialCount
       WHERE entities.id=OLD.entityId;
-    DELETE FROM FTS_storage WHERE storageId = OLD.id;
+    DELETE FROM FTS_storage WHERE storageId MATCH OLD.id;
   END;
 CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEntrySize ON storage
   BEGIN
@@ -164,7 +163,7 @@ CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalE
   END;
 CREATE TRIGGER storageUpdateName AFTER UPDATE OF name ON storage
   BEGIN
-    DELETE FROM FTS_storage WHERE storageId = OLD.id;
+    DELETE FROM FTS_storage WHERE storageId MATCH OLD.id;
     INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
   END;
 
@@ -192,8 +191,6 @@ CREATE VIRTUAL TABLE FTS_files USING FTS4(
   fileId,
   name,
 
-  notindexed=fileId,
-//  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
   tokenize=unicode61
 );
 
@@ -216,7 +213,7 @@ CREATE TRIGGER filesDelete BEFORE DELETE ON files
           totalFileCount =totalFileCount-1,
           totalFileSize  =totalFileSize -OLD.size
       WHERE storage.id=OLD.storageId;
-    DELETE FROM FTS_files WHERE fileId = OLD.id;
+    DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
   END;
 CREATE TRIGGER filesUpdateSize AFTER UPDATE OF storageId,size ON files
   BEGIN
@@ -235,7 +232,7 @@ CREATE TRIGGER filesUpdateSize AFTER UPDATE OF storageId,size ON files
   END;
 CREATE TRIGGER filesUpdateName AFTER UPDATE OF name ON files
   BEGIN
-    DELETE FROM FTS_files WHERE fileId = OLD.id;
+    DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
     INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
   END;
 
@@ -259,7 +256,6 @@ CREATE VIRTUAL TABLE FTS_images USING FTS4(
   imageId,
   name,
 
-  notindexed=imageId,
   tokenize=unicode61
 );
 
@@ -280,9 +276,9 @@ CREATE TRIGGER imagesDelete BEFORE DELETE ON images
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size,
           totalImageCount =totalImageCount-1,
-          totalImageSize  =totalImageSize -NEW.size
+          totalImageSize  =totalImageSize -OLD.size
       WHERE storage.id=OLD.storageId;
-    DELETE FROM FTS_images WHERE imageId = OLD.id;
+    DELETE FROM FTS_images WHERE imageId MATCH OLD.id;
   END;
 CREATE TRIGGER imagesUpdateSize AFTER UPDATE OF storageId,size ON images
   BEGIN
@@ -290,7 +286,7 @@ CREATE TRIGGER imagesUpdateSize AFTER UPDATE OF storageId,size ON images
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size,
           totalImageCount =totalImageCount-1,
-          totalImageSize  =totalImageSize -NEW.size
+          totalImageSize  =totalImageSize -OLD.size
       WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
@@ -301,7 +297,7 @@ CREATE TRIGGER imagesUpdateSize AFTER UPDATE OF storageId,size ON images
   END;
 CREATE TRIGGER imagesUpdateName AFTER UPDATE OF name ON images
   BEGIN
-    DELETE FROM FTS_images WHERE imageId = OLD.id;
+    DELETE FROM FTS_images WHERE imageId MATCH OLD.id;
     INSERT INTO FTS_images VALUES (NEW.id,NEW.name);
   END;
 
@@ -326,7 +322,6 @@ CREATE VIRTUAL TABLE FTS_directories USING FTS4(
   directoryId,
   name,
 
-  notindexed=directoryId,
   tokenize=unicode61
 );
 
@@ -345,7 +340,7 @@ CREATE TRIGGER directoriesDelete BEFORE DELETE ON directories
       SET totalEntryCount=totalEntryCount-1,
           totalDirectoryCount =totalDirectoryCount-1
       WHERE storage.id=OLD.storageId;
-    DELETE FROM FTS_directories WHERE directoryId = OLD.id;
+    DELETE FROM FTS_directories WHERE directoryId MATCH OLD.id;
   END;
 CREATE TRIGGER directoriesUpdateSize AFTER UPDATE ON directories
   BEGIN
@@ -360,7 +355,7 @@ CREATE TRIGGER directoriesUpdateSize AFTER UPDATE ON directories
   END;
 CREATE TRIGGER directoriesUpdateName AFTER UPDATE OF name ON directories
   BEGIN
-    DELETE FROM FTS_directories WHERE directoryId = OLD.id;
+    DELETE FROM FTS_directories WHERE directoryId MATCH OLD.id;
     INSERT INTO FTS_directories VALUES (NEW.id,NEW.name);
   END;
 
@@ -386,7 +381,6 @@ CREATE VIRTUAL TABLE FTS_links USING FTS4(
   linkId,
   name,
 
-  notindexed=linkId,
   tokenize=unicode61
 );
 
@@ -405,7 +399,7 @@ CREATE TRIGGER linksDelete BEFORE DELETE ON links
       SET totalEntryCount=totalEntryCount-1,
           totalLinkCount =totalLinkCount-1
       WHERE storage.id=OLD.storageId;
-    DELETE FROM FTS_links WHERE linkId = OLD.id;
+    DELETE FROM FTS_links WHERE linkId MATCH OLD.id;
   END;
 CREATE TRIGGER linsUpdateSize AFTER UPDATE ON links
   BEGIN
@@ -420,7 +414,7 @@ CREATE TRIGGER linsUpdateSize AFTER UPDATE ON links
   END;
 CREATE TRIGGER linksUpdateName AFTER UPDATE OF name ON links
   BEGIN
-    DELETE FROM FTS_links WHERE linkId = OLD.id;
+    DELETE FROM FTS_links WHERE linkId MATCH OLD.id;
     INSERT INTO FTS_links VALUES (NEW.id,NEW.name);
   END;
 
@@ -448,7 +442,6 @@ CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
   hardlinkId,
   name,
 
-  notindexed=hardlinkId,
   tokenize=unicode61
 );
 
@@ -471,7 +464,7 @@ CREATE TRIGGER hardlinksDelete BEFORE DELETE ON hardlinks
           totalHardlinkCount =totalHardlinkCount-1,
           totalHardlinkSize  =totalHardlinkSize -OLD.size
       WHERE storage.id=OLD.storageId;
-    DELETE FROM FTS_hardlinks WHERE hardlinkId = OLD.id;
+    DELETE FROM FTS_hardlinks WHERE hardlinkId MATCH OLD.id;
   END;
 CREATE TRIGGER hardlinksUpdateSize AFTER UPDATE OF storageId,size ON hardlinks
   BEGIN
@@ -490,7 +483,7 @@ CREATE TRIGGER hardlinksUpdateSize AFTER UPDATE OF storageId,size ON hardlinks
   END;
 CREATE TRIGGER hardlinksUpdateName AFTER UPDATE OF name ON hardlinks
   BEGIN
-    DELETE FROM FTS_hardlinks WHERE hardlinkId = OLD.id;
+    DELETE FROM FTS_hardlinks WHERE hardlinkId MATCH OLD.id;
     INSERT INTO FTS_hardlinks VALUES (NEW.id,NEW.name);
   END;
 
@@ -518,7 +511,6 @@ CREATE VIRTUAL TABLE FTS_special USING FTS4(
   specialId,
   name,
 
-  notindexed=specialId,
   tokenize=unicode61
 );
 
@@ -537,7 +529,7 @@ CREATE TRIGGER specialDelete BEFORE DELETE ON special
       SET totalEntryCount=totalEntryCount-1,
           totalSpecialCount=totalSpecialCount-1
       WHERE storage.id=OLD.storageId;
-    DELETE FROM FTS_special WHERE specialId = OLD.id;
+    DELETE FROM FTS_special WHERE specialId MATCH OLD.id;
   END;
 CREATE TRIGGER specialUpdateSize AFTER UPDATE ON special
   BEGIN
@@ -552,7 +544,7 @@ CREATE TRIGGER specialUpdateSize AFTER UPDATE ON special
   END;
 CREATE TRIGGER specialUpdateName AFTER UPDATE OF name ON special
   BEGIN
-    DELETE FROM FTS_special WHERE specialId = OLD.id;
+    DELETE FROM FTS_special WHERE specialId MATCH OLD.id;
     INSERT INTO FTS_special VALUES (NEW.id,NEW.name);
   END;
 
