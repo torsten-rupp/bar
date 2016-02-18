@@ -5617,7 +5617,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // images
   if (error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
     {
 fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(imageIdsString));
@@ -5638,7 +5637,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT COUNT(files.id),TOTAL(images.size) \
+                                 "SELECT COUNT(images.id),TOTAL(images.size) \
                                     FROM images \
                                     WHERE     (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,images.name)) \
@@ -5671,7 +5670,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // directories
   if (error == ERROR_NONE)
   {
-    if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
+    if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
     {
 fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(directoryIdsString));
       if (String_isEmpty(pattern) && String_isEmpty(imageIdsString))
@@ -5724,8 +5723,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // links
   if (error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
+    if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
     {
 fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(linkIdsString));
       if (String_isEmpty(pattern) && String_isEmpty(linkIdsString))
@@ -5745,8 +5743,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT COUNT(links.id)0.0 \
-                                    FROM files \
+                                 "SELECT COUNT(links.id),0.0 \
+                                    FROM links \
                                     WHERE     (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,links.name)) \
                                           AND (%d OR (links.storageId IN (%S))) \
@@ -5778,8 +5776,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // hardlinks
   if (error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
+    if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
     {
 fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(hardlinkIdsString));
       if (String_isEmpty(pattern) && String_isEmpty(hardlinkIdsString))
@@ -5800,9 +5797,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(hardlinks.id),TOTAL(hardlinks.size) \
-                                    FROM files \
+                                    FROM hardlinks \
                                     WHERE     (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
-                                          AND (%d OR REGEXP(%S,0,files.name)) \
+                                          AND (%d OR REGEXP(%S,0,hardlinks.name)) \
                                           AND (%d OR (hardlinks.storageId IN (%S))) \
                                           AND (%d OR (hardlinks.id IN (%S))) \
                                  ",
@@ -5832,8 +5829,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // special
   if (error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
+    if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
     {
 fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(specialIdsString));
       if (String_isEmpty(pattern) && String_isEmpty(specialIdsString))
@@ -5854,7 +5850,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(special.id),0.0 \
-                                    FROM files \
+                                    FROM special \
                                     WHERE     (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,special.name)) \
                                           AND (%d OR (special.storageId IN (%S))) \
