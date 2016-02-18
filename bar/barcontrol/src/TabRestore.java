@@ -147,7 +147,7 @@ abstract class BackgroundTask
 public class TabRestore
 {
   // max. shown entries in tree/tables
-  final int MAX_SHOWN_ENTRIES = 100000;
+  final int MAX_SHOWN_ENTRIES = 32000;
 
   /** index states
    */
@@ -1772,27 +1772,26 @@ Dprintf.dprintf("");
           try
           {
             HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
-            if (!updateFlag)
+            if (!this.updateFlag)
             {
               updateUUIDTreeItems(uuidTreeItems);
             }
 
             HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
-            if (!updateFlag)
+            if (!this.updateFlag)
             {
               updateEntityTreeItems(uuidTreeItems,entityTreeItems);
             }
-
-            if (!updateFlag)
+            if (!this.updateFlag)
             {
               updateStorageTreeItems(entityTreeItems);
             }
 
-            if (updateFlag)
+            if (!this.updateFlag)
             {
               updateStorageTableCount();
             }
-            if (updateOffsets.size() > 0)
+            if (!this.updateFlag && (updateOffsets.size() > 0))
             {
               updateStorageTable(updateOffsets);
             }
@@ -1800,8 +1799,6 @@ Dprintf.dprintf("");
           catch (CommunicationError error)
           {
             // ignored
-Dprintf.dprintf("xxxxxxxxxxxxxxxxxx");
-System.exit(1);
           }
           catch (Exception exception)
           {
@@ -1863,13 +1860,19 @@ System.exit(1);
 
             // save flag and offsets, reset
             updateFlag = this.updateFlag;
-            for (Integer offset : this.updateOffsets)
+            updateOffsets.addAll(this.updateOffsets);
+
+            // wait for immediate further triggers
+            do
             {
-              updateOffsets.add(offset);
+              this.updateFlag = false;
+              this.updateOffsets.clear();
+
+              try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
+              updateOffsets.addAll(this.updateOffsets);
             }
-            this.updateFlag = false;
-            this.updateOffsets.clear();
-//Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOffsets.size());
+            while (this.updateFlag || (this.updateOffsets.size() > 0));
+Dprintf.dprintf("wait done");
           }
         }
       }
@@ -1976,7 +1979,7 @@ System.exit(1);
     }
 
     /** trigger update of storage list
-     * @param offset offset in list to update
+     * @param index index in list to update
      */
     public void triggerUpdate(int index)
     {
@@ -3231,13 +3234,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
   {
     private final int PAGE_SIZE = 64;
 
-    private Object           trigger           = new Object();   // trigger update object
-    private boolean          updateFlag        = false;
-    private HashSet<Integer> updateOffsets     = new HashSet<Integer>();
-    private int              count             = 0;
-    private EntryTypes       entryType         = EntryTypes.ANY;
-    private String           entryPattern      = "";
-    private boolean          newestEntriesOnly = false;
+    private Object           trigger            = new Object();   // trigger update object
+    private boolean          updateFlag         = false;
+    private HashSet<Integer> updateOffsets      = new HashSet<Integer>();
+    private int              count              = 0;
+    private EntryTypes       entryType          = EntryTypes.ANY;
+    private String           entryPattern       = "";
+    private boolean          newestEntriesOnly  = false;
+    private boolean          setUpdateIndicator = false;          // true to set color/cursor at update
 
     /** create update entry list thread
      */
@@ -3259,31 +3263,32 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         for (;;)
         {
           // set busy cursor, foreground color to inform about update
-          display.syncExec(new Runnable()
+          if (setUpdateIndicator)
           {
-            public void run()
+            display.syncExec(new Runnable()
             {
-              BARControl.waitCursor();
-              widgetEntryTable.setForeground(COLOR_MODIFIED);
-            }
-          });
+              public void run()
+              {
+                BARControl.waitCursor();
+                widgetEntryTable.setForeground(COLOR_MODIFIED);
+              }
+            });
+          }
 
           // update table count, table segment
           try
           {
-            if (updateFlag)
+            if (!this.updateFlag)
             {
               updateEntryTableCount();
             }
-            if (updateOffsets.size() > 0)
+            if (!this.updateFlag && (updateOffsets.size() > 0))
             {
               updateEntryTable(updateOffsets);
             }
           }
           catch (CommunicationError error)
           {
-Dprintf.dprintf("xxxxxxxxxxxxxxx");
-System.exit(1);
             // ignored
           }
           catch (Exception exception)
@@ -3298,35 +3303,46 @@ System.exit(1);
           }
 
           // reset cursor, foreground color
-          display.syncExec(new Runnable()
+          if (setUpdateIndicator)
           {
-            public void run()
+            display.syncExec(new Runnable()
             {
-              widgetEntryTable.setForeground(null);
-              BARControl.resetCursor();
-            }
-          });
+              public void run()
+              {
+                widgetEntryTable.setForeground(null);
+                BARControl.resetCursor();
+              }
+            });
+          }
 
           // wait for trigger
           synchronized(trigger)
           {
             // wait for refresh request trigger or timeout
-            while (!this.updateFlag && (this.updateOffsets.size() == 0))
+            if (!this.updateFlag && (this.updateOffsets.size() == 0))
             {
-//TODO
-//              try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
-              try { trigger.wait(); } catch (InterruptedException exception) { /* ignored */ };
+              try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
+
+            // if not triggered (timeout occurred) update is done invisible (color is not set)
+            if (!this.updateFlag && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
 
             // save trigger flag and offsets, reset
             updateFlag = this.updateFlag;
-            for (Integer offset : this.updateOffsets)
+            updateOffsets.addAll(this.updateOffsets);
+
+            // wait for immediate further triggers
+Dprintf.dprintf("wait");
+            do
             {
-              updateOffsets.add(offset);
+              this.updateFlag = false;
+              this.updateOffsets.clear();
+
+              try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
+              updateOffsets.addAll(this.updateOffsets);
             }
-            this.updateFlag = false;
-            this.updateOffsets.clear();
-//Dprintf.dprintf("wait done: updateFlag=%s updateOffsets=%d",updateFlag,updateOffsets.size());
+            while (this.updateFlag || (this.updateOffsets.size() > 0));
+Dprintf.dprintf("wait done");
           }
         }
       }
@@ -3391,6 +3407,7 @@ System.exit(1);
           this.entryPattern       = entryPattern;
           this.entryType          = entryType;
           this.newestEntriesOnly  = newestEntriesOnly;
+          this.setUpdateIndicator = true;
 
           updateFlag = true;
           trigger.notify();
@@ -3409,7 +3426,8 @@ System.exit(1);
       {
         if ((this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern))
         {
-          this.entryPattern = entryPattern;
+          this.entryPattern       = entryPattern;
+          this.setUpdateIndicator = true;
 
           updateFlag = true;
           trigger.notify();
@@ -3426,7 +3444,8 @@ System.exit(1);
       {
         if (entryType != this.entryType)
         {
-          this.entryType = entryType;
+          this.entryType          = entryType;
+          this.setUpdateIndicator = true;
 
           updateFlag = true;
           trigger.notify();
@@ -3445,6 +3464,7 @@ System.exit(1);
         if (this.newestEntriesOnly != newestEntriesOnly)
         {
           this.newestEntriesOnly  = newestEntriesOnly;
+          this.setUpdateIndicator = true;
 
           updateFlag = true;
           trigger.notify();
@@ -3453,7 +3473,7 @@ System.exit(1);
     }
 
     /** trigger update entry list
-     * @param offset offset in list to start update
+     * @param index index in list to start update
      */
     public void triggerUpdate(int index)
     {
@@ -3507,7 +3527,24 @@ System.exit(1);
                                   ) == Errors.NONE
          )
       {
+        int oldCount = count;
         count = valueMap.getInt("count");
+        if ((oldCount > 0) && (oldCount <= MAX_SHOWN_ENTRIES) && (count > MAX_SHOWN_ENTRIES))
+        {
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.warning(shell,
+                              Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                              BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
+                                            updateEntryTableThread.getCount(),
+                                            MAX_SHOWN_ENTRIES
+                                           )
+                             );
+            }
+          });
+        }
       }
 
       // set count
@@ -3516,12 +3553,7 @@ System.exit(1);
         public void run()
         {
           widgetEntryTableTitle.redraw();
-
-          widgetEntryTable.setItemCount(0);
-          widgetEntryTable.clearAll();
-
           widgetEntryTable.setItemCount(Math.min(count,MAX_SHOWN_ENTRIES));
-          widgetEntryTable.setTopIndex(0);
         }
       });
 
@@ -4281,7 +4313,7 @@ Dprintf.dprintf("");
     DropTarget  dropTarget;
 
     // get shell, display
-    shell = parentTabFolder.getShell();
+    shell   = parentTabFolder.getShell();
     display = shell.getDisplay();
 
     // get colors
@@ -4315,19 +4347,13 @@ Dprintf.dprintf("");
         {
           if (updateEntryTableThread.getCount() >= MAX_SHOWN_ENTRIES)
           {
-            display.syncExec(new Runnable()
-            {
-              public void run()
-              {
-                Dialogs.warning(shell,
-                                Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
-                                BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
-                                              updateEntryTableThread.getCount(),
-                                              MAX_SHOWN_ENTRIES
-                                             )
-                               );
-              }
-            });
+            Dialogs.warning(shell,
+                            Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                            BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
+                                          updateEntryTableThread.getCount(),
+                                          MAX_SHOWN_ENTRIES
+                                         )
+                           );
           }
         }
       }
@@ -4366,7 +4392,7 @@ Dprintf.dprintf("");
                       8
                      );
 
-          text = String.format(BARControl.tr("Count: %6d"),updateStorageTreeTableThread.getCount());
+          text = BARControl.tr("Count: {0}",updateStorageTreeTableThread.getCount());
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
                       bounds.width-size.x-8,
@@ -5328,7 +5354,7 @@ Dprintf.dprintf("remove");
                      );
 
           // number of entries
-          text = String.format(BARControl.tr("Count: %6d"),updateEntryTableThread.getCount());
+          text = BARControl.tr("Count: {0}",updateEntryTableThread.getCount());
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
                       bounds.width-size.x-8,

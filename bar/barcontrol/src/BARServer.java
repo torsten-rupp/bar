@@ -739,6 +739,7 @@ class ReadThread extends Thread
             {
               // result for unknown command -> currently ignored
               if (Settings.debugLevel > 0) System.err.println("Network: received unknown command result '"+line+"'");
+System.exit(1);
             }
           }
         }
