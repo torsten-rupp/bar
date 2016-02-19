@@ -5103,7 +5103,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                            {
                                              // add to index
                                              error = Index_newStorage(indexHandle,
-                                                                      DATABASE_ID_NONE, // entityId
+                                                                      INDEX_ID_NONE, // entityId
                                                                       storageName,
                                                                       INDEX_STATE_UPDATE_REQUESTED,
                                                                       INDEX_MODE_AUTO,
@@ -12525,30 +12525,25 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            uuid=<uuid>|* and/or
 *            indexId=<id>|0
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
+  IndexId          indexId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  IndexId          entityId;
-  IndexId          storageId;
   Errors           error;
+  IndexId          storageId;
   IndexQueryHandle indexQueryHandle;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job UUID, entity id, or storage id
-#warning TODO: replace by indexId
-  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
-     )
+  // get index id
+  if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<id>");
     return;
   }
 
@@ -12559,103 +12554,105 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     return;
   }
 
-  if (!String_isEmpty(jobUUID))
+fprintf(stderr,"%s, %d: ------------------------\n",__FILE__,__LINE__);
+  switch (Index_getType(indexId))
   {
-//????
-    // add all storage ids with specified uuid
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   jobUUID,
-                                   DATABASE_ID_ANY, // entity id
-                                   STORAGE_TYPE_ANY,
-                                   NULL, // storageName
-                                   NULL, // hostName
-                                   NULL, // loginName
-                                   NULL, // deviceName
-                                   NULL, // fileName
-                                   INDEX_STATE_SET_ALL,
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      return;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &storageId,
-                                NULL, // entity id
-                                NULL, // job UUID
-                                NULL, // schedule UUID
-                                NULL, // archive type
-                                NULL, // storageName
-                                NULL, // createdDateTime
-                                NULL, // entries
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
-          )
-    {
-      Array_append(&clientInfo->storageIdArray,&storageId);
-    }
-    Index_doneList(&indexQueryHandle);
-  }
+    case INDEX_TYPE_UUID:
+      // get uuid
 
-  if (entityId != DATABASE_ID_NONE)
-  {
-    // add all storage ids with entity id
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   NULL, // uuid
-                                   entityId,
-                                   STORAGE_TYPE_ANY,
-                                   NULL, // storageName
-                                   NULL, // hostName
-                                   NULL, // loginName
-                                   NULL, // deviceName
-                                   NULL, // fileName
-                                   INDEX_STATE_SET_ALL,
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      return;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &storageId,
-                                NULL, // entity id
-                                NULL, // job UUID
-                                NULL, // schedule UUID
-                                NULL, // archive type
-                                NULL, // storageName
-                                NULL, // createdDateTime
-                                NULL, // entries
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
-          )
-    {
-      Array_append(&clientInfo->storageIdArray,&storageId);
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-
-  if (storageId != DATABASE_ID_NONE)
-  {
-    // add to storage id array
-    Array_append(&clientInfo->storageIdArray,&storageId);
+      // add all storage ids with specified uuid
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     jobUUID,
+                                     DATABASE_ID_ANY, // entity id
+                                     STORAGE_TYPE_ANY,
+                                     NULL, // storageName
+                                     NULL, // hostName
+                                     NULL, // loginName
+                                     NULL, // deviceName
+                                     NULL, // fileName
+                                     INDEX_STATE_SET_ALL,
+                                     NULL,  // storageIds
+                                     0,  // storageIdCount
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+        return;
+      }
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &storageId,
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
+                                  NULL, // archive type
+                                  NULL, // storageName
+                                  NULL, // createdDateTime
+                                  NULL, // entries
+                                  NULL, // size
+                                  NULL, // indexState
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 )
+            )
+      {
+        Array_append(&clientInfo->storageIdArray,&storageId);
+      }
+      Index_doneList(&indexQueryHandle);
+      break;
+    case INDEX_TYPE_ENTITY:
+      // add all storage ids with entity id
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     NULL, // uuid
+                                     indexId,
+                                     STORAGE_TYPE_ANY,
+                                     NULL, // storageName
+                                     NULL, // hostName
+                                     NULL, // loginName
+                                     NULL, // deviceName
+                                     NULL, // fileName
+                                     INDEX_STATE_SET_ALL,
+                                     NULL,  // storageIds
+                                     0,  // storageIdCount
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+        return;
+      }
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &storageId,
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
+                                  NULL, // archive type
+                                  NULL, // storageName
+                                  NULL, // createdDateTime
+                                  NULL, // entries
+                                  NULL, // size
+                                  NULL, // indexState
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 )
+            )
+      {
+        Array_append(&clientInfo->storageIdArray,&storageId);
+      }
+      Index_doneList(&indexQueryHandle);
+      break;
+    case INDEX_TYPE_STORAGE:
+      // add to storage id array
+      Array_append(&clientInfo->storageIdArray,&indexId);
+      break;
+    default:
+      break;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -12715,8 +12712,8 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
   IndexId          storageId;
   // get job UUID, entity id, or storage id
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
@@ -12771,7 +12768,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
     Index_doneList(&indexQueryHandle);
   }
 
-  if (entityId != DATABASE_ID_NONE)
+  if (entityId != INDEX_ID_NONE)
   {
     // add all storage ids with entity id
     error = Index_initListStorages(&indexQueryHandle,
@@ -12817,7 +12814,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
     Index_doneList(&indexQueryHandle);
   }
 
-  if (storageId != DATABASE_ID_NONE)
+  if (storageId != INDEX_ID_NONE)
   {
     // add to storage id array
     Array_append(&clientInfo->storageIdArray,&storageId);
@@ -12880,7 +12877,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
   assert(argumentMap != NULL);
 
   // get entry ids
-  if (!StringMap_getInt64(argumentMap,"entryId",&entryId,DATABASE_ID_NONE))
+  if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
     return;
@@ -12946,13 +12943,14 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const St
     return;
   }
 
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Array_length(&clientInfo->entryIdArray));
   error = Index_getEntriesInfo(indexHandle,
                                NULL,  // storageIds
                                0,  // storageIdCount
                                Array_cArray(&clientInfo->entryIdArray),
                                Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_SET_ANY,
-                               NULL,
+                               NULL,  // pattern
                                &count,
                                &size
                               );
@@ -12993,11 +12991,11 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
   // get uuid, job id, and/or storage id
   String_clear(jobUUID);
-  entityId  = DATABASE_ID_NONE;
-  storageId = DATABASE_ID_NONE;
+  entityId  = INDEX_ID_NONE;
+  storageId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
@@ -13022,7 +13020,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
   }
 
-  if (entityId != DATABASE_ID_NONE)
+  if (entityId != INDEX_ID_NONE)
   {
     // delete all storage files of entity
     error = deleteEntity(entityId);
@@ -13033,7 +13031,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
   }
 
-  if (storageId != DATABASE_ID_NONE)
+  if (storageId != INDEX_ID_NONE)
   {
     // delete storage file
     error = deleteStorage(storageId);
@@ -14475,7 +14473,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
                                else
                                {
                                  error = Index_newStorage(indexHandle,
-                                                          DATABASE_ID_NONE, // entityId
+                                                          INDEX_ID_NONE, // entityId
                                                           storageName,
                                                           INDEX_STATE_UPDATE_REQUESTED,
                                                           INDEX_MODE_MANUAL,
@@ -14546,21 +14544,21 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
 
   // get toJobUUID, toEntityId, archive type, jobUUID/entityId/storageId
   String_clear(toJobUUID);
-  toEntityId = DATABASE_ID_NONE;
+  toEntityId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"toJobUUID",toJobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"toEntityId",&toEntityId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"toEntityId",&toEntityId,INDEX_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
-  if (String_isEmpty(toJobUUID) && (toEntityId == DATABASE_ID_NONE))
+  if (String_isEmpty(toJobUUID) && (toEntityId == INDEX_ID_NONE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected non-empty toJobUUID or toEntityId");
     return;
   }
   archiveType = ARCHIVE_TYPE_UNKNOWN;
-  if (toEntityId == DATABASE_ID_NONE)
+  if (toEntityId == INDEX_ID_NONE)
   {
     if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
     {
@@ -14569,11 +14567,11 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
     }
   }
   String_clear(jobUUID);
-  entityId  = DATABASE_ID_NONE;
-  storageId = DATABASE_ID_NONE;
+  entityId  = INDEX_ID_NONE;
+  storageId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
@@ -14589,15 +14587,15 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
 
   if (!String_isEmpty(jobUUID))
   {
-    if      (toEntityId != DATABASE_ID_NONE)
+    if      (toEntityId != INDEX_ID_NONE)
     {
       // assign all storage of all entities of job to other entity
       error = Index_assignTo(indexHandle,
                              jobUUID,
-                             DATABASE_ID_NONE,  // entityId,
-                             DATABASE_ID_NONE,  // storageId
+                             INDEX_ID_NONE,  // entityId,
+                             INDEX_ID_NONE,  // storageId
                              toEntityId,
-                             DATABASE_ID_NONE,  // toStorageId
+                             INDEX_ID_NONE,  // toStorageId
                              ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
@@ -14624,10 +14622,10 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
       // assign all storage of all entities of job to other entity
       error = Index_assignTo(indexHandle,
                              jobUUID,
-                             DATABASE_ID_NONE,  // entityId
-                             DATABASE_ID_NONE,  // storageId
+                             INDEX_ID_NONE,  // entityId
+                             INDEX_ID_NONE,  // storageId
                              toEntityId,
-                             DATABASE_ID_NONE,  // toStorageId
+                             INDEX_ID_NONE,  // toStorageId
                              ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
@@ -14638,18 +14636,18 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
     }
   }
 
-  if (entityId != DATABASE_ID_NONE)
+  if (entityId != INDEX_ID_NONE)
   {
     // assign entity to another entity
-    if      (toEntityId != DATABASE_ID_NONE)
+    if      (toEntityId != INDEX_ID_NONE)
     {
       // assign all storage of entity to other entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
                              entityId,
-                             DATABASE_ID_NONE,  // storageId
+                             INDEX_ID_NONE,  // storageId
                              toEntityId,
-                             DATABASE_ID_NONE,  // toStorageId
+                             INDEX_ID_NONE,  // toStorageId
                              ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
@@ -14676,10 +14674,10 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
       // assign all storage of entity to other entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
-                             DATABASE_ID_NONE,  // entityId
+                             INDEX_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             DATABASE_ID_NONE,  // toStorageId
+                             INDEX_ID_NONE,  // toStorageId
                              ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
@@ -14690,17 +14688,17 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
     }
   }
 
-  if (storageId != DATABASE_ID_NONE)
+  if (storageId != INDEX_ID_NONE)
   {
-    if      (toEntityId != DATABASE_ID_NONE)
+    if      (toEntityId != INDEX_ID_NONE)
     {
       // assign storage to another entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
-                             DATABASE_ID_NONE,  // entityId
+                             INDEX_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             DATABASE_ID_NONE,  // toStorageId
+                             INDEX_ID_NONE,  // toStorageId
                              ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
@@ -14727,10 +14725,10 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
       // assign storage to another entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
-                             DATABASE_ID_NONE,  // entityId
+                             INDEX_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             DATABASE_ID_NONE,  // toStorageId
+                             INDEX_ID_NONE,  // toStorageId
                              ARCHIVE_TYPE_NONE
                             );
       if (error != ERROR_NONE)
@@ -14798,8 +14796,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
   }
   patternString = String_new();
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
       && !StringMap_getString(argumentMap,"pattern",patternString,NULL)
      )
   {
@@ -14817,7 +14815,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     return;
   }
 
-  if (String_isEmpty(jobUUID) && (storageId == DATABASE_ID_NONE) && (entityId == DATABASE_ID_NONE) && String_isEmpty(patternString))
+  if (String_isEmpty(jobUUID) && (storageId == INDEX_ID_NONE) && (entityId == INDEX_ID_NONE) && String_isEmpty(patternString))
   {
     // refresh all storage with specific state
     error = Index_initListStorages(&indexQueryHandle,
@@ -14927,7 +14925,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     Index_doneList(&indexQueryHandle);
   }
 
-  if (entityId != DATABASE_ID_NONE)
+  if (entityId != INDEX_ID_NONE)
   {
     // refresh all storage of entity
     error = Index_initListStorages(&indexQueryHandle,
@@ -14980,7 +14978,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     Index_doneList(&indexQueryHandle);
   }
 
-  if (storageId != DATABASE_ID_NONE)
+  if (storageId != INDEX_ID_NONE)
   {
     // refresh storage
     Index_setState(indexHandle,
@@ -15100,11 +15098,11 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
     return;
   }
   String_clear(jobUUID);
-  entityId  = DATABASE_ID_NONE;
-  storageId = DATABASE_ID_NONE;
+  entityId  = INDEX_ID_NONE;
+  storageId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,DATABASE_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,DATABASE_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
@@ -15118,7 +15116,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
     return;
   }
 
-  if (String_isEmpty(jobUUID) && (storageId == DATABASE_ID_NONE) && (entityId == DATABASE_ID_NONE))
+  if (String_isEmpty(jobUUID) && (storageId == INDEX_ID_NONE) && (entityId == INDEX_ID_NONE))
   {
     // initialize variables
     Storage_initSpecifier(&storageSpecifier);
@@ -15218,7 +15216,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
     }
   }
 
-  if (entityId != DATABASE_ID_NONE)
+  if (entityId != INDEX_ID_NONE)
   {
     // delete entity index
     error = Index_deleteEntity(indexHandle,entityId);
@@ -15229,7 +15227,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
     }
   }
 
-  if (storageId != DATABASE_ID_NONE)
+  if (storageId != INDEX_ID_NONE)
   {
     // delete storage index
     error = Index_deleteStorage(indexHandle,storageId);
