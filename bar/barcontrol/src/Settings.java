@@ -500,7 +500,9 @@ public class Settings
   public static boolean               listFlag                        = false;
 
   // flags
-  public static boolean               showEntriesExceededInfo         = true;
+//TODO
+//  public static boolean               showEntriesExceededInfo         = true;
+  public static boolean               showEntriesExceededInfo         = false;
 
   // debug
   public static int                   debugLevel                      = 0;

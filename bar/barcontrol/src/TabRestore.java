@@ -843,7 +843,8 @@ return 0;
     public int compareTo(IndexData indexData)
     {
 //      return name.compareTo(indexData.name);
-Dprintf.dprintf("");
+//TODO
+//Dprintf.dprintf("");
 return 0;
     }
 
@@ -861,51 +862,6 @@ return 0;
     public String toString()
     {
       return "UUIDIndexData {"+jobUUID+", lastDateTime="+lastDateTime+", totalSize="+totalSize+" bytes}";
-    }
-  }
-
-  /** UUID data map
-   */
-//TODO remove
-  class UUIDIndexDataMapX extends HashMap<String,UUIDIndexData>
-  {
-    /** get job data from map
-     * @param uuid UUID
-     * @return UUID data
-     */
-    public UUIDIndexData get(String uuid)
-    {
-      return super.get(uuid);
-    }
-
-    /** get UUID data from map by job name
-     * @param name job name
-     * @return UUID data
-     */
-    public UUIDIndexData getByJobName(String name)
-    {
-      for (UUIDIndexData uuidIndexData : values())
-      {
-        if (uuidIndexData.name.equals(name)) return uuidIndexData;
-      }
-
-      return null;
-    }
-
-    /** put UUID data into map
-     * @param uuidIndexData UUID data
-     */
-    public void put(UUIDIndexData uuidIndexData)
-    {
-      put(uuidIndexData.jobUUID,uuidIndexData);
-    }
-
-    /** remove UUID data from map
-     * @param uuidIndexData UUID data
-     */
-    public void remove(UUIDIndexData uuidIndexData)
-    {
-      remove(uuidIndexData.jobUUID);
     }
   }
 
@@ -1076,52 +1032,6 @@ Dprintf.dprintf("");
     }
   }
 
-  /** entity index data map
-   */
-//TODO remove
-  class EntityIndexDataMapX extends HashMap<Long,EntityIndexData>
-  {
-    /** get job data from map
-     * @param entityId entry id
-     * @return job data
-     */
-    public EntityIndexData get(long entityId)
-    {
-      return super.get(entityId);
-    }
-
-    /** get job data from map by job name
-     * @param jobName job name
-     * @return job data
-     */
-    public EntityIndexData getByName(String jobName)
-    {
-      for (EntityIndexData entityIndexData : values())
-      {
-Dprintf.dprintf("");
-//        if (entityIndexData.name.equals(jobName)) return entityIndexData;
-      }
-
-      return null;
-    }
-
-    /** put job data into map
-     * @param entityIndexData job data
-     */
-    public void put(EntityIndexData entityIndexData)
-    {
-      put(entityIndexData.indexId,entityIndexData);
-    }
-
-    /** remove job data from map
-     * @param entityIndexData job data
-     */
-    public void remove(EntityIndexData entityIndexData)
-    {
-      remove(entityIndexData.indexId);
-    }
-  }
-
   /** storage index data
    */
   class StorageIndexData extends IndexData implements Serializable
@@ -1267,7 +1177,7 @@ Dprintf.dprintf("");
     /** set table item reference
      * @param tableItem table item
      */
-    public void updateItem(TableItem tableItem)
+    public void XupdateItem(TableItem tableItem)
     {
 //      updateTableItem(tableItem,tableItemUpdateRunnable);
       Widgets.updateTableItem(tableItem,
@@ -1356,262 +1266,6 @@ return 0;
       return "StorageIndexData {"+indexId+", name="+name+", lastDateTime="+lastDateTime+", totalSize="+totalSize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
     }
   };
-
-  /** storage index data map
-   */
-//TODO remove
-  class StorageIndexDataMapX extends HashMap<Long,StorageIndexData>
-  {
-    /** get storage data from map
-     * @param storageId entry id
-     * @return storage data
-     */
-    public StorageIndexData get(long storageId)
-    {
-      return super.get(storageId);
-    }
-
-    /** get storage data from map
-     * @param storageName storage name
-     * @return storage data
-     */
-    public StorageIndexData get(String storageName)
-    {
-      for (StorageIndexData storageIndexData : values())
-      {
-        if (storageIndexData.name.equals(storageName)) return storageIndexData;
-      }
-
-      return null;
-    }
-
-    /** put storage data into map
-     * @param storageIndexData storage data
-     */
-    public void put(StorageIndexData storageIndexData)
-    {
-      put(storageIndexData.indexId,storageIndexData);
-    }
-
-    /** remove storage data from map
-     * @param storageIndexData storage data
-     */
-    public void remove(StorageIndexData storageIndexData)
-    {
-      remove(storageIndexData.indexId);
-    }
-  }
-
-  /** index data map
-   */
-//TODO remove
-  class IndexDataMapX
-  {
-    private HashMap<String,UUIDIndexData>  uuidIndexDataMap;
-    private HashMap<Long,EntityIndexData>  entityIndexDataMap;
-    private HashMap<Long,StorageIndexData> storageIndexDataMap;
-
-    /** constructor
-     */
-/*    public IndexDataMap()
-    {
-      this.uuidIndexDataMap    = new HashMap<String,UUIDIndexData>();
-      this.entityIndexDataMap  = new HashMap<Long,EntityIndexData>();
-      this.storageIndexDataMap = new HashMap<Long,StorageIndexData>();
-    }*/
-
-    /** get UUID index data from map by UUID
-     * @param uuid UUID
-     * @return UUID index data
-     */
-/*    public UUIDIndexData getUUIDIndexData(String uuid)
-    {
-      return uuidIndexDataMap.get(uuid);
-    }*/
-
-    /** get all UUID index data from map by UUID
-     * @return UUID index data collection
-     */
-/*    public Collection<UUIDIndexData> getUUIDIndexData()
-    {
-      return uuidIndexDataMap.values();
-    }*/
-
-    /** update UUID data index
-     * @param jobUUID job UUID
-     * @param name job name
-     * @param lastDateTime last date/time (timestamp) when storage was created
-     * @param totalEntries total number of entresi of storage
-     * @param totalSize total size of storage [byte]
-     * @param lastErrorMessage last error message text
-     */
-/*
-    synchronized public UUIDIndexData updateUUIDIndexData(long indexId, String jobUUID, String name, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
-    {
-      UUIDIndexData uuidIndexData = uuidIndexDataMap.get(jobUUID);
-      if (uuidIndexData != null)
-      {
-Dprintf.dprintf("");
-        uuidIndexData.name         = name;
-//        uuidIndexData.dateTime     = lastDateTime;
-//        uuidIndexData.totalEntries = totalEntries;
-//        uuidIndexData.size         = totalSize;
-//        uuidIndexData.errorMessage = lastErrorMessage;
-      }
-      else
-      {
-        uuidIndexData = new UUIDIndexData(indexId,
-                                          jobUUID,
-                                          name,
-                                          lastDateTime,
-                                          totalEntries,
-                                          totalSize,
-                                          lastErrorMessage
-                                         );
-        uuidIndexDataMap.put(jobUUID,uuidIndexData);
-      }
-
-      return uuidIndexData;
-    }*/
-
-    /** get job index data from map by job id
-     * @param entityId database entity id
-     * @return job index data
-     */
-/*    public EntityIndexData getEntityIndexData(long entityId)
-    {
-      return entityIndexDataMap.get(entityId);
-    }*/
-
-    /** get job index data from map by job name
-     * @param name job name
-     * @return UUID data
-     */
-/*    public EntityIndexData getEntityIndexDataByName(String name)
-    {
-      for (EntityIndexData entityIndexData : entityIndexDataMap.values())
-      {
-Dprintf.dprintf("");
-//        if (entityIndexData.name.equals(name)) return entityIndexData;
-      }
-
-      return null;
-    }*/
-
-    /** update entity data index
-     * @param entityId job id
-     * @param name name of storage
-     * @param lastDateTime last date/time (timestamp) when storage was created
-     * @param totalEntries total number of entresi of storage
-     * @param totalSize total size of storage [byte]
-     * @param lastErrorMessage last error message text
-     */
-/*    public synchronized EntityIndexData updateEntityIndexData(long entityId, Settings.ArchiveTypes archiveType, long lastDateTime, long totalEntries, long totalSize, String lastErrorMessage)
-    {
-      EntityIndexData entityIndexData = entityIndexDataMap.get(entityId);
-      if (entityIndexData != null)
-      {
-//        entityIndexData.entityId     = entityId;
-        entityIndexData.archiveType  = archiveType;
-//        entityIndexData.dateTime     = lastDateTime;
-Dprintf.dprintf("");
-//        entityIndexData.totalEntries = totalEntries;
-//        entityIndexData.size         = totalSize;
-//        entityIndexData.errorMessage = lastErrorMessage;
-      }
-      else
-      {
-        entityIndexData = new EntityIndexData(entityId,
-                                              archiveType,
-                                              lastDateTime,
-                                              totalEntries,
-                                              totalSize,
-                                              lastErrorMessage
-                                             );
-        entityIndexDataMap.put(entityId,entityIndexData);
-      }
-
-      return entityIndexData;
-    }*/
-
-    /** get storage index data from map by storage id
-     * @param storageId database storage id
-     * @return storage index data
-     */
-/*    public StorageIndexData getStorageIndexData(long storageId)
-    {
-      return storageIndexDataMap.get(storageId);
-    }*/
-
-    /** update storage data index
-     * @param storageId database storage id
-     * @param jobName job name
-     * @param archiveType archive type
-     * @param name name of storage
-     * @param dateTime date/time (timestamp) when storage was created
-     * @param entries number of entries
-     * @param size size of storage [byte]
-     * @param indexState storage index state
-     * @param indexMode storage index mode
-     * @param lastCheckedDateTime last checked date/time (timestamp)
-     * @param errorMessage error message text
-     */
-/*    public synchronized StorageIndexData updateStorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name, long dateTime, long entries, long size, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
-    {
-      StorageIndexData storageIndexData = storageIndexDataMap.get(storageId);
-      if (storageIndexData != null)
-      {
-        storageIndexData.jobName             = jobName;
-        storageIndexData.archiveType         = archiveType;
-        storageIndexData.name                = name;
-        storageIndexData.lastDateTime            = dateTime;
-        storageIndexData.totalEntries             = entries;
-        storageIndexData.totalSize                = size;
-        storageIndexData.indexState          = indexState;
-        storageIndexData.indexMode           = indexMode;
-        storageIndexData.lastCheckedDateTime = lastCheckedDateTime;
-        storageIndexData.errorMessage        = errorMessage;
-      }
-      else
-      {
-        storageIndexData = new StorageIndexData(storageId,
-                                                jobName,
-                                                archiveType,
-                                                name,
-                                                dateTime,
-                                                entries,
-                                                size,
-                                                indexState,
-                                                indexMode,
-                                                lastCheckedDateTime,
-                                                errorMessage
-//                                                new File(name).getName()
-                                               );
-        storageIndexDataMap.put(storageId,storageIndexData);
-      }
-
-      return storageIndexData;
-    }*/
-
-    /** remove index data from map
-     * @param indexData index data
-     */
-/*    public void remove(IndexData indexData)
-    {
-      if      (indexData instanceof UUIDIndexData)
-      {
-        uuidIndexDataMap.remove((UUIDIndexData)indexData);
-      }
-      else if (indexData instanceof EntityIndexData)
-      {
-        entityIndexDataMap.remove((EntityIndexData)indexData);
-      }
-      else if (indexData instanceof StorageIndexData)
-      {
-        storageIndexDataMap.remove((StorageIndexData)indexData);
-      }
-    }*/
-  }
 
   /** find index for insert of item in sorted storage data list
    * @param indexData index data
@@ -1743,7 +1397,6 @@ Dprintf.dprintf("");
      */
     public void run()
     {
-      boolean          updateFlag    = true;
       HashSet<Integer> updateOffsets = new HashSet<Integer>();
       try
       {
@@ -1771,6 +1424,7 @@ Dprintf.dprintf("");
           // update tree/table
           try
           {
+Dprintf.dprintf("%d ",System.currentTimeMillis());
             HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
             if (!this.updateFlag)
             {
@@ -1795,6 +1449,7 @@ Dprintf.dprintf("");
             {
               updateStorageTable(updateOffsets);
             }
+Dprintf.dprintf("%d ",System.currentTimeMillis());
           }
           catch (CommunicationError error)
           {
@@ -1858,8 +1513,7 @@ Dprintf.dprintf("");
             // if not triggered (timeout occurred) update is done invisible (color is not set)
             if (!this.updateFlag && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
 
-            // save flag and offsets, reset
-            updateFlag = this.updateFlag;
+            // get offsets to update
             updateOffsets.addAll(this.updateOffsets);
 
             // wait for immediate further triggers
@@ -1872,7 +1526,6 @@ Dprintf.dprintf("");
               updateOffsets.addAll(this.updateOffsets);
             }
             while (this.updateFlag || (this.updateOffsets.size() > 0));
-Dprintf.dprintf("wait done");
           }
         }
       }
@@ -1988,7 +1641,10 @@ Dprintf.dprintf("wait done");
         int offset = (index/PAGE_SIZE)*PAGE_SIZE;
         if (!updateOffsets.contains(offset))
         {
+Dprintf.dprintf("%d ",System.currentTimeMillis());
           updateOffsets.add(offset);
+
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -2432,9 +2088,9 @@ assert storagePattern != null;
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
       if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO storagePattern=%'S indexStateSet=%s",
-                                                        storagePattern,
-                                                        storageIndexStateSet.nameList("|")
-                                                       ),
+                                                       storagePattern,
+                                                       storageIndexStateSet.nameList("|")
+                                                      ),
                                    0,  // debugLevel
                                    errorMessage,
                                    valueMap
@@ -2472,6 +2128,7 @@ assert storagePattern != null;
       assert storagePattern != null;
       assert offset >= 0;
       assert count >= 0;
+Dprintf.dprintf("%d xxxxx %d",System.currentTimeMillis(),offset);
 
       // get limit
       final int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
@@ -2529,8 +2186,14 @@ assert storagePattern != null;
                                        public void run()
                                        {
                                          TableItem tableItem = widgetStorageTable.getItem(index);
-                                         storageIndexData.updateItem(tableItem);
 
+                                         Widgets.updateTableItem(tableItem,
+                                                                 (Object)storageIndexData,
+                                                                 storageIndexData.name,
+                                                                 Units.formatByteSize(storageIndexData.totalSize),
+                                                                 simpleDateFormat.format(new Date(storageIndexData.lastDateTime*1000L)),
+                                                                 storageIndexData.indexState.toString()
+                                                                );
                                          tableItem.setChecked(selectedIndexIdSet.contains(storageIndexData.indexId));
                                        }
                                      });
@@ -2549,12 +2212,11 @@ assert storagePattern != null;
                                    // check if aborted
                                    if (isUpdateTriggered() || (n[0] >= limit))
                                    {
-                                     return Errors.INTERRUPTED;
+//TODO
+//                                     abort();
                                    }
-                                   else
-                                   {
-                                     return Errors.NONE;
-                                   }
+
+                                   return Errors.NONE;
                                  }
                                }
                               );
@@ -3029,22 +2691,6 @@ assert storagePattern != null;
       this.restoreState = restoreState;
     }
 
-    /** check if entry is checked
-     * @return true if entry is checked, false otherwise
-     */
-    public boolean isChecked()
-    {
-      return checked;
-    }
-
-    /** set checked state
-     * @param checked checked state
-     */
-    public void XsetChecked(boolean checked)
-    {
-      this.checked = checked;
-    }
-
     /** convert data to string
      * @return string
      */
@@ -3256,7 +2902,6 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      */
     public void run()
     {
-      boolean          updateFlag    = true;
       HashSet<Integer> updateOffsets = new HashSet<Integer>();
       try
       {
@@ -3327,12 +2972,10 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             // if not triggered (timeout occurred) update is done invisible (color is not set)
             if (!this.updateFlag && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
 
-            // save trigger flag and offsets, reset
-            updateFlag = this.updateFlag;
+            // get offsets to update
             updateOffsets.addAll(this.updateOffsets);
 
             // wait for immediate further triggers
-Dprintf.dprintf("wait");
             do
             {
               this.updateFlag = false;
@@ -3342,7 +2985,6 @@ Dprintf.dprintf("wait");
               updateOffsets.addAll(this.updateOffsets);
             }
             while (this.updateFlag || (this.updateOffsets.size() > 0));
-Dprintf.dprintf("wait done");
           }
         }
       }
@@ -3483,6 +3125,8 @@ Dprintf.dprintf("wait done");
         if (!updateOffsets.contains(offset))
         {
           updateOffsets.add(offset);
+
+          updateFlag = true;
           trigger.notify();
         }
       }
@@ -3517,10 +3161,10 @@ Dprintf.dprintf("wait done");
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
       if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestEntriesOnly=%y",
-                                                        entryPattern,
-                                                        entryType.toString(),
-                                                        newestEntriesOnly
-                                                       ),
+                                                       entryPattern,
+                                                       entryType.toString(),
+                                                       newestEntriesOnly
+                                                      ),
                                    0,  // debugLevel
                                    errorMessage,
                                    valueMap
@@ -4799,6 +4443,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           TableItem tableItem = (TableItem)event.item;
 
           int i = widgetStorageTable.indexOf(tableItem);
+Dprintf.dprintf("%d widgetStorageTable %d",System.currentTimeMillis(),i);
           updateStorageTreeTableThread.triggerUpdate(i);
         }
       });
@@ -4829,8 +4474,11 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
           {
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
-            selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
-            checkedStorageEvent.trigger();
+            if (storageIndexData != null)
+            {
+              selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
+              checkedStorageEvent.trigger();
+            }
           }
         }
       });
@@ -5070,7 +4718,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setCheckedAllStorage(true);
+            setAllCheckedStorage(true);
           }
         });
 
@@ -5085,7 +4733,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setCheckedAllStorage(false);
+            setAllCheckedStorage(false);
           }
         });
 
@@ -5190,13 +4838,13 @@ Dprintf.dprintf("");
             Button button = (Button)selectionEvent.widget;
             if (!selectedIndexIdSet.isEmpty())
             {
-              setCheckedAllStorage(false);
+              setAllCheckedStorage(false);
               button.setImage(IMAGE_MARK_ALL);
               button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
             else
             {
-              setCheckedAllStorage(true);
+              setAllCheckedStorage(true);
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
@@ -5312,6 +4960,7 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
+//TODO
 Dprintf.dprintf("remove");
 //            getCheckedIndexData(indexDataHashSet);
 //            getSelectedIndexData(indexDataHashSet);
@@ -5447,8 +5096,11 @@ Dprintf.dprintf("remove");
           if (tableItem != null)
           {
             EntryData entryData = (EntryData)tableItem.getData();
-            tableItem.setChecked(!tableItem.getChecked());
-            selectedEntryIdSet.set(entryData.indexId,tableItem.getChecked());
+            if (entryData != null)
+            {
+              tableItem.setChecked(!tableItem.getChecked());
+              selectedEntryIdSet.set(entryData.indexId,tableItem.getChecked());
+            }
           }
 
           // trigger update checked
@@ -5513,7 +5165,7 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setCheckedAllEntries(true);
+            setAllCheckedEntries(true);
           }
         });
 
@@ -5528,7 +5180,7 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setCheckedAllEntries(false);
+            setAllCheckedEntries(false);
           }
         });
 
@@ -5618,13 +5270,13 @@ Dprintf.dprintf("remove");
             Button button = (Button)selectionEvent.widget;
             if (!selectedEntryIdSet.isEmpty())
             {
-              setCheckedAllEntries(false);
+              setAllCheckedEntries(false);
               button.setImage(IMAGE_MARK_ALL);
               button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
             else
             {
-              setCheckedAllEntries(true);
+              setAllCheckedEntries(true);
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
@@ -5876,60 +5528,16 @@ Dprintf.dprintf("remove");
 
   //-----------------------------------------------------------------------
 
-  /** update list of checked storage entries
-   */
-//TODO remove
-  private void updateCheckedStorageList()
-  {
-Dprintf.dprintf("updateCheckedStorageList");
-    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
-    switch (widgetStorageTabFolder.getSelectionIndex())
-    {
-      case 0:
-        // tree view
-        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
-        {
-          UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
-//          if (uuidIndexData.isChecked())
-          {
-            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobUUID=%'S",uuidIndexData.jobUUID),0);
-          }
-
-          if (uuidTreeItem.getExpanded())
-          {
-            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
-            {
-              EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-//              if (entityIndexData.isChecked())
-              {
-                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD entityId=%d",entityIndexData.indexId),0);
-              }
-
-              if (entityTreeItem.getExpanded())
-              {
-                for (TreeItem storageTreeItem : entityTreeItem.getItems())
-                {
-                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-//                  if (storageIndexData.isChecked())
-                  {
-                    BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageId=%d",storageIndexData.indexId),0);
-                  }
-                }
-              }
-            }
-          }
-        }
-        break;
-      case 1:
-        break;
-    }
-  }
-
   /** set/clear checked all storage entries
    * @param checked true for set checked, false for clear checked
    */
-  private void setCheckedAllStorage(final boolean checked)
+  private void setAllCheckedStorage(final boolean checked)
   {
+    final int MAX_CONFIRM_ENTRIES = 1000;
+
+    final String[] errorMessage = new String[1];
+    ValueMap       valueMap     = new ValueMap();
+
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
@@ -5992,36 +5600,79 @@ Dprintf.dprintf("");
         }
         break;
       case 1:
-        String[] errorMessage = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s",
-                                                                 "*",
-                                                                 updateStorageTreeTableThread.getStoragePattern(),
-                                                                 updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                                 "*"
-                                                                ),
-                                             1,  // debugLevel
-                                             errorMessage,
-                                             new CommandResultHandler()
-                                             {
-                                               public int handleResult(int i, ValueMap valueMap)
-                                               {
-                                                 long storageId = valueMap.getLong("storageId");
+        final int     count[] = new int[]{0};
+        final boolean doit[]  = new boolean[]{true};
 
-                                                 selectedIndexIdSet.set(storageId,checked);
-
-                                                 return Errors.NONE;
-                                               }
-                                             }
-                                            );
-        if (error != Errors.NONE)
+        if (checked)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot mark all index storages\n\n(error: {0})",errorMessage[0]));
-          return;
+          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO storagePattern=%'S indexStateSet=%s",
+                                                           updateStorageTreeTableThread.getStoragePattern(),
+                                                           updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|")
+                                                          ),
+                                       0,  // debugLevel
+                                       errorMessage,
+                                       valueMap
+                                      ) == Errors.NONE
+             )
+          {
+            count[0] = valueMap.getInt("count");
+            if (count[0] > MAX_CONFIRM_ENTRIES)
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  doit[0] = Dialogs.confirm(shell,
+                                            Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                                            BARControl.tr("There are {0} entries. Really mark all entries?",
+                                                          count[0]
+                                                         )
+                                           );
+                }
+              });
+            }
+          }
         }
 
-        // refresh table
-        Widgets.refreshVirtualTable(widgetStorageTable);
-        break;
+        if (doit[0])
+        {
+          // check/uncheck all entries
+          final int n[] = new int[]{0};
+          final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
+          busyDialog.setMaximum(count[0]);
+          int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s",
+                                                                   "*",
+                                                                   updateStorageTreeTableThread.getStoragePattern(),
+                                                                   updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                                   "*"
+                                                                  ),
+                                               1,  // debugLevel
+                                               errorMessage,
+                                               new CommandResultHandler()
+                                               {
+                                                 public int handleResult(int i, ValueMap valueMap)
+                                                 {
+                                                   long storageId = valueMap.getLong("storageId");
+
+                                                   selectedIndexIdSet.set(storageId,checked);
+
+                                                   n[0]++;
+                                                   busyDialog.updateProgressBar(n[0]);
+
+                                                   return Errors.NONE;
+                                                 }
+                                               }
+                                              );
+          busyDialog.close();
+          if (error != Errors.NONE)
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot mark all storages\n\n(error: {0})",errorMessage[0]));
+            return;
+          }
+
+          // refresh table
+          Widgets.refreshVirtualTable(widgetStorageTable);
+        }
     }
 
     // trigger update checked
@@ -6283,7 +5934,6 @@ Dprintf.dprintf("");
               }
             }
           });
-
 
           // update storage list
           EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
@@ -7356,58 +7006,33 @@ assert storagePattern != null;
     Composite  composite,subComposite;
     Button     button;
 
-    // set entries to restore
-    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
-//TODO: optimize send more than one entry?
-    for (Long indexId : indexIdSet)
-    {
-      BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
-                                                   indexId
-                                                  ),
-                               0  // debugLevel
-                              );
-    }
-
-    // get number total entries and size
-    long           count        = 0;
-    long           size         = 0;
-    final String[] errorMessage = new String[1];
-    ValueMap       valueMap     = new ValueMap();
-Dprintf.dprintf("");
-    if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                 0,  // debugLevel
-                                 errorMessage,
-                                 valueMap
-                                ) == Errors.NONE
-       )
-    {
-      count = valueMap.getLong("count");
-      size  = valueMap.getLong("size");
-    }
-
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore archives"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
+    final Label  widgetCount;
+    final Label  widgetSize;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
     final Button widgetOverwriteEntries;
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
-    composite.setLayout(new TableLayout(0.0,1.0));
+    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Restore {0} {0,choice,0#entries|1#entry|1<entries} with {1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
-                                                       count,
-                                                       Units.formatByteSize(size),
-                                                       size
-                                                      )
-                              );
+      label = Widgets.newLabel(composite,BARControl.tr("Entries:"));
       Widgets.layout(label,0,0,TableLayoutData.W);
+      widgetCount = Widgets.newLabel(composite,"-");
+      Widgets.layout(widgetCount,0,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Size:"));
+      Widgets.layout(label,1,0,TableLayoutData.W);
+      widgetSize = Widgets.newLabel(composite,"-");
+      Widgets.layout(widgetSize,1,1,TableLayoutData.WE);
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
-      Widgets.layout(subComposite,1,0,TableLayoutData.WE);
+      Widgets.layout(subComposite,2,0,TableLayoutData.WE,0,2);
       {
         widgetRestoreTo = Widgets.newCheckbox(subComposite,BARControl.tr("to"));
         widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
@@ -7503,7 +7128,7 @@ Dprintf.dprintf("");
 
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,2,0,TableLayoutData.W);
+      Widgets.layout(widgetOverwriteEntries,3,0,TableLayoutData.W,0,2);
     }
 
     // buttons
@@ -7512,6 +7137,7 @@ Dprintf.dprintf("");
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
       widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
+      widgetRestore.setEnabled(false);
       Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
@@ -7547,6 +7173,60 @@ Dprintf.dprintf("");
       }
     });
 */
+
+    Dialogs.show(dialog);
+
+    new BackgroundTask((BusyDialog)null,new Object[]{indexIdSet})
+    {
+      @Override
+      public void run(BusyDialog busyDialog, Object userData)
+      {
+        IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
+
+        // set entries to restore
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+//TODO: optimize send more than one entry?
+        for (Long indexId : indexIdSet)
+        {
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
+                                                       indexId
+                                                      ),
+                                   0  // debugLevel
+                                  );
+        }
+
+        // get number entries, size
+        final String[] errorMessage = new String[1];
+        ValueMap       valueMap     = new ValueMap();
+        if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
+                                     0,  // debugLevel
+                                     errorMessage,
+                                     valueMap
+                                    ) == Errors.NONE
+           )
+        {
+          final long count = valueMap.getLong("count");
+          final long size  = valueMap.getLong("size");
+
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              widgetCount.setText(Long.toString(count));
+              widgetSize.setText(Units.formatByteSize(size));
+            }
+          });
+        }
+
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            widgetRestore.setEnabled(true);
+          }
+        });
+      }
+    };
 
 Dprintf.dprintf("");
 String directory = "/tmp/x";
@@ -7765,65 +7445,92 @@ boolean overwriteFiles = false;
 
   //-----------------------------------------------------------------------
 
-  /** update list of checked storage entries
-   */
-  private void updateCheckedEntryList()
-  {
-Dprintf.dprintf("");
-    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
-/*
-    for (TableItem tableItem : widgetEntryTable.getItems())
-    {
-      EntryData entryData = (EntryData)tableItem.getData();
-      if (entryData.isChecked())
-      {
-        BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD archiveEntryType=%s entryId=%d",
-                                                     entryData.entryType,
-                                                     entryData.entryId
-                                                    ),
-                                 0  // debugLevel
-                                );
-      }
-    }
-    */
-  }
-
-  /** set/clear tagging of all entries
+  /** set/clear checked all entries
    * @param checked true for set checked, false for clear checked
    */
-  private void setCheckedAllEntries(final boolean checked)
+  private void setAllCheckedEntries(final boolean checked)
   {
-    String[] errorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y",
-                                                             updateEntryTableThread.getEntryPattern(),
-                                                             updateEntryTableThread.getEntryType().toString(),
-                                                             updateEntryTableThread.getNewestEntriesOnly()
-                                                            ),
-                                         1,
-                                         errorMessage,
-                                         new CommandResultHandler()
-                                         {
-                                           public int handleResult(int i, ValueMap valueMap)
-                                           {
-                                             long entryId = valueMap.getLong("entryId");
+    final int MAX_CONFIRM_ENTRIES = 1000;
 
-                                             selectedEntryIdSet.set(entryId,checked);
+    final String[] errorMessage = new String[1];
+    ValueMap       valueMap     = new ValueMap();
 
-                                             return Errors.NONE;
-                                           }
-                                         }
-                                        );
-    if (error != Errors.NONE)
+    // confirm check
+    final int     count[] = new int[]{0};
+    final boolean doit[]  = new boolean[]{true};
+    if (checked)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot mark all index entries\n\n(error: {0})",errorMessage[0]));
-      return;
+      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestEntriesOnly=%y",
+                                                       updateEntryTableThread.getEntryPattern(),
+                                                       updateEntryTableThread.getEntryType().toString(),
+                                                       updateEntryTableThread.getNewestEntriesOnly()
+                                                      ),
+                                   0,  // debugLevel
+                                   errorMessage,
+                                   valueMap
+                                  ) == Errors.NONE
+         )
+      {
+        count[0] = valueMap.getInt("count");
+        if (count[0] > MAX_CONFIRM_ENTRIES)
+        {
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              doit[0] = Dialogs.confirm(shell,
+                                        Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                                        BARControl.tr("There are {0} entries. Really mark all entries?",
+                                                      count[0]
+                                                     )
+                                       );
+            }
+          });
+        }
+      }
     }
 
-    // refresh table
-    Widgets.refreshVirtualTable(widgetEntryTable);
+    if (doit[0])
+    {
+      // check/uncheck all entries
+      final int n[] = new int[]{0};
+      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
+      busyDialog.setMaximum(count[0]);
+      int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y",
+                                                               updateEntryTableThread.getEntryPattern(),
+                                                               updateEntryTableThread.getEntryType().toString(),
+                                                               updateEntryTableThread.getNewestEntriesOnly()
+                                                              ),
+                                           1,
+                                           errorMessage,
+                                           new CommandResultHandler()
+                                           {
+                                             public int handleResult(int i, ValueMap valueMap)
+                                             {
+                                               long entryId = valueMap.getLong("entryId");
 
-    // trigger update checked
-    checkedEntryEvent.trigger();
+                                               selectedEntryIdSet.set(entryId,checked);
+
+                                               n[0]++;
+                                               busyDialog.updateProgressBar(n[0]);
+
+                                               return Errors.NONE;
+                                             }
+                                           }
+                                          );
+      busyDialog.close();
+      if (error != Errors.NONE)
+      {
+        Dialogs.error(shell,BARControl.tr("Cannot mark all index entries\n\n(error: {0})",errorMessage[0]));
+        return;
+      }
+
+      // refresh table
+      Widgets.refreshVirtualTable(widgetEntryTable);
+
+      // trigger update checked
+      checkedEntryEvent.trigger();
+    }
   }
 
   /** get checked entries
@@ -7983,57 +7690,33 @@ Dprintf.dprintf("");
     Composite  composite,subComposite;
     Button     button;
 
-    // set entries to restore
-    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
-//TODO: optimize send more than one entry?
-    for (Long entryId : entryIdSet)
-    {
-      BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryId=%ld",
-                                                   entryId
-                                                  ),
-                               0  // debugLevel
-                              );
-    }
-
-    // get number entries, size
-    long           count        = 0;
-    long           size         = 0;
-    final String[] errorMessage = new String[1];
-    ValueMap       valueMap     = new ValueMap();
-    if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
-                                 0,  // debugLevel
-                                 errorMessage,
-                                 valueMap
-                                ) == Errors.NONE
-       )
-    {
-      count = valueMap.getLong("count");
-      size  = valueMap.getLong("size");
-    }
-
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore entries"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
+    final Label  widgetCount;
+    final Label  widgetSize;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
     final Button widgetOverwriteEntries;
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
-    composite.setLayout(new TableLayout(0.0,1.0));
+    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Restore {0} {0,choice,0#entries|1#entry|1<entries} with {1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
-                                                       count,
-                                                       Units.formatByteSize(size),
-                                                       size
-                                                      )
-                              );
+      label = Widgets.newLabel(composite,BARControl.tr("Entries:"));
       Widgets.layout(label,0,0,TableLayoutData.W);
+      widgetCount = Widgets.newLabel(composite,"-");
+      Widgets.layout(widgetCount,0,1,TableLayoutData.WE);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Size:"));
+      Widgets.layout(label,1,0,TableLayoutData.W);
+      widgetSize = Widgets.newLabel(composite,"-");
+      Widgets.layout(widgetSize,1,1,TableLayoutData.WE);
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
-      Widgets.layout(subComposite,1,0,TableLayoutData.WE);
+      Widgets.layout(subComposite,2,0,TableLayoutData.WE,0,2);
       {
         widgetRestoreTo = Widgets.newCheckbox(subComposite,BARControl.tr("to"));
         widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
@@ -8129,7 +7812,7 @@ Dprintf.dprintf("");
 
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,2,0,TableLayoutData.W);
+      Widgets.layout(widgetOverwriteEntries,3,0,TableLayoutData.W,0,2);
     }
 
     // buttons
@@ -8138,6 +7821,7 @@ Dprintf.dprintf("");
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
       widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
+      widgetRestore.setEnabled(false);
       Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
@@ -8174,9 +7858,63 @@ Dprintf.dprintf("");
     });
 */
 
+    Dialogs.show(dialog);
+
+    new BackgroundTask((BusyDialog)null,new Object[]{entryIdSet})
+    {
+      @Override
+      public void run(BusyDialog busyDialog, Object userData)
+      {
+        IndexIdSet entryIdSet = (IndexIdSet)((Object[])userData)[0];
+
+        // set entries to restore
+        BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
+    //TODO: optimize send more than one entry?
+        for (Long entryId : entryIdSet)
+        {
+          BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryId=%ld",
+                                                       entryId
+                                                      ),
+                                   0  // debugLevel
+                                  );
+        }
+
+        // get number entries, size
+        final String[] errorMessage = new String[1];
+        ValueMap       valueMap     = new ValueMap();
+        if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+                                     0,  // debugLevel
+                                     errorMessage,
+                                     valueMap
+                                    ) == Errors.NONE
+           )
+        {
+          final long count = valueMap.getLong("count");
+          final long size  = valueMap.getLong("size");
+
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              widgetCount.setText(Long.toString(count));
+              widgetSize.setText(Units.formatByteSize(size));
+            }
+          });
+        }
+
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            widgetRestore.setEnabled(true);
+          }
+        });
+      }
+    };
+
+//TODO
 String directory = "/tmp/x";
 boolean overwriteFiles = false;
-
     // run dialog
     if ((Boolean)Dialogs.run(dialog,false))
     {
@@ -8226,7 +7964,7 @@ Dprintf.dprintf("");
               {
                 retryFlag = false;
 
-  //TODO: restore with one command: send entry list before
+//TODO: restore with one command: send entry list before
                 // start restore
                 command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFiles=%y name=%'S",
 "xxx",//                                                                   entryData.storageName,
