@@ -12599,6 +12599,7 @@ fprintf(stderr,"%s, %d: ------------------------\n",__FILE__,__LINE__);
                                  )
             )
       {
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,storageId);
         Array_append(&clientInfo->storageIdArray,&storageId);
       }
       Index_doneList(&indexQueryHandle);
@@ -12643,12 +12644,13 @@ fprintf(stderr,"%s, %d: ------------------------\n",__FILE__,__LINE__);
                                  )
             )
       {
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,storageId);
         Array_append(&clientInfo->storageIdArray,&storageId);
       }
       Index_doneList(&indexQueryHandle);
       break;
     case INDEX_TYPE_STORAGE:
-      // add to storage id array
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,indexId);
       Array_append(&clientInfo->storageIdArray,&indexId);
       break;
     default:
@@ -12689,6 +12691,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Index_getStoragesInfo(indexHandle,
                                 Array_cArray(&clientInfo->storageIdArray),
                                 Array_length(&clientInfo->storageIdArray),
@@ -14309,7 +14312,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     return;
   }
   count = 0;
-fprintf(stderr,"%s, %d: ---------------------\n",__FILE__,__LINE__);
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextStorage(&indexQueryHandle,
                                  &storageId,
@@ -14350,7 +14352,6 @@ fprintf(stderr,"%s, %d: ---------------------\n",__FILE__,__LINE__);
       String_set(printableStorageName,storageName);
     }
 
-fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(printableStorageName),archiveType);
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                      "storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu entries=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                      storageId,
@@ -14370,7 +14371,6 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(printableStora
     count++;
   }
   Index_doneList(&indexQueryHandle);
-fprintf(stderr,"%s, %d: done\n",__FILE__,__LINE__);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
@@ -15270,12 +15270,9 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   ulong      count;
   uint64     size;
 
-uint64 t0,t1,t2,t3,t4;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-t0 = Misc_getTimestamp();
   // entry pattern, get max. count, new entries only
   entryPatternString = String_new();
   if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
@@ -15312,10 +15309,8 @@ t0 = Misc_getTimestamp();
     String_delete(entryPatternString);
     return;
   }
-t1 = Misc_getTimestamp();
 
   // get index info
-//Database_debugEnable(1);
   error = Index_getEntriesInfo(indexHandle,
                                Array_cArray(&clientInfo->storageIdArray),
                                Array_length(&clientInfo->storageIdArray),
@@ -15326,8 +15321,6 @@ t1 = Misc_getTimestamp();
                                &count,
                                &size
                               );
-t2 = Misc_getTimestamp();
-//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"get entries info index database fail");
@@ -15337,8 +15330,6 @@ t2 = Misc_getTimestamp();
 
   // send data
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
-t3 = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: %llu %llu %llu\n",__FILE__,__LINE__,t1-t0,t2-t1,t3-t0);
 
   // free resources
   String_delete(entryPatternString);
