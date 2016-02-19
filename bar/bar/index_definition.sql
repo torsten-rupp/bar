@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS entities(
   // updated by triggers
   totalStorageCount   INTEGER DEFAULT 0,
   totalStorageSize    INTEGER DEFAULT 0,
+
   totalEntryCount     INTEGER DEFAULT 0,
   totalEntrySize      INTEGER DEFAULT 0,
 
