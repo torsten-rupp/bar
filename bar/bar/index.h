@@ -30,8 +30,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define INDEX_STORAGE_ID_NONE -1LL
-
 // max. limit value
 #define INDEX_UNLIMITED 9223372036854775807LL
 
@@ -295,6 +293,23 @@ INLINE IndexTypes Index_getType(IndexId indexId);
 INLINE IndexTypes Index_getType(IndexId indexId)
 {
   return INDEX_TYPE_(indexId);
+}
+#endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Index_getDatabaseId
+* Purpose: get database id
+* Input  : indexId - index id
+* Output : -
+* Return : database id
+* Notes  : -
+\***********************************************************************/
+
+INLINE DatabaseId Index_getDatabaseId(IndexId indexId);
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENATION__)
+INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
+{
+  return INDEX_DATABASE_ID_(indexId);
 }
 #endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
 

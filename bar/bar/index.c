@@ -969,8 +969,6 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
   error = ERROR_NONE;
 
-fprintf(stderr,"%s, %d: %x %s\n",__FILE__,__LINE__,oldIndexHandle->upgradeError,Error_getText(oldIndexHandle->upgradeError));
-fprintf(stderr,"%s, %d: %x %s\n",__FILE__,__LINE__,newIndexHandle->upgradeError,Error_getText(newIndexHandle->upgradeError));
   // fix possible broken ids
   fixBrokenIds(oldIndexHandle,"storage");
   fixBrokenIds(oldIndexHandle,"files");
@@ -3621,7 +3619,6 @@ bool Index_findByName(IndexHandle  *indexHandle,
     return FALSE;
   }
 
-Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entities.id, \
@@ -3721,7 +3718,6 @@ Database_debugEnable(1);
   String_delete(storageName);
 
   Database_finalize(&databaseQueryHandle);
-Database_debugEnable(0);
 
   return foundFlag;
 }
@@ -3980,7 +3976,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
 Database_lock(&indexHandle->databaseHandle);
-Database_debugEnable(1);
 uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -4059,12 +4054,11 @@ uint64 t0=Misc_getTimestamp();
   }
 uint64 t1=Misc_getTimestamp();
 fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
-Database_debugEnable(0);
 Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
@@ -4219,7 +4213,6 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
 Database_lock(&indexHandle->databaseHandle);
-Database_debugEnable(1);
 uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -4320,12 +4313,11 @@ uint64 t0=Misc_getTimestamp();
   }
 uint64 t1=Misc_getTimestamp();
 fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
-Database_debugEnable(0);
 Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
@@ -4563,7 +4555,6 @@ uint64 t0=Misc_getTimestamp();
   if (count != NULL) (*count) = 0L;
   if (size != NULL) (*size) = 0LL;
 
-Database_debugEnable(1);
   indexStateSetString = String_new();
 
   #define STORAGE_IDS "  SELECT storage.id FROM storage where storage.id IN (%S) \
@@ -4573,7 +4564,6 @@ Database_debugEnable(1);
                          SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN ($S))) \
                       "
 
-Database_debugEnable(1);
 // -------------------------------
 fprintf(stderr,"%s, %d:++++++++++++++++++++++++++++++++++++++++++++++++++ \n",__FILE__,__LINE__);
 {
@@ -4819,7 +4809,6 @@ exit(1);
     if (size != NULL) (*size) = (uint64)totalEntrySize_;
   }
   Database_finalize(&databaseQueryHandle);
-Database_debugEnable(0);
 
   // free resources
   String_delete(storageIdsString);
@@ -4883,7 +4872,6 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   }
 
   indexStateSetString = String_new();
-//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -4982,7 +4970,6 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -4997,7 +4984,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
@@ -5508,10 +5495,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       String_format(storageIdsString,"%d",storageIds[i]);
     }
   }
-  else
-  {
-    String_appendCString(storageIdsString,"0");
-  }
 
   fileIdsString      = String_new();
   imageIdsString     = String_new();
@@ -5559,16 +5542,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   if (count != NULL) (*count) = 0L;
   if (size != NULL) (*size) = 0LL;
 
-Database_debugEnable(1);
   error = ERROR_NONE;
 
+fprintf(stderr,"%s, %d:  %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),entryIdCount);
   // files
   if (error == ERROR_NONE)
   {
     if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
     {
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(fileIdsString));
-      if (String_isEmpty(pattern) && String_isEmpty(fileIdsString))
+      if (String_isEmpty(pattern) && (entryIdCount == 0))
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
@@ -5581,7 +5563,6 @@ fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),Strin
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(files.id),TOTAL(files.size) \
@@ -5589,12 +5570,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     WHERE     (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,files.name)) \
                                           AND (%d OR (files.storageId IN (%S))) \
-                                          AND (%d OR (files.id IN (%S))) \
+                                          AND (files.id IN (%S)) \
                                  ",
                                  String_isEmpty(pattern) ? 1 : 0,ftsString,
-      1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+1||                                 String_isEmpty(pattern) ? 1 : 0,regexpString,
                                  String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                                 String_isEmpty(fileIdsString) ? 1 : 0,fileIdsString
+                                 fileIdsString
                                 );
       }
       if (error == ERROR_NONE)
@@ -5606,6 +5587,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                )
            )
         {
+//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
           if (count != NULL) (*count) += count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -5619,10 +5601,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
     {
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(imageIdsString));
-      if (String_isEmpty(pattern) && String_isEmpty(fileIdsString))
+      if (String_isEmpty(pattern) && (entryIdCount == 0))
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(totalImageCount),TOTAL(totalImageSize) \
@@ -5634,7 +5614,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(images.id),TOTAL(images.size) \
@@ -5642,12 +5621,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     WHERE     (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,images.name)) \
                                           AND (%d OR (images.storageId IN (%S))) \
-                                          AND (%d OR (images.id IN (%S))) \
+                                          AND (images.id IN (%S)) \
                                  ",
                                  String_isEmpty(pattern) ? 1 : 0,ftsString,
-      1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+1||                                 String_isEmpty(pattern) ? 1 : 0,regexpString,
                                  String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                                 String_isEmpty(imageIdsString) ? 1 : 0,imageIdsString
+                                 imageIdsString
                                 );
       }
       if (error == ERROR_NONE)
@@ -5659,6 +5638,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                )
            )
         {
+//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
           if (count != NULL) (*count) += count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -5672,10 +5652,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
     {
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(directoryIdsString));
-      if (String_isEmpty(pattern) && String_isEmpty(imageIdsString))
+      if (String_isEmpty(pattern) && (entryIdCount == 0))
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(totalDirectoryCount),0.0 \
@@ -5687,7 +5665,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(directories.id),0.0 \
@@ -5695,12 +5672,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     WHERE     (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,directories.name)) \
                                           AND (%d OR (directories.storageId IN (%S))) \
-                                          AND (%d OR (directories.id IN (%S))) \
+                                          AND (directories.id IN (%S)) \
                                  ",
                                  String_isEmpty(pattern) ? 1 : 0,ftsString,
-      1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+1||                                 String_isEmpty(pattern) ? 1 : 0,regexpString,
                                  String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                                 String_isEmpty(directoryIdsString) ? 1 : 0,directoryIdsString
+                                 directoryIdsString
                                 );
       }
       if (error == ERROR_NONE)
@@ -5712,6 +5689,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                )
            )
         {
+//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
           if (count != NULL) (*count) += count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -5725,10 +5703,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
     {
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(linkIdsString));
-      if (String_isEmpty(pattern) && String_isEmpty(linkIdsString))
+      if (String_isEmpty(pattern) && (entryIdCount == 0))
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(totalLinkCount),0.0 \
@@ -5740,7 +5716,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(links.id),0.0 \
@@ -5748,12 +5723,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     WHERE     (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,links.name)) \
                                           AND (%d OR (links.storageId IN (%S))) \
-                                          AND (%d OR (links.id IN (%S))) \
+                                          AND (links.id IN (%S)) \
                                  ",
                                  String_isEmpty(pattern) ? 1 : 0,ftsString,
-      1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+1||                                 String_isEmpty(pattern) ? 1 : 0,regexpString,
                                  String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                                 String_isEmpty(linkIdsString) ? 1 : 0,linkIdsString
+                                 linkIdsString
                                 );
       }
       if (error == ERROR_NONE)
@@ -5765,6 +5740,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                )
            )
         {
+//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
           if (count != NULL) (*count) += count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -5778,10 +5754,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
     {
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(hardlinkIdsString));
-      if (String_isEmpty(pattern) && String_isEmpty(hardlinkIdsString))
+      if (String_isEmpty(pattern) && (entryIdCount == 0))
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(totalHardlinkCount),TOTAL(totalHardlinkSize) \
@@ -5793,7 +5767,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(hardlinks.id),TOTAL(hardlinks.size) \
@@ -5801,12 +5774,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     WHERE     (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,hardlinks.name)) \
                                           AND (%d OR (hardlinks.storageId IN (%S))) \
-                                          AND (%d OR (hardlinks.id IN (%S))) \
+                                          AND (hardlinks.id IN (%S)) \
                                  ",
                                  String_isEmpty(pattern) ? 1 : 0,ftsString,
-      1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+1||                                 String_isEmpty(pattern) ? 1 : 0,regexpString,
                                  String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                                 String_isEmpty(hardlinkIdsString) ? 1 : 0,hardlinkIdsString
+                                 hardlinkIdsString
                                 );
       }
       if (error == ERROR_NONE)
@@ -5818,6 +5791,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                )
            )
         {
+//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
           if (count != NULL) (*count) += count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -5831,13 +5805,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
     {
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),String_isEmpty(specialIdsString));
-      if (String_isEmpty(pattern) && String_isEmpty(specialIdsString))
+      if (String_isEmpty(pattern) && (entryIdCount == 0))
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(totalFileCount),0.0 \
+                                 "SELECT TOTAL(totalSpecialCount),0.0 \
                                     FROM storage \
                                     WHERE %d OR (id IN (%S)) \
                                  ",
@@ -5846,7 +5818,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(special.id),0.0 \
@@ -5854,12 +5825,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     WHERE     (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
                                           AND (%d OR REGEXP(%S,0,special.name)) \
                                           AND (%d OR (special.storageId IN (%S))) \
-                                          AND (%d OR (special.id IN (%S))) \
+                                          AND (special.id IN (%S)) \
                                  ",
                                  String_isEmpty(pattern) ? 1 : 0,ftsString,
-      1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+1||                                 String_isEmpty(pattern) ? 1 : 0,regexpString,
                                  String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                                 String_isEmpty(specialIdsString) ? 1 : 0,specialIdsString
+                                 specialIdsString
                                 );
       }
       if (error == ERROR_NONE)
@@ -5871,6 +5842,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                )
            )
         {
+//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
           if (count != NULL) (*count) += count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -5990,7 +5962,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Database_finalize(&databaseQueryHandle);
   }
 #endif
-Database_debugEnable(0);
+//Database_debugEnable(0);
 
   // free resources
   String_delete(specialIdsString);
@@ -6052,10 +6024,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
       String_format(storageIdsString,"%d",storageIds[i]);
     }
   }
-  else
-  {
-    String_appendCString(storageIdsString,"0");
-  }
 
   entryIdsString = String_new();
   if (entryIds != NULL)
@@ -6066,13 +6034,8 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
       String_format(entryIdsString,"%d",entryIds[i]);
     }
   }
-  else
-  {
-    String_appendCString(entryIdsString,"0");
-  }
 
 Database_lock(&indexHandle->databaseHandle);
-Database_debugEnable(1);
 uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -6218,43 +6181,43 @@ uint64 t0=Misc_getTimestamp();
                            IN_SET(indexTypeSet,INDEX_TYPE_FILE),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
                            String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
 
                            INDEX_TYPE_IMAGE,
                            IN_SET(indexTypeSet,INDEX_TYPE_IMAGE),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
                            String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
 
                            INDEX_TYPE_DIRECTORY,
                            IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
                            String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
 
                            INDEX_TYPE_LINK,
                            IN_SET(indexTypeSet,INDEX_TYPE_LINK),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
                            String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
 
                            INDEX_TYPE_HARDLINK,
                            IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
                            String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
 
                            INDEX_TYPE_SPECIAL,
                            IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL),
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
                            String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,entryIdsString,
+                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
 
                            offset,
                            limit
@@ -6271,12 +6234,11 @@ uint64 t0=Misc_getTimestamp();
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 uint64 t1=Misc_getTimestamp();
 fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
-Database_debugEnable(0);
 Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
@@ -6418,7 +6380,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
@@ -6571,7 +6533,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
@@ -6718,7 +6680,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
@@ -6868,7 +6830,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
@@ -7020,8 +6982,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
@@ -7125,13 +7086,11 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   entryIdsString = String_new();
   if (storageIds != NULL)
   {
-    storageIdsString = String_newCString("(special.storageId IN (");
     for (i = 0; i < storageIdCount; i++)
     {
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
-    String_appendCString(storageIdsString,"))");
   }
   else
   {
@@ -7139,13 +7098,11 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   }
   if (entryIds != NULL)
   {
-    entryIdsString = String_newCString("(special.id IN (");
     for (i = 0; i < entryIdCount; i++)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
       String_format(entryIdsString,"%d",entryIds[i]);
     }
-    String_appendCString(entryIdsString,"))");
   }
   else
   {
@@ -7164,7 +7121,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                                    special.permission \
                             FROM special \
                               LEFT JOIN storage ON storage.id=special.storageId \
-                            WHERE     (%d OR (special.id IN (SELECT specialId FROM FTS_specialWHERE FTS_special MATCH %S))) \
+                            WHERE     (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
                                   AND (%d OR REGEXP(%S,0,special.name)) \
                                   AND (%d OR (special.storageId IN (%S))) \
                                   AND (%d OR (special.id IN (%S))) \
@@ -7186,7 +7143,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
-  return error;
+  return ERROR_NONE;
 }
 
 bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
