@@ -41,7 +41,7 @@
 
 /***************************** Constants *******************************/
 #if 1
-#define DEBUG_WARNING_LOCK_TIME  5ULL*1000ULL    // DEBUG only: warning lock time [ms]
+#define DEBUG_WARNING_LOCK_TIME  500ULL    // DEBUG only: warning lock time [ms]
 #define DEBUG_MAX_LOCK_TIME     60ULL*1000ULL    // DEBUG only: max. lock time [ms]
 #else
 #define DEBUG_WARNING_LOCK_TIME MAX_UINT64
@@ -1055,7 +1055,7 @@ void Database_lock(DatabaseHandle *databaseHandle)
   assert(databaseHandle->handle != NULL);
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  DATABASE_LOCK(databaseHandle,"");
+  DATABASE_LOCK(databaseHandle,"");
 }
 void Database_unlock(DatabaseHandle *databaseHandle)
 {
@@ -1063,7 +1063,7 @@ void Database_unlock(DatabaseHandle *databaseHandle)
   assert(databaseHandle->handle != NULL);
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  DATABASE_UNLOCK(databaseHandle);
+  DATABASE_UNLOCK(databaseHandle);
 }
 
 Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
