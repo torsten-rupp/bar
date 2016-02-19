@@ -131,8 +131,8 @@ CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalE
     UPDATE entities
       SET totalStorageCount=totalStorageCount-1,
           totalStorageSize =totalStorageSize -OLD.totalEntrySize,
-          totalEntryCount =totalEntryCount -OLD.totalEntryCount,
-          totalEntrySize  =totalEntrySize  -OLD.totalEntrySize,
+          totalEntryCount  =totalEntryCount -OLD.totalEntryCount,
+          totalEntrySize   =totalEntrySize  -OLD.totalEntrySize,
 
           totalFileCount     =totalFileCount     -OLD.totalFileCount,
           totalFileSize      =totalFileSize      -OLD.totalFileSize,
