@@ -2768,7 +2768,6 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
 
 void Database_debugEnable(bool enabled)
 {
-#if 0
   if (enabled)
   {
     databaseDebugCounter++;
@@ -2779,7 +2778,6 @@ void Database_debugEnable(bool enabled)
 
     databaseDebugCounter--;
   }
-#endif
 }
 
 void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle)
