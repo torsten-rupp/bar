@@ -3975,8 +3975,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-Database_lock(&indexHandle->databaseHandle);
-uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -3989,6 +3987,7 @@ uint64 t0=Misc_getTimestamp();
                             GROUP BY entities.jobUUID; \
                            "
 #else
+//TODO: usage total*
                            "SELECT entities1.id, \
                                    entities1.jobUUID, \
                                    STRFTIME('%%s',(SELECT MAX(created) FROM storage WHERE storage.entityId=entities1.id)), \
@@ -4052,9 +4051,6 @@ uint64 t0=Misc_getTimestamp();
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
-uint64 t1=Misc_getTimestamp();
-fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
-Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -4212,8 +4208,6 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-Database_lock(&indexHandle->databaseHandle);
-uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -4311,9 +4305,6 @@ uint64 t0=Misc_getTimestamp();
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
-uint64 t1=Misc_getTimestamp();
-fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
-Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -4506,8 +4497,6 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   assert((indexIdCount == 0) || (indexIds != NULL));
   assert(count != NULL);
 
-uint64 t0=Misc_getTimestamp();
-
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
@@ -4544,257 +4533,40 @@ uint64 t0=Misc_getTimestamp();
       }
     }
   }
-  else
-  {
-//    String_appendCString(uuidIdsString,"0");
-//    String_appendCString(entityIdsString,"0");
-//    String_appendCString(storageIdsString,"0");
-  }
-#warning entryIds not used
 
   if (count != NULL) (*count) = 0L;
   if (size != NULL) (*size) = 0LL;
 
   indexStateSetString = String_new();
-
-  #define STORAGE_IDS "  SELECT storage.id FROM storage where storage.id IN (%S) \
-                       UNION \
-                         SELECT storage.id FROM storage WHERE storage.entityId IN ($S) \
-                       UNION \
-                         SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN ($S))) \
-                      "
-
-// -------------------------------
-fprintf(stderr,"%s, %d:++++++++++++++++++++++++++++++++++++++++++++++++++ \n",__FILE__,__LINE__);
-{
-uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-#if 1
-                           "  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
-                                                                   AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                                                                   AND (%d OR REGEXP(%S,0,storage.name)) \
-                            UNION ALL \
-                              SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (%S))) \
-                            UNION ALL \
-                              SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))))) \
+                           "SELECT COUNT(storage.id),\
+                                   TOTAL(storage.totalEntryCount), \
+                                   TOTAL(storage.totalEntrySize) \
+                            FROM storage \
+                            WHERE storage.id IN (  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
+                                                                                        AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                                                                        AND (%d OR REGEXP(%S,0,storage.name)) \
+                                                 UNION ALL \
+                                                   SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (%S))) \
+                                                 UNION ALL \
+                                                   SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))))) \
+                                                ) \
                            ",
-#elif 0
-                           "  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
-                                                                   AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                                                                   AND (%d OR REGEXP(%S,0,storage.name)) \
-                            UNION ALL \
-                              SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (%S))) \
-                           ",
-#elif 0
-                           "  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
-                                                                   AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                                                                   AND (%d OR REGEXP(%S,0,storage.name)) \
-                           ",
-#elif 0
-                           "  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
-                                                                   AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                           ",
-#else
-                           "  SELECT COUNT(storage.id),\
-                                     TOTAL(storage.totalEntryCount), \
-                                     TOTAL(storage.totalEntrySize) \
-                                FROM storage \
-                                  LEFT JOIN entities ON storage.entityId=entities.id \
-                                WHERE     (   %d \
-                                           OR (storage.id IN (%S)) \
-                                           OR (storage.entityId IN (%S)) \
-                                           OR (entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))) \
-                                          ) \
-                                      AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                                      AND (%d OR REGEXP(%S,0,storage.name)) \
-                           ",
-#endif
-#if 1
                            String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
+1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
                            String_isEmpty(entityIdsString ) ? 1 : 0,entityIdsString,
                            String_isEmpty(uuidIdsString   ) ? 1 : 0,uuidIdsString
-#elif 0
-                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           String_isEmpty(entityIdsString ) ? 1 : 0,entityIdsString
-#elif 0
-                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString
-#else
-                           String_isEmpty(storageIdsString) && String_isEmpty(entityIdsString) && String_isEmpty(uuidIdsString) ? 1 : 0,
-                             storageIdsString,
-                             entityIdsString,
-                             uuidIdsString,
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString
-#endif
-                          );
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-exit(1);
-  }
-/*
-  if (Database_getNextRow(&databaseQueryHandle,
-                          "%lu",
-                          &count_
-                         )
-        )
-  {
-  }*/
-  Database_finalize(&databaseQueryHandle);
-uint64 t1=Misc_getTimestamp();
-fprintf(stderr,"%s, %d: dt=%llu\n",__FILE__,__LINE__,t1-t0);
-//exit(1);
-}
-// -------------------------------
-
-
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-#if 1
-                           "  SELECT COUNT(storage.id),\
-                                     TOTAL(storage.totalEntryCount), \
-                                     TOTAL(storage.totalEntrySize) \
-                                FROM storage \
-                                WHERE storage.id IN (  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
-                                                                                            AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                                                                                            AND (%d OR REGEXP(%S,0,storage.name)) \
-                                                     UNION ALL \
-                                                       SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (%S))) \
-                                                     UNION ALL \
-                                                       SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))))) \
-                                                    ) \
-                           ",
-#else
-                           "  SELECT COUNT(storage.id),\
-                                     TOTAL(storage.totalEntryCount), \
-                                     TOTAL(storage.totalEntrySize) \
-                                FROM storage \
-                                  LEFT JOIN entities ON storage.entityId=entities.id \
-                                WHERE     (   %d \
-                                           OR (storage.id IN (%S)) \
-                                           OR (storage.entityId IN (%S)) \
-                                           OR (entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))) \
-                                          ) \
-                                      AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                                      AND (%d OR REGEXP(%S,0,storage.name)) \
-                           ",
-#endif
-#if 0
-                           "UNION ALL"
-                           "  SELECT COUNT(images.id),TOTAL(images.size) \
-                                FROM images \
-                                  LEFT JOIN storage ON storage.id=images.storageId \
-                                WHERE     %d \
-                                      AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
-                                      AND (%d OR REGEXP(%S,0,images.name)) \
-                                      AND (%d OR (images.storageId IN (%S))) \
-                                      AND (%d OR (images.id IN (%S))) \
-                           "
-                           "UNION ALL"
-                           "  SELECT COUNT(directories.id),0.0 \
-                                FROM directories \
-                                  LEFT JOIN storage ON storage.id=directories.storageId \
-                                WHERE     %d \
-                                      AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
-                                      AND (%d OR REGEXP(%S,0,directories.name)) \
-                                      AND (%d OR (directories.storageId IN (%S))) \
-                                      AND (%d OR (directories.id IN (%S))) \
-                           "
-                           "UNION ALL"
-                           "  SELECT COUNT(links.id),0.0 \
-                                FROM links \
-                                  LEFT JOIN storage ON storage.id=links.storageId \
-                                WHERE     %d \
-                                      AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
-                                      AND (%d OR REGEXP(%S,0,links.name)) \
-                                      AND (%d OR (links.storageId IN (%S))) \
-                                      AND (%d OR (links.id IN (%S))) \
-                           "
-                           "UNION ALL"
-                           "  SELECT COUNT(hardlinks.id),TOTAL(hardlinks.size) \
-                                FROM hardlinks \
-                                  LEFT JOIN storage ON storage.id=hardlinks.storageId \
-                                WHERE     %d \
-                                      AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
-                                      AND (%d OR REGEXP(%S,0,hardlinks.name)) \
-                                      AND (%d OR (hardlinks.storageId IN (%S))) \
-                                      AND (%d OR (hardlinks.id IN (%S))) \
-                           "
-                           "UNION ALL"
-                           "  SELECT COUNT(special.id),0.0 \
-                                FROM special \
-                                  LEFT JOIN storage ON storage.id=special.storageId \
-                                WHERE     %d \
-                                      AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
-                                      AND (%d OR REGEXP(%S,0,special.name)) \
-                                      AND (%d OR (special.storageId IN (%S))) \
-                                      AND (%d OR (special.id IN (%S))) \
-                           ",
-#endif
-#if 1
-                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           String_isEmpty(entityIdsString ) ? 1 : 0,entityIdsString,
-                           String_isEmpty(uuidIdsString   ) ? 1 : 0,uuidIdsString
-#else
-                           String_isEmpty(storageIdsString) && String_isEmpty(entityIdsString) && String_isEmpty(uuidIdsString) ? 1 : 0,
-                             storageIdsString,
-                             entityIdsString,
-                             uuidIdsString,
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString
-#endif
-
-#if 0
-                           IN_SET(indexTypeSet,INDEX_TYPE_IMAGE),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,imageIdsString,
-
-                           IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,directoryIdsString,
-
-                           IN_SET(indexTypeSet,INDEX_TYPE_LINK),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,linkIdsString,
-
-                           IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,hardlinkIdsString,
-
-                           IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-1||                             String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           (storageIdCount == 0  ) ? 1 : 0,storageIdsString,
-                           (entryIdCount   == 0  ) ? 1 : 0,specialIdsString
-#endif
                           );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-exit(1);
     String_delete(indexStateSetString);
     String_delete(storageIdsString);
     String_delete(ftsString);
     String_delete(regexpString);
-    return -1L;
+    return error;
   }
   String_delete(indexStateSetString);
   if (Database_getNextRow(&databaseQueryHandle,
@@ -4806,6 +4578,8 @@ exit(1);
         )
   {
     if (count != NULL) (*count) = count_;
+//TODO
+//    if (totalCount != NULL) (*size) = (uint64)totalEntrySize_;
     if (size != NULL) (*size) = (uint64)totalEntrySize_;
   }
   Database_finalize(&databaseQueryHandle);
@@ -5544,7 +5318,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
   error = ERROR_NONE;
 
-fprintf(stderr,"%s, %d:  %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),entryIdCount);
   // files
   if (error == ERROR_NONE)
   {
@@ -5975,8 +5748,6 @@ fprintf(stderr,"%s, %d:  %d %d\n",__FILE__,__LINE__,String_isEmpty(pattern),entr
   String_delete(ftsString);
   String_delete(regexpString);
 
-fprintf(stderr,"%s, %d: %x %s\n",__FILE__,__LINE__,error,Error_getText(error));
-
   return error;
 }
 
@@ -6035,8 +5806,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-Database_lock(&indexHandle->databaseHandle);
-uint64 t0=Misc_getTimestamp();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "  SELECT files.id, \
@@ -6232,9 +6001,6 @@ uint64 t0=Misc_getTimestamp();
     return error;
   }
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-uint64 t1=Misc_getTimestamp();
-fprintf(stderr,"%s, %d: Index_initListUUIDs dt=%llu\n",__FILE__,__LINE__,t1-t0);
-Database_unlock(&indexHandle->databaseHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
