@@ -1513,12 +1513,16 @@ Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.
               try { trigger.wait(); } catch (InterruptedException exception) { /* ignored */ };
             }
 
-            // if not triggered (timeout occurred) update is done invisible (color is not set)
-            if (!this.updateCount && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
-
             // get update count, offsets to update
             updateCount = this.updateCount;
             updateOffsets.addAll(this.updateOffsets);
+
+            // if not triggered (timeout occurred) update count is done invisible (color is not set)
+            if (!this.updateCount && this.updateOffsets.isEmpty())
+            {
+              updateCount = true;
+              setUpdateIndicator = false;
+            }
 
             // wait for immediate further triggers
             do
@@ -2971,12 +2975,16 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
-            // if not triggered (timeout occurred) update is done invisible (color is not set)
-            if (!this.updateCount && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
-
             // get update count, offsets to update
             updateCount = this.updateCount;
             updateOffsets.addAll(this.updateOffsets);
+
+            // if not triggered (timeout occurred) update count is done invisible (color is not set)
+            if (!this.updateCount && this.updateOffsets.isEmpty())
+            {
+              updateCount = true;
+              setUpdateIndicator = false;
+            }
 
             // wait for immediate further triggers
             do
