@@ -747,10 +747,10 @@ return 0;
   {
     public String jobUUID;                        // job UUID
     public String name;
-    public long   lastDateTime;                   // date/time when storage was created or last time some storage was created
+    public long   lastCreatedDateTime;            // last date/time when some storage was created
+    public String lastErrorMessage;               // last error message
     public long   totalEntries;
     public long   totalSize;
-    public String lastErrorMessage;               // last error message
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -762,7 +762,7 @@ return 0;
                                (Object)uuidIndexData,
                                uuidIndexData.name,
                                Units.formatByteSize(uuidIndexData.totalSize),
-                               (uuidIndexData.lastDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastDateTime*1000L)) : "-",
+                               (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                ""
                               );
       }
@@ -782,27 +782,27 @@ return 0;
      * @param indexId index id
      * @param jobUUID job uuid
      * @param name job name
-     * @param lastDateTime last date/time (timestamp) when storage was created
+     * @param lastCreatedDateTime last date/time (timestamp) when some storage was created
+     * @param lastErrorMessage last error message text
      * @param totalEntries total number of entries of storage
      * @param totalSize total size of storage [byte]
-     * @param lastErrorMessage last error message text
      */
     UUIDIndexData(long   indexId,
                   String jobUUID,
                   String name,
-                  long   lastDateTime,
+                  long   lastCreatedDateTime,
+                  String lastErrorMessage,
                   long   totalEntries,
-                  long   totalSize,
-                  String lastErrorMessage
+                  long   totalSize
                  )
     {
       super(indexId);
-      this.jobUUID          = jobUUID;
-      this.name             = name;
-      this.lastDateTime     = lastDateTime;
-      this.totalEntries     = totalEntries;
-      this.totalSize        = totalSize;
-      this.lastErrorMessage = lastErrorMessage;
+      this.jobUUID             = jobUUID;
+      this.name                = name;
+      this.lastCreatedDateTime = lastCreatedDateTime;
+      this.lastErrorMessage    = lastErrorMessage;
+      this.totalEntries        = totalEntries;
+      this.totalSize           = totalSize;
     }
 
     /** get number of entries
@@ -861,7 +861,7 @@ return 0;
      */
     public String toString()
     {
-      return "UUIDIndexData {"+jobUUID+", lastDateTime="+lastDateTime+", totalSize="+totalSize+" bytes}";
+      return "UUIDIndexData {"+jobUUID+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes}";
     }
   }
 
@@ -870,10 +870,10 @@ return 0;
   class EntityIndexData extends IndexData implements Serializable
   {
     public Settings.ArchiveTypes archiveType;
-    public long                  lastDateTime;         // last date/time when some storage was created
+    public long                  lastCreatedDateTime;  // last date/time when some storage was created
+    public String                lastErrorMessage;     // last error message
     public long                  totalEntries;
     public long                  totalSize;
-    public String                lastErrorMessage;     // last error message
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -885,7 +885,7 @@ return 0;
                                (Object)entityIndexData,
                                entityIndexData.archiveType.toString(),
                                Units.formatByteSize(entityIndexData.totalSize),
-                               (entityIndexData.lastDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastDateTime*1000L)) : "-",
+                               (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
                                ""
                               );
       }
@@ -905,25 +905,25 @@ Dprintf.dprintf("");
     /** create job data index
      * @param entityId entity id
      * @param name name of storage
-     * @param lastDateTime last date/time (timestamp) when storage was created
+     * @param lastCreatedDateTime last date/time (timestamp) when some storage was created
+     * @param lastErrorMessage last error message text
      * @param totalEntries total number of entresi of storage
      * @param totalSize total size of storage [byte]
-     * @param lastErrorMessage last error message text
      */
     EntityIndexData(long                  entityId,
                     Settings.ArchiveTypes archiveType,
-                    long                  lastDateTime,
+                    long                  lastCreatedDateTime,
+                    String                lastErrorMessage,
                     long                  totalEntries,
-                    long                  totalSize,
-                    String                lastErrorMessage
+                    long                  totalSize
                    )
     {
       super(entityId);
-      this.archiveType      = archiveType;
-      this.lastDateTime     = lastDateTime;
-      this.totalEntries     = totalEntries;
-      this.totalSize        = totalSize;
-      this.lastErrorMessage = lastErrorMessage;
+      this.archiveType         = archiveType;
+      this.lastCreatedDateTime = lastCreatedDateTime;
+      this.lastErrorMessage    = lastErrorMessage;
+      this.totalEntries        = totalEntries;
+      this.totalSize           = totalSize;
     }
 
     /** get number of entries
@@ -966,11 +966,11 @@ Dprintf.dprintf("");
       EntityIndexData entityIndexData = (EntityIndexData)indexData;
       int             result;
 
-      if      (lastDateTime < entityIndexData.lastDateTime)
+      if      (lastCreatedDateTime < entityIndexData.lastCreatedDateTime)
       {
         result = -1;
       }
-      else if (lastDateTime > entityIndexData.lastDateTime)
+      else if (lastCreatedDateTime > entityIndexData.lastCreatedDateTime)
       {
         result = 1;
       }
@@ -1000,10 +1000,10 @@ Dprintf.dprintf("");
     {
       super.writeObject(out);
       out.writeObject(archiveType);
-      out.writeObject(lastDateTime);
+      out.writeObject(lastCreatedDateTime);
+      out.writeObject(lastErrorMessage);
       out.writeObject(totalEntries);
       out.writeObject(totalSize);
-      out.writeObject(lastErrorMessage);
     }
 
     /** read storage index data object from object stream
@@ -1016,11 +1016,11 @@ Dprintf.dprintf("");
       throws IOException, ClassNotFoundException
     {
       super.readObject(in);
-      archiveType      = (Settings.ArchiveTypes)in.readObject();
-      lastDateTime     = (Long)in.readObject();
-      totalEntries     = (Long)in.readObject();
-      totalSize        = (Long)in.readObject();
-      lastErrorMessage = (String)in.readObject();
+      archiveType         = (Settings.ArchiveTypes)in.readObject();
+      lastCreatedDateTime = (Long)in.readObject();
+      lastErrorMessage    = (String)in.readObject();
+      totalEntries        = (Long)in.readObject();
+      totalSize           = (Long)in.readObject();
     }
 
     /** convert data to string
@@ -1028,7 +1028,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "EntityIndexData {"+indexId+", type="+archiveType.toString()+", lastDateTime="+lastDateTime+", totalSize="+totalSize+" bytes}";
+      return "EntityIndexData {"+indexId+", type="+archiveType.toString()+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes}";
     }
   }
 
@@ -1039,7 +1039,7 @@ Dprintf.dprintf("");
     public String                jobName;                  // job name or null
     public Settings.ArchiveTypes archiveType;              // archive type
     public String                name;                     // name
-    public long                  lastDateTime;             // last date/time when some storage was created
+    public long                  lastCreatedDateTime;      // last date/time when some storage was created
     private long                 totalEntries;
     private long                 totalSize;
     public IndexStates           indexState;               // state of index
@@ -1057,7 +1057,7 @@ Dprintf.dprintf("");
                                (Object)storageIndexData,
                                storageIndexData.name,
                                Units.formatByteSize(storageIndexData.totalSize),
-                               (storageIndexData.lastDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastDateTime*1000L)) : "-",
+                               (storageIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                storageIndexData.indexState.toString()
                               );
       }
@@ -1073,7 +1073,7 @@ Dprintf.dprintf("");
                                  (Object)storageIndexData,
                                  storageIndexData.name,
                                  Units.formatByteSize(storageIndexData.totalSize),
-                                 simpleDateFormat.format(new Date(storageIndexData.lastDateTime*1000L)),
+                                 simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                  storageIndexData.indexState.toString()
                                 );
       }
@@ -1084,7 +1084,7 @@ Dprintf.dprintf("");
      * @param jobName job name or null
      * @param archiveType archive type
      * @param name name of storage
-     * @param lastDateTime date/time (timestamp) when storage was created
+     * @param lastCreatedDateTime date/time (timestamp) when some storage was created
      * @param totalEntries number of entries
      * @param totalSize size of storage [byte]
      * @param indexState storage index state
@@ -1096,7 +1096,7 @@ Dprintf.dprintf("");
                      String                jobName,
                      Settings.ArchiveTypes archiveType,
                      String                name,
-                     long                  lastDateTime,
+                     long                  lastCreatedDateTime,
                      long                  totalEntries,
                      long                  totalSize,
                      IndexStates           indexState,
@@ -1109,7 +1109,7 @@ Dprintf.dprintf("");
       this.jobName             = jobName;
       this.archiveType         = archiveType;
       this.name                = name;
-      this.lastDateTime        = lastDateTime;
+      this.lastCreatedDateTime = lastCreatedDateTime;
       this.totalEntries        = totalEntries;
       this.totalSize           = totalSize;
       this.indexState          = indexState;
@@ -1123,18 +1123,18 @@ Dprintf.dprintf("");
      * @param jobName job name
      * @param archiveType archive type
      * @param name name of storage
-     * @param lastDateTime date/time (timestamp) when storage was created
+     * @param lastCreatedDateTime date/time (timestamp) when storage was created
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
     StorageIndexData(long                  storageId,
                      String                jobName,
                      Settings.ArchiveTypes archiveType,
                      String                name,
-                     long                  lastDateTime,
+                     long                  lastCreatedDateTime,
                      long                  lastCheckedDateTime
                     )
     {
-      this(storageId,jobName,archiveType,name,lastDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(storageId,jobName,archiveType,name,lastCreatedDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
 Dprintf.dprintf("");
     }
 
@@ -1184,7 +1184,7 @@ Dprintf.dprintf("");
                               (Object)this,
                               name,
                               Units.formatByteSize(totalSize),
-                              simpleDateFormat.format(new Date(lastDateTime*1000L)),
+                              simpleDateFormat.format(new Date(lastCreatedDateTime*1000L)),
                               indexState.toString()
                              );
 
@@ -1229,7 +1229,7 @@ return 0;
       out.writeObject(jobName);
       out.writeObject(archiveType);
       out.writeObject(name);
-      out.writeObject(lastDateTime);
+      out.writeObject(lastCreatedDateTime);
       out.writeObject(totalEntries);
       out.writeObject(totalSize);
       out.writeObject(indexState);
@@ -1250,7 +1250,7 @@ return 0;
       jobName             = (String)in.readObject();
       archiveType         = (Settings.ArchiveTypes)in.readObject();
       name                = (String)in.readObject();
-      lastDateTime        = (Long)in.readObject();
+      lastCreatedDateTime = (Long)in.readObject();
       totalEntries        = (Long)in.readObject();
       totalSize           = (Long)in.readObject();
       indexState          = (IndexStates)in.readObject();
@@ -1263,7 +1263,7 @@ return 0;
      */
     public String toString()
     {
-      return "StorageIndexData {"+indexId+", name="+name+", lastDateTime="+lastDateTime+", totalSize="+totalSize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
+      return "StorageIndexData {"+indexId+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
     }
   };
 
@@ -1376,7 +1376,7 @@ return 0;
     private final int PAGE_SIZE = 64;
 
     private Object           trigger              = new Object();   // trigger update object
-    private boolean          updateFlag           = false;
+    private boolean          updateCount          = false;
     private HashSet<Integer> updateOffsets        = new HashSet<Integer>();
     private int              count                = 0;
     private String           storagePattern       = "";
@@ -1397,6 +1397,7 @@ return 0;
      */
     public void run()
     {
+      boolean          updateCount   = true;
       HashSet<Integer> updateOffsets = new HashSet<Integer>();
       try
       {
@@ -1424,32 +1425,31 @@ return 0;
           // update tree/table
           try
           {
-Dprintf.dprintf("%d ",System.currentTimeMillis());
+Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.size());
             HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
-            if (!this.updateFlag)
+            if (!this.updateCount)
             {
               updateUUIDTreeItems(uuidTreeItems);
             }
-
             HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
-            if (!this.updateFlag)
+            if (!this.updateCount)
             {
               updateEntityTreeItems(uuidTreeItems,entityTreeItems);
             }
-            if (!this.updateFlag)
+            if (!this.updateCount)
             {
               updateStorageTreeItems(entityTreeItems);
             }
 
-            if (!this.updateFlag)
+            if (updateCount)
             {
               updateStorageTableCount();
             }
-            if (!this.updateFlag && (updateOffsets.size() > 0))
+            if (!updateOffsets.isEmpty())
             {
               updateStorageTable(updateOffsets);
             }
-Dprintf.dprintf("%d ",System.currentTimeMillis());
+Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.size());
           }
           catch (CommunicationError error)
           {
@@ -1469,7 +1469,8 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
           // update menues
           try
           {
-            updateUUIDMenus();
+//TODO
+//            updateUUIDMenus();
           }
           catch (CommunicationError error)
           {
@@ -1504,28 +1505,31 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
           // wait for trigger or sleep a short time
           synchronized(trigger)
           {
-            if (!this.updateFlag && this.updateOffsets.isEmpty())
+            if (!this.updateCount && this.updateOffsets.isEmpty())
             {
               // wait for refresh request trigger or timeout
-              try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
+//TODO
+//              try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
+              try { trigger.wait(); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // if not triggered (timeout occurred) update is done invisible (color is not set)
-            if (!this.updateFlag && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
+            if (!this.updateCount && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
 
-            // get offsets to update
+            // get update count, offsets to update
+            updateCount = this.updateCount;
             updateOffsets.addAll(this.updateOffsets);
 
             // wait for immediate further triggers
             do
             {
-              this.updateFlag = false;
+              this.updateCount = false;
               this.updateOffsets.clear();
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
               updateOffsets.addAll(this.updateOffsets);
             }
-            while (this.updateFlag || (this.updateOffsets.size() > 0));
+            while (this.updateCount || (this.updateOffsets.size() > 0));
           }
         }
       }
@@ -1584,8 +1588,7 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
-
-          updateFlag = true;
+          updateCount = true;
           trigger.notify();
         }
       }
@@ -1604,8 +1607,7 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
         {
           this.storagePattern     = storagePattern;
           this.setUpdateIndicator = true;
-
-          updateFlag = true;
+          updateCount = true;
           trigger.notify();
         }
       }
@@ -1624,8 +1626,7 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
-
-          updateFlag = true;
+          updateCount = true;
           trigger.notify();
         }
       }
@@ -1641,10 +1642,7 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
         int offset = (index/PAGE_SIZE)*PAGE_SIZE;
         if (!updateOffsets.contains(offset))
         {
-Dprintf.dprintf("%d ",System.currentTimeMillis());
           updateOffsets.add(offset);
-
-          updateFlag = true;
           trigger.notify();
         }
       }
@@ -1657,8 +1655,7 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
       synchronized(trigger)
       {
         this.setUpdateIndicator = true;
-
-        updateFlag = true;
+        updateCount = true;
         trigger.notify();
       }
     }
@@ -1668,7 +1665,7 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
      */
     private boolean isUpdateTriggered()
     {
-      return updateFlag || !updateOffsets.isEmpty();
+      return updateCount || !updateOffsets.isEmpty();
     }
 
     /** update UUID tree items
@@ -1699,79 +1696,88 @@ Dprintf.dprintf("%d ",System.currentTimeMillis());
       // update UUID list
 // TODO
 assert storagePattern != null;
-      command = BARServer.runCommand(StringParser.format("INDEX_UUID_LIST maxCount=%d pattern=%'S",
-100,//                                                         storageMaxCount,
-                                                         storagePattern
-                                                        ),
-                                     1
-                                    );
-      while (   !isUpdateTriggered()
-             && !command.endOfData()
-             && command.getNextResult(errorMessage,
-                                      valueMap,
-                                      Command.TIMEOUT
-                                     ) == Errors.NONE
-            )
-      {
-        try
-        {
-          long   indexId          = valueMap.getLong  ("indexId"         );
-          String jobUUID          = valueMap.getString("jobUUID"         );
-          String name             = valueMap.getString("name"            );
-          long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
-          long   totalEntries     = valueMap.getLong  ("totalEntries"    );
-          long   totalSize        = valueMap.getLong  ("totalSize"       );
-          String lastErrorMessage = valueMap.getString("lastErrorMessage");
+Dprintf.dprintf("-----------------------------------------------");
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S offset=%d limit=%d",
+                                                   storagePattern,
+                                                   0,//offset
+                                                   100000 //limit
+                                                  ),
+                               1,
+                               new CommandResultHandler()
+                               {
+                                 public int handleResult(int i, ValueMap valueMap)
+                                 {
+                                   try
+                                   {
+                                     long   indexId             = valueMap.getLong  ("indexId"            );
+                                     String jobUUID             = valueMap.getString("jobUUID"            );
+                                     String name                = valueMap.getString("name"               );
+                                     long   lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
+                                     String lastErrorMessage    = valueMap.getString("lastErrorMessage"   );
+                                     long   totalEntries        = valueMap.getLong  ("totalEntries"       );
+                                     long   totalSize           = valueMap.getLong  ("totalSize"          );
 
-          // add/update index map
-          final UUIDIndexData uuidIndexData = new UUIDIndexData(indexId,
-                                                                jobUUID,
-                                                                name,
-                                                                lastDateTime,
-                                                                totalEntries,
-                                                                totalSize,
-                                                                lastErrorMessage
-                                                               );
+                                     // add/update index map
+                                     final UUIDIndexData uuidIndexData = new UUIDIndexData(indexId,
+                                                                                           jobUUID,
+                                                                                           name,
+                                                                                           lastCreatedDateTime,
+                                                                                           lastErrorMessage,
+                                                                                           totalEntries,
+                                                                                           totalSize
+                                                                                          );
 
-          // update/insert tree item
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexData);
-              if (uuidTreeItem == null)
-              {
-                // insert tree item
-                uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
-                                                      findStorageTreeIndex(uuidIndexData),
-                                                      (Object)uuidIndexData,
-                                                      true
-                                                     );
-                uuidIndexData.setTreeItem(uuidTreeItem);
-              }
-              else
-              {
-                assert uuidTreeItem.getData() instanceof UUIDIndexData;
+                                     // update/insert tree item
+                                     display.syncExec(new Runnable()
+                                     {
+                                       public void run()
+                                       {
+                                         TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexData);
+                                         if (uuidTreeItem == null)
+                                         {
+                                           // insert tree item
+                                           uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
+                                                                                 findStorageTreeIndex(uuidIndexData),
+                                                                                 (Object)uuidIndexData,
+                                                                                 true
+                                                                                );
+                                           uuidIndexData.setTreeItem(uuidTreeItem);
+                                         }
+                                         else
+                                         {
+                                           assert uuidTreeItem.getData() instanceof UUIDIndexData;
 
-                // keep tree item
-                removeUUIDTreeItemSet.remove(uuidTreeItem);
-              }
-              if (uuidTreeItem.getExpanded())
-              {
-                uuidTreeItems.add(uuidTreeItem);
-              }
-            }
-          });
+                                           // keep tree item
+                                           removeUUIDTreeItemSet.remove(uuidTreeItem);
+                                         }
+                                         if (uuidTreeItem.getExpanded())
+                                         {
+                                           uuidTreeItems.add(uuidTreeItem);
+                                         }
+                                       }
+                                     });
 
-        }
-        catch (IllegalArgumentException exception)
-        {
-          if (Settings.debugLevel > 0)
-          {
-            System.err.println("ERROR: "+exception.getMessage());
-          }
-        }
-      }
+                                   }
+                                   catch (IllegalArgumentException exception)
+                                   {
+                                     if (Settings.debugLevel > 0)
+                                     {
+                                       System.err.println("ERROR: "+exception.getMessage());
+                                     }
+                                   }
+
+                                     // check if aborted
+  //                                   if (isUpdateTriggered() || (n[0] >= limit))
+                                   if (isUpdateTriggered())
+                                   {
+  //TODO
+  //                                     abort();
+                                   }
+
+                                   return Errors.NONE;
+                                 }
+                               }
+                              );
       if (isUpdateTriggered()) return;
 
       // remove not existing entries
@@ -1840,22 +1846,22 @@ assert storagePattern != null;
       {
         try
         {
-          long                  entityId         = valueMap.getLong  ("entityId"                               );
-          String                jobUUID          = valueMap.getString("jobUUID"                                );
-          String                scheduleUUID     = valueMap.getString("scheduleUUID"                           );
-          Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-          long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
-          long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
-          long                  totalSize        = valueMap.getLong  ("totalSize"                              );
-          String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
+          long                  entityId            = valueMap.getLong  ("entityId"                               );
+          String                jobUUID             = valueMap.getString("jobUUID"                                );
+          String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+          Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+          long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
+          String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
+          long                  totalEntries        = valueMap.getLong  ("totalEntries"                           );
+          long                  totalSize           = valueMap.getLong  ("totalSize"                              );
 
           // add entity data index
           final EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                       archiveType,
-                                                                      lastDateTime,
+                                                                      lastCreatedDateTime,
+                                                                      lastErrorMessage,
                                                                       totalEntries,
-                                                                      totalSize,
-                                                                      lastErrorMessage
+                                                                      totalSize
                                                                      );
 
           // insert/update tree item
@@ -1929,10 +1935,10 @@ assert storagePattern != null;
       }
     }
 
-    /** update storage tree items
+    /** update storage tree item
      * @param entityTreeItem job tree item to update
      */
-    private void updateStorageTreeItems(final TreeItem entityTreeItem)
+    private void updateStorageTreeItem(final TreeItem entityTreeItem)
     {
       final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
       Command                 command;
@@ -2059,7 +2065,7 @@ assert storagePattern != null;
     {
       for (final TreeItem entityTreeItem : entityTreeItems)
       {
-        updateStorageTreeItems(entityTreeItem);
+        updateStorageTreeItem(entityTreeItem);
       }
     }
 
@@ -2074,7 +2080,7 @@ assert storagePattern != null;
       }
       else if (treeItem.getData() instanceof EntityIndexData)
       {
-        updateStorageTreeTableThread.updateStorageTreeItems(treeItem);
+        updateStorageTreeTableThread.updateStorageTreeItem(treeItem);
       }
     }
 
@@ -2084,6 +2090,7 @@ assert storagePattern != null;
     {
       assert storagePattern != null;
 
+Dprintf.dprintf("updateStorageTableCount+++++++++++++++++++++++++++++");
       // get storages info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
@@ -2114,9 +2121,6 @@ assert storagePattern != null;
           widgetStorageTable.setItemCount(count);
         }
       });
-
-      // reset
-      updateFlag = false;
     }
 
     /** refresh storage table items
@@ -2128,7 +2132,6 @@ assert storagePattern != null;
       assert storagePattern != null;
       assert offset >= 0;
       assert count >= 0;
-Dprintf.dprintf("%d xxxxx %d",System.currentTimeMillis(),offset);
 
       // get limit
       final int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
@@ -2191,7 +2194,7 @@ Dprintf.dprintf("%d xxxxx %d",System.currentTimeMillis(),offset);
                                                                  (Object)storageIndexData,
                                                                  storageIndexData.name,
                                                                  Units.formatByteSize(storageIndexData.totalSize),
-                                                                 simpleDateFormat.format(new Date(storageIndexData.lastDateTime*1000L)),
+                                                                 simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                                                  storageIndexData.indexState.toString()
                                                                 );
                                          tableItem.setChecked(selectedIndexIdSet.contains(storageIndexData.indexId));
@@ -2207,7 +2210,7 @@ Dprintf.dprintf("%d xxxxx %d",System.currentTimeMillis(),offset);
                                    }
 
                                    // store number of entries
-                                   n[0] = i;
+                                   n[0] = i+1;
 
                                    // check if aborted
                                    if (isUpdateTriggered() || (n[0] >= limit))
@@ -2242,10 +2245,8 @@ Dprintf.dprintf("%d xxxxx %d",System.currentTimeMillis(),offset);
         Integer offsets[] = updateOffsets.toArray(new Integer[updateOffsets.size()]);
         for (Integer offset : offsets)
         {
-          if (updateStorageTable(offset))
-          {
-            updateOffsets.remove(offset);
-          }
+          if (!updateStorageTable(offset)) break;
+          updateOffsets.remove(offset);
         }
       }
       finally
@@ -2303,22 +2304,22 @@ Dprintf.dprintf("%d xxxxx %d",System.currentTimeMillis(),offset);
       {
         try
         {
-          long   indexId          = valueMap.getLong  ("indexId"         );
-          String jobUUID          = valueMap.getString("jobUUID"         );
-          String name             = valueMap.getString("name"            );
-          long   lastDateTime     = valueMap.getLong  ("lastDateTime"    );
-          long   totalEntries     = valueMap.getLong  ("totalEntries"    );
-          long   totalSize        = valueMap.getLong  ("totalSize"       );
-          String lastErrorMessage = valueMap.getString("lastErrorMessage");
+          long   indexId             = valueMap.getLong  ("indexId"            );
+          String jobUUID             = valueMap.getString("jobUUID"            );
+          String name                = valueMap.getString("name"               );
+          long   lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
+          String lastErrorMessage    = valueMap.getString("lastErrorMessage"   );
+          long   totalEntries        = valueMap.getLong  ("totalEntries"       );
+          long   totalSize           = valueMap.getLong  ("totalSize"          );
 
           // add UUID index data
           final UUIDIndexData uuidIndexData = new UUIDIndexData(indexId,
                                                                 jobUUID,
                                                                 name,
-                                                                lastDateTime,
+                                                                lastCreatedDateTime,
+                                                                lastErrorMessage,
                                                                 totalEntries,
-                                                                totalSize,
-                                                                lastErrorMessage
+                                                                totalSize
                                                                );
 
           // update/insert menu item
@@ -2490,22 +2491,22 @@ Dprintf.dprintf("%d xxxxx %d",System.currentTimeMillis(),offset);
         {
           try
           {
-            long                  entityId         = valueMap.getLong  ("entityId"                               );
-            String                jobUUID          = valueMap.getString("jobUUID"                                );
-            String                scheduleUUID     = valueMap.getString("scheduleUUID"                           );
-            Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-            long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
-            long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
-            long                  totalSize        = valueMap.getLong  ("totalSize"                              );
-            String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
+            long                  entityId            = valueMap.getLong  ("entityId"                               );
+            String                jobUUID             = valueMap.getString("jobUUID"                                );
+            String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+            Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+            long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
+            String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
+            long                  totalEntries        = valueMap.getLong  ("totalEntries"                           );
+            long                  totalSize           = valueMap.getLong  ("totalSize"                              );
 
             // add entity data index
             final EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                         archiveType,
-                                                                        lastDateTime,
+                                                                        lastCreatedDateTime,
+                                                                        lastErrorMessage,
                                                                         totalEntries,
-                                                                        totalSize,
-                                                                        lastErrorMessage
+                                                                        totalSize
                                                                        );
 
             // update/insert menu item
@@ -2520,7 +2521,7 @@ Dprintf.dprintf("%d xxxxx %d",System.currentTimeMillis(),offset);
                   menuItem = Widgets.insertMenuItem(subMenu,
                                                     findStorageMenuIndex(subMenu,entityIndexData),
                                                     (Object)entityIndexData,
-                                                    ((entityIndexData.lastDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
+                                                    ((entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
                                                    );
                   menuItem.addSelectionListener(new SelectionListener()
                   {
@@ -2881,7 +2882,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     private final int PAGE_SIZE = 64;
 
     private Object           trigger            = new Object();   // trigger update object
-    private boolean          updateFlag         = false;
+    private boolean          updateCount        = false;
     private HashSet<Integer> updateOffsets      = new HashSet<Integer>();
     private int              count              = 0;
     private EntryTypes       entryType          = EntryTypes.ANY;
@@ -2902,6 +2903,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      */
     public void run()
     {
+      boolean          updateCount   = true;
       HashSet<Integer> updateOffsets = new HashSet<Integer>();
       try
       {
@@ -2923,11 +2925,11 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           // update table count, table segment
           try
           {
-            if (!this.updateFlag)
+            if (updateCount)
             {
               updateEntryTableCount();
             }
-            if (!this.updateFlag && (updateOffsets.size() > 0))
+            if (updateOffsets.size() > 0)
             {
               updateEntryTable(updateOffsets);
             }
@@ -2964,27 +2966,28 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           synchronized(trigger)
           {
             // wait for refresh request trigger or timeout
-            if (!this.updateFlag && (this.updateOffsets.size() == 0))
+            if (!this.updateCount && (this.updateOffsets.size() == 0))
             {
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // if not triggered (timeout occurred) update is done invisible (color is not set)
-            if (!this.updateFlag && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
+            if (!this.updateCount && this.updateOffsets.isEmpty()) setUpdateIndicator = false;
 
-            // get offsets to update
+            // get update count, offsets to update
+            updateCount = this.updateCount;
             updateOffsets.addAll(this.updateOffsets);
 
             // wait for immediate further triggers
             do
             {
-              this.updateFlag = false;
+              this.updateCount = false;
               this.updateOffsets.clear();
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
               updateOffsets.addAll(this.updateOffsets);
             }
-            while (this.updateFlag || (this.updateOffsets.size() > 0));
+            while (this.updateCount || (this.updateOffsets.size() > 0));
           }
         }
       }
@@ -3050,8 +3053,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           this.entryType          = entryType;
           this.newestEntriesOnly  = newestEntriesOnly;
           this.setUpdateIndicator = true;
-
-          updateFlag = true;
+          updateCount = true;
           trigger.notify();
         }
       }
@@ -3070,8 +3072,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.entryPattern       = entryPattern;
           this.setUpdateIndicator = true;
-
-          updateFlag = true;
+          updateCount = true;
           trigger.notify();
         }
       }
@@ -3088,8 +3089,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.entryType          = entryType;
           this.setUpdateIndicator = true;
-
-          updateFlag = true;
+          updateCount = true;
           trigger.notify();
         }
       }
@@ -3107,8 +3107,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.newestEntriesOnly  = newestEntriesOnly;
           this.setUpdateIndicator = true;
-
-          updateFlag = true;
+          updateCount = true;
           trigger.notify();
         }
       }
@@ -3125,8 +3124,6 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         if (!updateOffsets.contains(offset))
         {
           updateOffsets.add(offset);
-
-          updateFlag = true;
           trigger.notify();
         }
       }
@@ -3138,7 +3135,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     {
       synchronized(trigger)
       {
-        updateFlag = true;
+        updateCount = true;
         trigger.notify();
       }
     }
@@ -3148,7 +3145,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      */
     private boolean isUpdateTriggered()
     {
-      return updateFlag || !updateOffsets.isEmpty();
+      return updateCount || !updateOffsets.isEmpty();
     }
 
     /** refresh entry table display count
@@ -3200,9 +3197,6 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           widgetEntryTable.setItemCount(Math.min(count,MAX_SHOWN_ENTRIES));
         }
       });
-
-      // reset
-      updateFlag = false;
     }
 
     /** refresh entry table items
@@ -3483,7 +3477,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                    }
 
                                    // store number of entries
-                                   n[0] = i;
+                                   n[0] = i+1;
 
                                    // check if aborted
                                    if (isUpdateTriggered() || (n[0] >= limit))
@@ -3517,10 +3511,8 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         Integer offsets[] = updateOffsets.toArray(new Integer[updateOffsets.size()]);
         for (Integer offset : offsets)
         {
-          if (updateEntryTable(offset))
-          {
-            updateOffsets.remove(offset);
-          }
+          if (!updateEntryTable(offset)) break;
+          updateOffsets.remove(offset);
         }
       }
       finally
@@ -3759,37 +3751,37 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,1,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.lastDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastDateTime*1000L)) : "-");
+    label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,1,1,TableLayoutData.WE);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,2,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.getEntries()));
+    label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.lastErrorMessage);
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,2,1,TableLayoutData.WE);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,3,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entityIndexData.getSize()),entityIndexData.getSize()));
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.getEntries()));
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,3,1,TableLayoutData.WE);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,4,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.lastErrorMessage);
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entityIndexData.getSize()),entityIndexData.getSize()));
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,4,1,TableLayoutData.WE);
@@ -3860,7 +3852,7 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,2,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastDateTime*1000L)));
+    label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)));
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -4333,6 +4325,7 @@ Dprintf.dprintf("");
         public void dragSetData(DragSourceEvent dragSourceEvent)
         {
           dragSourceEvent.data = selectedIndexData;
+//TODO
 Dprintf.dprintf("dragSourceEvent.data=%s",dragSourceEvent.data);
         }
         public void dragFinished(DragSourceEvent dragSourceEvent)
@@ -4352,6 +4345,7 @@ Dprintf.dprintf("dragSourceEvent.data=%s",dragSourceEvent.data);
         }
         public void drop(DropTargetEvent dropTargetEvent)
         {
+//TODO
 Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
           if (dropTargetEvent.data != null)
           {
@@ -4362,6 +4356,7 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
             {
               IndexData fromIndexData = (IndexData)dropTargetEvent.data;
               IndexData toIndexData   = (IndexData)treeItem.getData();
+//TODO
 Dprintf.dprintf("fromIndexData=%s",fromIndexData);
 Dprintf.dprintf("toIndexData=%s",toIndexData);
 
@@ -4443,7 +4438,6 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           TableItem tableItem = (TableItem)event.item;
 
           int i = widgetStorageTable.indexOf(tableItem);
-Dprintf.dprintf("%d widgetStorageTable %d",System.currentTimeMillis(),i);
           updateStorageTreeTableThread.triggerUpdate(i);
         }
       });
@@ -5850,22 +5844,23 @@ Dprintf.dprintf("");
           {
             try
             {
-              long                  entityId         = valueMap.getLong  ("entityId"                               );
-              String                jobUUID          = valueMap.getString("jobUUID"                                );
-              String                scheuduleUUID    = valueMap.getString("scheduleUUID"                           );
-              Settings.ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-              long                  lastDateTime     = valueMap.getLong  ("lastDateTime"                           );
-              long                  totalEntries     = valueMap.getLong  ("totalEntries"                           );
-              long                  totalSize        = valueMap.getLong  ("totalSize"                              );
-              String                lastErrorMessage = valueMap.getString("lastErrorMessage"                       );
+              long                  entityId            = valueMap.getLong  ("entityId"                               );
+              String                jobUUID             = valueMap.getString("jobUUID"                                );
+              String                scheuduleUUID       = valueMap.getString("scheduleUUID"                           );
+              Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+              long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
+              String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
+              long                  totalEntries        = valueMap.getLong  ("totalEntries"                           );
+              long                  totalSize           = valueMap.getLong  ("totalSize"                              );
 
               // add entity data index
               final EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                           archiveType,
-                                                                          lastDateTime,
+                                                                          lastCreatedDateTime,
+                                                                          lastErrorMessage,
                                                                           totalEntries,
-                                                                          totalSize,
-                                                                          lastErrorMessage);
+                                                                          totalSize
+                                                                         );
 
               // insert/update tree item
               display.syncExec(new Runnable()
