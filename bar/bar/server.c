@@ -4164,9 +4164,9 @@ LOCAL Errors deleteUUID(const String jobUUID)
                              NULL,  // scheduleUUID,
                              NULL,  // createdDateTime,
                              NULL,  // archiveType,
+                             NULL,  // lastErrorMessage,
                              NULL,  // totalEntries,
-                             NULL,  // totalSize,
-                             NULL   // lastErrorMessage
+                             NULL  // totalSize,
                             )
         )
   {
@@ -4243,9 +4243,9 @@ LOCAL void purgeExpiredEntities(void)
                                   scheduleUUID,
                                   NULL,  // createdDateTime,
                                   NULL,  // archiveType,
+                                  NULL,  // lastErrorMessage
                                   NULL,  // totalEntries,
-                                  NULL,  // totalSize,
-                                  NULL   // lastErrorMessage
+                                  NULL  // totalSize,
                                  )
           )
     {
@@ -4297,9 +4297,9 @@ LOCAL void purgeExpiredEntities(void)
                                             NULL,  // scheduleUUID
                                             &createdDateTime,
                                             &archiveType,
+                                            NULL,  // lastErrorMessage
                                             &totalEntries,
-                                            &totalSize,
-                                            NULL   // lastErrorMessage
+                                            &totalSize
                                            )
                     )
               {
@@ -4347,9 +4347,9 @@ LOCAL void purgeExpiredEntities(void)
                                             NULL,  // scheduleUUID
                                             &createdDateTime,
                                             &archiveType,
+                                            NULL,  // lastErrorMessage
                                             &totalEntries,
-                                            &totalSize,
-                                            NULL   // lastErrorMessage
+                                            &totalSize
                                            )
                     )
               {
@@ -10812,9 +10812,9 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
                                      NULL,  // scheduleUUID,
                                      &createdDateTime,  // createdDateTime,
                                      NULL,  // archiveType,
+                                     NULL,  // lastErrorMessage
                                      &entries,
-                                     &size,
-                                     NULL   // lastErrorMessage
+                                     &size
                                     )
                 )
           {
@@ -13518,16 +13518,17 @@ restoreCommandInfo.clientInfo->abortFlag = FALSE;
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            maxCount=<n>|0
 *            pattern=<text>
+*            [offset=<n>]
+*            [limit=<n>]
 *          Result:
 *            indexId=<n>
 *            jobUUID=<uuid> \
 *            name=<name> \
-*            lastDateTime=<created date/time [s]> \
-*            totalEntries=<n> \
-*            totalSize=<n> \
+*            lastCreatedDateTime=<created date/time [s]> \
 *            lastErrorMessage=<text> \
+*            totalEntries=<n> \
+*            totalBytes=<n> \
 *            ...
 \***********************************************************************/
 
@@ -13542,9 +13543,9 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     String  jobUUID;
     String  name;
     uint64  lastCreatedDateTime;
+    String  lastErrorMessage;
     uint64  totalEntries;
     uint64  totalSize;
-    String  lastErrorMessage;
   } UUIDDataNode;
 
   typedef struct
@@ -13626,16 +13627,17 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     return String_compare(uuidDataNode1->name,uuidDataNode2->name,CALLBACK(NULL,NULL));
   }
 
-  uint             maxCount;
   String           patternString;
+  uint64           offset;
+  uint64           limit;
   UUIDDataList     uuidDataList;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          indexId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   uint64           lastCreatedDateTime;
-  uint64           totalEntries,totalSize;
   String           lastErrorMessage;
+  uint64           totalEntries,totalSize;
   SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
   UUIDDataNode     *uuidDataNode;
@@ -13643,8 +13645,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get max. count, index state, filter pattern
-  StringMap_getUInt(argumentMap,"maxCount",&maxCount,0);
+  // filter pattern, offset, limit
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
@@ -13652,6 +13653,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     String_delete(patternString);
     return;
   }
+  StringMap_getUInt64(argumentMap,"offset",&offset,0);
+  StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -13671,10 +13674,11 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     LIST_ITERATE(&jobList,jobNode)
     {
       // limit number of results
-      if ((maxCount > 0) && (List_count(&uuidDataList) >= maxCount))
-      {
-        break;
-      }
+//TODO
+//      if ((maxCount > 0) && (List_count(&uuidDataList) >= maxCount))
+//      {
+//        break;
+//      }
 
       // add uuid data node
       uuidDataNode = findUUIDDataNode(&uuidDataList,jobNode->uuid);
@@ -13697,24 +13701,26 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
         uuidDataNode->jobUUID             = String_duplicate(jobNode->uuid);
         uuidDataNode->name                = String_duplicate(jobNode->uuid);
         uuidDataNode->lastCreatedDateTime = 0LL;
+        uuidDataNode->lastErrorMessage    = String_new();
         uuidDataNode->totalEntries        = 0LL;
         uuidDataNode->totalSize           = 0LL;
-        uuidDataNode->lastErrorMessage    = String_new();
 
         List_append(&uuidDataList,uuidDataNode);
       }
 
       // clear uuid data
       uuidDataNode->lastCreatedDateTime = 0LL;
+      String_clear(uuidDataNode->lastErrorMessage);
       uuidDataNode->totalEntries        = 0LL;
       uuidDataNode->totalSize           = 0LL;
-      String_clear(uuidDataNode->lastErrorMessage);
     }
   }
 
   // get uuids from database
   error = Index_initListUUIDs(&indexQueryHandle,
-                              indexHandle
+                              indexHandle,
+                              offset,
+                              limit
                              );
   if (error != ERROR_NONE)
   {
@@ -13727,14 +13733,14 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
-         && ((maxCount == 0) || (List_count(&uuidDataList) < maxCount))
+//         && ((maxCount == 0) || (List_count(&uuidDataList) < maxCount))
          && Index_getNextUUID(&indexQueryHandle,
                               &indexId,
                               jobUUID,
                               &lastCreatedDateTime,
+                              lastErrorMessage,
                               &totalEntries,
-                              &totalSize,
-                              lastErrorMessage
+                              &totalSize
                              )
         )
   {
@@ -13758,18 +13764,18 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
       uuidDataNode->jobUUID             = String_duplicate(jobUUID);
       uuidDataNode->name                = String_duplicate(jobUUID);
       uuidDataNode->lastCreatedDateTime = 0LL;
+      uuidDataNode->lastErrorMessage    = String_new();
       uuidDataNode->totalEntries        = 0LL;
       uuidDataNode->totalSize           = 0LL;
-      uuidDataNode->lastErrorMessage    = String_new();
 
       List_append(&uuidDataList,uuidDataNode);
     }
 
     // update uuid data
     uuidDataNode->lastCreatedDateTime = lastCreatedDateTime;
+    String_set(uuidDataNode->lastErrorMessage,lastErrorMessage);
     uuidDataNode->totalEntries        = totalEntries;
     uuidDataNode->totalSize           = totalSize;
-    String_set(uuidDataNode->lastErrorMessage,lastErrorMessage);
   }
   Index_doneList(&indexQueryHandle);
 
@@ -13791,14 +13797,14 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "indexId=%llu jobUUID=%S name=%'S lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
+                     "indexId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
                      uuidDataNode->indexId,
                      uuidDataNode->jobUUID,
                      uuidDataNode->name,
                      uuidDataNode->lastCreatedDateTime,
+                     uuidDataNode->lastErrorMessage,
                      uuidDataNode->totalEntries,
-                     uuidDataNode->totalSize,
-                     uuidDataNode->lastErrorMessage
+                     uuidDataNode->totalSize
                     );
   }
 
@@ -13826,10 +13832,10 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 *            jobUUID=<uuid> \
 *            scheduleUUID=<uuid> \
 *            archiveType=<type> \
-*            lastDateTime=<created time stamp> \
+*            lastCreatedDateTime=<created time stamp> \
+*            lastErrorMessage=<error message>
 *            totalEntries=<n> \
 *            totalSize=<n> \
-*            lastErrorMessage=<error message>
 *            ...
 \***********************************************************************/
 
@@ -13839,11 +13845,11 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          entityId;
-  uint64           createdDateTime;
-  uint64           totalEntries,totalSize;
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  uint64           createdDateTime;
   ArchiveTypes     archiveType;
   String           lastErrorMessage;
+  uint64           totalEntries,totalSize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13886,22 +13892,22 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
                                 scheduleUUID,
                                 &createdDateTime,
                                 &archiveType,
+                                lastErrorMessage,
                                 &totalEntries,
-                                &totalSize,
-                                lastErrorMessage
+                                &totalSize
                                )
         )
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "entityId=%lld jobUUID=%S scheduleUUID=%S archiveType=%s lastDateTime=%llu totalEntries=%llu totalSize=%llu lastErrorMessage=%'S",
+                     "entityId=%lld jobUUID=%S scheduleUUID=%S archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
                      entityId,
                      jobUUID,
                      scheduleUUID,
                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                      createdDateTime,
+                     lastErrorMessage,
                      totalEntries,
-                     totalSize,
-                     lastErrorMessage
+                     totalSize
                     );
   }
   Index_doneList(&indexQueryHandle);
