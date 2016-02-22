@@ -16,6 +16,34 @@ CREATE TABLE IF NOT EXISTS meta(
 INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$version);
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
+// --- uuids -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS uuids(
+  id                  INTEGER PRIMARY KEY,
+  jobUUID             TEXT NOT NULL,
+
+  // updated by triggers
+  totalEntityCount    INTEGER DEFAULT 0,  // total number of entities
+  totalEntitySize     INTEGER DEFAULT 0,  // total size of entities [bytes]
+  lastCreated         INTEGER DEFAULT 0,  // date/time last created entity 
+  lastErrorMessage    TEXT DEFAULT '',    // last entity error message
+
+  totalStorageCount   INTEGER DEFAULT 0,  // total number of storages
+  totalStorageSize    INTEGER DEFAULT 0,  // total size of storages [bytes]
+
+  totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
+  totalEntrySize      INTEGER DEFAULT 0,  // total size of entries [bytes]
+
+  totalFileCount      INTEGER DEFAULT 0,  // total number of file entries
+  totalFileSize       INTEGER DEFAULT 0,  // total size of file entries [bytes]
+  totalImageCount     INTEGER DEFAULT 0,  // total number of image entries
+  totalImageSize      INTEGER DEFAULT 0,  // total size of image entries [bytes]
+  totalDirectoryCount INTEGER DEFAULT 0,  // total number of directory entries
+  totalLinkCount      INTEGER DEFAULT 0,  // total number of link entries
+  totalHardlinkCount  INTEGER DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize   INTEGER DEFAULT 0,  // total size of hardlink entries [bytes]
+  totalSpecialCount   INTEGER DEFAULT 0   // total number of file entries
+);
+
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
   id                  INTEGER PRIMARY KEY,
@@ -27,24 +55,129 @@ CREATE TABLE IF NOT EXISTS entities(
   bidFlag             INTEGER,
 
   // updated by triggers
-  totalStorageCount   INTEGER DEFAULT 0,
-  totalStorageSize    INTEGER DEFAULT 0,
+  totalStorageCount   INTEGER DEFAULT 0,  // total number of storages
+  totalStorageSize    INTEGER DEFAULT 0,  // total size of storages [bytes]
+  lastCreated         INTEGER DEFAULT 0,  // date/time last created storage 
+  lastErrorMessage    TEXT DEFAULT '',    // last storage error message
 
-  totalEntryCount     INTEGER DEFAULT 0,
-  totalEntrySize      INTEGER DEFAULT 0,
+  totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
+  totalEntrySize      INTEGER DEFAULT 0,  // total size of entries [bytes]
 
-  totalFileCount      INTEGER DEFAULT 0,
-  totalFileSize       INTEGER DEFAULT 0,
-  totalImageCount     INTEGER DEFAULT 0,
-  totalImageSize      INTEGER DEFAULT 0,
-  totalDirectoryCount INTEGER DEFAULT 0,
-  totalLinkCount      INTEGER DEFAULT 0,
-  totalHardlinkCount  INTEGER DEFAULT 0,
-  totalHardlinkSize   INTEGER DEFAULT 0,
-  totalSpecialCount   INTEGER DEFAULT 0
+  totalFileCount      INTEGER DEFAULT 0,  // total number of file entries
+  totalFileSize       INTEGER DEFAULT 0,  // total size of file entries [bytes]
+  totalImageCount     INTEGER DEFAULT 0,  // total number of image entries
+  totalImageSize      INTEGER DEFAULT 0,  // total size of image entries [bytes]
+  totalDirectoryCount INTEGER DEFAULT 0,  // total number of directory entries
+  totalLinkCount      INTEGER DEFAULT 0,  // total number of link entries
+  totalHardlinkCount  INTEGER DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize   INTEGER DEFAULT 0,  // total size of hardlink entries [bytes]
+  totalSpecialCount   INTEGER DEFAULT 0   // total number of file entries
+
+//  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (0,'','',0,0,0,0);
-CREATE INDEX IF NOT EXISTS entitiesIndex ON entities (jobUUID);
+CREATE INDEX IF NOT EXISTS entitiesIndex ON entities (jobUUID,created,lastCreated);
+
+// insert/delete/update triggeres
+CREATE TRIGGER entityInsert AFTER INSERT ON entities
+  BEGIN
+    INSERT OR IGNORE INTO uuids
+      (jobUUID) VALUES (NEW.jobUUID);
+    UPDATE uuids
+      SET totalEntityCount   =totalEntityCount   +1,
+          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,
+          lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
+          lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
+
+          totalStorageCount  =totalStorageCount  +NEW.totalStorageCount,
+          totalStorageSize   =totalStorageSize   +NEW.totalStorageSize,
+
+          totalEntryCount    =totalEntryCount    +NEW.totalEntryCount,
+          totalEntrySize     =totalEntrySize     +NEW.totalEntrySize,
+
+          totalFileCount     =totalFileCount     +NEW.totalFileCount,
+          totalFileSize      =totalFileSize      +NEW.totalFileSize,
+          totalImageCount    =totalImageCount    +NEW.totalImageCount,
+          totalImageSize     =totalSpecialCount  +NEW.totalImageSize,
+          totalDirectoryCount=totalDirectoryCount+NEW.totalDirectoryCount,
+          totalLinkCount     =totalLinkCount     +NEW.totalLinkCount,
+          totalHardlinkCount =totalHardlinkCount +NEW.totalHardlinkCount,
+          totalHardlinkSize  =totalHardlinkSize  +NEW.totalHardlinkSize,
+          totalSpecialCount  =totalSpecialCount  +NEW.totalSpecialCount
+      WHERE uuids.jobUUID=NEW.jobUUID;
+  END;
+CREATE TRIGGER entityDelete BEFORE DELETE ON entities
+  BEGIN
+    UPDATE uuids
+      SET totalEntityCount   =totalEntityCount   -1,
+          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,
+          lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
+          lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
+          
+          totalStorageCount  =totalStorageCount  -OLD.totalStorageCount,
+          totalStorageSize   =totalStorageSize   -OLD.totalStorageSize,
+
+          totalEntryCount    =totalEntryCount    -OLD.totalEntryCount,
+          totalEntrySize     =totalEntrySize     -OLD.totalEntrySize,
+
+          totalFileCount     =totalFileCount     -OLD.totalFileCount,
+          totalFileSize      =totalFileSize      -OLD.totalFileSize,
+          totalImageCount    =totalImageCount    -OLD.totalImageCount,
+          totalImageSize     =totalSpecialCount  -OLD.totalImageSize,
+          totalDirectoryCount=totalDirectoryCount-OLD.totalDirectoryCount,
+          totalLinkCount     =totalLinkCount     -OLD.totalLinkCount,
+          totalHardlinkCount =totalHardlinkCount -OLD.totalHardlinkCount,
+          totalHardlinkSize  =totalHardlinkSize  -OLD.totalHardlinkSize,
+          totalSpecialCount  =totalSpecialCount  -OLD.totalSpecialCount
+      WHERE uuids.jobUUID=OLD.jobUUID;
+  END;
+CREATE TRIGGER entityUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEntrySize ON entities
+  BEGIN
+    UPDATE uuids
+      SET totalEntityCount   =totalEntityCount   -1,                        
+          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,       
+          lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
+          lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
+
+          totalStorageCount  =totalStorageCount  -OLD.totalStorageCount,
+          totalStorageSize   =totalStorageSize   -OLD.totalStorageSize,
+
+          totalEntryCount    =totalEntryCount    -OLD.totalEntryCount, 
+          totalEntrySize     =totalEntrySize     -OLD.totalEntrySize,  
+
+          totalFileCount     =totalFileCount     -OLD.totalFileCount,
+          totalFileSize      =totalFileSize      -OLD.totalFileSize,
+          totalImageCount    =totalImageCount    -OLD.totalImageCount,
+          totalImageSize     =totalSpecialCount  -OLD.totalImageSize,
+          totalDirectoryCount=totalDirectoryCount-OLD.totalDirectoryCount,
+          totalLinkCount     =totalLinkCount     -OLD.totalLinkCount,
+          totalHardlinkCount =totalHardlinkCount -OLD.totalHardlinkCount,
+          totalHardlinkSize  =totalHardlinkSize  -OLD.totalHardlinkSize,
+          totalSpecialCount  =totalSpecialCount  -OLD.totalSpecialCount
+      WHERE uuids.jobUUID=OLD.jobUUID;
+    UPDATE uuids
+      SET totalEntityCount   =totalEntityCount   +1,
+          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,       
+          lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
+          lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
+          
+          totalStorageCount  =totalStorageCount  +NEW.totalStorageCount,
+          totalStorageSize   =totalStorageSize   +NEW.totalStorageSize,
+
+          totalEntryCount    =totalEntryCount    +NEW.totalEntryCount, 
+          totalEntrySize     =totalEntrySize     +NEW.totalEntrySize,  
+
+          totalFileCount     =totalFileCount     +NEW.totalFileCount,
+          totalFileSize      =totalFileSize      +NEW.totalFileSize,
+          totalImageCount    =totalImageCount    +NEW.totalImageCount,
+          totalImageSize     =totalSpecialCount  +NEW.totalImageSize,
+          totalDirectoryCount=totalDirectoryCount+NEW.totalDirectoryCount,
+          totalLinkCount     =totalLinkCount     +NEW.totalLinkCount,
+          totalHardlinkCount =totalHardlinkCount +NEW.totalHardlinkCount,
+          totalHardlinkSize  =totalHardlinkSize  +NEW.totalHardlinkSize,
+          totalSpecialCount  =totalSpecialCount  +NEW.totalSpecialCount
+      WHERE uuids.jobUUID=NEW.jobUUID;
+  END;
 
 // --- storage ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage(
@@ -59,23 +192,23 @@ CREATE TABLE IF NOT EXISTS storage(
   errorMessage        TEXT,
 
   // updated by triggers
-  totalEntryCount     INTEGER DEFAULT 0,
-  totalEntrySize      INTEGER DEFAULT 0,
+  totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
+  totalEntrySize      INTEGER DEFAULT 0,  // total size of entries [bytes]
 
-  totalFileCount      INTEGER DEFAULT 0,
-  totalFileSize       INTEGER DEFAULT 0,
-  totalImageCount     INTEGER DEFAULT 0,
-  totalImageSize      INTEGER DEFAULT 0,
-  totalDirectoryCount INTEGER DEFAULT 0,
-  totalLinkCount      INTEGER DEFAULT 0,
-  totalHardlinkCount  INTEGER DEFAULT 0,
-  totalHardlinkSize   INTEGER DEFAULT 0,
-  totalSpecialCount   INTEGER DEFAULT 0
+  totalFileCount      INTEGER DEFAULT 0,  // total number of file entries
+  totalFileSize       INTEGER DEFAULT 0,  // total size of file entries [bytes]
+  totalImageCount     INTEGER DEFAULT 0,  // total number of image entries
+  totalImageSize      INTEGER DEFAULT 0,  // total size of image entries [bytes]
+  totalDirectoryCount INTEGER DEFAULT 0,  // total number of directory entries
+  totalLinkCount      INTEGER DEFAULT 0,  // total number of link entries
+  totalHardlinkCount  INTEGER DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize   INTEGER DEFAULT 0,  // total size of hardlink entries [bytes]
+  totalSpecialCount   INTEGER DEFAULT 0   // total number of file entries
 
   // Note: no foreign key entityId: storage may be created temporary before an entity
   // FOREIGN KEY(entityId) REFERENCES entities(id)
 );
-CREATE INDEX IF NOT EXISTS storagesIndex ON storage (entityId,name);
+CREATE INDEX IF NOT EXISTS storagesIndex ON storage (entityId,name,created);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_storage USING FTS4(
@@ -86,14 +219,17 @@ CREATE VIRTUAL TABLE FTS_storage USING FTS4(
   tokenize=unicode61
 );
 
-// update triggeres
+// insert/delete/update triggeres
 CREATE TRIGGER storageInsert AFTER INSERT ON storage
   BEGIN
     UPDATE entities
-      SET totalStorageCount=totalStorageCount+1,
-          totalStorageSize =totalStorageSize +NEW.totalEntrySize,
-          totalEntryCount =totalEntryCount +NEW.totalEntryCount,
-          totalEntrySize  =totalEntrySize  +NEW.totalEntrySize,
+      SET totalStorageCount  =totalStorageCount  +1,
+          totalStorageSize   =totalStorageSize   +NEW.totalEntrySize,
+          lastCreated        =(SELECT storage.created      FROM storage WHERE storage.entityId=NEW.entityId ORDER BY storage.created DESC LIMIT 0,1),
+          lastErrorMessage   =(SELECT storage.errorMessage FROM storage WHERE storage.entityId=NEW.entityId ORDER BY storage.created DESC LIMIT 0,1),
+
+          totalEntryCount    =totalEntryCount    +NEW.totalEntryCount,
+          totalEntrySize     =totalEntrySize     +NEW.totalEntrySize,
 
           totalFileCount     =totalFileCount     +NEW.totalFileCount,
           totalFileSize      =totalFileSize      +NEW.totalFileSize,
@@ -110,10 +246,13 @@ CREATE TRIGGER storageInsert AFTER INSERT ON storage
 CREATE TRIGGER storageDelete BEFORE DELETE ON storage
   BEGIN
     UPDATE entities
-      SET totalStorageCount=totalStorageCount-1,
-          totalStorageSize =totalStorageSize -OLD.totalEntrySize,
-          totalEntryCount =totalEntryCount -OLD.totalEntryCount,
-          totalEntrySize  =totalEntrySize  -OLD.totalEntrySize,
+      SET totalStorageCount  =totalStorageCount  -1,
+          totalStorageSize   =totalStorageSize   -OLD.totalEntrySize,
+          lastCreated        =(SELECT storage.created      FROM storage WHERE storage.entityId=OLD.entityId ORDER BY storage.created DESC LIMIT 0,1),
+          lastErrorMessage   =(SELECT storage.errorMessage FROM storage WHERE storage.entityId=OLD.entityId ORDER BY storage.created DESC LIMIT 0,1),
+
+          totalEntryCount    =totalEntryCount    -OLD.totalEntryCount,
+          totalEntrySize     =totalEntrySize     -OLD.totalEntrySize,
 
           totalFileCount     =totalFileCount     -OLD.totalFileCount,
           totalFileSize      =totalFileSize      -OLD.totalFileSize,
@@ -130,10 +269,13 @@ CREATE TRIGGER storageDelete BEFORE DELETE ON storage
 CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEntrySize ON storage
   BEGIN
     UPDATE entities
-      SET totalStorageCount=totalStorageCount-1,
-          totalStorageSize =totalStorageSize -OLD.totalEntrySize,
-          totalEntryCount  =totalEntryCount -OLD.totalEntryCount,
-          totalEntrySize   =totalEntrySize  -OLD.totalEntrySize,
+      SET totalStorageCount  =totalStorageCount  -1,
+          totalStorageSize   =totalStorageSize   -OLD.totalEntrySize,
+          lastCreated        =(SELECT storage.created      FROM storage WHERE storage.entityId=OLD.entityId ORDER BY storage.created DESC LIMIT 0,1),
+          lastErrorMessage   =(SELECT storage.errorMessage FROM storage WHERE storage.entityId=OLD.entityId ORDER BY storage.created DESC LIMIT 0,1),
+
+          totalEntryCount    =totalEntryCount    -OLD.totalEntryCount,
+          totalEntrySize     =totalEntrySize     -OLD.totalEntrySize,
 
           totalFileCount     =totalFileCount     -OLD.totalFileCount,
           totalFileSize      =totalFileSize      -OLD.totalFileSize,
@@ -146,10 +288,13 @@ CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalE
           totalSpecialCount  =totalSpecialCount  -OLD.totalSpecialCount
       WHERE entities.id=OLD.entityId;
     UPDATE entities
-      SET totalStorageCount=totalStorageCount+1,
-          totalStorageSize =totalStorageSize +NEW.totalEntrySize,
-          totalEntryCount =totalEntryCount +NEW.totalEntryCount,
-          totalEntrySize  =totalEntrySize  +NEW.totalEntrySize,
+      SET totalStorageCount  =totalStorageCount  +1,
+          totalStorageSize   =totalStorageSize   +NEW.totalEntrySize,
+          lastCreated        =(SELECT storage.created      FROM storage WHERE storage.entityId=NEW.entityId ORDER BY storage.created DESC LIMIT 0,1),
+          lastErrorMessage   =(SELECT storage.errorMessage FROM storage WHERE storage.entityId=NEW.entityId ORDER BY storage.created DESC LIMIT 0,1),
+
+          totalEntryCount    =totalEntryCount    +NEW.totalEntryCount,
+          totalEntrySize     =totalEntrySize     +NEW.totalEntrySize,
 
           totalFileCount     =totalFileCount     +NEW.totalFileCount,
           totalFileSize      =totalFileSize      +NEW.totalFileSize,
@@ -195,7 +340,7 @@ CREATE VIRTUAL TABLE FTS_files USING FTS4(
   tokenize=unicode61
 );
 
-// update triggeres
+// insert/delete/update triggeres
 CREATE TRIGGER filesInsert AFTER INSERT ON files
   BEGIN
     UPDATE storage
@@ -260,7 +405,7 @@ CREATE VIRTUAL TABLE FTS_images USING FTS4(
   tokenize=unicode61
 );
 
-// update triggeres
+// insert/delete/update triggeres
 CREATE TRIGGER imagesInsert AFTER INSERT ON images
   BEGIN
     UPDATE storage
@@ -326,7 +471,7 @@ CREATE VIRTUAL TABLE FTS_directories USING FTS4(
   tokenize=unicode61
 );
 
-// update triggeres
+// insert/delete/update triggeres
 CREATE TRIGGER directoriesInsert AFTER INSERT ON directories
   BEGIN
     UPDATE storage
@@ -385,7 +530,7 @@ CREATE VIRTUAL TABLE FTS_links USING FTS4(
   tokenize=unicode61
 );
 
-// update triggeres
+// insert/delete/update triggeres
 CREATE TRIGGER linksInsert AFTER INSERT ON links
   BEGIN
     UPDATE storage
@@ -446,7 +591,7 @@ CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
   tokenize=unicode61
 );
 
-// update triggeres
+// insert/delete/update triggeres
 CREATE TRIGGER hardlinksInsert AFTER INSERT ON hardlinks
   BEGIN
     UPDATE storage
@@ -515,7 +660,7 @@ CREATE VIRTUAL TABLE FTS_special USING FTS4(
   tokenize=unicode61
 );
 
-// update triggeres
+// insert/delete/update triggeres
 CREATE TRIGGER specialInsert AFTER INSERT ON special
   BEGIN
     UPDATE storage
