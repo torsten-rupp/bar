@@ -36,7 +36,8 @@ my $databaseTableDefinition="";
 while ($line=<STDIN>)
 {
   chop $line;
-  if ($line =~ /^\s*\/\// || $line =~ /^\s*$/) { next; }
+  $line =~ s/\/\/.*$//g;
+  if ($line =~ /^\s*$/) { next; }
 
   if ($commentFlag)
   {
