@@ -1006,9 +1006,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        &entityId,
                                                        NULL,  // createdDateTime,
                                                        NULL,  // archiveType,
+                                                       NULL,  // lastErrorMessage
                                                        NULL,  // totalEntryCount,
-                                                       NULL,  // totalSize,
-                                                       NULL  // lastErrorMessage
+                                                       NULL  // totalSize,
                                                       )
                                   )
                                {
@@ -1156,6 +1156,10 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              },NULL),
                              NULL  // filter
                             );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }
@@ -1212,9 +1216,9 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        &entityId,
                                                        NULL,  // createdDateTime,
                                                        NULL,  // archiveType,
+                                                       NULL,  // lastErrorMessage
                                                        NULL,  // totalEntryCount,
-                                                       NULL,  // totalSize,
-                                                       NULL  // lastErrorMessage
+                                                       NULL  // totalSize,
                                                       )
                                   )
                                {
@@ -1362,6 +1366,10 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              },NULL),
                              NULL  // filter
                             );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }
@@ -2383,6 +2391,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   DirectoryListHandle directoryListHandle;
   String              prefixFileName;
   String              oldDatabaseFileName;
+  uint                oldDatabaseCount;
   uint                sleepTime;
 
   plogMessage(NULL,  // logHandle
@@ -2391,7 +2400,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
               "Start upgrade index database\n"
              );
 
-  // get absolute file name
+  // get absolute file name of database
   absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexHandle->databaseFileName);
 
   // open directory
@@ -2415,10 +2424,20 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   // process all *.oldNNNN files
   prefixFileName      = String_appendCString(String_duplicate(absoluteFileName),".old");
   oldDatabaseFileName = String_new();
+  oldDatabaseCount    = 0;
   while (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
   {
     if (String_startsWith(oldDatabaseFileName,prefixFileName))
     {
+      if (oldDatabaseCount == 0)
+      {
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_INDEX,
+                    "INDEX",
+                    "Start upgrade index database\n"
+                   );
+      }
+
       error = importIndex(indexHandle,oldDatabaseFileName);
       if (error == ERROR_NONE)
       {
@@ -2428,20 +2447,31 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
                     "Imported index database '%s'\n",
                     String_cString(oldDatabaseFileName)
                    );
-        (void)File_delete(oldDatabaseFileName,FALSE);
+//TODO
+#warning active
+//        (void)File_delete(oldDatabaseFileName,FALSE);
       }
       else
       {
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
-                    "Import index database '%s' fail: %s\n",
-                    String_cString(oldDatabaseFileName),
-                    Error_getText(error)
+                    "Import index database '%s' fail\n",
+                    String_cString(oldDatabaseFileName)
                    );
       }
       if (indexHandle->upgradeError == ERROR_NONE) indexHandle->upgradeError = error;
+      
+      oldDatabaseCount++;
     }
+  }
+  if (oldDatabaseCount > 0)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Done upgrade index database\n"
+               );
   }
   String_delete(oldDatabaseFileName);
   String_delete(prefixFileName);
@@ -2451,12 +2481,6 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
 
   // free resources
   String_delete(absoluteFileName);
-
-  plogMessage(NULL,  // logHandle
-              LOG_TYPE_INDEX,
-              "INDEX",
-              "Done upgrade index database\n"
-             );
 
   // single clean-ups
   plogMessage(NULL,  // logHandle
@@ -3033,9 +3057,9 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
                              NULL,  // scheduleUUID,
                              NULL,  // createdDateTime,
                              NULL,  // archiveType,
+                             NULL,   // lastErrorMessage
                              NULL,  // totalEntryCount,
-                             NULL,  // totalSize,
-                             NULL   // lastErrorMessage
+                             NULL  // totalSize,
                             )
         )
   {
@@ -3166,9 +3190,9 @@ LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
                              NULL,  // scheduleUUID,
                              NULL,  // createdDateTime,
                              NULL,  // archiveType,
+                             NULL,  // lastErrorMessage
                              NULL,  // totalEntryCount,
-                             NULL,  // totalSize,
-                             NULL   // lastErrorMessage
+                             NULL  // totalSize,
                             )
         )
   {
@@ -3482,9 +3506,9 @@ bool Index_findByUUID(IndexHandle  *indexHandle,
                       IndexId      *entityId,
                       uint64       *createdDateTime,
                       ArchiveTypes *archiveType,
+                      String       lastErrorMessage,
                       uint64       *totalEntryCount,
-                      uint64       *totalSize,
-                      String       lastErrorMessage
+                      uint64       *totalSize
                      )
 {
   Errors              error;
@@ -3499,14 +3523,15 @@ bool Index_findByUUID(IndexHandle  *indexHandle,
     return FALSE;
   }
 
+//TODO errorMessage
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id, \
                                    STRFTIME('%%s',created), \
                                    type, \
+                                   '', \
                                    totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount, \
-                                   totalFileSize+totalImageSize+totalHardlinkSize, \
-                                   '' \
+                                   totalFileSize+totalImageSize+totalHardlinkSize \
                             FROM entities \
                             WHERE    (%d AND jobUUID=%'S) \
                                   OR (%d AND scheduleUUID=%'S) \
@@ -3520,13 +3545,13 @@ bool Index_findByUUID(IndexHandle  *indexHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%llu %llu %d %llu %llu %S",
+                               "%llu %llu %d %S %llu %llu",
                                entityId,
                                createdDateTime,
                                archiveType,
+                               lastErrorMessage,
                                totalEntryCount,
-                               totalSize,
-                               lastErrorMessage
+                               totalSize
                               );
   Database_finalize(&databaseQueryHandle);
 
@@ -3959,7 +3984,9 @@ long Index_countState(IndexHandle *indexHandle,
 }
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
-                           IndexHandle      *indexHandle
+                           IndexHandle      *indexHandle,
+                           uint64           offset,
+                           uint64           limit
                           )
 {
   Errors error;
@@ -3975,22 +4002,24 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
                            "SELECT entities.jobUUID, \
                                    STRFTIME('%%s',(SELECT created FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1)), \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
                                    (SELECT SUM(entries) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID), \
-                                   (SELECT SUM(size) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID), \
-                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                                   (SELECT SUM(size) FROM storage LEFT JOIN entities AS storageEntities ON storage.entityId=storageEntities.id WHERE storageEntities.jobUUID=entities.jobUUID) \
                             FROM entities \
                             GROUP BY entities.jobUUID; \
                            "
-#else
+#elif 0
 //TODO: usage total*
                            "SELECT entities1.id, \
                                    entities1.jobUUID, \
                                    STRFTIME('%%s',(SELECT MAX(created) FROM storage WHERE storage.entityId=entities1.id)), \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities1.id ORDER BY created DESC LIMIT 0,1), \
                                    ( \
                                       (SELECT COUNT(id) FROM files WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId IN \
@@ -4039,15 +4068,30 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                                           (SELECT id FROM entities AS entities2 WHERE entities2.jobUUID=entities1.jobUUID) \
                                         ) \
                                       ) \
-                                   ), \
-                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities1.id ORDER BY created DESC LIMIT 0,1) \
+                                   ) \
                             FROM entities AS entities1 \
                             GROUP BY entities1.jobUUID; \
                            "
+#else
+//TODO: usage total*
+                           "SELECT id, \
+                                   jobUUID, \
+                                   lastCreated, \
+                                   lastErrorMessage, \
+                                   totalEntryCount, \
+                                   totalEntrySize \
+                            FROM uuids \
+                            LIMIT %llu,%llu \
+                           ",
+                           offset,
+                           limit
 #endif
                           );
+Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+exit(1);
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
@@ -4061,13 +4105,12 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        IndexId          *indexId,
                        String           jobUUID,
                        uint64           *lastCreatedDateTime,
-                       uint64           *totalEntryCount,
-                       uint64           *totalSize,
-                       String           lastErrorMessage
+                       String           lastErrorMessage,
+                       uint64           *totalEntries,
+                       uint64           *totalSize
                       )
 {
   DatabaseId databaseId;
-  double     totalSize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -4080,29 +4123,28 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 
 #if 0
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%S %llu %llu %llu %S",
+                             "%S %llu %S %llu %llu",
                              jobUUID,
                              lastCreatedDateTime,
-                             totalEntryCount,
-                             totalSize,
-                             lastErrorMessage
+                             lastErrorMessage,
+                             totalEntries,
+                             totalSize
                             );
 #else
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%llu %S %llu %llu %lf %S",
+                           "%llu %S %llu %S %llu %llu",
                            &databaseId,
                            jobUUID,
                            lastCreatedDateTime,
-                           totalEntryCount,
-                           &totalSize_,
-                           lastErrorMessage
+                           lastErrorMessage,
+                           totalEntries,
+                           totalSize
                           )
      )
   {
     return FALSE;
   }
   if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
-  if (totalSize != NULL) (*totalSize) = (uint64)totalSize_;
 
   return TRUE;
 #endif
@@ -4216,9 +4258,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.scheduleUUID, \
                                    STRFTIME('%%s',entities.created), \
                                    entities.type, \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
                                    (SELECT SUM(entries) FROM storage WHERE storage.entityId=entities.id), \
-                                   (SELECT SUM(size) FROM storage WHERE storage.entityId=entities.id), \
-                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                                   (SELECT SUM(size) FROM storage WHERE storage.entityId=entities.id) \
                             FROM entities \
                             WHERE     (%d OR jobUUID=%'S) \
                                   AND (%d OR scheduleUUID=%'S) \
@@ -4237,6 +4279,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.scheduleUUID, \
                                    STRFTIME('%%s',entities.created), \
                                    entities.type, \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
                                    ( \
                                       (SELECT COUNT(id) FROM files WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId=entities.id) \
@@ -4267,8 +4310,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                      +(SELECT TOTAL(size) FROM hardlinks WHERE storageId IN \
                                         (SELECT id FROM storage WHERE entityId=entities.id) \
                                       ) \
-                                   ), \
-                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                                   ) \
                             FROM entities \
                             WHERE     (%d OR jobUUID=%'S) \
                                   AND (%d OR scheduleUUID=%'S) \
@@ -4285,9 +4327,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.scheduleUUID, \
                                    STRFTIME('%%s',entities.created), \
                                    entities.type, \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
                                    entities.totalEntryCount, \
-                                   entities.totalEntrySize, \
-                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1) \
+                                   entities.totalEntrySize \
                             FROM entities \
                             WHERE     (%d OR jobUUID=%'S) \
                                   AND (%d OR scheduleUUID=%'S) \
@@ -4317,9 +4359,9 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          String           scheduleUUID,
                          uint64           *createdDateTime,
                          ArchiveTypes     *archiveType,
+                         String           lastErrorMessage,
                          uint64           *totalEntryCount,
-                         uint64           *totalSize,
-                         String           lastErrorMessage
+                         uint64           *totalSize
                         )
 {
   DatabaseId databaseId;
@@ -4336,27 +4378,27 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 
 #if 0
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%lld %S %S %llu %u %llu %llu %S",
+                             "%lld %S %S %llu %u %S %llu %llu",
                              &databaseId,
                              jobUUID,
                              scheduleUUID,
                              createdDateTime,
                              archiveType,
+                             lastErrorMessage,
                              totalEntryCount,
-                             totalSize,
-                             lastErrorMessage
+                             totalSize
                             );
 #else
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %S %llu %u %llu %lf %S",
+                           "%lld %S %S %llu %u %S %llu %lf",
                            &databaseId,
                            jobUUID,
                            scheduleUUID,
                            createdDateTime,
                            archiveType,
+                           lastErrorMessage,
                            totalEntryCount,
-                           &totalSize_,
-                           lastErrorMessage
+                           &totalSize_
                           )
      )
   {

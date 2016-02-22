@@ -322,9 +322,9 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 * Output : entityId         - entity id
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          archiveType      - archive type (can be NULL)
+*          lastErrorMessage - last error message (can be NULL)
 *          totalEntries     - total number of entries (can be NULL)
 *          totalSize        - total size [bytes] (can be NULL)
-*          lastErrorMessage - last error message (can be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -335,9 +335,9 @@ bool Index_findByUUID(IndexHandle  *indexHandle,
                       IndexId      *entityId,
                       uint64       *createdDateTime,
                       ArchiveTypes *archiveType,
+                      String       lastErrorMessage,
                       uint64       *totalEntries,
-                      uint64       *totalSize,
-                      String       lastErrorMessage
+                      uint64       *totalSize
                      );
 
 /***********************************************************************\
@@ -488,14 +488,18 @@ long Index_countState(IndexHandle *indexHandle,
 * Purpose: list uuid entries and aggregated data of entities
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          name             - name pattern (glob) or NULL
+*          offset           - offset or 0
+*          limit            - numer of entries to list or
+*                             INDEX_UNLIMITED
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
-                           IndexHandle      *indexHandle
+                           IndexHandle      *indexHandle,
+                           uint64           offset,
+                           uint64           limit
                           );
 
 /***********************************************************************\
@@ -505,9 +509,9 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Output : indexId             - index id of UUID
 *          jobUUID             - unique job id (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
+*          lastErrorMessage    - last storage error message (can be NULL)
 *          totalEntries        - total number of entries (can be NULL)
 *          totalSize           - total storage size [bytes] (can be NULL)
-*          lastErrorMessage    - last storage error message (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -516,9 +520,9 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        IndexId          *indexId,
                        String           jobUUID,
                        uint64           *lastCreatedDateTime,
+                       String           lastErrorMessage,
                        uint64           *totalEntries,
-                       uint64           *totalSize,
-                       String           lastErrorMessage
+                       uint64           *totalSize
                       );
 
 /***********************************************************************\
@@ -562,9 +566,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 *          scheduleUUID     - unique schedule id (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          archiveType      - archive type (can be NULL)
+*          lastErrorMessage - last storage error message (can be NULL)
 *          totalEntries     - total number of entries (can be NULL)
 *          totalSize        - total storage size [bytes] (can be NULL)
-*          lastErrorMessage - last storage error message (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -575,9 +579,9 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          String           scheduleUUID,
                          uint64           *createdDateTime,
                          ArchiveTypes     *archiveType,
+                         String           lastErrorMessage,
                          uint64           *totalEntries,
-                         uint64           *totalSize,
-                         String           lastErrorMessage
+                         uint64           *totalSize
                         );
 
 /***********************************************************************\
