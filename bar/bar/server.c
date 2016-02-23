@@ -2790,7 +2790,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
         {
           // read job
           readJob(jobNode);
-
+          
           // notify about changes
           jobIncludeExcludeChanged(jobNode);
           jobScheduleChanged(jobNode);
@@ -13631,12 +13631,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   uint64           offset;
   uint64           limit;
   UUIDDataList     uuidDataList;
+  String           lastErrorMessage;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          indexId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   uint64           lastCreatedDateTime;
-  String           lastErrorMessage;
   uint64           totalEntries,totalSize;
   SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
@@ -13673,13 +13673,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   {
     LIST_ITERATE(&jobList,jobNode)
     {
-      // limit number of results
-//TODO
-//      if ((maxCount > 0) && (List_count(&uuidDataList) >= maxCount))
-//      {
-//        break;
-//      }
-
       // add uuid data node
       uuidDataNode = findUUIDDataNode(&uuidDataList,jobNode->uuid);
       if (uuidDataNode == NULL)
@@ -13719,8 +13712,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   // get uuids from database
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
-                              offset,
-                              limit
+                              0,
+                              INDEX_UNLIMITED
                              );
   if (error != ERROR_NONE)
   {
@@ -13733,7 +13726,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
-//         && ((maxCount == 0) || (List_count(&uuidDataList) < maxCount))
          && Index_getNextUUID(&indexQueryHandle,
                               &indexId,
                               jobUUID,
@@ -13796,6 +13788,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   // send results
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
+fprintf(stderr,"%s, %d: %lld: %s \n",__FILE__,__LINE__,uuidDataNode->indexId,String_cString(uuidDataNode->name));
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                      "indexId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
                      uuidDataNode->indexId,
