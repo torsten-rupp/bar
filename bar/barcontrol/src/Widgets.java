@@ -5687,6 +5687,24 @@ e composite widget
     return null;
   }
 
+  /** get table item
+   * @param table table
+   * @param data table item data
+   * @return table item or null if not found
+   */
+  public static <T> TableItem getTableItem(Table table, Comparator<T> comparator, T data)
+  {
+    for (TableItem tableItem : table.getItems())
+    {
+      if (comparator.compare(data,(T)tableItem.getData()) == 0)
+      {
+        return tableItem;
+      }
+    }
+
+    return null;
+  }
+
   /** set table item color
    * @param table table
    * @param data table item data
@@ -6525,6 +6543,34 @@ e composite widget
       if (treeItem.getExpanded())
       {
         subTreeItem = getSubTreeItem(treeItem,data);
+        if (subTreeItem != null)
+        {
+          return subTreeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** get tree item
+   * @param tree tree
+   * @param comparator tree item comparator
+   * @return tree item or null if not found
+   */
+  public static <T> TreeItem getTreeItem(Tree tree, Comparator<T> comparator, T data)
+  {
+    TreeItem subTreeItem;
+
+    for (TreeItem treeItem : tree.getItems())
+    {
+      if (comparator.compare(data,(T)treeItem.getData()) == 0)
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        subTreeItem = getSubTreeItem(treeItem,comparator);
         if (subTreeItem != null)
         {
           return subTreeItem;
