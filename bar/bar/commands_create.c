@@ -4048,9 +4048,9 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
                                      createInfo->storageSpecifier->loginName,
                                      createInfo->storageSpecifier->deviceName,
                                      storageMsg.archiveName,
+                                     NULL,  // entityId
                                      NULL,  // jobUUID,
                                      NULL,  // scheduleUUID,
-                                     NULL,  // entityId
                                      &storageId,
                                      NULL,  // indexState,
                                      NULL  // lastCheckedTimestamp

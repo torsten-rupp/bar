@@ -375,9 +375,9 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
 *          findLoginName   - login name to find or NULL
 *          findDeviceName  - device name to find or NULL
 *          findFileName    - file name to find or NULL
-* Output : jobUUID             - unique job id (can be NULL)
+* Output : entityId            - index id of entity (can be NULL)
+*          jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
-*          entityId            - index id of entity (can be NULL)
 *          storageId           - index id of storage (can be NULL)
 *          indexState          - index state (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
@@ -392,9 +392,9 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
                              ConstString  findLoginName,
                              ConstString  findDeviceName,
                              ConstString  findFileName,
+                             IndexId      *entityId,
                              String       jobUUID,
                              String       scheduleUUID,
-                             IndexId      *entityId,
                              IndexId      *storageId,
                              IndexStates  *indexState,
                              uint64       *lastCheckedDateTime

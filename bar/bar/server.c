@@ -5069,9 +5069,9 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                                                        storageSpecifier.loginName,
                                                                        storageSpecifier.deviceName,
                                                                        storageSpecifier.archiveName,
+                                                                       NULL,  // entityId
                                                                        NULL,  // jobUUID
                                                                        NULL,  // scheduleUUID
-                                                                       NULL,  // entityId
                                                                        &storageId,
                                                                        &indexState,
                                                                        &lastCheckedDateTime
@@ -14452,9 +14452,9 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
                                                            storageSpecifier.loginName,
                                                            storageSpecifier.deviceName,
                                                            storageSpecifier.archiveName,
+                                                           NULL,  // entityId
                                                            NULL,  // jobUUID
                                                            NULL,  // scheduleUUID
-                                                           NULL,  // entityId
 //TODO NULL
                                                            &storageId,
                                                            NULL,  // indexState,
