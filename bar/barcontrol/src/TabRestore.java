@@ -291,7 +291,7 @@ public class TabRestore
 
   /** index data
    */
-  class IndexData implements Comparable<IndexData>,Serializable
+  class IndexData implements Serializable
   {
     /** tree item update runnable
      */
@@ -333,6 +333,22 @@ public class TabRestore
       this.tableItem     = null;
       this.subMenu       = null;
       this.menuItem      = null;
+    }
+
+    /** get index comparator instance
+     * @param tree tree
+     */
+    IndexDataComparator getComparatorInstance(Tree tree)
+    {
+      return new IndexDataComparator(tree);
+    }
+
+    /** get index comparator instance
+     * @param table table
+     */
+    IndexDataComparator getComparatorInstance(Table table)
+    {
+      return new IndexDataComparator(table);
     }
 
     /** get tree item reference
@@ -457,16 +473,6 @@ public class TabRestore
       }
     }
 
-    /** compare index data
-     * @return <0/=0/>0 if name </=/> indexData.name
-     */
-    public int compareTo(IndexData indexData)
-    {
-Dprintf.dprintf("");
-//      return name.compareTo(indexData.name);
-return 0;
-    }
-
     /** get info string
      * @return info string
      */
@@ -509,7 +515,7 @@ return 0;
 
   /** index data comparator
    */
-  static class IndexDataComparator implements Comparator<IndexData>
+  static class IndexDataComparator<T extends IndexData> implements Comparator<T>
   {
     // sort modes
     enum SortModes
@@ -520,7 +526,7 @@ return 0;
       STATE
     }
 
-    private SortModes sortMode;
+    protected SortModes sortMode;
 
     /** create storage data comparator
      * @param tree storage tree
@@ -535,8 +541,8 @@ return 0;
       else                                      sortMode = SortModes.NAME;
     }
 
-    /** create storage data comparator
-     * @param table storage table
+    /** create index data comparator
+     * @param table table
      * @param sortColumn sort column
      */
     IndexDataComparator(Table table, TableColumn sortColumn)
@@ -548,20 +554,27 @@ return 0;
       else                                       sortMode = SortModes.NAME;
     }
 
-    /** create storage data comparator
-     * @param tree storage tree
+    /** create index data comparator
+     * @param tree tree
      */
     IndexDataComparator(Tree tree)
     {
       this(tree,tree.getSortColumn());
     }
 
-    /** create storage data comparator
+    /** create index data comparator
      * @param tree storage tree
      */
     IndexDataComparator(Table table)
     {
       this(table,table.getSortColumn());
+    }
+
+    /** create index data comparator
+     */
+    IndexDataComparator()
+    {
+      sortMode = SortModes.NAME;
     }
 
     /** compare index data
@@ -570,24 +583,15 @@ return 0;
                 0 iff indexData1 = indexData2,
                 1 iff indexData1 > indexData2
      */
-    public int compare(IndexData indexData1, IndexData indexData2)
+    @Override
+    public int compare(T indexData1, T indexData2)
     {
       switch (sortMode)
       {
         case NAME:
-          return indexData1.compareTo(indexData2);
-/*
         case SIZE:
-          if      (indexData1.size < indexData2.size) return -1;
-          else if (indexData1.size > indexData2.size) return  1;
-          else                                        return  0;
         case CREATED_DATETIME:
-          if      (indexData1.dateTime < indexData2.dateTime) return -1;
-          else if (indexData1.dateTime > indexData2.dateTime) return  1;
-          else                                                return  0;
         case STATE:
-          return indexData1.indexState.compareTo(indexData2.indexState);
-*/
         default:
           return 0;
       }
@@ -805,6 +809,14 @@ return 0;
       this.totalSize           = totalSize;
     }
 
+    /** get index comparator instance
+     * @param tree tree
+     */
+    UUIDIndexDataComparator getComparatorInstance(Tree tree)
+    {
+      return new UUIDIndexDataComparator(tree);
+    }
+
     /** get number of entries
      * @return entries
      */
@@ -837,17 +849,6 @@ return 0;
       setMenuItem(menuItem,menuItemUpdateRunnable);
     }
 
-    /** compare index data
-     * @return <0/=0/>0 if name </=/> indexData.name
-     */
-    public int compareTo(IndexData indexData)
-    {
-//      return name.compareTo(indexData.name);
-//TODO
-//Dprintf.dprintf("");
-return 0;
-    }
-
     /** get info string
      * @return string
      */
@@ -862,6 +863,55 @@ return 0;
     public String toString()
     {
       return "UUIDIndexData {"+jobUUID+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes}";
+    }
+  }
+
+  /** index data comparator
+   */
+  static class UUIDIndexDataComparator extends IndexDataComparator<UUIDIndexData>
+  {
+    /** create index data comparator
+     * @param tree tree
+     */
+    UUIDIndexDataComparator(Tree tree)
+    {
+      super(tree);
+    }
+
+    /** compare UUID index data
+     * @param uuidIndexData1, uuidIndexData2 index data to compare
+     * @return -1 iff uuidIndexData1 < uuidIndexData2,
+                0 iff uuidIndexData1 = uuidIndexData2,
+                1 iff uuidIndexData1 > indeuuidIndexData2xData2
+     */
+    @Override
+    public int compare(UUIDIndexData uuidIndexData1, UUIDIndexData uuidIndexData2)
+    {
+      switch (sortMode)
+      {
+        case NAME:
+          return uuidIndexData1.name.compareTo(uuidIndexData2.name);
+        case SIZE:
+          if      (uuidIndexData1.totalSize < uuidIndexData2.totalSize) return -1;
+          else if (uuidIndexData1.totalSize > uuidIndexData2.totalSize) return  1;
+          else                                                          return  0;
+        case CREATED_DATETIME:
+          if      (uuidIndexData1.lastCreatedDateTime < uuidIndexData2.lastCreatedDateTime) return -1;
+          else if (uuidIndexData1.lastCreatedDateTime > uuidIndexData2.lastCreatedDateTime) return  1;
+          else                                                                              return  0;
+        case STATE:
+        default:
+          return 0;
+      }
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    @Override
+    public String toString()
+    {
+      return "UUIDIndexDataComparator {"+sortMode+"}";
     }
   }
 
@@ -1274,8 +1324,10 @@ return 0;
   private int findStorageTreeIndex(IndexData indexData)
   {
     TreeItem            treeItems[]         = widgetStorageTree.getItems();
-    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
+    IndexDataComparator indexDataComparator = indexData.getComparatorInstance(widgetStorageTree);
 
+//TODO: remove
+/*
     int index = 0;
     while (   (index < treeItems.length)
            && (indexDataComparator.compare(indexData,(IndexData)treeItems[index].getData()) > 0)
@@ -1285,6 +1337,20 @@ return 0;
     }
 
     return index;
+    */
+
+    int i0 = 0;
+    int i1 = treeItems.length-1;
+    while (i0 < i1)
+    {
+      int i = (i1-i0)/2;
+      int result = indexDataComparator.compare(indexData,(IndexData)treeItems[i].getData());
+      if      (result < 0) i0 = i+1;
+      else if (result > 0) i1 = i-1;
+      else return i;
+    }
+
+    return treeItems.length;
   }
 
   /** find index for insert of item in sorted index data tree
@@ -1294,18 +1360,33 @@ return 0;
    */
   private int findStorageTreeIndex(TreeItem treeItem, IndexData indexData)
   {
-    TreeItem            treeItems[]         = treeItem.getItems();
-    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
+    TreeItem            subTreeItems[]      = treeItem.getItems();
+    IndexDataComparator indexDataComparator = indexData.getComparatorInstance(widgetStorageTree);
 
+//TODO: remove
+/*
     int index = 0;
-    while (   (index < treeItems.length)
-           && (indexDataComparator.compare(indexData,(IndexData)treeItems[index].getData()) > 0)
+    while (   (index < subTreeItems.length)
+           && (indexDataComparator.compare(indexData,(IndexData)subTreeItems[index].getData()) > 0)
           )
     {
       index++;
     }
 
     return index;
+*/
+    int i0 = 0;
+    int i1 = subTreeItems.length-1;
+    while (i0 < i1)
+    {
+      int i = (i1-i0)/2;
+      int result = indexDataComparator.compare(indexData,(IndexData)subTreeItems[i].getData());
+      if      (result < 0) i0 = i+1;
+      else if (result > 0) i1 = i-1;
+      else return i;
+    }
+
+    return subTreeItems.length;
   }
 
   /** find index for insert of item in sorted storage menu
@@ -1317,6 +1398,7 @@ return 0;
     MenuItem            menuItems[]         = widgetStorageTreeAssignToMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
+//TODO: binary search
     int index = STORAGE_TREE_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(uuidIndexData,(UUIDIndexData)menuItems[index].getData()) > 0)
@@ -1338,6 +1420,7 @@ return 0;
     MenuItem            menuItems[]         = subMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
+//TODO: binary search
     int index = STORAGE_LIST_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(entityIndexData,(EntityIndexData)menuItems[index].getData()) > 0)
@@ -1353,11 +1436,13 @@ return 0;
    * @param storageIndexData data of tree item
    * @return index in table
    */
-  private int findStorageTableIndex(StorageIndexData storageIndexData)
+  private int findStorageTableIndex(IndexData indexData)
   {
     TableItem           tableItems[]        = widgetStorageTable.getItems();
-    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable);
+    IndexDataComparator indexDataComparator = indexData.getComparatorInstance(widgetStorageTable);
 
+//TODO: remove
+/*
     int index = 0;
     while (   (index < tableItems.length)
            && (indexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[index].getData()) > 0)
@@ -1367,6 +1452,19 @@ return 0;
     }
 
     return index;
+*/
+    int i0 = 0;
+    int i1 = tableItems.length-1;
+    while (i0 < i1)
+    {
+      int i = (i1-i0)/2;
+      int result = indexDataComparator.compare(indexData,(IndexData)tableItems[i].getData());
+      if      (result < 0) i0 = i+1;
+      else if (result > 0) i1 = i-1;
+      else return i;
+    }
+
+    return tableItems.length;
   }
 
   /** update storage tree/table thread
