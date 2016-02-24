@@ -4042,19 +4042,19 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
     if (storageMsg.storageId != INDEX_ID_NONE)
     {
       if (   appendFlag
-          && Index_findByName(indexHandle,
-                              createInfo->storageSpecifier->type,
-                              createInfo->storageSpecifier->hostName,
-                              createInfo->storageSpecifier->loginName,
-                              createInfo->storageSpecifier->deviceName,
-                              storageMsg.archiveName,
-                              NULL,  // jobUUID,
-                              NULL,  // scheduleUUID,
-                              NULL,  // entityId
-                              &storageId,
-                              NULL,  // indexState,
-                              NULL  // lastCheckedTimestamp
-                             )
+          && Index_findByStorageName(indexHandle,
+                                     createInfo->storageSpecifier->type,
+                                     createInfo->storageSpecifier->hostName,
+                                     createInfo->storageSpecifier->loginName,
+                                     createInfo->storageSpecifier->deviceName,
+                                     storageMsg.archiveName,
+                                     NULL,  // jobUUID,
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // entityId
+                                     &storageId,
+                                     NULL,  // indexState,
+                                     NULL  // lastCheckedTimestamp
+                                    )
          )
       {
         // append storage to existing entity

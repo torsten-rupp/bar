@@ -991,25 +991,25 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                UNUSED_VARIABLE(fromColumnList);
                                UNUSED_VARIABLE(userData);
 
-                               if (   Index_findById(oldIndexHandle,
-                                                     Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE),
-                                                     jobUUID,
-                                                     NULL,  // scheduleUUDI
-                                                     NULL,  // entityId
-                                                     NULL,  // storageName
-                                                     NULL,  // indexState
-                                                     NULL  // lastCheckedDateTime
-                                                    )
-                                   && Index_findByUUID(newIndexHandle,
-                                                       jobUUID,
-                                                       NULL,  // scheduleUUDI,
-                                                       &entityId,
-                                                       NULL,  // createdDateTime,
-                                                       NULL,  // archiveType,
-                                                       NULL,  // lastErrorMessage
-                                                       NULL,  // totalEntryCount,
-                                                       NULL  // totalSize,
-                                                      )
+                               if (   Index_findByStorageId(oldIndexHandle,
+                                                            Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE),
+                                                            NULL,  // jobUUID
+                                                            NULL,  // scheduleUUDI
+                                                            &entityId,
+                                                            NULL,  // storageName
+                                                            NULL,  // indexState
+                                                            NULL  // lastCheckedDateTime
+                                                           )
+                                   && Index_findByJobUUID(newIndexHandle,
+                                                          jobUUID,
+                                                          NULL,  // scheduleUUDI,
+                                                          &entityId,
+                                                          NULL,  // createdDateTime,
+                                                          NULL,  // archiveType,
+                                                          NULL,  // lastErrorMessage
+                                                          NULL,  // totalEntryCount,
+                                                          NULL  // totalSize,
+                                                         )
                                   )
                                {
                                  error = ERROR_NONE;
@@ -1201,25 +1201,25 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                UNUSED_VARIABLE(fromColumnList);
                                UNUSED_VARIABLE(userData);
 
-                               if (   Index_findById(oldIndexHandle,
-                                                     Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE),
-                                                     jobUUID,
-                                                     NULL,  // scheduleUUDI
-                                                     NULL,  // entityId
-                                                     NULL,  // storageName
-                                                     NULL,  // indexState
-                                                     NULL  // lastCheckedDateTime
-                                                    )
-                                   && Index_findByUUID(newIndexHandle,
-                                                       jobUUID,
-                                                       NULL,  // scheduleUUDI,
-                                                       &entityId,
-                                                       NULL,  // createdDateTime,
-                                                       NULL,  // archiveType,
-                                                       NULL,  // lastErrorMessage
-                                                       NULL,  // totalEntryCount,
-                                                       NULL  // totalSize,
-                                                      )
+                               if (   Index_findByStorageId(oldIndexHandle,
+                                                            Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE),
+                                                            jobUUID,
+                                                            NULL,  // scheduleUUDI
+                                                            NULL,  // entityId
+                                                            NULL,  // storageName
+                                                            NULL,  // indexState
+                                                            NULL  // lastCheckedDateTime
+                                                           )
+                                   && Index_findByJobUUID(newIndexHandle,
+                                                          jobUUID,
+                                                          NULL,  // scheduleUUDI,
+                                                          &entityId,
+                                                          NULL,  // createdDateTime,
+                                                          NULL,  // archiveType,
+                                                          NULL,  // lastErrorMessage
+                                                          NULL,  // totalEntryCount,
+                                                          NULL  // totalSize,
+                                                         )
                                   )
                                {
                                  error = ERROR_NONE;
@@ -2461,7 +2461,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
                    );
       }
       if (indexHandle->upgradeError == ERROR_NONE) indexHandle->upgradeError = error;
-      
+
       oldDatabaseCount++;
     }
   }
@@ -3500,16 +3500,16 @@ Errors Index_init(IndexHandle *indexHandle,
   #endif /* NDEBUG */
 }
 
-bool Index_findByUUID(IndexHandle  *indexHandle,
-                      ConstString  jobUUID,
-                      ConstString  scheduleUUID,
-                      IndexId      *entityId,
-                      uint64       *createdDateTime,
-                      ArchiveTypes *archiveType,
-                      String       lastErrorMessage,
-                      uint64       *totalEntryCount,
-                      uint64       *totalSize
-                     )
+bool Index_findByJobUUID(IndexHandle  *indexHandle,
+                         ConstString  jobUUID,
+                         ConstString  scheduleUUID,
+                         IndexId      *entityId,
+                         uint64       *createdDateTime,
+                         ArchiveTypes *archiveType,
+                         String       lastErrorMessage,
+                         uint64       *totalEntryCount,
+                         uint64       *totalSize
+                        )
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
@@ -3558,15 +3558,15 @@ bool Index_findByUUID(IndexHandle  *indexHandle,
   return result;
 }
 
-bool Index_findById(IndexHandle *indexHandle,
-                    IndexId     storageId,
-                    String      jobUUID,
-                    String      scheduleUUID,
-                    IndexId     *entityId,
-                    String      storageName,
-                    IndexStates *indexState,
-                    uint64      *lastCheckedDateTime
-                   )
+bool Index_findByStorageId(IndexHandle *indexHandle,
+                           IndexId     storageId,
+                           String      jobUUID,
+                           String      scheduleUUID,
+                           IndexId     *entityId,
+                           String      storageName,
+                           IndexStates *indexState,
+                           uint64      *lastCheckedDateTime
+                          )
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
@@ -3613,19 +3613,19 @@ bool Index_findById(IndexHandle *indexHandle,
   return result;
 }
 
-bool Index_findByName(IndexHandle  *indexHandle,
-                      StorageTypes storageType,
-                      ConstString  hostName,
-                      ConstString  loginName,
-                      ConstString  deviceName,
-                      ConstString  fileName,
-                      String       jobUUID,
-                      String       scheduleUUID,
-                      IndexId      *entityId,
-                      IndexId      *storageId,
-                      IndexStates  *indexState,
-                      uint64       *lastCheckedDateTime
-                     )
+bool Index_findByStorageName(IndexHandle  *indexHandle,
+                             StorageTypes storageType,
+                             ConstString  hostName,
+                             ConstString  loginName,
+                             ConstString  deviceName,
+                             ConstString  fileName,
+                             String       jobUUID,
+                             String       scheduleUUID,
+                             IndexId      *entityId,
+                             IndexId      *storageId,
+                             IndexStates  *indexState,
+                             uint64       *lastCheckedDateTime
+                            )
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;

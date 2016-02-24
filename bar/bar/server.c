@@ -2790,7 +2790,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
         {
           // read job
           readJob(jobNode);
-          
+
           // notify about changes
           jobIncludeExcludeChanged(jobNode);
           jobScheduleChanged(jobNode);
@@ -3958,15 +3958,15 @@ LOCAL Errors deleteStorage(IndexId storageId)
   storageName = String_new();
 
   // find storage
-  if (!Index_findById(indexHandle,
-                      storageId,
-                      jobUUID,
-                      NULL,  // scheduleUUID
-                      NULL,  // entityId
-                      storageName,
-                      NULL,  // indexState
-                      NULL  // lastCheckedDateTime
-                     )
+  if (!Index_findByStorageId(indexHandle,
+                             storageId,
+                             jobUUID,
+                             NULL,  // scheduleUUID
+                             NULL,  // entityId
+                             storageName,
+                             NULL,  // indexState
+                             NULL  // lastCheckedDateTime
+                            )
      )
   {
     String_delete(storageName);
@@ -5063,19 +5063,19 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                          case FILE_TYPE_LINK:
                                          case FILE_TYPE_HARDLINK:
                                            // get index id, request index update
-                                           if (Index_findByName(indexHandle,
-                                                                storageSpecifier.type,
-                                                                storageSpecifier.hostName,
-                                                                storageSpecifier.loginName,
-                                                                storageSpecifier.deviceName,
-                                                                storageSpecifier.archiveName,
-                                                                NULL,  // jobUUID
-                                                                NULL,  // scheduleUUID
-                                                                NULL,  // entityId
-                                                                &storageId,
-                                                                &indexState,
-                                                                &lastCheckedDateTime
-                                                               )
+                                           if (Index_findByStorageName(indexHandle,
+                                                                       storageSpecifier.type,
+                                                                       storageSpecifier.hostName,
+                                                                       storageSpecifier.loginName,
+                                                                       storageSpecifier.deviceName,
+                                                                       storageSpecifier.archiveName,
+                                                                       NULL,  // jobUUID
+                                                                       NULL,  // scheduleUUID
+                                                                       NULL,  // entityId
+                                                                       &storageId,
+                                                                       &indexState,
+                                                                       &lastCheckedDateTime
+                                                                      )
                                               )
                                            {
                                              if      (fileInfo->timeModified > lastCheckedDateTime)
@@ -14446,20 +14446,20 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                              if (String_endsWithCString(storageSpecifier.archiveName,".bar"))
                              {
 fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPrintableName(&storageSpecifier,NULL)));
-                               if (Index_findByName(indexHandle,
-                                                    storageSpecifier.type,
-                                                    storageSpecifier.hostName,
-                                                    storageSpecifier.loginName,
-                                                    storageSpecifier.deviceName,
-                                                    storageSpecifier.archiveName,
-                                                    NULL,  // jobUUID
-                                                    NULL,  // scheduleUUID
-                                                    NULL,  // entityId
+                               if (Index_findByStorageName(indexHandle,
+                                                           storageSpecifier.type,
+                                                           storageSpecifier.hostName,
+                                                           storageSpecifier.loginName,
+                                                           storageSpecifier.deviceName,
+                                                           storageSpecifier.archiveName,
+                                                           NULL,  // jobUUID
+                                                           NULL,  // scheduleUUID
+                                                           NULL,  // entityId
 //TODO NULL
-                                                    &storageId,
-                                                    NULL,  // indexState,
-                                                    NULL  // lastCheckedDateTime
-                                                   )
+                                                           &storageId,
+                                                           NULL,  // indexState,
+                                                           NULL  // lastCheckedDateTime
+                                                          )
                                   )
                                {
                                  error = Index_setState(indexHandle,
