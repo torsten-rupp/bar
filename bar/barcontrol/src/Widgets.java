@@ -6280,6 +6280,62 @@ e composite widget
     showTreeColumn(treeColumn,false);
   }
 
+  /** get insert position in sorted tree
+   * @param tree tree
+   * @param comparator table data comparator
+   * @param data data
+   * @return index in tree
+   */
+  public static int getTreeItemIndex(Tree tree, Comparator comparator, Object data)
+  {
+    int index = 0;
+
+    if (!tree.isDisposed())
+    {
+      TreeItem[] treeItems = tree.getItems();
+
+      // get sort column index (default: first column)
+      int sortColumnIndex = 0;
+      TreeColumn[] treeColumns = tree.getColumns();
+      for (int i = 0; i < treeColumns.length; i++)
+      {
+        if (tree.getSortColumn() == treeColumns[i])
+        {
+          sortColumnIndex = i;
+          break;
+        }
+      }
+
+      // get sorting direction
+      int sortDirection = tree.getSortDirection();
+      if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
+
+      // find insert index
+      boolean foundFlag = false;
+      while ((index < treeItems.length) && !foundFlag)
+      {
+        switch (sortDirection)
+        {
+          case SWT.UP:
+            if (comparator != String.CASE_INSENSITIVE_ORDER)
+              foundFlag = (comparator.compare(treeItems[index].getData(),data) > 0);
+            else
+              foundFlag = (comparator.compare(treeItems[index].getText(sortColumnIndex),data) > 0);
+            break;
+          case SWT.DOWN:
+            if (comparator != String.CASE_INSENSITIVE_ORDER)
+              foundFlag = (comparator.compare(treeItems[index].getData(),data) < 0);
+            else
+              foundFlag = (comparator.compare(treeItems[index].getText(sortColumnIndex),data) < 0);
+            break;
+        }
+        if (!foundFlag) index++;
+      }
+    }
+
+    return index;
+  }
+
   /** insert tree item
    * @param tree tree widget
    * @param index index (0..n)
@@ -6351,7 +6407,7 @@ e composite widget
    */
   public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final boolean folderFlag, final Object... values)
   {
-    return insertTreeItem(tree,index,data,null,folderFlag,values);
+    return insertTreeItem(tree,index,data,(Image)null,folderFlag,values);
   }
 
   /** add tree item at end
