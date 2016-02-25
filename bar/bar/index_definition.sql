@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS uuids(
   // updated by triggers
   totalEntityCount    INTEGER DEFAULT 0,  // total number of entities
   totalEntitySize     INTEGER DEFAULT 0,  // total size of entities [bytes]
-  lastCreated         INTEGER DEFAULT 0,  // date/time last created entity 
+  lastCreated         INTEGER DEFAULT 0,  // date/time last created entity
   lastErrorMessage    TEXT DEFAULT '',    // last entity error message
 
   totalStorageCount   INTEGER DEFAULT 0,  // total number of storages
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS entities(
   // updated by triggers
   totalStorageCount   INTEGER DEFAULT 0,  // total number of storages
   totalStorageSize    INTEGER DEFAULT 0,  // total size of storages [bytes]
-  lastCreated         INTEGER DEFAULT 0,  // date/time last created storage 
+  lastCreated         INTEGER DEFAULT 0,  // date/time last created storage
   lastErrorMessage    TEXT DEFAULT '',    // last storage error message
 
   totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
@@ -113,7 +113,7 @@ CREATE TRIGGER entityDelete BEFORE DELETE ON entities
           totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
-          
+
           totalStorageCount  =totalStorageCount  -OLD.totalStorageCount,
           totalStorageSize   =totalStorageSize   -OLD.totalStorageSize,
 
@@ -134,16 +134,16 @@ CREATE TRIGGER entityDelete BEFORE DELETE ON entities
 CREATE TRIGGER entityUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEntrySize ON entities
   BEGIN
     UPDATE uuids
-      SET totalEntityCount   =totalEntityCount   -1,                        
-          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,       
+      SET totalEntityCount   =totalEntityCount   -1,
+          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
 
           totalStorageCount  =totalStorageCount  -OLD.totalStorageCount,
           totalStorageSize   =totalStorageSize   -OLD.totalStorageSize,
 
-          totalEntryCount    =totalEntryCount    -OLD.totalEntryCount, 
-          totalEntrySize     =totalEntrySize     -OLD.totalEntrySize,  
+          totalEntryCount    =totalEntryCount    -OLD.totalEntryCount,
+          totalEntrySize     =totalEntrySize     -OLD.totalEntrySize,
 
           totalFileCount     =totalFileCount     -OLD.totalFileCount,
           totalFileSize      =totalFileSize      -OLD.totalFileSize,
@@ -157,15 +157,15 @@ CREATE TRIGGER entityUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEn
       WHERE uuids.jobUUID=OLD.jobUUID;
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   +1,
-          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,       
+          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
-          
+
           totalStorageCount  =totalStorageCount  +NEW.totalStorageCount,
           totalStorageSize   =totalStorageSize   +NEW.totalStorageSize,
 
-          totalEntryCount    =totalEntryCount    +NEW.totalEntryCount, 
-          totalEntrySize     =totalEntrySize     +NEW.totalEntrySize,  
+          totalEntryCount    =totalEntryCount    +NEW.totalEntryCount,
+          totalEntrySize     =totalEntrySize     +NEW.totalEntrySize,
 
           totalFileCount     =totalFileCount     +NEW.totalFileCount,
           totalFileSize      =totalFileSize      +NEW.totalFileSize,
@@ -697,6 +697,8 @@ CREATE TRIGGER specialUpdateName AFTER UPDATE OF name ON special
 /*
 
 // ---------------------------------------------------------------------
+
+VERSION = 5;???
 
 VERSION = 4;
 
