@@ -339,11 +339,11 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
   fixBrokenIds(oldIndexHandle,"links");
   fixBrokenIds(oldIndexHandle,"special");
 
-  // transfer index data to new index
+  // transfer storage and entries
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // pre: copy storage and create entities
+                             // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -363,7 +363,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // post: copy files, images, directories, links, special entries
+                             // post: transfer files, images, directories, links, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromStorageId;
@@ -501,11 +501,11 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
   fixBrokenIds(oldIndexHandle,"hardlinks");
   fixBrokenIds(oldIndexHandle,"special");
 
-  // transfer index data to new index
+  // transfer storage and entries
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // pre: copy storage and create entities
+                             // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -525,7 +525,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // post: copy files, images, directories, links, hardlinks, special entries
+                             // post: transfer files, images, directories, links, hardlinks, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromStorageId;
@@ -690,11 +690,11 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
   error = ERROR_NONE;
 
-  // transfer index data to new index
+  // transfer storage and entries
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // pre: copy storage and create entities
+                             // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -714,7 +714,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // post: copy files, images, directories, links, hardlinks, special entries
+                             // post: transfer files, images, directories, links, hardlinks, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromStorageId;
@@ -977,11 +977,194 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
   fixBrokenIds(oldIndexHandle,"links");
   fixBrokenIds(oldIndexHandle,"special");
 
-  // transfer index data to new index
+fprintf(stderr,"%s, %d: start \n",__FILE__,__LINE__);
+  // transfer entities with storage and entries
+  error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                             &newIndexHandle->databaseHandle,
+                             "entities",
+                             // pre: transfer entity
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             {
+                               return ERROR_NONE;
+                             },NULL),
+                             // post: transfer storages
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             {
+                               Errors  error;
+                               IndexId fromEntityId;
+                               IndexId toEntityId;
+
+                               UNUSED_VARIABLE(userData);
+
+                               fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                               toEntityId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+fprintf(stderr,"%s, %d: copy ebntituy jobUUID=%s: %llu -> %llu\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL),fromEntityId,toEntityId);
+
+                               // transfer storages of entity
+                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                          &newIndexHandle->databaseHandle,
+                                                          "storage",
+                                                          // pre: transfer storage
+                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          {
+                                                            UNUSED_VARIABLE(fromColumnList);
+                                                            UNUSED_VARIABLE(userData);
+
+                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+
+                                                            return ERROR_NONE;
+                                                          },NULL),
+                                                          // post: transfer files, images, directories, links, special entries
+                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          {
+                                                            Errors  error;
+                                                            IndexId fromStorageId;
+                                                            IndexId toStorageId;
+
+                                                            UNUSED_VARIABLE(userData);
+
+                                                            fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                            toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__,__LINE__,toEntityId,Database_getTableColumnListCString(fromColumnList,"name",NULL),fromStorageId,toStorageId);
+
+                                                            error = ERROR_NONE;
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "files",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "images",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "directories",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "links",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "hardlinks",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "special",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            return error;
+                                                          },NULL),
+                                                          "WHERE entityId=%llu",
+                                                          fromEntityId
+                                                         );
+fprintf(stderr,"%s, %d: copy ebntituy done %s\n",__FILE__,__LINE__,Error_getText(error));
+
+                               return error;
+                             },NULL),
+                             NULL  // filter
+                            );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+    return error;
+  }
+
+fprintf(stderr,"%s, %d: import inlknown\n",__FILE__,__LINE__);
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // pre: copy storage and create entities
+                             // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -1027,9 +1210,10 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             // post: copy files, images, directories, links, special entries
+                             // post: transfer files, images, directories, links, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
+                               Errors  error;
                                IndexId fromStorageId;
                                IndexId toStorageId;
 
@@ -1037,6 +1221,8 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+
+                               error = ERROR_NONE;
 
                                if (error == ERROR_NONE)
                                {
@@ -1152,14 +1338,16 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                            );
                                }
 
-                               return ERROR_NONE;
+                               return error;
                              },NULL),
-                             NULL  // filter
+                             "WHERE entityId=0"
                             );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
+fprintf(stderr,"%s, %d: ferti \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -1187,11 +1375,197 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
   fixBrokenIds(oldIndexHandle,"links");
   fixBrokenIds(oldIndexHandle,"special");
 
-  // transfer index data to new index
+  // transfer entities with storage and entries
+  error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                             &newIndexHandle->databaseHandle,
+                             "entities",
+                             // pre: transfer entity
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             {
+                               return ERROR_NONE;
+                             },NULL),
+                             // post: transfer storage
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             {
+                               Errors  error;
+                               IndexId fromEntityId;
+                               IndexId toEntityId;
+
+                               UNUSED_VARIABLE(userData);
+
+                               fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                               toEntityId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
+
+                               // transfer storages of entity
+                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                          &newIndexHandle->databaseHandle,
+                                                          "storage",
+                                                          // pre: transfer storage
+                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          {
+                                                            UNUSED_VARIABLE(fromColumnList);
+                                                            UNUSED_VARIABLE(userData);
+
+                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+
+                                                            return ERROR_NONE;
+                                                          },NULL),
+                                                          // post: transfer files, images, directories, links, special entries
+                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          {
+                                                            Errors  error;
+                                                            IndexId fromStorageId;
+                                                            IndexId toStorageId;
+
+                                                            UNUSED_VARIABLE(userData);
+
+                                                            fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                            toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+
+fprintf(stderr,"%s, %d: start %llu -> %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
+                                                            error = ERROR_NONE;
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+fprintf(stderr,"%s, %d: file\n",__FILE__,__LINE__);
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "files",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+fprintf(stderr,"%s, %d: im\n",__FILE__,__LINE__);
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "images",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+fprintf(stderr,"%s, %d: dir\n",__FILE__,__LINE__);
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "directories",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+fprintf(stderr,"%s, %d: link\n",__FILE__,__LINE__);
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "links",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+fprintf(stderr,"%s, %d: hardl \n",__FILE__,__LINE__);
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "hardlinks",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+fprintf(stderr,"%s, %d: spe\n",__FILE__,__LINE__);
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "special",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
+                                                            return error;
+                                                          },NULL),
+                                                          "WHERE entityId=%llu",
+                                                          fromEntityId
+                                                         );
+
+                               return error;
+                             },NULL),
+                             NULL  // filter
+                            );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             // pre: copy storage and create entity
+                             // pre: transfer storage and create entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
@@ -1364,7 +1738,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return ERROR_NONE;
                              },NULL),
-                             NULL  // filter
+                             "entityId IS NULL"
                             );
   if (error != ERROR_NONE)
   {
@@ -4148,6 +4522,43 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 
   return TRUE;
 #endif
+}
+
+Errors Index_newUUID(IndexHandle *indexHandle,
+                     ConstString jobUUID,
+                     IndexId     *uuidId
+                    )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO uuids \
+                              ( \
+                               jobUUID \
+                              ) \
+                            VALUES \
+                              ( \
+                               %'S \
+                              ); \
+                           ",
+                           jobUUID
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (uuidId != NULL) (*uuidId) = Database_getLastRowId(&indexHandle->databaseHandle);
+
+  return ERROR_NONE;
 }
 
 Errors Index_deleteUUID(IndexHandle *indexHandle,
