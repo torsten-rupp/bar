@@ -14215,7 +14215,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   String           jobName;
   String           storageName;
   String           printableStorageName;
-  uint             count;
   String           errorMessage;
   IndexId          storageId;
   ArchiveTypes     archiveType;
@@ -14310,7 +14309,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     String_delete(storagePatternString);
     return;
   }
-  count = 0;
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextStorage(&indexQueryHandle,
                                  &storageId,
@@ -14367,7 +14365,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                      lastCheckedDateTime,
                      errorMessage
                     );
-    count++;
   }
   Index_doneList(&indexQueryHandle);
 
