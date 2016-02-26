@@ -13710,6 +13710,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   }
 
   // get uuids from database
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,List_count(&uuidDataList));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
                               0,
@@ -13770,6 +13772,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     uuidDataNode->totalSize           = totalSize;
   }
   Index_doneList(&indexQueryHandle);
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,List_count(&uuidDataList));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // fill in current job names, sort list by names
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
@@ -13784,6 +13788,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     }
   }
   List_sort(&uuidDataList,CALLBACK((ListNodeCompareFunction)compareUUIDDataNode,NULL));
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,List_count(&uuidDataList));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // send results
   LIST_ITERATE(&uuidDataList,uuidDataNode)
