@@ -4155,7 +4155,8 @@ bool Index_findByState(IndexHandle   *indexHandle,
   assert(indexHandle != NULL);
   assert(storageId != NULL);
 
-  (*storageId) = DATABASE_ID_NONE;
+  if (entityId != NULL) (*entityId) = INDEX_ID_NONE;
+  (*storageId) = INDEX_ID_NONE;
   if (storageName != NULL) String_clear(storageName);
   if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = 0LL;
 
@@ -4197,6 +4198,9 @@ bool Index_findByState(IndexHandle   *indexHandle,
                                lastCheckedDateTime
                               );
   Database_finalize(&databaseQueryHandle);
+
+  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId);
+  if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId);
 
   return result;
 }
