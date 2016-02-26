@@ -526,6 +526,21 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                       );
 
 /***********************************************************************\
+* Name   : Index_newUUID
+* Purpose: create new entity index
+* Input  : indexHandle  - index handle
+*          jobUUID      - unique job id (can be NULL)
+* Output : uuidId - index id of new entity index (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_newUUID(IndexHandle *indexHandle,
+                     ConstString jobUUID,
+                     IndexId     *uuidId
+                    );
+
+/***********************************************************************\
 * Name   : Index_deleteUUID
 * Purpose: delete job UUID index including entries for attached entities
 * Input  : indexQueryHandle - index query handle
