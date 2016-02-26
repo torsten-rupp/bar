@@ -4778,7 +4778,7 @@ LOCAL void indexThreadCode(void)
     {
       // pause
       pauseIndexUpdate();
-fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
+//fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
 
       // parse storage name, get printable name
       error = Storage_parseName(&storageSpecifier,storageName);
