@@ -977,7 +977,6 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
   fixBrokenIds(oldIndexHandle,"links");
   fixBrokenIds(oldIndexHandle,"special");
 
-fprintf(stderr,"%s, %d: start \n",__FILE__,__LINE__);
   // transfer entities with storage and entries
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
@@ -1025,7 +1024,7 @@ fprintf(stderr,"%s, %d: copy ebntituy jobUUID=%s: %llu -> %llu\n",__FILE__,__LIN
 
                                                             fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                                             toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
-fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"name",NULL),toEntityId,fromStorageId,toStorageId);
+//fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"name",NULL),toEntityId,fromStorageId,toStorageId);
 
                                                             error = ERROR_NONE;
 
@@ -1160,7 +1159,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
-fprintf(stderr,"%s, %d: import inlknown\n",__FILE__,__LINE__);
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
@@ -1174,8 +1172,9 @@ fprintf(stderr,"%s, %d: import inlknown\n",__FILE__,__LINE__);
                                UNUSED_VARIABLE(fromColumnList);
                                UNUSED_VARIABLE(userData);
 
+fprintf(stderr,"%s, %d: import inlknown\n",__FILE__,__LINE__);
                                if (   Index_findByStorageId(oldIndexHandle,
-                                                            Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE),
+                                                            INDEX_ID_(INDEX_TYPE_STORAGE,Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             NULL,  // jobUUID
                                                             NULL,  // scheduleUUDI
                                                             &entityId,
@@ -1344,10 +1343,10 @@ fprintf(stderr,"%s, %d: import inlknown\n",__FILE__,__LINE__);
                             );
   if (error != ERROR_NONE)
   {
+//TODO
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
-fprintf(stderr,"%s, %d: ferti \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -1576,7 +1575,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                UNUSED_VARIABLE(userData);
 
                                if (   Index_findByStorageId(oldIndexHandle,
-                                                            Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE),
+                                                            INDEX_ID_(INDEX_TYPE_STORAGE,Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             jobUUID,
                                                             NULL,  // scheduleUUDI
                                                             NULL,  // entityId
@@ -3280,6 +3279,7 @@ LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
   Errors           error;
   uint             i;
 
+  assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(INDEX_TYPE_(toStorageId) == INDEX_TYPE_STORAGE);
 
@@ -3332,6 +3332,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
   IndexQueryHandle indexQueryHandle;
   IndexId          storageId;
 
+  assert(indexHandle != NULL);
   assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
   assert(INDEX_TYPE_(toStorageId) == INDEX_TYPE_STORAGE);
 
@@ -3420,6 +3421,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
   IndexQueryHandle indexQueryHandle;
   IndexId          entityId;
 
+  assert(indexHandle != NULL);
   assert(INDEX_TYPE_(toStorageId) == INDEX_TYPE_STORAGE);
 
   error = Index_initListEntities(&indexQueryHandle,
@@ -3475,6 +3477,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 {
   Errors error;
 
+  assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(INDEX_TYPE_(toEntityId) == INDEX_TYPE_ENTITY);
 
@@ -3513,6 +3516,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle *indexHandle,
 {
   Errors error;
 
+  assert(indexHandle != NULL);
   assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
   assert(INDEX_TYPE_(toEntityId) == INDEX_TYPE_ENTITY);
 
@@ -3561,6 +3565,7 @@ LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
   IndexQueryHandle indexQueryHandle;
   IndexId          entityId;
 
+  assert(indexHandle != NULL);
   assert(INDEX_TYPE_(toEntityId) == INDEX_TYPE_ENTITY);
 
   error = Index_initListEntities(&indexQueryHandle,
@@ -3618,6 +3623,8 @@ LOCAL Errors assignJobToJob(IndexHandle *indexHandle,
                            )
 {
   Errors error;
+
+  assert(indexHandle != NULL);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -3963,6 +3970,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
   bool                result;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -4026,7 +4034,7 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
   assert(indexHandle != NULL);
   assert(storageId != NULL);
 
-  (*storageId) = DATABASE_ID_NONE;
+  (*storageId) = INDEX_ID_NONE;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -4216,6 +4224,7 @@ Errors Index_getState(IndexHandle *indexHandle,
   DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -4485,8 +4494,6 @@ Database_debugEnable(1);
 Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-exit(1);
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
@@ -5252,6 +5259,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 {
   StorageSpecifier storageSpecifier;
   bool             foundFlag;
+  DatabaseId       entityId_,storageId_;
   String           storageName_;
   double           size_;
 
@@ -5272,8 +5280,8 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 #if 0
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                                 "%lld %lld %S %S %d %S %llu %llu %llu %d %d %llu %S",
-                                storageId,
-                                entityId,
+                                &storageId_,
+                                &entityId_,
                                 jobUUID,
                                 scheduleUUID,
                                 archiveType,
@@ -5289,8 +5297,8 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 #else
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                                 "%lld %lld %S %S %d %S %llu %llu %lf %d %d %llu %S",
-                                storageId,
-                                entityId,
+                                &storageId_,
+                                &entityId_,
                                 jobUUID,
                                 scheduleUUID,
                                 archiveType,
@@ -5381,6 +5389,8 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
       foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FILESYSTEM))
                   && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,PATTERN_MATCH_MODE_ANY));
     }
+    if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+    if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
     if (storageName != NULL) String_set(storageName,storageName_);
     if (size != NULL) (*size) = (uint64)size_;
   }
@@ -5402,6 +5412,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
   assert(storageId != NULL);
+  assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5451,6 +5462,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5512,6 +5524,7 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5576,6 +5589,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
   DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5618,7 +5632,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                             WHERE id=%d \
                            ",
 #endif
-                           storageId
+                           INDEX_DATABASE_ID_(storageId)
                           );
   if (error != ERROR_NONE)
   {
@@ -5654,6 +5668,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5738,6 +5753,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   {
     for (i = 0; i < storageIdCount; i++)
     {
+      assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
@@ -6264,6 +6280,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   {
     for (i = 0; i < storageIdCount; i++)
     {
+      assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
@@ -6568,6 +6585,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   {
     for (i = 0; i < storageIdCount; i++)
     {
+      assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
       if (i > 0) String_appendChar(storageIdsString,',');
       String_format(storageIdsString,"%d",storageIds[i]);
     }
@@ -7474,6 +7492,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(fileName != NULL);
 
   // check init error
@@ -7547,6 +7566,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(imageName != NULL);
 
   // check init error
@@ -7609,6 +7629,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(directoryName != NULL);
 
   // check init error
@@ -7675,6 +7696,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
@@ -7749,6 +7771,7 @@ Errors Index_addHardLink(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(fileName != NULL);
 
   // check init error
@@ -7826,6 +7849,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   Errors  error;
 
   assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   // check init error
@@ -7906,12 +7930,14 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  if      (toEntityId != DATABASE_ID_NONE)
+  if      (toEntityId != INDEX_ID_NONE)
   {
     // assign to other entity
 
-    if (storageId != DATABASE_ID_NONE)
+    if (storageId != INDEX_ID_NONE)
     {
+      assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+
       // assign storage to other entity
       error = assignStorageToEntity(indexHandle,
                                     storageId,
@@ -7923,8 +7949,10 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
       }
     }
 
-    if (entityId != DATABASE_ID_NONE)
+    if (entityId != INDEX_ID_NONE)
     {
+      assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
+
       // assign all storage entries of entity to other entity
       error = assignEntityToEntity(indexHandle,
                                    entityId,
@@ -7949,12 +7977,14 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
       }
     }
   }
-  else if (toStorageId != DATABASE_ID_NONE)
+  else if (toStorageId != INDEX_ID_NONE)
   {
     // assign to other storage
 
-    if (storageId != DATABASE_ID_NONE)
+    if (storageId != INDEX_ID_NONE)
     {
+      assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+
       // assign storage entries to other storage
       error = assignStorageToStorage(indexHandle,storageId,toStorageId);
       if (error != ERROR_NONE)
@@ -7963,8 +7993,10 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
       }
     }
 
-    if (entityId != DATABASE_ID_NONE)
+    if (entityId != INDEX_ID_NONE)
     {
+      assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
+
       // assign all storage entries of entity to other storage
       error = assignEntityToStorage(indexHandle,entityId,toStorageId);
       if (error != ERROR_NONE)
@@ -8000,6 +8032,9 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   uint    i;
   IndexId id;
   Errors  error;
+
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check if entries exists for storage
   existsFlag = FALSE;
@@ -8047,6 +8082,9 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   IndexQueryHandle indexQueryHandle;
   IndexId          storageId;
   bool             existsFlag;
+
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
 
 fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
 
