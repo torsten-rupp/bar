@@ -2965,81 +2965,13 @@ LOCAL String getIndexStateSetString(String string, IndexStateSet indexStateSet)
 * Name   : getREGEXPString
 * Purpose: get REGEXP filter string
 * Input  : string      - string variable
-*          columnName  - column name
 *          patternText - pattern text
 * Output : -
-* Return : string for WHERE statement
+* Return : string for WHERE filter-statement
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String XgetREGEXPString(String string, const char *columnName, ConstString patternText)
-{
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  ulong           i;
-  char            ch;
-
-  String_setCString(string,"1");
-  if (!String_isEmpty(patternText))
-  {
-    String_initTokenizer(&stringTokenizer,
-                         patternText,
-                         STRING_BEGIN,
-                         STRING_WHITE_SPACES,
-                         STRING_QUOTES,
-                         TRUE
-                        );
-    while (String_getNextToken(&stringTokenizer,&token,NULL))
-    {
-      String_appendCString(string," AND REGEXP('");
-      i = 0;
-      while (i < String_length(token))
-      {
-        ch = String_index(token,i);
-        switch (ch)
-        {
-          case '.':
-          case '[':
-          case ']':
-          case '(':
-          case ')':
-          case '{':
-          case '}':
-          case '+':
-          case '|':
-          case '^':
-          case '$':
-          case '\\':
-            String_appendChar(string,'\\');
-            String_appendChar(string,ch);
-            i++;
-            break;
-          case '*':
-            String_appendCString(string,".*");
-            i++;
-            break;
-          case '?':
-            String_appendChar(string,'.');
-            i++;
-            break;
-          case '\'':
-            String_appendCString(string,"''");
-            i++;
-            break;
-          default:
-            String_appendChar(string,ch);
-            i++;
-            break;
-        }
-      }
-      String_format(string,"',0,%s)",columnName);
-    }
-    String_doneTokenizer(&stringTokenizer);
-  }
-
-  return string;
-}
-LOCAL String getREGEXPString2(String string, ConstString patternText)
+LOCAL String getREGEXPString(String string, ConstString patternText)
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -3115,67 +3047,13 @@ LOCAL String getREGEXPString2(String string, ConstString patternText)
 * Name   : getFTSString
 * Purpose: get full-text-search filter string
 * Input  : string      - string variable
-*          columnName  - column name
 *          patternText - pattern text
 * Output : -
-* Return : string for WHERE statement
+* Return : string for WHERE filter-statement
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String XgetFTSString(String string, const char *tableName, ConstString patternText)
-{
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  bool            addedPatternFlag;
-  ulong           i;
-  char            ch;
-
-  String_setCString(string,"1");
-  if (!String_isEmpty(patternText))
-  {
-    String_format(string," AND (%s MATCH '",tableName);
-    String_initTokenizer(&stringTokenizer,
-                         patternText,
-                         STRING_BEGIN,
-                         STRING_WHITE_SPACES,
-                         STRING_QUOTES,
-                         TRUE
-                        );
-    while (String_getNextToken(&stringTokenizer,&token,NULL))
-    {
-      addedPatternFlag = FALSE;
-      i                = 0;
-      while (i < String_length(token))
-      {
-        ch = String_index(token,i);
-        if (isalnum(ch))
-        {
-          if (addedPatternFlag)
-          {
-            String_appendChar(string,' ');
-            addedPatternFlag = FALSE;
-          }
-          String_appendChar(string,ch);
-        }
-        else
-        {
-          if (!addedPatternFlag)
-          {
-            String_appendChar(string,'*');
-            addedPatternFlag = TRUE;
-          }
-        }
-        i++;
-      }
-      if (!String_isEmpty(string) && !addedPatternFlag) String_appendChar(string,'*');
-    }
-    String_doneTokenizer(&stringTokenizer);
-    String_appendCString(string,"')");
-  }
-
-  return string;
-}
-LOCAL String getFTSString2(String string, ConstString patternText)
+LOCAL String getFTSString(String string, ConstString patternText)
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -4984,8 +4862,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
 
   uuidIdsString    = String_new();
   entityIdsString  = String_new();
@@ -5114,7 +4992,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   if (deviceName  != NULL) indexQueryHandle->storage.deviceNamePattern  = Pattern_new(deviceName, PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
   if (fileName    != NULL) indexQueryHandle->storage.fileNamePattern    = Pattern_new(fileName,   PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
 
-  regexpStorageName = getREGEXPString2(String_new(),storageName);
+  regexpStorageName = getREGEXPString(String_new(),storageName);
 
   storageIdsString = String_new();
   if (storageIds != NULL)
@@ -5412,7 +5290,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
   assert(storageId != NULL);
-  assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
+  assert((entityId == INDEX_ID_NONE) || (INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5745,8 +5623,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
 
   storageIdsString = String_new();
   if (storageIds != NULL)
@@ -5840,6 +5718,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  fileIdsString
                                 );
       }
+if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
       {
         if (Database_getNextRow(&databaseQueryHandle,
@@ -5891,6 +5770,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  imageIdsString
                                 );
       }
+if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
       {
         if (Database_getNextRow(&databaseQueryHandle,
@@ -5942,6 +5822,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  directoryIdsString
                                 );
       }
+if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
       {
         if (Database_getNextRow(&databaseQueryHandle,
@@ -5993,6 +5874,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  linkIdsString
                                 );
       }
+if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
       {
         if (Database_getNextRow(&databaseQueryHandle,
@@ -6044,6 +5926,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  hardlinkIdsString
                                 );
       }
+if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
       {
         if (Database_getNextRow(&databaseQueryHandle,
@@ -6095,6 +5978,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  specialIdsString
                                 );
       }
+if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
       {
         if (Database_getNextRow(&databaseQueryHandle,
@@ -6272,8 +6156,8 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
 
   storageIdsString = String_new();
   if (storageIds != NULL)
@@ -6578,8 +6462,8 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -6735,8 +6619,8 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -6882,8 +6766,8 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -7029,8 +6913,8 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -7181,8 +7065,8 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
   storageIdsString = String_new();
   if (storageIds != NULL)
   {
@@ -7337,8 +7221,8 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  regexpString = getREGEXPString2(String_new(),pattern);
-  ftsString    = getFTSString2   (String_new(),pattern);
+  regexpString = getREGEXPString(String_new(),pattern);
+  ftsString    = getFTSString   (String_new(),pattern);
   storageIdsString = String_new();
   entryIdsString = String_new();
   if (storageIds != NULL)
