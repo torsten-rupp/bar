@@ -2615,20 +2615,26 @@ String String_sub(String string, ConstString fromString, ulong fromIndex, long f
     {
       assert(fromString->data != NULL);
 
-      if (fromIndex < fromString->length)
+      if      (fromIndex == STRING_END)
       {
-        if (fromIndex == STRING_END)
-        {
-          n = MIN(fromString->length,fromString->length-(ulong)fromLength);
-        }
-        else
-        {
-          n = MIN((ulong)fromLength,fromString->length-fromIndex);
-        }
+        n = MIN((ulong)fromLength,fromString->length);
+        ensureStringLength(string,n);
+        memcpy(&string->data[0],&fromString->data[fromString->length-n],n);
+        string->data[n] ='\0';
+        string->length = n;
+      }
+      else if (fromIndex < fromString->length)
+      {
+        n = MIN((ulong)fromLength,fromString->length-fromIndex);
         ensureStringLength(string,n);
         memcpy(&string->data[0],&fromString->data[fromIndex],n);
         string->data[n] ='\0';
         string->length = n;
+      }
+      else
+      {
+        string->data[0] ='\0';
+        string->length = 0;
       }
     }
     else
@@ -2657,7 +2663,13 @@ char *String_subCString(char *s, ConstString fromString, ulong fromIndex, long f
     {
       assert(fromString->data != NULL);
 
-      if (fromIndex < fromString->length)
+      if      (fromIndex == STRING_END)
+      {
+        n = MIN((ulong)fromLength,fromString->length);
+        memcpy(s,&fromString->data[fromString->length-n],n);
+        s[n] = '\0';
+      }
+      else if (fromIndex < fromString->length)
       {
         n = MIN((ulong)fromLength,fromString->length-fromIndex);
         memcpy(s,&fromString->data[fromIndex],n);
@@ -2691,7 +2703,13 @@ char *String_subBuffer(char *buffer, ConstString fromString, ulong fromIndex, lo
     {
       assert(fromString->data != NULL);
 
-      if (fromIndex < fromString->length)
+      if      (fromIndex == STRING_END)
+      {
+        n = MIN((ulong)fromLength,fromString->length);
+        memcpy(&buffer[0],&fromString->data[fromString->length-n],n);
+        memset(&buffer[n],0,fromLength-n);
+      }
+      else if (fromIndex < fromString->length)
       {
         n = MIN((ulong)fromLength,fromString->length-fromIndex);
         memcpy(&buffer[0],&fromString->data[fromIndex],n);

@@ -383,7 +383,6 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 *          fromString    - string to get sub-string from
 *          index         - start index (0..n-1)
 *          length        - length of sub-string (0..n) or STRING_END
-*                          (String_sub only!)
 * Output : -
 * Return : new sub-string/buffer
 * Notes  : -
