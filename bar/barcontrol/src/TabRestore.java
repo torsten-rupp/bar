@@ -1755,6 +1755,22 @@ Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.
 
       uuidTreeItems.clear();
 
+      // get UUID items
+      final TreeItem[] topTreeItem = new TreeItem[]{null};
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          topTreeItem[0] = widgetStorageTree.getTopItem();
+          for (TreeItem treeItem : widgetStorageTree.getItems())
+          {
+            assert treeItem.getData() instanceof UUIDIndexData;
+            removeUUIDTreeItemSet.add(treeItem);
+          }
+        }
+      });
+      if (isUpdateTriggered()) return;
+
       try
       {
         // disable redraw
@@ -1765,22 +1781,6 @@ Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.
             widgetStorageTree.setRedraw(false);
           }
         });
-
-        // get UUID items
-        final TreeItem[] topTreeItem = new TreeItem[]{null};
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            topTreeItem[0] = widgetStorageTree.getTopItem();
-            for (TreeItem treeItem : widgetStorageTree.getItems())
-            {
-              assert treeItem.getData() instanceof UUIDIndexData;
-              removeUUIDTreeItemSet.add(treeItem);
-            }
-          }
-        });
-        if (isUpdateTriggered()) return;
 
         // update UUID list
         BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S offset=%d limit=%d",
@@ -1916,6 +1916,26 @@ Dprintf.dprintf("");
      */
     private void updateEntityTreeItems(final TreeItem uuidTreeItem, final HashSet<TreeItem> entityTreeItems)
     {
+      // get job items, UUID index data
+      final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
+      final UUIDIndexData     uuidIndexData[]         = new UUIDIndexData[1];
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          assert uuidTreeItem.getData() instanceof UUIDIndexData;
+
+          for (TreeItem treeItem : uuidTreeItem.getItems())
+          {
+            assert treeItem.getData() instanceof EntityIndexData;
+            removeEntityTreeItemSet.add(treeItem);
+          }
+
+          uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
+        }
+      });
+      if (isUpdateTriggered()) return;
+
       try
       {
         // disable redraw
@@ -1926,26 +1946,6 @@ Dprintf.dprintf("");
             widgetStorageTree.setRedraw(false);
           }
         });
-
-        // get job items, UUID index data
-        final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
-        final UUIDIndexData     uuidIndexData[]         = new UUIDIndexData[1];
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            assert uuidTreeItem.getData() instanceof UUIDIndexData;
-
-            for (TreeItem treeItem : uuidTreeItem.getItems())
-            {
-              assert treeItem.getData() instanceof EntityIndexData;
-              removeEntityTreeItemSet.add(treeItem);
-            }
-
-            uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
-          }
-        });
-        if (isUpdateTriggered()) return;
 
         // update entity list
         BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=%'S",
@@ -2069,6 +2069,24 @@ Dprintf.dprintf("");
      */
     private void updateStorageTreeItem(final TreeItem entityTreeItem)
     {
+      // get storage items, entity index data
+      final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
+      final EntityIndexData   entityIndexData[]        = new EntityIndexData[1];
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          for (TreeItem treeItem : entityTreeItem.getItems())
+          {
+            assert treeItem.getData() instanceof StorageIndexData;
+            removeStorageTreeItemSet.add(treeItem);
+          }
+
+          entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
+        }
+      });
+      if (isUpdateTriggered()) return;
+
       try
       {
         // disable redraw
@@ -2079,24 +2097,6 @@ Dprintf.dprintf("");
             widgetStorageTree.setRedraw(false);
           }
         });
-
-        // get storage items, entity index data
-        final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
-        final EntityIndexData   entityIndexData[]        = new EntityIndexData[1];
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            for (TreeItem treeItem : entityTreeItem.getItems())
-            {
-              assert treeItem.getData() instanceof StorageIndexData;
-              removeStorageTreeItemSet.add(treeItem);
-            }
-
-            entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
-          }
-        });
-        if (isUpdateTriggered()) return;
 
         // update storage list
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s",
