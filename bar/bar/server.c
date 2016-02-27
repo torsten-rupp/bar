@@ -12702,7 +12702,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail");
+    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
     return;
   }
 
@@ -12959,7 +12959,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Array_length(&clientInfo->entryI
                               );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"get entries info from index database fail");
+    sendClientResult(clientInfo,id,TRUE,error,"get entries info from index database fail: %s",Error_getText(error));
     return;
   }
 
@@ -13710,8 +13710,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   }
 
   // get uuids from database
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,List_count(&uuidDataList));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
                               0,
@@ -13772,8 +13770,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     uuidDataNode->totalSize           = totalSize;
   }
   Index_doneList(&indexQueryHandle);
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,List_count(&uuidDataList));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // fill in current job names, sort list by names
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
@@ -13788,13 +13784,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
   }
   List_sort(&uuidDataList,CALLBACK((ListNodeCompareFunction)compareUUIDDataNode,NULL));
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,List_count(&uuidDataList));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // send results
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
-fprintf(stderr,"%s, %d: %lld: %s \n",__FILE__,__LINE__,uuidDataNode->indexId,String_cString(uuidDataNode->name));
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                      "indexId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
                      uuidDataNode->indexId,
@@ -14144,7 +14137,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get index database fail");
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get index database fail: %s",Error_getText(error));
   }
 #else
   // get index info
@@ -14160,7 +14153,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail");
+    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
     String_delete(storagePatternString);
     return;
   }
@@ -15275,7 +15268,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // entry pattern, get max. count, new entries only
+  // entry pattern, get type, new entries only
   entryPatternString = String_new();
   if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
   {
@@ -15325,7 +15318,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
                               );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"get entries info index database fail");
+    sendClientResult(clientInfo,id,TRUE,error,"get entries info index database fail: %s",Error_getText(error));
     String_delete(entryPatternString);
     return;
   }
