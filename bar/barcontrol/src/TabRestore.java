@@ -1462,111 +1462,117 @@ return 0;
      */
     public void run()
     {
-      boolean          updateCount    = true;
-      HashSet<Integer> updateOffsets  = new HashSet<Integer>();
+      boolean          updateIndicator = false;
+      boolean          updateCount     = true;
+      HashSet<Integer> updateOffsets   = new HashSet<Integer>();
       try
       {
         for (;;)
         {
-          boolean updateIndicatorFlag = false;
-
-          // set busy cursor and foreground color to inform about update
-          if (setUpdateIndicator)
           {
-            display.syncExec(new Runnable()
+            // set busy cursor and foreground color to inform about update
+            if (setUpdateIndicator)
             {
-              public void run()
+              display.syncExec(new Runnable()
               {
-                BARControl.waitCursor();
-                widgetStorageTree.setForeground(COLOR_MODIFIED);
-//TODO
-//                widgetStorageTree.setRedraw(true);
-                widgetStorageTable.setForeground(COLOR_MODIFIED);
-              }
-            });
-            updateIndicatorFlag = true;
+                public void run()
+                {
+                  BARControl.waitCursor();
+                  widgetStorageTree.setForeground(COLOR_MODIFIED);
+  //TODO
+  //                widgetStorageTree.setRedraw(true);
+                  widgetStorageTable.setForeground(COLOR_MODIFIED);
+                }
+              });
+              updateIndicator = true;
+            }
           }
-
-          // update tree/table
           try
           {
-Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.size());
-            if (updateCount)
+            // update tree/table
+            try
             {
-              updateStorageTableCount();
-            }
-
-            HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
-            if (!this.updateCount)
-            {
-              updateUUIDTreeItems(uuidTreeItems);
-            }
-            HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
-            if (!this.updateCount)
-            {
-              updateEntityTreeItems(uuidTreeItems,entityTreeItems);
-            }
-            if (!this.updateCount)
-            {
-              updateStorageTreeItems(entityTreeItems);
-            }
-
-            if (!updateOffsets.isEmpty())
-            {
-              updateStorageTable(updateOffsets);
-            }
-Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.size());
-          }
-          catch (CommunicationError error)
-          {
-            // ignored
-          }
-          catch (Exception exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
-              System.exit(1);
-            }
-          }
-
-          // update menues
-          try
-          {
-//TODO
-//            updateUUIDMenus();
-          }
-          catch (CommunicationError error)
-          {
-            // ignored
-          }
-          catch (Exception exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
-              System.exit(1);
-            }
-          }
-
-          // reset cursor and foreground color
-          if (updateIndicatorFlag)
-          {
-            display.syncExec(new Runnable()
-            {
-              public void run()
+  Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.size());
+              if (updateCount)
               {
-                widgetStorageTree.setForeground(null);
-//                widgetStorageTree.setRedraw(true);
-                widgetStorageTable.setForeground(null);
-                BARControl.resetCursor();
+                updateStorageTableCount();
               }
-            });
+
+              HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
+              if (!this.updateCount)
+              {
+                updateUUIDTreeItems(uuidTreeItems);
+              }
+              HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
+              if (!this.updateCount)
+              {
+                updateEntityTreeItems(uuidTreeItems,entityTreeItems);
+              }
+              if (!this.updateCount)
+              {
+                updateStorageTreeItems(entityTreeItems);
+              }
+
+              if (!updateOffsets.isEmpty())
+              {
+                updateStorageTable(updateOffsets);
+              }
+  Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.size());
+            }
+            catch (CommunicationError error)
+            {
+              // ignored
+            }
+            catch (Exception exception)
+            {
+              if (Settings.debugLevel > 0)
+              {
+                BARServer.disconnect();
+                System.err.println("ERROR: "+exception.getMessage());
+                BARControl.printStackTrace(exception);
+                System.exit(1);
+              }
+            }
+
+            // update menues
+            try
+            {
+  //TODO
+  //            updateUUIDMenus();
+            }
+            catch (CommunicationError error)
+            {
+              // ignored
+            }
+            catch (Exception exception)
+            {
+              if (Settings.debugLevel > 0)
+              {
+                BARServer.disconnect();
+                System.err.println("ERROR: "+exception.getMessage());
+                BARControl.printStackTrace(exception);
+                System.exit(1);
+              }
+            }
           }
+          finally
+          {
+            // reset cursor and foreground color
+            if (updateIndicator)
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  widgetStorageTree.setForeground(null);
+  //                widgetStorageTree.setRedraw(true);
+                  widgetStorageTable.setForeground(null);
+                  BARControl.resetCursor();
+                }
+              });
+            }
+          }
+
 
           // wait for trigger or sleep a short time
           synchronized(trigger)
@@ -1656,7 +1662,7 @@ Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
-          updateCount = true;
+          this.updateCount = true;
           trigger.notify();
         }
       }
@@ -1675,7 +1681,7 @@ Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.
         {
           this.storagePattern     = storagePattern;
           this.setUpdateIndicator = true;
-          updateCount = true;
+          this.updateCount = true;
           trigger.notify();
         }
       }
@@ -1694,7 +1700,7 @@ Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
-          updateCount = true;
+          this.updateCount = true;
           trigger.notify();
         }
       }
@@ -1723,7 +1729,7 @@ Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.
       synchronized(trigger)
       {
         this.setUpdateIndicator = true;
-        updateCount = true;
+        this.updateCount = true;
         trigger.notify();
       }
     }
@@ -2260,11 +2266,15 @@ Dprintf.dprintf("updateStorageTableCount+++++++++++++++++++++++++++++");
         {
           widgetStorageTabFolderTitle.redraw();
 
+          widgetStorageTable.setRedraw(false);
+
           widgetStorageTable.setItemCount(0);
           widgetStorageTable.clearAll();
 
           widgetStorageTable.setTopIndex(0);
           widgetStorageTable.setItemCount(count);
+
+          widgetStorageTable.setRedraw(true);
         }
       });
     }
@@ -3049,63 +3059,71 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      */
     public void run()
     {
-      boolean          updateCount   = true;
-      HashSet<Integer> updateOffsets = new HashSet<Integer>();
+      boolean          updateIndicator = false;
+      boolean          updateCount     = true;
+      HashSet<Integer> updateOffsets   = new HashSet<Integer>();
       try
       {
         for (;;)
         {
-          // set busy cursor, foreground color to inform about update
-          if (setUpdateIndicator)
           {
-            display.syncExec(new Runnable()
+            // set busy cursor, foreground color to inform about update
+            if (setUpdateIndicator)
             {
-              public void run()
+              display.syncExec(new Runnable()
               {
-                BARControl.waitCursor();
-                widgetEntryTable.setForeground(COLOR_MODIFIED);
-              }
-            });
+                public void run()
+                {
+                  BARControl.waitCursor();
+                  widgetEntryTable.setForeground(COLOR_MODIFIED);
+                }
+              });
+              updateIndicator = true;
+            }
           }
-
-          // update table count, table segment
           try
           {
-            if (updateCount)
+            // update table count, table segment
+            try
             {
-              updateEntryTableCount();
-            }
-            if (!updateOffsets.isEmpty())
-            {
-              updateEntryTable(updateOffsets);
-            }
-          }
-          catch (CommunicationError error)
-          {
-            // ignored
-          }
-          catch (Exception exception)
-          {
-            if (Settings.debugLevel > 0)
-            {
-              BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
-              System.exit(1);
-            }
-          }
-
-          // reset cursor, foreground color
-          if (setUpdateIndicator)
-          {
-            display.syncExec(new Runnable()
-            {
-              public void run()
+              if (updateCount)
               {
-                widgetEntryTable.setForeground(null);
-                BARControl.resetCursor();
+                updateEntryTableCount();
               }
-            });
+              if (!updateOffsets.isEmpty())
+              {
+                updateEntryTable(updateOffsets);
+              }
+            }
+            catch (CommunicationError error)
+            {
+              // ignored
+            }
+            catch (Exception exception)
+            {
+              if (Settings.debugLevel > 0)
+              {
+                BARServer.disconnect();
+                System.err.println("ERROR: "+exception.getMessage());
+                BARControl.printStackTrace(exception);
+                System.exit(1);
+              }
+            }
+          }
+          finally
+          {
+            // reset cursor, foreground color
+            if (updateIndicator)
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  widgetEntryTable.setForeground(null);
+                  BARControl.resetCursor();
+                }
+              });
+            }
           }
 
           // wait for trigger
@@ -3203,7 +3221,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           this.entryType          = entryType;
           this.newestEntriesOnly  = newestEntriesOnly;
           this.setUpdateIndicator = true;
-          updateCount = true;
+          this.updateCount = true;
           trigger.notify();
         }
       }
@@ -3222,7 +3240,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.entryPattern       = entryPattern;
           this.setUpdateIndicator = true;
-          updateCount = true;
+          this.updateCount = true;
           trigger.notify();
         }
       }
@@ -3239,7 +3257,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.entryType          = entryType;
           this.setUpdateIndicator = true;
-          updateCount = true;
+          this.updateCount = true;
           trigger.notify();
         }
       }
@@ -3257,7 +3275,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.newestEntriesOnly  = newestEntriesOnly;
           this.setUpdateIndicator = true;
-          updateCount = true;
+          this.updateCount = true;
           trigger.notify();
         }
       }
@@ -3344,7 +3362,16 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         public void run()
         {
           widgetEntryTableTitle.redraw();
+
+          widgetEntryTable.setRedraw(false);
+
+          widgetEntryTable.setItemCount(0);
+          widgetEntryTable.clearAll();
+
+          widgetEntryTable.setTopIndex(0);
           widgetEntryTable.setItemCount(Math.min(count,MAX_SHOWN_ENTRIES));
+
+          widgetEntryTable.setRedraw(true);
         }
       });
     }
