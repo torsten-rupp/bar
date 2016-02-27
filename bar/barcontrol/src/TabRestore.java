@@ -1462,13 +1462,14 @@ return 0;
      */
     public void run()
     {
-      boolean          updateIndicator = false;
-      boolean          updateCount     = true;
-      HashSet<Integer> updateOffsets   = new HashSet<Integer>();
+      boolean          updateCount        = true;
+      HashSet<Integer> updateOffsets      = new HashSet<Integer>();
+      boolean          setUpdateIndicator = true;
       try
       {
         for (;;)
         {
+          boolean updateIndicator = false;
           {
             // set busy cursor and foreground color to inform about update
             if (setUpdateIndicator)
@@ -1584,21 +1585,23 @@ return 0;
             }
 
             // get update count, offsets to update
-            updateCount = this.updateCount;
+            updateCount        = this.updateCount;
             updateOffsets.addAll(this.updateOffsets);
+            setUpdateIndicator = this.setUpdateIndicator;
 
             // if not triggered (timeout occurred) update count is done invisible (color is not set)
             if (!this.updateCount && this.updateOffsets.isEmpty())
             {
-              updateCount = true;
+              updateCount        = true;
               setUpdateIndicator = false;
             }
 
             // wait for immediate further triggers
             do
             {
-              this.updateCount = false;
+              this.updateCount        = false;
               this.updateOffsets.clear();
+              this.setUpdateIndicator = false;
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
               updateOffsets.addAll(this.updateOffsets);
@@ -1662,7 +1665,7 @@ return 0;
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
-          this.updateCount = true;
+          this.updateCount          = true;
           trigger.notify();
         }
       }
@@ -1681,7 +1684,7 @@ return 0;
         {
           this.storagePattern     = storagePattern;
           this.setUpdateIndicator = true;
-          this.updateCount = true;
+          this.updateCount        = true;
           trigger.notify();
         }
       }
@@ -1700,7 +1703,7 @@ return 0;
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
-          this.updateCount = true;
+          this.updateCount          = true;
           trigger.notify();
         }
       }
@@ -1729,7 +1732,7 @@ return 0;
       synchronized(trigger)
       {
         this.setUpdateIndicator = true;
-        this.updateCount = true;
+        this.updateCount        = true;
         trigger.notify();
       }
     }
@@ -3059,13 +3062,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      */
     public void run()
     {
-      boolean          updateIndicator = false;
-      boolean          updateCount     = true;
-      HashSet<Integer> updateOffsets   = new HashSet<Integer>();
+      boolean          updateCount        = true;
+      HashSet<Integer> updateOffsets      = new HashSet<Integer>();
+      boolean          setUpdateIndicator = true;
       try
       {
         for (;;)
         {
+          boolean updateIndicator = false;
           {
             // set busy cursor, foreground color to inform about update
             if (setUpdateIndicator)
@@ -3136,21 +3140,23 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             }
 
             // get update count, offsets to update
-            updateCount = this.updateCount;
+            updateCount        = this.updateCount;
             updateOffsets.addAll(this.updateOffsets);
+            setUpdateIndicator = this.setUpdateIndicator;
 
             // if not triggered (timeout occurred) update count is done invisible (color is not set)
             if (!this.updateCount && this.updateOffsets.isEmpty())
             {
-              updateCount = true;
+              updateCount        = true;
               setUpdateIndicator = false;
             }
 
             // wait for immediate further triggers
             do
             {
-              this.updateCount = false;
+              this.updateCount        = false;
               this.updateOffsets.clear();
+              this.setUpdateIndicator = false;
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
               updateOffsets.addAll(this.updateOffsets);
@@ -3221,7 +3227,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           this.entryType          = entryType;
           this.newestEntriesOnly  = newestEntriesOnly;
           this.setUpdateIndicator = true;
-          this.updateCount = true;
+          this.updateCount        = true;
           trigger.notify();
         }
       }
@@ -3240,7 +3246,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.entryPattern       = entryPattern;
           this.setUpdateIndicator = true;
-          this.updateCount = true;
+          this.updateCount        = true;
           trigger.notify();
         }
       }
@@ -3257,7 +3263,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.entryType          = entryType;
           this.setUpdateIndicator = true;
-          this.updateCount = true;
+          this.updateCount        = true;
           trigger.notify();
         }
       }
@@ -3275,7 +3281,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         {
           this.newestEntriesOnly  = newestEntriesOnly;
           this.setUpdateIndicator = true;
-          this.updateCount = true;
+          this.updateCount        = true;
           trigger.notify();
         }
       }
@@ -7406,8 +7412,6 @@ boolean overwriteFiles = false;
     // run dialog
     if ((Boolean)Dialogs.run(dialog,false))
     {
-      BARControl.waitCursor();
-
       final BusyDialog busyDialog = new BusyDialog(shell,
                                                    !directory.isEmpty() ? BARControl.tr("Restore archives to: {0}",directory) : BARControl.tr("Restore archives"),
                                                    500,
@@ -7430,163 +7434,179 @@ boolean overwriteFiles = false;
           // restore entries
           try
           {
-            boolean       retryFlag;
-            long          errorCount    = 0;
-            final boolean skipAllFlag[] = new boolean[]{false};
-            Command       command;
-            boolean       passwordFlag  = false;
-            do
             {
-              retryFlag  = false;
-              errorCount = 0;
-
-              // start restore
-              command = BARServer.runCommand(StringParser.format("RESTORE destination=%'S overwriteFiles=%y",
-                                                                 directory,
-                                                                 overwriteFiles
-                                                                ),
-                                             0
-                                            );
-
-              // read results, update/add data
-              String[] errorMessage = new String[1];
-              ValueMap resultMap    = new ValueMap();
-              while (   !command.endOfData()
-                     && !busyDialog.isAborted()
-                     && command.getNextResult(errorMessage,
-                                              resultMap,
-                                              60*1000
-                                             ) == Errors.NONE
-                    )
+              display.syncExec(new Runnable()
               {
-                // parse and update progresss
-                try
+                @Override
+                public void run()
                 {
-                  String storageName       = resultMap.getString("storageName"      );
-                  long   storageDoneBytes  = resultMap.getLong  ("storageDoneBytes" );
-                  long   storageTotalBytes = resultMap.getLong  ("storageTotalBytes");
-                  String entryName         = resultMap.getString("entryName"        );
-                  long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"   );
-                  long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes"  );
-
-                  busyDialog.updateText(0,"%s",storageName);
-                  busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                  busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
-                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                  BARControl.waitCursor();
                 }
-                catch (IllegalArgumentException exception)
-                {
-                  if (Settings.debugLevel > 0)
-                  {
-                    System.err.println("ERROR: "+exception.getMessage());
-                  }
-                }
-
-                // discard waiting results to avoid heap overflow
-                command.purgeResults();
-              }
-
-              if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
-                      || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
-                      || (command.getErrorCode() == Errors.CORRUPT_DATA)
-                     )
-                  && !passwordFlag
-                  && !busyDialog.isAborted()
-                 )
+              });
+            }
+            try
+            {
+              boolean       retryFlag;
+              long          errorCount    = 0;
+              final boolean skipAllFlag[] = new boolean[]{false};
+              Command       command;
+              boolean       passwordFlag  = false;
+              do
               {
-                // get crypt password
-                display.syncExec(new Runnable()
-                {
-                  @Override
-                  public void run()
-                  {
-                    String password = Dialogs.password(shell,
-                                                       BARControl.tr("Decrypt password"),
-                                                       BARControl.tr("Password")+":"
-                                                      );
-                    if (password != null)
-                    {
-                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
-                                                                   BARServer.getPasswordEncryptType(),
-                                                                   BARServer.encryptPassword(password)
+                retryFlag  = false;
+                errorCount = 0;
+
+                // start restore
+                command = BARServer.runCommand(StringParser.format("RESTORE destination=%'S overwriteFiles=%y",
+                                                                   directory,
+                                                                   overwriteFiles
                                                                   ),
-                                               0  // debugLevel
+                                               0
                                               );
+
+                // read results, update/add data
+                String[] errorMessage = new String[1];
+                ValueMap resultMap    = new ValueMap();
+                while (   !command.endOfData()
+                       && !busyDialog.isAborted()
+                       && command.getNextResult(errorMessage,
+                                                resultMap,
+                                                60*1000
+                                               ) == Errors.NONE
+                      )
+                {
+                  // parse and update progresss
+                  try
+                  {
+                    String storageName       = resultMap.getString("storageName"      );
+                    long   storageDoneBytes  = resultMap.getLong  ("storageDoneBytes" );
+                    long   storageTotalBytes = resultMap.getLong  ("storageTotalBytes");
+                    String entryName         = resultMap.getString("entryName"        );
+                    long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"   );
+                    long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes"  );
+
+                    busyDialog.updateText(0,"%s",storageName);
+                    busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                    busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
+                    busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                  }
+                  catch (IllegalArgumentException exception)
+                  {
+                    if (Settings.debugLevel > 0)
+                    {
+                      System.err.println("ERROR: "+exception.getMessage());
                     }
                   }
-                });
-                passwordFlag = true;
 
-                // retry
-                retryFlag = true;
-              }
-            }
-            while (retryFlag && !busyDialog.isAborted());
+                  // discard waiting results to avoid heap overflow
+                  command.purgeResults();
+                }
 
-            // abort command if requested
-            if (!busyDialog.isAborted())
-            {
-              if (command.getErrorCode() != Errors.NONE)
-              {
-                final String errorText = command.getErrorText();
-
-                busyDialog.updateList(errorText);
-                errorCount++;
-
-                if (!skipAllFlag[0])
+                if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
+                        || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
+                        || (command.getErrorCode() == Errors.CORRUPT_DATA)
+                       )
+                    && !passwordFlag
+                    && !busyDialog.isAborted()
+                   )
                 {
+                  // get crypt password
                   display.syncExec(new Runnable()
                   {
                     @Override
                     public void run()
                     {
-                      switch (Dialogs.select(shell,
-                                             BARControl.tr("Confirmation"),
-                                             BARControl.tr("Cannot restore archive:\n\n {0}",
-                                                           errorText
-                                                          ),
-                                             new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                             0
-                                            )
-                             )
+                      String password = Dialogs.password(shell,
+                                                         BARControl.tr("Decrypt password"),
+                                                         BARControl.tr("Password")+":"
+                                                        );
+                      if (password != null)
                       {
-                        case 0:
-                          break;
-                        case 1:
-                          skipAllFlag[0] = true;
-                          break;
-                        case 2:
-                          busyDialog.abort();
-                          break;
+                        BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
+                                                                     BARServer.getPasswordEncryptType(),
+                                                                     BARServer.encryptPassword(password)
+                                                                    ),
+                                                 0  // debugLevel
+                                                );
                       }
                     }
                   });
-                };
-              }
-            }
-            else
-            {
-              busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
-              command.abort();
-            }
+                  passwordFlag = true;
 
-            // close/done busy dialog, restore cursor
-            if (errorCount == 0)
-            {
-              busyDialog.close();
-            }
-            else
-            {
-              busyDialog.done();
-            }
-            display.syncExec(new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                BARControl.resetCursor();
+                  // retry
+                  retryFlag = true;
+                }
               }
-            });
+              while (retryFlag && !busyDialog.isAborted());
+
+              // abort command if requested
+              if (!busyDialog.isAborted())
+              {
+                if (command.getErrorCode() != Errors.NONE)
+                {
+                  final String errorText = command.getErrorText();
+
+                  busyDialog.updateList(errorText);
+                  errorCount++;
+
+                  if (!skipAllFlag[0])
+                  {
+                    display.syncExec(new Runnable()
+                    {
+                      @Override
+                      public void run()
+                      {
+                        switch (Dialogs.select(shell,
+                                               BARControl.tr("Confirmation"),
+                                               BARControl.tr("Cannot restore archive:\n\n {0}",
+                                                             errorText
+                                                            ),
+                                               new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                               0
+                                              )
+                               )
+                        {
+                          case 0:
+                            break;
+                          case 1:
+                            skipAllFlag[0] = true;
+                            break;
+                          case 2:
+                            busyDialog.abort();
+                            break;
+                        }
+                      }
+                    });
+                  };
+                }
+              }
+              else
+              {
+                busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
+                command.abort();
+              }
+
+              // close/done busy dialog, restore cursor
+              if (errorCount == 0)
+              {
+                busyDialog.close();
+              }
+              else
+              {
+                busyDialog.done();
+              }
+            }
+            finally
+            {
+              display.syncExec(new Runnable()
+              {
+                @Override
+                public void run()
+                {
+                  BARControl.resetCursor();
+                }
+              });
+            }
           }
           catch (CommunicationError error)
           {
@@ -7597,7 +7617,6 @@ boolean overwriteFiles = false;
               public void run()
               {
                 busyDialog.close();
-                BARControl.resetCursor();
                 Dialogs.error(shell,BARControl.tr("Error while restoring archives:\n\n{0}",errorMessage));
                }
             });
@@ -8089,8 +8108,6 @@ boolean overwriteFiles = false;
     // run dialog
     if ((Boolean)Dialogs.run(dialog,false))
     {
-      BARControl.waitCursor();
-
       final BusyDialog busyDialog = new BusyDialog(shell,
                                                    !directory.isEmpty() ? BARControl.tr("Restore entries to: {0}",directory) : BARControl.tr("Restore entries"),
                                                    500,
@@ -8114,290 +8131,306 @@ boolean overwriteFiles = false;
           // restore entries
           try
           {
-            long  errorCount            = 0;
-            final boolean skipAllFlag[] = new boolean[]{false};
-            int n = 0;
-            for (final Long entryId : entryIdSet)
             {
-Dprintf.dprintf("");
-//              busyDialog.updateText(0,"%s",entryData.storageName);
-//              busyDialog.updateProgressBar(0,((double)n*100.0)/(double)entryData_.length);
-Dprintf.dprintf("");
-//              busyDialog.updateText(1,"%s",new File(directory,entryData.name).getPath());
-
-              Command command;
-              boolean retryFlag;
-              boolean ftpPasswordFlag     = false;
-              boolean sshPasswordFlag     = false;
-              boolean webdavPasswordFlag  = false;
-              boolean decryptPasswordFlag = false;
-              do
+              display.syncExec(new Runnable()
               {
-                retryFlag = false;
-
-//TODO: restore with one command: send entry list before
-                // start restore
-                command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFiles=%y name=%'S",
-"xxx",//                                                                   entryData.storageName,
-                                                                   directory,
-                                                                   overwriteFiles,
-"xxx"//                                                                   entryData.name
-                                                                  ),
-                                               0
-                                              );
-
-                // read results, update/add data
-                String[] errorMessage = new String[1];
-                ValueMap valueMap     = new ValueMap();
-                while (   !command.endOfData()
-                       && !busyDialog.isAborted()
-                       && command.getNextResult(errorMessage,
-                                                valueMap,
-                                                60*1000
-                                               ) == Errors.NONE
-                      )
+                @Override
+                public void run()
                 {
-                  // parse and update progresss
-                  try
-                  {
-                    String storageName       = valueMap.getString("storageName"      );
-  //                  long   storageDoneBytes  = valueMap.getLong  ("storageDoneBytes" );
-  //                  long   storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
-                    String entryName         = valueMap.getString("entryName"        );
-                    long   entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"   );
-                    long   entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"  );
-
-                    busyDialog.updateText(0,"%s",storageName);
-  //                  busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                    busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
-                    busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-                  }
-                  catch (IllegalArgumentException exception)
-                  {
-                    if (Settings.debugLevel > 0)
-                    {
-                      System.err.println("ERROR: "+exception.getMessage());
-                    }
-                  }
-
-                  // discard waiting results to avoid heap overflow
-                  command.purgeResults();
+                  BARControl.waitCursor();
                 }
-
-                if      (   (   (command.getErrorCode() == Errors.FTP_SESSION_FAIL)
-                             || (command.getErrorCode() == Errors.NO_FTP_PASSWORD)
-                             || (command.getErrorCode() == Errors.INVALID_FTP_PASSWORD)
-                            )
-                         && !ftpPasswordFlag
-                         && !busyDialog.isAborted()
-                        )
-                {
-                  // get ftp password
-                  display.syncExec(new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-                      String password = Dialogs.password(shell,
-                                                         BARControl.tr("FTP login password"),
-"xxx",//                                                         BARControl.tr("Please enter FTP login password for: {0}.",entryData.storageName),
-                                                         BARControl.tr("Password")+":"
-                                                        );
-                      if (password != null)
-                      {
-                        BARServer.executeCommand(StringParser.format("FTP_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                     BARServer.getPasswordEncryptType(),
-                                                                     BARServer.encryptPassword(password)
-                                                                    ),
-                                                 0  // debugLevel
-                                                );
-                      }
-                    }
-                  });
-                  ftpPasswordFlag = true;
-
-                  // retry
-                  retryFlag = true;
-                }
-                else if (   (   (command.getErrorCode() == Errors.SSH_SESSION_FAIL)
-                             || (command.getErrorCode() == Errors.NO_SSH_PASSWORD)
-                             || (command.getErrorCode() == Errors.INVALID_SSH_PASSWORD)
-                            )
-                         && !sshPasswordFlag
-                         && !busyDialog.isAborted()
-                        )
-                {
-                  // get ssh password
-                  display.syncExec(new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-                      String password = Dialogs.password(shell,
-                                                         BARControl.tr("SSH (TLS) login password"),
-"xxx",//                                                         BARControl.tr("Please enter SSH (TLS) login password for: {0}.",entryData.storageName),
-                                                         BARControl.tr("Password")+":"
-                                                        );
-                      if (password != null)
-                      {
-                        BARServer.executeCommand(StringParser.format("SSH_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                     BARServer.getPasswordEncryptType(),
-                                                                     BARServer.encryptPassword(password)
-                                                                    ),
-                                                 0  // debugLevel
-                                                );
-                      }
-                    }
-                  });
-                  sshPasswordFlag = true;
-
-                  // retry
-                  retryFlag = true;
-                }
-                else if (   (   (command.getErrorCode() == Errors.WEBDAV_SESSION_FAIL)
-                             || (command.getErrorCode() == Errors.NO_WEBDAV_PASSWORD)
-                             || (command.getErrorCode() == Errors.INVALID_WEBDAV_PASSWORD)
-                            )
-                         && !webdavPasswordFlag
-                         && !busyDialog.isAborted()
-                        )
-                {
-                  // get webdav password
-                  display.syncExec(new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-                      String password = Dialogs.password(shell,
-                                                         BARControl.tr("Webdav login password"),
-"xxx",//                                                         BARControl.tr("Please enter Webdav login password for: {0}.",entryData.storageName),
-                                                         BARControl.tr("Password")+":"
-                                                        );
-                      if (password != null)
-                      {
-                        BARServer.executeCommand(StringParser.format("WEBDAV_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                     BARServer.getPasswordEncryptType(),
-                                                                     BARServer.encryptPassword(password)
-                                                                    ),
-                                                 0  // debugLevel
-                                                );
-                      }
-                    }
-                  });
-                  webdavPasswordFlag = true;
-
-                  // retry
-                  retryFlag = true;
-                }
-                else if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
-                             || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
-                             || (command.getErrorCode() == Errors.CORRUPT_DATA)
-                            )
-                         && !decryptPasswordFlag
-                         && !busyDialog.isAborted()
-                        )
-                {
-                  // get crypt password
-                  display.syncExec(new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-                      String password = Dialogs.password(shell,
-                                                         BARControl.tr("Decrypt password"),
-"xxx",//                                                         BARControl.tr("Please enter decrypt password for: {0}.",entryData.storageName),
-                                                         BARControl.tr("Password")+":"
-                                                        );
-                      if (password != null)
-                      {
-                        BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
-                                                                     BARServer.getPasswordEncryptType(),
-                                                                     BARServer.encryptPassword(password)
-                                                                    ),
-                                                 0  // debugLevel
-                                                );
-                      }
-                    }
-                  });
-                  decryptPasswordFlag = true;
-
-                  // retry
-                  retryFlag = true;
-                }
-              }
-              while (retryFlag && !busyDialog.isAborted());
-
-              // abort command if requested
-              if (!busyDialog.isAborted())
+              });
+            }
+            try
+            {
+              long  errorCount            = 0;
+              final boolean skipAllFlag[] = new boolean[]{false};
+              int n = 0;
+              for (final Long entryId : entryIdSet)
               {
-                if (command.getErrorCode() != Errors.NONE)
-                {
-Dprintf.dprintf("");
-//                  busyDialog.updateList(entryData.name);
-                  errorCount++;
+  Dprintf.dprintf("");
+  //              busyDialog.updateText(0,"%s",entryData.storageName);
+  //              busyDialog.updateProgressBar(0,((double)n*100.0)/(double)entryData_.length);
+  Dprintf.dprintf("");
+  //              busyDialog.updateText(1,"%s",new File(directory,entryData.name).getPath());
 
-                  if (!skipAllFlag[0])
+                Command command;
+                boolean retryFlag;
+                boolean ftpPasswordFlag     = false;
+                boolean sshPasswordFlag     = false;
+                boolean webdavPasswordFlag  = false;
+                boolean decryptPasswordFlag = false;
+                do
+                {
+                  retryFlag = false;
+
+  //TODO: restore with one command: send entry list before
+                  // start restore
+                  command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destination=%'S overwriteFiles=%y name=%'S",
+  "xxx",//                                                                   entryData.storageName,
+                                                                     directory,
+                                                                     overwriteFiles,
+  "xxx"//                                                                   entryData.name
+                                                                    ),
+                                                 0
+                                                );
+
+                  // read results, update/add data
+                  String[] errorMessage = new String[1];
+                  ValueMap valueMap     = new ValueMap();
+                  while (   !command.endOfData()
+                         && !busyDialog.isAborted()
+                         && command.getNextResult(errorMessage,
+                                                  valueMap,
+                                                  60*1000
+                                                 ) == Errors.NONE
+                        )
                   {
-                    final String errorText = command.getErrorText();
+                    // parse and update progresss
+                    try
+                    {
+                      String storageName       = valueMap.getString("storageName"      );
+    //                  long   storageDoneBytes  = valueMap.getLong  ("storageDoneBytes" );
+    //                  long   storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
+                      String entryName         = valueMap.getString("entryName"        );
+                      long   entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"   );
+                      long   entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"  );
+
+                      busyDialog.updateText(0,"%s",storageName);
+    //                  busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                      busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
+                      busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                    }
+                    catch (IllegalArgumentException exception)
+                    {
+                      if (Settings.debugLevel > 0)
+                      {
+                        System.err.println("ERROR: "+exception.getMessage());
+                      }
+                    }
+
+                    // discard waiting results to avoid heap overflow
+                    command.purgeResults();
+                  }
+
+                  if      (   (   (command.getErrorCode() == Errors.FTP_SESSION_FAIL)
+                               || (command.getErrorCode() == Errors.NO_FTP_PASSWORD)
+                               || (command.getErrorCode() == Errors.INVALID_FTP_PASSWORD)
+                              )
+                           && !ftpPasswordFlag
+                           && !busyDialog.isAborted()
+                          )
+                  {
+                    // get ftp password
                     display.syncExec(new Runnable()
                     {
                       @Override
                       public void run()
                       {
-Dprintf.dprintf("");
-                        switch (Dialogs.select(shell,
-                                               BARControl.tr("Confirmation"),
-                                               BARControl.tr("Cannot restore entry\n\n''{0}''\n\nfrom archive\n\n''{1}''\n\n(error: {2})",
-"xxx",//                                                             entryData.name,
-"xxx",//                                                             entryData.storageName,
-                                                             errorText
-                                                            ),
-                                               new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                               0
-                                              )
-                               )
+                        String password = Dialogs.password(shell,
+                                                           BARControl.tr("FTP login password"),
+  "xxx",//                                                         BARControl.tr("Please enter FTP login password for: {0}.",entryData.storageName),
+                                                           BARControl.tr("Password")+":"
+                                                          );
+                        if (password != null)
                         {
-                          case 0:
-                            break;
-                          case 1:
-                            skipAllFlag[0] = true;
-                            break;
-                          case 2:
-                            busyDialog.abort();
-                            break;
+                          BARServer.executeCommand(StringParser.format("FTP_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                       BARServer.getPasswordEncryptType(),
+                                                                       BARServer.encryptPassword(password)
+                                                                      ),
+                                                   0  // debugLevel
+                                                  );
                         }
                       }
                     });
+                    ftpPasswordFlag = true;
+
+                    // retry
+                    retryFlag = true;
+                  }
+                  else if (   (   (command.getErrorCode() == Errors.SSH_SESSION_FAIL)
+                               || (command.getErrorCode() == Errors.NO_SSH_PASSWORD)
+                               || (command.getErrorCode() == Errors.INVALID_SSH_PASSWORD)
+                              )
+                           && !sshPasswordFlag
+                           && !busyDialog.isAborted()
+                          )
+                  {
+                    // get ssh password
+                    display.syncExec(new Runnable()
+                    {
+                      @Override
+                      public void run()
+                      {
+                        String password = Dialogs.password(shell,
+                                                           BARControl.tr("SSH (TLS) login password"),
+  "xxx",//                                                         BARControl.tr("Please enter SSH (TLS) login password for: {0}.",entryData.storageName),
+                                                           BARControl.tr("Password")+":"
+                                                          );
+                        if (password != null)
+                        {
+                          BARServer.executeCommand(StringParser.format("SSH_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                       BARServer.getPasswordEncryptType(),
+                                                                       BARServer.encryptPassword(password)
+                                                                      ),
+                                                   0  // debugLevel
+                                                  );
+                        }
+                      }
+                    });
+                    sshPasswordFlag = true;
+
+                    // retry
+                    retryFlag = true;
+                  }
+                  else if (   (   (command.getErrorCode() == Errors.WEBDAV_SESSION_FAIL)
+                               || (command.getErrorCode() == Errors.NO_WEBDAV_PASSWORD)
+                               || (command.getErrorCode() == Errors.INVALID_WEBDAV_PASSWORD)
+                              )
+                           && !webdavPasswordFlag
+                           && !busyDialog.isAborted()
+                          )
+                  {
+                    // get webdav password
+                    display.syncExec(new Runnable()
+                    {
+                      @Override
+                      public void run()
+                      {
+                        String password = Dialogs.password(shell,
+                                                           BARControl.tr("Webdav login password"),
+  "xxx",//                                                         BARControl.tr("Please enter Webdav login password for: {0}.",entryData.storageName),
+                                                           BARControl.tr("Password")+":"
+                                                          );
+                        if (password != null)
+                        {
+                          BARServer.executeCommand(StringParser.format("WEBDAV_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                       BARServer.getPasswordEncryptType(),
+                                                                       BARServer.encryptPassword(password)
+                                                                      ),
+                                                   0  // debugLevel
+                                                  );
+                        }
+                      }
+                    });
+                    webdavPasswordFlag = true;
+
+                    // retry
+                    retryFlag = true;
+                  }
+                  else if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
+                               || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
+                               || (command.getErrorCode() == Errors.CORRUPT_DATA)
+                              )
+                           && !decryptPasswordFlag
+                           && !busyDialog.isAborted()
+                          )
+                  {
+                    // get crypt password
+                    display.syncExec(new Runnable()
+                    {
+                      @Override
+                      public void run()
+                      {
+                        String password = Dialogs.password(shell,
+                                                           BARControl.tr("Decrypt password"),
+  "xxx",//                                                         BARControl.tr("Please enter decrypt password for: {0}.",entryData.storageName),
+                                                           BARControl.tr("Password")+":"
+                                                          );
+                        if (password != null)
+                        {
+                          BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
+                                                                       BARServer.getPasswordEncryptType(),
+                                                                       BARServer.encryptPassword(password)
+                                                                      ),
+                                                   0  // debugLevel
+                                                  );
+                        }
+                      }
+                    });
+                    decryptPasswordFlag = true;
+
+                    // retry
+                    retryFlag = true;
                   }
                 }
+                while (retryFlag && !busyDialog.isAborted());
+
+                // abort command if requested
+                if (!busyDialog.isAborted())
+                {
+                  if (command.getErrorCode() != Errors.NONE)
+                  {
+  Dprintf.dprintf("");
+  //                  busyDialog.updateList(entryData.name);
+                    errorCount++;
+
+                    if (!skipAllFlag[0])
+                    {
+                      final String errorText = command.getErrorText();
+                      display.syncExec(new Runnable()
+                      {
+                        @Override
+                        public void run()
+                        {
+  Dprintf.dprintf("");
+                          switch (Dialogs.select(shell,
+                                                 BARControl.tr("Confirmation"),
+                                                 BARControl.tr("Cannot restore entry\n\n''{0}''\n\nfrom archive\n\n''{1}''\n\n(error: {2})",
+  "xxx",//                                                             entryData.name,
+  "xxx",//                                                             entryData.storageName,
+                                                               errorText
+                                                              ),
+                                                 new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                                 0
+                                                )
+                                 )
+                          {
+                            case 0:
+                              break;
+                            case 1:
+                              skipAllFlag[0] = true;
+                              break;
+                            case 2:
+                              busyDialog.abort();
+                              break;
+                          }
+                        }
+                      });
+                    }
+                  }
+                }
+                else
+                {
+                  busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
+                  command.abort();
+                  break;
+                }
+
+                n++;
+              }
+
+              // close/done busy dialog, restore cursor
+              if (errorCount == 0)
+              {
+                busyDialog.close();
               }
               else
               {
-                busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
-                command.abort();
-                break;
+                busyDialog.done();
               }
-
-              n++;
             }
-
-            // close/done busy dialog, restore cursor
-            if (errorCount == 0)
+            finally
             {
-              busyDialog.close();
-            }
-            else
-            {
-              busyDialog.done();
-            }
-            display.syncExec(new Runnable()
-            {
-              @Override
-              public void run()
+              display.syncExec(new Runnable()
               {
-                BARControl.resetCursor();
-              }
-            });
+                @Override
+                public void run()
+                {
+                  BARControl.resetCursor();
+                }
+              });
+            }
           }
           catch (CommunicationError error)
           {
@@ -8408,7 +8441,6 @@ Dprintf.dprintf("");
               public void run()
               {
                 busyDialog.close();
-                BARControl.resetCursor();
                 Dialogs.error(shell,BARControl.tr("Error while restoring entries:\n\n{0}",errorMessage));
                }
             });
