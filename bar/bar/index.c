@@ -2800,9 +2800,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
                     "Imported index database '%s'\n",
                     String_cString(oldDatabaseFileName)
                    );
-//TODO
-#warning active
-//        (void)File_delete(oldDatabaseFileName,FALSE);
+        (void)File_delete(oldDatabaseFileName,FALSE);
       }
       else
       {
@@ -2815,7 +2813,6 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
       }
       if (indexHandle->upgradeError == ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: upgrade rror %s\n",__FILE__,__LINE__,Error_getText(error));
         indexHandle->upgradeError = error;
       }
 
