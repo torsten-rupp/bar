@@ -14064,16 +14064,8 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   bool          indexStateAny;
   IndexStateSet indexStateSet;
   Errors        error;
-#if 0
-  long          storageEntryOKCount;
-  long          storageEntryCreateCount;
-  long          storageEntryUpdateRequestedCount;
-  long          storageEntryUpdateCount;
-  long          storageEntryErrorCount;
-#else
   ulong         count;
   uint64        size;
-#endif
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14112,36 +14104,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
     return;
   }
 
-#if 0
-  storageEntryOKCount              = Index_countState(indexHandle,INDEX_STATE_OK              );
-  storageEntryCreateCount          = Index_countState(indexHandle,INDEX_STATE_CREATE          );
-  storageEntryUpdateRequestedCount = Index_countState(indexHandle,INDEX_STATE_UPDATE_REQUESTED);
-  storageEntryUpdateCount          = Index_countState(indexHandle,INDEX_STATE_UPDATE          );
-  storageEntryErrorCount           = Index_countState(indexHandle,INDEX_STATE_ERROR           );
-
-  if (   (storageEntryOKCount              >= 0L)
-      && (storageEntryCreateCount          >= 0L)
-      && (storageEntryUpdateRequestedCount >= 0L)
-      && (storageEntryUpdateCount          >= 0L)
-      && (storageEntryErrorCount           >= 0L)
-     )
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                     "okCount=%ld createCount=%ld updateRequestedCount=%ld updateCount=%ld errorCount=%ld",
-                     storageEntryOKCount,
-                     storageEntryCreateCount,
-                     storageEntryUpdateRequestedCount,
-                     storageEntryUpdateCount,
-                     storageEntryErrorCount
-                    );
-  }
-  else
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get index database fail: %s",Error_getText(error));
-  }
-#else
   // get index info
-//Database_debugEnable(1);
   error = Index_getStoragesInfo(indexHandle,
                                 Array_cArray(&clientInfo->storageIdArray),
                                 Array_length(&clientInfo->storageIdArray),
@@ -14150,7 +14113,6 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
                                 &count,
                                 &size
                               );
-//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
@@ -14160,7 +14122,6 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 
   // send data
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
-#endif
 
   // free resources
   String_delete(storagePatternString);
