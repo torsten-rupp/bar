@@ -91,7 +91,14 @@ typedef union
       assert(databaseHandle != NULL); \
       \
       sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
-      stringFormat(databaseHandle->locked.text,sizeof(databaseHandle->locked.text),format, ## __VA_ARGS__); \
+      if (format != NULL) \
+      { \
+        stringFormat(databaseHandle->locked.text,sizeof(databaseHandle->locked.text),format, ## __VA_ARGS__); \
+      } \
+      else \
+      { \
+        stringClear(databaseHandle->locked.text); \
+      } \
       databaseHandle->locked.lineNb = __LINE__; \
       databaseHandle->locked.t0     = Misc_getTimestamp(); \
       if (databaseDebugCounter > 0) \
@@ -115,7 +122,7 @@ typedef union
                 databaseHandle->locked.text \
                ); \
       } \
-      if      (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_WARNING_LOCK_TIME) \
+      if      (!stringIsEmpty(databaseHandle->locked.text) && (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_WARNING_LOCK_TIME)) \
       { \
         fprintf(stderr, \
                 "DEBUG database: warning long locked time %llums: %s\n", \
@@ -123,7 +130,7 @@ typedef union
                 databaseHandle->locked.text \
                ); \
       } \
-      else if (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_MAX_LOCK_TIME) \
+      else if (!stringIsEmpty(databaseHandle->locked.text) && (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000ULL) > DEBUG_MAX_LOCK_TIME)) \
       { \
         HALT(128, \
              "DEBUG database: lock time exceeded %llums: %s\n", \
@@ -1205,7 +1212,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
 
   // select rows in from-table
   BLOCK_DOX(error,
-            { DATABASE_LOCK(fromDatabaseHandle,"copy table from '%s'",tableName);
+            { DATABASE_LOCK(fromDatabaseHandle,NULL);
               DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName);
             },
             { DATABASE_UNLOCK(fromDatabaseHandle);
@@ -2068,6 +2075,8 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
             DATABASE_LOCK(databaseQueryHandle->databaseHandle,"%s",String_cString(databaseQueryHandle->sqlString)),
             DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
+    bool result;
+
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
@@ -2277,13 +2286,15 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
         }
       }
 
-      return TRUE;
+      result = TRUE;
     }
     else
     {
-      return FALSE;
+      result = FALSE;
     }
     DATABASE_DEBUG_TIME_END(databaseQueryHandle);
+
+    return result;
   });
   va_end(arguments);
 
