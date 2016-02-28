@@ -982,10 +982,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              &newIndexHandle->databaseHandle,
                              "entities",
                              // pre: transfer entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                             {
-                               return ERROR_NONE;
-                             },NULL),
+                             CALLBACK(NULL,NULL),
                              // post: transfer storages
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -997,7 +994,6 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                toEntityId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
-fprintf(stderr,"%s, %d: copy ebntituy jobUUID=%s: %llu -> %llu\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL),fromEntityId,toEntityId);
 
                                // transfer storages of entity
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1147,7 +1143,6 @@ fprintf(stderr,"%s, %d: copy ebntituy jobUUID=%s: %llu -> %llu\n",__FILE__,__LIN
                                                           "WHERE entityId=%llu",
                                                           fromEntityId
                                                          );
-fprintf(stderr,"%s, %d: copy ebntituy done %s\n",__FILE__,__LINE__,Error_getText(error));
 
                                return error;
                              },NULL),
@@ -1155,7 +1150,6 @@ fprintf(stderr,"%s, %d: copy ebntituy done %s\n",__FILE__,__LINE__,Error_getText
                             );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -1172,7 +1166,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                                UNUSED_VARIABLE(fromColumnList);
                                UNUSED_VARIABLE(userData);
 
-fprintf(stderr,"%s, %d: import inlknown\n",__FILE__,__LINE__);
                                if (   Index_findByStorageId(oldIndexHandle,
                                                             INDEX_ID_(INDEX_TYPE_STORAGE,Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             NULL,  // jobUUID
@@ -1343,8 +1336,6 @@ fprintf(stderr,"%s, %d: import inlknown\n",__FILE__,__LINE__);
                             );
   if (error != ERROR_NONE)
   {
-//TODO
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -1379,10 +1370,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              &newIndexHandle->databaseHandle,
                              "entities",
                              // pre: transfer entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                             {
-                               return ERROR_NONE;
-                             },NULL),
+                             CALLBACK(NULL,NULL),
                              // post: transfer storage
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -1394,7 +1382,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                toEntityId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
-fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
+//fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
 
                                // transfer storages of entity
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1422,12 +1410,11 @@ fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnL
                                                             fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                                             toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
 
-fprintf(stderr,"%s, %d: start %llu -> %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
+//fprintf(stderr,"%s, %d: start storage %llu -> %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                                             error = ERROR_NONE;
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: file\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "files",
@@ -1437,6 +1424,7 @@ fprintf(stderr,"%s, %d: file\n",__FILE__,__LINE__);
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
                                                                                          CALLBACK(NULL,NULL),
@@ -1447,7 +1435,6 @@ fprintf(stderr,"%s, %d: file\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: im\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "images",
@@ -1467,7 +1454,6 @@ fprintf(stderr,"%s, %d: im\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: dir\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "directories",
@@ -1487,7 +1473,6 @@ fprintf(stderr,"%s, %d: dir\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: link\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "links",
@@ -1507,7 +1492,6 @@ fprintf(stderr,"%s, %d: link\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: hardl \n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "hardlinks",
@@ -1527,7 +1511,6 @@ fprintf(stderr,"%s, %d: hardl \n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: spe\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "special",
@@ -1560,7 +1543,6 @@ fprintf(stderr,"%s, %d: spe\n",__FILE__,__LINE__);
     return error;
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
@@ -1735,9 +1717,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                            );
                                }
 
-                               return ERROR_NONE;
+                               return error;
                              },NULL),
-                             "entityId IS NULL"
+                             "WHERE entityId=0"
                             );
   if (error != ERROR_NONE)
   {
@@ -2762,7 +2744,6 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   String              pathName;
   Errors              error;
   DirectoryListHandle directoryListHandle;
-  String              prefixFileName;
   String              oldDatabaseFileName;
   uint                oldDatabaseCount;
   uint                sleepTime;
@@ -2794,13 +2775,12 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   }
   String_delete(pathName);
 
-  // process all *.oldNNNN files
-  prefixFileName      = String_appendCString(String_duplicate(absoluteFileName),".old");
+  // process all *.oldNNN files
   oldDatabaseFileName = String_new();
   oldDatabaseCount    = 0;
   while (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
   {
-    if (String_startsWith(oldDatabaseFileName,prefixFileName))
+    if (String_startsWith(oldDatabaseFileName,absoluteFileName) && String_matchCString(oldDatabaseFileName,STRING_BEGIN,".*\\.old\\d\\d\\d$",NULL,NULL))
     {
       if (oldDatabaseCount == 0)
       {
@@ -2833,7 +2813,11 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
                     String_cString(oldDatabaseFileName)
                    );
       }
-      if (indexHandle->upgradeError == ERROR_NONE) indexHandle->upgradeError = error;
+      if (indexHandle->upgradeError == ERROR_NONE)
+      {
+fprintf(stderr,"%s, %d: upgrade rror %s\n",__FILE__,__LINE__,Error_getText(error));
+        indexHandle->upgradeError = error;
+      }
 
       oldDatabaseCount++;
     }
@@ -2847,7 +2831,6 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
                );
   }
   String_delete(oldDatabaseFileName);
-  String_delete(prefixFileName);
 
   // close directory
   File_closeDirectoryList(&directoryListHandle);
@@ -3789,6 +3772,7 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   bool                result;
+  DatabaseId          entityId_;
 
   assert(indexHandle != NULL);
 
@@ -3821,7 +3805,7 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
   }
   result = Database_getNextRow(&databaseQueryHandle,
                                "%llu %llu %d %S %llu %llu",
-                               entityId,
+                               &entityId_,
                                createdDateTime,
                                archiveType,
                                lastErrorMessage,
@@ -3829,6 +3813,7 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
                                totalSize
                               );
   Database_finalize(&databaseQueryHandle);
+  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
 
   return result;
 }
@@ -3846,6 +3831,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   bool                result;
+  DatabaseId          entityId_;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
@@ -3877,7 +3863,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
   }
   result = Database_getNextRow(&databaseQueryHandle,
                                "%llu %S %S %S %d %llu",
-                               entityId,
+                               &entityId_,
                                jobUUID,
                                scheduleUUID,
                                storageName,
@@ -3885,6 +3871,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
                                lastCheckedDateTime
                               );
   Database_finalize(&databaseQueryHandle);
+  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
 
   return result;
 }
@@ -3908,6 +3895,7 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
   String              storageName;
   StorageSpecifier    storageSpecifier;
   bool                foundFlag;
+  DatabaseId          entityId_,storageId_;
 
   assert(indexHandle != NULL);
   assert(storageId != NULL);
@@ -3944,16 +3932,18 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
   while (   !foundFlag
          && Database_getNextRow(&databaseQueryHandle,
                                 "%llu %S %S %lld %S %d %llu",
-                                entityId,
+                                &entityId_,
                                 jobUUID,
                                 scheduleUUID,
-                                storageId,
+                                &storageId_,
                                 storageName,
                                 indexState,
                                 lastCheckedDateTime
                                )
         )
   {
+    if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+    if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
     if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
     {
       switch (storageSpecifier.type)
@@ -4036,6 +4026,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
   Errors              error;
   String              indexStateSetString;
   DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          entityId_,storageId_;
   bool                result;
 
   assert(indexHandle != NULL);
@@ -4076,17 +4067,17 @@ bool Index_findByState(IndexHandle   *indexHandle,
   String_delete(indexStateSetString);
   result = Database_getNextRow(&databaseQueryHandle,
                                "%llu %S %S %lld %S %llu",
-                               entityId,
+                               &entityId_,
                                jobUUID,
                                scheduleUUID,
-                               storageId,
+                               &storageId_,
                                storageName,
                                lastCheckedDateTime
                               );
   Database_finalize(&databaseQueryHandle);
 
-  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId);
-  if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId);
+  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+  if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
 
   return result;
 }
@@ -4284,7 +4275,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-Database_debugEnable(1);
+//TODO
+//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -4369,7 +4361,7 @@ Database_debugEnable(1);
                            limit
 #endif
                           );
-Database_debugEnable(0);
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -4859,6 +4851,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return indexHandle->upgradeError;
   }
 
@@ -4921,6 +4914,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(indexStateSetString);
     String_delete(storageIdsString);
     String_delete(ftsString);
@@ -5005,7 +4999,8 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   }
 
   indexStateSetString = String_new();
-Database_debugEnable(1);
+//TODO
+//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -5101,7 +5096,7 @@ Database_debugEnable(1);
                            offset,
                            limit
                           );
-Database_debugEnable(0);
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
