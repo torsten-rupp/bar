@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS entities(
 //  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (0,'','',0,0,0,0);
-CREATE INDEX IF NOT EXISTS entitiesIndex ON entities (jobUUID,created,lastCreated);
+CREATE INDEX IF NOT EXISTS entitiesIndex ON entities (jobUUID,created,type,lastCreated);
 
 // insert/delete/update triggeres
 CREATE TRIGGER entityInsert AFTER INSERT ON entities
@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS storage(
   // Note: no foreign key entityId: storage may be created temporary before an entity
   // FOREIGN KEY(entityId) REFERENCES entities(id)
 );
-CREATE INDEX IF NOT EXISTS storagesIndex ON storage (entityId,name,created);
+CREATE INDEX IF NOT EXISTS storagesIndex ON storage (entityId,name,created,state);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_storage USING FTS4(
