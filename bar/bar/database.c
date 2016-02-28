@@ -84,14 +84,6 @@ typedef union
 
 /****************************** Macros *********************************/
 
-#if 0
-if (databaseHandle->locked.lineNb != 0) fprintf(stderr,"%s, %d: databaseHandle->locked.lineNb=%d %s\n",__FILE__,__LINE__,databaseHandle->locked.lineNb,databaseHandle->locked.text); \
-      assert(databaseHandle->locked.lineNb == 0); \
-
-      assert(databaseHandle->locked.lineNb != 0); \
-
-#endif
-
 #ifndef NDEBUG
   #define DATABASE_LOCK(databaseHandle,format,...) \
     do \
@@ -642,6 +634,8 @@ LOCAL int executeCallback(void *userData,
 {
   DatabaseRowCallback *databaseRowCallback = (DatabaseRowCallback*)userData;
 
+  assert(databaseRowCallback != NULL);
+
   return databaseRowCallback->function(databaseRowCallback->userData,
                                        (int)count,
                                        (const char**)names,
@@ -807,7 +801,7 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
       else
       {
         columnNode->type    = DATABASE_TYPE_INT64;
-        columnNode->value.d = String_new();
+        columnNode->value.i = String_new();
       }
     }
     else if (stringEqualsIgnoreCase(type,"REAL"))
@@ -1083,11 +1077,21 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
   {
     return error;
   }
+//TODO
+#warning test
+#if 0
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),
                            "PRAGMA journal_mode=%s;",
                            enabled ? "ON" : "OFF"
                           );
+#else
+  error = Database_execute(databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "PRAGMA journal_mode=%s;",
+                           enabled ? "ON" : "WAL"
+                          );
+#endif
   if (error != ERROR_NONE)
   {
     return error;
@@ -1171,7 +1175,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     va_end(arguments);
   }
   String_appendCString(sqlSelectString,";");
-//fprintf(stderr,"%s, %d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sqlSelectString));
+  DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlSelectString);
 
   // create SQL insert statement string
   sqlInsertString = formatSQLString(String_new(),"INSERT INTO %s (",tableName);
@@ -1197,7 +1201,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     }
   }
   String_appendCString(sqlInsertString,");");
-//fprintf(stderr,"%s, %d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
+  DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
 
   // select rows in from-table
   BLOCK_DOX(error,
@@ -1209,7 +1213,6 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
             },
   {
     // create select statement
-    DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlSelectString);
     sqliteResult = sqlite3_prepare_v2(fromDatabaseHandle->handle,
                                       String_cString(sqlSelectString),
                                       -1,
@@ -1222,7 +1225,6 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     }
 
     // create insert statement
-    DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
     sqliteResult = sqlite3_prepare_v2(toDatabaseHandle->handle,
                                       String_cString(sqlInsertString),
                                       -1,
@@ -1249,6 +1251,11 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
           case DATABASE_TYPE_PRIMARY_KEY:
             columnNode->value.id = sqlite3_column_int64(fromHandle,n);
 //fprintf(stderr,"%s, %d: DATABASE_TYPE_PRIMARY_KEY %d %s: %lld\n",__FILE__,__LINE__,n,columnNode->name,columnNode->value.id);
+            toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
+            if (toColumnNode != NULL)
+            {
+              toColumnNode->value.id = DATABASE_ID_NONE;
+            }
             break;
           case DATABASE_TYPE_INT64:
             String_setCString(columnNode->value.i,(const char*)sqlite3_column_text(fromHandle,n));
@@ -1332,7 +1339,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
             sqlite3_bind_text(toHandle,n,String_cString(columnNode->value.d),-1,NULL);
             break;
           case DATABASE_TYPE_DATETIME:
-            sqlite3_bind_text(toHandle,n,String_cString(columnNode->value.d),-1,NULL);
+            sqlite3_bind_text(toHandle,n,String_cString(columnNode->value.i),-1,NULL);
             break;
           case DATABASE_TYPE_TEXT:
 //fprintf(stderr,"%s, %d: DATABASE_TYPE_TEXT %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
@@ -1426,7 +1433,7 @@ int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, con
     }
     else
     {
-      return String_toInteger64(columnNode->value.d,STRING_BEGIN,NULL,NULL,0);
+      return String_toInteger64(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
     }
   }
   else
@@ -1459,7 +1466,7 @@ uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList,
   if (columnNode != NULL)
   {
     assert(columnNode->type == DATABASE_TYPE_DATETIME);
-    return String_toInteger64(columnNode->value.d,STRING_BEGIN,NULL,NULL,0);
+    return String_toInteger64(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
   }
   else
   {

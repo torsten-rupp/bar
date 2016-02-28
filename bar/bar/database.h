@@ -110,10 +110,10 @@ typedef struct DatabaseColumnNode
   union
   {
     // Note: data values are kept as strings to avoid conversion problems e.g. date/time -> integer
-    int64  id;
-    String i;
-    String d;
-    String text;
+    int64  id;      // primary key
+    String i;       // integer, date/time
+    String d;       // double
+    String text;    // text
     struct
     {
       const void *data;
