@@ -1696,6 +1696,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   DeltaSourceList_done(&jobNode->deltaSourceList);
   PatternList_done(&jobNode->compressExcludePatternList);
   List_done(&jobNode->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  String_delete(jobNode->excludeCommand);
   PatternList_done(&jobNode->excludePatternList);
   String_delete(jobNode->includeImageCommand);
   String_delete(jobNode->includeFileCommand);
@@ -1750,8 +1751,9 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   jobNode->includeFileCommand             = String_new();
   jobNode->includeImageCommand            = String_new();
   PatternList_init(&jobNode->excludePatternList);
-  PatternList_init(&jobNode->compressExcludePatternList);
+  jobNode->excludeCommand                 = String_new();
   List_init(&jobNode->mountList);
+  PatternList_init(&jobNode->compressExcludePatternList);
   DeltaSourceList_init(&jobNode->deltaSourceList);
   List_init(&jobNode->scheduleList);
   initDuplicateJobOptions(&jobNode->jobOptions,serverDefaultJobOptions);
@@ -1836,6 +1838,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
                             &jobNode->excludePatternList,
                             CALLBACK(NULL,NULL)
                            );
+  newJobNode->excludeCommand                 = String_duplicate(jobNode->excludeCommand);
   List_initDuplicate(&newJobNode->mountList,
                      &jobNode->mountList,
                      CALLBACK(NULL,NULL),
