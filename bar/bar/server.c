@@ -12554,7 +12554,6 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     return;
   }
 
-fprintf(stderr,"%s, %d: ------------------------\n",__FILE__,__LINE__);
   switch (Index_getType(indexId))
   {
     case INDEX_TYPE_UUID:
@@ -12599,7 +12598,7 @@ fprintf(stderr,"%s, %d: ------------------------\n",__FILE__,__LINE__);
                                  )
             )
       {
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,storageId);
+fprintf(stderr,"%s, %d: e=%llu storageId=%llu\n",__FILE__,__LINE__,Index_getDatabaseId(indexId),Index_getDatabaseId(storageId));
         Array_append(&clientInfo->storageIdArray,&storageId);
       }
       Index_doneList(&indexQueryHandle);
@@ -12644,18 +12643,19 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,storageId);
                                  )
             )
       {
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,storageId);
+fprintf(stderr,"%s, %d: e=%llu storageId=%llu\n",__FILE__,__LINE__,Index_getDatabaseId(indexId),Index_getDatabaseId(storageId));
         Array_append(&clientInfo->storageIdArray,&storageId);
       }
       Index_doneList(&indexQueryHandle);
       break;
     case INDEX_TYPE_STORAGE:
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,indexId);
       Array_append(&clientInfo->storageIdArray,&indexId);
       break;
     default:
+      // ignore others
       break;
   }
+fprintf(stderr,"%s, %d: done ----------------------- %d\n",__FILE__,__LINE__,Array_length(&clientInfo->storageIdArray));
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -12691,7 +12691,6 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Index_getStoragesInfo(indexHandle,
                                 Array_cArray(&clientInfo->storageIdArray),
                                 Array_length(&clientInfo->storageIdArray),
