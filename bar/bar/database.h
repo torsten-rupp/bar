@@ -120,6 +120,7 @@ typedef struct DatabaseColumnNode
       ulong      length;
     }      blob;
   } value;
+  bool          usedFlag;
 } DatabaseColumnNode;
 
 typedef struct
