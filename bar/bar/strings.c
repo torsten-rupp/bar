@@ -2020,6 +2020,60 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
 /***********************************************************************\
 * Name   : matchString
 * Purpose: match string
+* Input  : string    - string to patch
+*          index     - start index in string
+*          pattern   - regualar expression pattern
+*          nextIndex - variable for index of next not matched
+*                      character (can be NULL)
+* Output : nextIndex - index of next not matched character
+* Return : TRUE if string matched, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool matchString(ConstString  string,
+                       ulong        index,
+                       const char   *pattern,
+                       long         *nextIndex
+                      )
+{
+  regex_t regex;
+  bool    matchFlag;
+
+  assert(string != NULL);
+  assert(string->data != NULL);
+  assert(pattern != NULL);
+
+  if (index < string->length)
+  {
+    // compile pattern
+    if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
+    {
+      return FALSE;
+    }
+
+    // match
+    matchFlag = (regexec(&regex,
+                         &string->data[index],
+                         0,  // subMatchCount
+                         NULL,  // subMatches
+                         0
+                        ) == 0
+                );
+
+    // free resources
+    regfree(&regex);
+  }
+  else
+  {
+    matchFlag = FALSE;
+  }
+
+  return matchFlag;
+}
+
+/***********************************************************************\
+* Name   : vmatchString
+* Purpose: match string with arguments
 * Input  : string            - string to patch
 *          index             - start index in string
 *          pattern           - regualar expression pattern
@@ -2034,13 +2088,13 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool matchString(ConstString  string,
-                       ulong        index,
-                       const char   *pattern,
-                       long         *nextIndex,
-                       String       matchedString,
-                       va_list      matchedSubStrings
-                      )
+LOCAL bool vmatchString(ConstString  string,
+                        ulong        index,
+                        const char   *pattern,
+                        long         *nextIndex,
+                        String       matchedString,
+                        va_list      matchedSubStrings
+                       )
 {
   regex_t    regex;
   va_list    arguments;
@@ -4774,9 +4828,16 @@ bool String_match(ConstString string, ulong index, ConstString pattern, long *ne
   va_list arguments;
   bool    matchFlag;
 
-  va_start(arguments,matchedString);
-  matchFlag = matchString(string,index,String_cString(pattern),nextIndex,matchedString,arguments);
-  va_end(arguments);
+  if (matchedString != NULL)
+  {
+    va_start(arguments,matchedString);
+    matchFlag = vmatchString(string,index,String_cString(pattern),nextIndex,matchedString,arguments);
+    va_end(arguments);
+  }
+  else
+  {
+    matchFlag = matchString(string,index,String_cString(pattern),nextIndex);
+  }
 
   return matchFlag;
 }
@@ -4786,9 +4847,16 @@ bool String_matchCString(ConstString string, ulong index, const char *pattern, l
   va_list arguments;
   bool    matchFlag;
 
-  va_start(arguments,matchedString);
-  matchFlag = matchString(string,index,pattern,nextIndex,matchedString,arguments);
-  va_end(arguments);
+  if (matchedString != NULL)
+  {
+    va_start(arguments,matchedString);
+    matchFlag = vmatchString(string,index,pattern,nextIndex,matchedString,arguments);
+    va_end(arguments);
+  }
+  else
+  {
+    matchFlag = matchString(string,index,pattern,nextIndex);
+  }
 
   return matchFlag;
 }
