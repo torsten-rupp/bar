@@ -1020,9 +1020,36 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                                             fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                                             toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
-//fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"name",NULL),toEntityId,fromStorageId,toStorageId);
+fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"name",NULL),toEntityId,fromStorageId,toStorageId);
+uint64 t0 = Misc_getTimestamp();
 
                                                             error = ERROR_NONE;
+
+                                                            if (error == ERROR_NONE)
+                                                            {
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "directories",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+#if 0
+fprintf(stderr,"%s, %d: copty dir %llu: %s\n",__FILE__,__LINE__,
+Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE),
+Database_getTableColumnListCString(fromColumnList,"name",NULL)
+);
+#endif
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit(12); }
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -1034,6 +1061,13 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
 
+#if 0
+fprintf(stderr,"%s, %d: copty file %llu: %s %llubytes\n",__FILE__,__LINE__,
+Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE),
+Database_getTableColumnListCString(fromColumnList,"name",NULL),
+Database_getTableColumnListInt64(fromColumnList,"size",0)
+);
+#endif
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
@@ -1042,6 +1076,8 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          fromStorageId
                                                                                         );
                                                             }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a\n",__FILE__,__LINE__); exit(12); }
+
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -1061,7 +1097,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          fromStorageId
                                                                                         );
                                                             }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
 
+#if 0
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1080,6 +1118,8 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          fromStorageId
                                                                                         );
                                                             }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit(12); }
+#endif
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -1099,6 +1139,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          fromStorageId
                                                                                         );
                                                             }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d\n",__FILE__,__LINE__); exit(12); }
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -1118,6 +1159,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          fromStorageId
                                                                                         );
                                                             }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e\n",__FILE__,__LINE__); exit(12); }
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -1137,6 +1179,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          fromStorageId
                                                                                         );
                                                             }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f\n",__FILE__,__LINE__); exit(12); }
+uint64 t1 = Misc_getTimestamp();
+fprintf(stderr,"%s, %d: %llums\n",__FILE__,__LINE__,(t1-t0)/1000);
 
                                                             return error;
                                                           },NULL),
@@ -2780,16 +2825,24 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   oldDatabaseCount    = 0;
   while (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
   {
-    if (String_startsWith(oldDatabaseFileName,absoluteFileName) && String_matchCString(oldDatabaseFileName,STRING_BEGIN,".*\\.old\\d\\d\\d$",NULL,NULL))
+    if (   String_startsWith(oldDatabaseFileName,absoluteFileName)\
+        && String_matchCString(oldDatabaseFileName,STRING_BEGIN,".*\\.old\\d\\d\\d$",NULL,NULL)
+       )
     {
       if (oldDatabaseCount == 0)
       {
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Start upgrade index database\n"
+                    "Upgrade index database\n"
                    );
       }
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Started import index database '%s'\n",
+                  String_cString(oldDatabaseFileName)
+                 );
 
       error = importIndex(indexHandle,oldDatabaseFileName);
       if (error == ERROR_NONE)
@@ -2824,7 +2877,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Done upgrade index database\n"
+                "Upgrade index database done\n"
                );
   }
   String_delete(oldDatabaseFileName);
