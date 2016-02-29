@@ -1332,7 +1332,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             "WHERE entityId=0"
+                             "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)
   {
@@ -1719,7 +1719,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
-                             "WHERE entityId=0"
+                             "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)
   {
@@ -4848,7 +4848,6 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return indexHandle->upgradeError;
   }
 
@@ -4866,15 +4865,15 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       {
         case INDEX_TYPE_UUID:
           if (i > 0) String_appendChar(uuidIdsString,',');
-          String_format(uuidIdsString,"%d",indexIds[i]);
+          String_format(uuidIdsString,"%d",Index_getDatabaseId(indexIds[i]));
           break;
         case INDEX_TYPE_ENTITY:
           if (i > 0) String_appendChar(entityIdsString,',');
-          String_format(entityIdsString,"%d",indexIds[i]);
+          String_format(entityIdsString,"%d",Index_getDatabaseId(indexIds[i]));
           break;
         case INDEX_TYPE_STORAGE:
           if (i > 0) String_appendChar(storageIdsString,',');
-          String_format(storageIdsString,"%d",indexIds[i]);
+          String_format(storageIdsString,"%d",Index_getDatabaseId(indexIds[i]));
           break;
         default:
           // ignore other types
@@ -4887,31 +4886,32 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (size != NULL) (*size) = 0LL;
 
   indexStateSetString = String_new();
+//Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(storage.id),\
                                    TOTAL(storage.totalEntryCount), \
                                    TOTAL(storage.totalEntrySize) \
                             FROM storage \
-                            WHERE storage.id IN (  SELECT storage.id FROM storage WHERE     (%d OR (storage.id IN (%S))) \
+                            WHERE storage.id IN (  SELECT storage.id FROM storage WHERE     (storage.id IN (%S)) \
                                                                                         AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
                                                                                         AND (%d OR REGEXP(%S,0,storage.name)) \
                                                  UNION ALL \
-                                                   SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (%S))) \
+                                                   SELECT storage.id FROM storage WHERE storage.entityId IN (%S) \
                                                  UNION ALL \
-                                                   SELECT storage.id FROM storage WHERE (%d OR (storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))))) \
+                                                   SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))) \
                                                 ) \
                            ",
-                           String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
+                           storageIdsString,
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
-                           String_isEmpty(entityIdsString ) ? 1 : 0,entityIdsString,
-                           String_isEmpty(uuidIdsString   ) ? 1 : 0,uuidIdsString
+                           entityIdsString,
+                           uuidIdsString
                           );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(indexStateSetString);
     String_delete(storageIdsString);
     String_delete(ftsString);
@@ -5643,19 +5643,19 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         case INDEX_TYPE_FILE:
           if (!String_isEmpty(fileIdsString)) String_appendChar(fileIdsString,',');
-          String_format(fileIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          String_format(fileIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
           break;
         case INDEX_TYPE_IMAGE:
           if (!String_isEmpty(imageIdsString)) String_appendChar(imageIdsString,',');
-          String_format(imageIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          String_format(imageIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
           break;
         case INDEX_TYPE_DIRECTORY:
           if (!String_isEmpty(directoryIdsString)) String_appendChar(directoryIdsString,',');
-          String_format(directoryIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          String_format(directoryIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
           break;
         case INDEX_TYPE_LINK:
           if (!String_isEmpty(linkIdsString)) String_appendChar(linkIdsString,',');
-          String_format(linkIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+          String_format(linkIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
           break;
         case INDEX_TYPE_HARDLINK:
           if (!String_isEmpty(hardlinkIdsString)) String_appendChar(hardlinkIdsString,',');
