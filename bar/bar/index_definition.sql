@@ -349,6 +349,11 @@ CREATE TRIGGER filesInsert AFTER INSERT ON files
           totalFileCount =totalFileCount+1,
           totalFileSize  =totalFileSize +NEW.size
       WHERE storage.id=NEW.storageId;
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount+1,
+          totalEntrySize =totalEntrySize +NEW.size
+      WHERE     id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH NEW.name)
+            AND INSTR(NEW.name,directories.name)>0;
     INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
   END;
 CREATE TRIGGER filesDelete BEFORE DELETE ON files
@@ -359,6 +364,10 @@ CREATE TRIGGER filesDelete BEFORE DELETE ON files
           totalFileCount =totalFileCount-1,
           totalFileSize  =totalFileSize -OLD.size
       WHERE storage.id=OLD.storageId;
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount-1,
+          totalEntrySize =totalEntrySize -OLD.size
+      WHERE INSTR(OLD.name,directories.name)>0;
     DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
   END;
 CREATE TRIGGER filesUpdateSize AFTER UPDATE OF storageId,size ON files
@@ -369,12 +378,20 @@ CREATE TRIGGER filesUpdateSize AFTER UPDATE OF storageId,size ON files
           totalFileCount =totalFileCount-1,
           totalFileSize  =totalFileSize -OLD.size
       WHERE storage.id=OLD.storageId;
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount-1,
+          totalEntrySize =totalEntrySize -OLD.size
+      WHERE INSTR(OLD.name,directories.name)>0;
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size,
           totalFileCount =totalFileCount+1,
           totalFileSize  =totalFileSize +NEW.size
       WHERE storage.id=NEW.storageId;
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount+1,
+          totalEntrySize =totalEntrySize +NEW.size
+      WHERE INSTR(NEW.name,directories.name)>0;
   END;
 CREATE TRIGGER filesUpdateName AFTER UPDATE OF name ON files
   BEGIN
@@ -411,8 +428,8 @@ CREATE TRIGGER imagesInsert AFTER INSERT ON images
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size,
-          totalImageCount =totalImageCount+1,
-          totalImageSize  =totalImageSize +NEW.size
+          totalImageCount=totalImageCount+1,
+          totalImageSize =totalImageSize +NEW.size
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_images VALUES (NEW.id,NEW.name);
   END;
@@ -421,8 +438,8 @@ CREATE TRIGGER imagesDelete BEFORE DELETE ON images
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size,
-          totalImageCount =totalImageCount-1,
-          totalImageSize  =totalImageSize -OLD.size
+          totalImageCount=totalImageCount-1,
+          totalImageSize =totalImageSize -OLD.size
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_images WHERE imageId MATCH OLD.id;
   END;
@@ -431,14 +448,14 @@ CREATE TRIGGER imagesUpdateSize AFTER UPDATE OF storageId,size ON images
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size,
-          totalImageCount =totalImageCount-1,
-          totalImageSize  =totalImageSize -OLD.size
+          totalImageCount=totalImageCount-1,
+          totalImageSize =totalImageSize -OLD.size
       WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size,
-          totalImageCount =totalImageCount+1,
-          totalImageSize  =totalImageSize +NEW.size
+          totalImageCount=totalImageCount+1,
+          totalImageSize =totalImageSize +NEW.size
       WHERE storage.id=NEW.storageId;
   END;
 CREATE TRIGGER imagesUpdateName AFTER UPDATE OF name ON images
@@ -458,6 +475,10 @@ CREATE TABLE IF NOT EXISTS directories(
   userId          INTEGER,
   groupId         INTEGER,
   permission      INTEGER,
+
+  // updated by triggers
+  totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
+  totalEntrySize      INTEGER DEFAULT 0,  // total size of entries [bytes]
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
