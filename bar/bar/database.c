@@ -622,6 +622,41 @@ LOCAL void regexpMatch(sqlite3_context *context, int argc, sqlite3_value *argv[]
 }
 
 /***********************************************************************\
+* Name   : dirname
+* Purpose: callback for DIRNAME function
+* Input  : context - SQLite3 context
+*          argc    - number of arguments
+*          argv    - argument array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void dirname(sqlite3_context *context, int argc, sqlite3_value *argv[])
+{
+  const char *string;
+  String     directoryName;
+
+  assert(context != NULL);
+  assert(argc == 1);
+  assert(argv != NULL);
+
+  UNUSED_VARIABLE(argc);
+
+  // get string
+  string = (const char*)sqlite3_value_text(argv[0]);
+
+  // get directory
+  directoryName = File_getFilePathNameCString(String_new(),string);
+
+  // store result
+  sqlite3_result_text(context,String_cString(directoryName),-1,SQLITE_TRANSIENT);
+
+  // free resources
+  String_delete(directoryName);
+}
+
+/***********************************************************************\
 * Name   : executeCallback
 * Purpose: SQLite3 callback wrapper
 * Input  : userData - user data
@@ -999,13 +1034,22 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   // set busy timeout handler
   sqlite3_busy_handler(databaseHandle->handle,busyHandlerCallback,NULL);
 
-  // register REGEXP functions
+  // register special functions
   sqlite3_create_function(databaseHandle->handle,
                           "regexp",
                           3,
                           SQLITE_ANY,
                           NULL,
                           regexpMatch,
+                          NULL,
+                          NULL
+                         );
+  sqlite3_create_function(databaseHandle->handle,
+                          "dirname",
+                          1,
+                          SQLITE_ANY,
+                          NULL,
+                          dirname,
                           NULL,
                           NULL
                          );
@@ -1150,6 +1194,9 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
   assert(toDatabaseHandle->handle != NULL);
   assert(tableName != NULL);
 
+uint64 t0 = Misc_getTimestamp();
+ulong xxx=0;
+
   // get table columns
   error = getTableColumnList(&fromColumnList,fromDatabaseHandle,tableName);
   if (error != ERROR_NONE)
@@ -1216,7 +1263,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
   sqlInsertString = String_new();
 #endif
 
-  // select rows in from-table
+  // select rows in from-table and copy to to-table
   BLOCK_DOX(error,
             { DATABASE_LOCK(fromDatabaseHandle,NULL);
               DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName);
@@ -1264,6 +1311,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     // copy rows
     while ((sqliteResult = sqlite3_step(fromHandle)) == SQLITE_ROW)
     {
+xxx++;
       // reset to data
       LIST_ITERATE(&toColumnList,columnNode)
       {
@@ -1494,6 +1542,13 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
     // free resources
 //    sqlite3_finalize(toHandle);
     sqlite3_finalize(fromHandle);
+
+//if (xxx > 5000)
+{
+uint64 t1 = Misc_getTimestamp();
+fprintf(stderr,"%s, %d: %s %llums xxx=%lu %lfms/trans\n",__FILE__,__LINE__,tableName,(t1-t0)/1000,xxx,(double)(t1-t0)/((double)xxx*1000));
+//exit(12);
+}
 
     return ERROR_NONE;
   });
