@@ -352,8 +352,8 @@ CREATE TRIGGER filesInsert AFTER INSERT ON files
     UPDATE directories
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size
-      WHERE     id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH NEW.name)
-            AND INSTR(NEW.name,directories.name)>0;
+      WHERE     directories.storageId=NEW.storageId
+            AND directories.name=DIRNAME(NEW.name);
     INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
   END;
 CREATE TRIGGER filesDelete BEFORE DELETE ON files
@@ -367,10 +367,11 @@ CREATE TRIGGER filesDelete BEFORE DELETE ON files
     UPDATE directories
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size
-      WHERE INSTR(OLD.name,directories.name)>0;
+      WHERE     directories.storageId=OLD.storageId
+            AND directories.name=DIRNAME(OLD.name);
     DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
   END;
-CREATE TRIGGER filesUpdateSize AFTER UPDATE OF storageId,size ON files
+CREATE TRIGGER filesUpdateStorageSize AFTER UPDATE OF storageId,size ON files
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -381,7 +382,8 @@ CREATE TRIGGER filesUpdateSize AFTER UPDATE OF storageId,size ON files
     UPDATE directories
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size
-      WHERE INSTR(OLD.name,directories.name)>0;
+      WHERE     directories.storageId=OLD.storageId
+            AND directories.name=DIRNAME(OLD.name);
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size,
@@ -391,7 +393,8 @@ CREATE TRIGGER filesUpdateSize AFTER UPDATE OF storageId,size ON files
     UPDATE directories
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size
-      WHERE INSTR(NEW.name,directories.name)>0;
+      WHERE     directories.storageId=NEW.storageId
+            AND directories.name=DIRNAME(NEW.name);
   END;
 CREATE TRIGGER filesUpdateName AFTER UPDATE OF name ON files
   BEGIN
@@ -443,7 +446,7 @@ CREATE TRIGGER imagesDelete BEFORE DELETE ON images
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_images WHERE imageId MATCH OLD.id;
   END;
-CREATE TRIGGER imagesUpdateSize AFTER UPDATE OF storageId,size ON images
+CREATE TRIGGER imagesUpdateStorageSize AFTER UPDATE OF storageId,size ON images
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -496,29 +499,42 @@ CREATE VIRTUAL TABLE FTS_directories USING FTS4(
 CREATE TRIGGER directoriesInsert AFTER INSERT ON directories
   BEGIN
     UPDATE storage
-      SET totalEntryCount=totalEntryCount+1,
-          totalDirectoryCount =totalDirectoryCount+1
+      SET totalEntryCount    =totalEntryCount+1,
+          totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_directories VALUES (NEW.id,NEW.name);
   END;
 CREATE TRIGGER directoriesDelete BEFORE DELETE ON directories
   BEGIN
     UPDATE storage
-      SET totalEntryCount=totalEntryCount-1,
-          totalDirectoryCount =totalDirectoryCount-1
+      SET totalEntryCount    =totalEntryCount-1,
+          totalDirectoryCount=totalDirectoryCount-1
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_directories WHERE directoryId MATCH OLD.id;
   END;
-CREATE TRIGGER directoriesUpdateSize AFTER UPDATE ON directories
+CREATE TRIGGER directoriesUpdate AFTER UPDATE OF storageId ON directories
   BEGIN
     UPDATE storage
-      SET totalEntryCount=totalEntryCount-1,
-          totalDirectoryCount =totalDirectoryCount-1
+      SET totalEntryCount    =totalEntryCount-1,
+          totalDirectoryCount=totalDirectoryCount-1
       WHERE storage.id=OLD.storageId;
     UPDATE storage
-      SET totalEntryCount=totalEntryCount+1,
-          totalDirectoryCount =totalDirectoryCount+1
+      SET totalEntryCount    =totalEntryCount+1,
+          totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
+  END;
+CREATE TRIGGER directoriesUpdateEntryCountSize AFTER UPDATE OF totalEntryCount,totalEntrySize ON directories
+  BEGIN
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount-OLD.totalEntryCount,
+          totalEntrySize =totalEntrySize -OLD.totalEntrySize
+      WHERE     directories.storageId=OLD.storageId
+            AND directories.name=DIRNAME(OLD.name);
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount+NEW.totalEntryCount,
+          totalEntrySize =totalEntrySize +NEW.totalEntrySize
+      WHERE     directories.storageId=NEW.storageId
+            AND directories.name=DIRNAME(NEW.name);
   END;
 CREATE TRIGGER directoriesUpdateName AFTER UPDATE OF name ON directories
   BEGIN
@@ -568,7 +584,7 @@ CREATE TRIGGER linksDelete BEFORE DELETE ON links
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_links WHERE linkId MATCH OLD.id;
   END;
-CREATE TRIGGER linsUpdateSize AFTER UPDATE ON links
+CREATE TRIGGER linsUpdateStorage AFTER UPDATE OF storageId ON links
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -616,37 +632,57 @@ CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
 CREATE TRIGGER hardlinksInsert AFTER INSERT ON hardlinks
   BEGIN
     UPDATE storage
-      SET totalEntryCount=totalEntryCount+1,
-          totalEntrySize =totalEntrySize +NEW.size,
-          totalHardlinkCount =totalHardlinkCount+1,
-          totalHardlinkSize  =totalHardlinkSize +NEW.size
+      SET totalEntryCount   =totalEntryCount+1,
+          totalEntrySize    =totalEntrySize +NEW.size,
+          totalHardlinkCount=totalHardlinkCount+1,
+          totalHardlinkSize =totalHardlinkSize +NEW.size
       WHERE storage.id=NEW.storageId;
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount+1,
+          totalEntrySize =totalEntrySize +NEW.size
+      WHERE     directories.storageId=NEW.storageId
+            AND directories.name=DIRNAME(NEW.name);
     INSERT INTO FTS_hardlinks VALUES (NEW.id,NEW.name);
   END;
 CREATE TRIGGER hardlinksDelete BEFORE DELETE ON hardlinks
   BEGIN
     UPDATE storage
-      SET totalEntryCount=totalEntryCount-1,
-          totalEntrySize =totalEntrySize -OLD.size,
-          totalHardlinkCount =totalHardlinkCount-1,
-          totalHardlinkSize  =totalHardlinkSize -OLD.size
+      SET totalEntryCount   =totalEntryCount-1,
+          totalEntrySize    =totalEntrySize -OLD.size,
+          totalHardlinkCount=totalHardlinkCount-1,
+          totalHardlinkSize =totalHardlinkSize -OLD.size
       WHERE storage.id=OLD.storageId;
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount-1,
+          totalEntrySize =totalEntrySize -OLD.size
+      WHERE     directories.storageId=OLD.storageId
+            AND directories.name=DIRNAME(OLD.name);
     DELETE FROM FTS_hardlinks WHERE hardlinkId MATCH OLD.id;
   END;
-CREATE TRIGGER hardlinksUpdateSize AFTER UPDATE OF storageId,size ON hardlinks
+CREATE TRIGGER hardlinksUpdateStorageSize AFTER UPDATE OF storageId,size ON hardlinks
   BEGIN
     UPDATE storage
-      SET totalEntryCount=totalEntryCount-1,
-          totalEntrySize =totalEntrySize -OLD.size,
-          totalHardlinkCount =totalHardlinkCount-1,
-          totalHardlinkSize  =totalHardlinkSize -OLD.size
+      SET totalEntryCount   =totalEntryCount-1,
+          totalEntrySize    =totalEntrySize -OLD.size,
+          totalHardlinkCount=totalHardlinkCount-1,
+          totalHardlinkSize =totalHardlinkSize -OLD.size
       WHERE storage.id=OLD.storageId;
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount-1,
+          totalEntrySize =totalEntrySize -OLD.size
+      WHERE     directories.storageId=OLD.storageId
+            AND directories.name=DIRNAME(OLD.name);
     UPDATE storage
-      SET totalEntryCount=totalEntryCount+1,
-          totalEntrySize =totalEntrySize +NEW.size,
-          totalHardlinkCount =totalHardlinkCount+1,
-          totalHardlinkSize  =totalHardlinkSize +NEW.size
+      SET totalEntryCount   =totalEntryCount+1,
+          totalEntrySize    =totalEntrySize +NEW.size,
+          totalHardlinkCount=totalHardlinkCount+1,
+          totalHardlinkSize =totalHardlinkSize +NEW.size
       WHERE storage.id=NEW.storageId;
+    UPDATE directories
+      SET totalEntryCount=totalEntryCount+1,
+          totalEntrySize =totalEntrySize +NEW.size
+      WHERE     directories.storageId=NEW.storageId
+            AND directories.name=DIRNAME(NEW.name);
   END;
 CREATE TRIGGER hardlinksUpdateName AFTER UPDATE OF name ON hardlinks
   BEGIN
@@ -693,19 +729,19 @@ CREATE TRIGGER specialInsert AFTER INSERT ON special
 CREATE TRIGGER specialDelete BEFORE DELETE ON special
   BEGIN
     UPDATE storage
-      SET totalEntryCount=totalEntryCount-1,
+      SET totalEntryCount  =totalEntryCount-1,
           totalSpecialCount=totalSpecialCount-1
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_special WHERE specialId MATCH OLD.id;
   END;
-CREATE TRIGGER specialUpdateSize AFTER UPDATE ON special
+CREATE TRIGGER specialUpdateStorage AFTER UPDATE OF storageId ON special
   BEGIN
     UPDATE storage
-      SET totalEntryCount=totalEntryCount-1,
+      SET totalEntryCount  =totalEntryCount-1,
           totalSpecialCount=totalSpecialCount-1
       WHERE storage.id=OLD.storageId;
     UPDATE storage
-      SET totalEntryCount=totalEntryCount+1,
+      SET totalEntryCount  =totalEntryCount+1,
           totalSpecialCount=totalSpecialCount+1
       WHERE storage.id=NEW.storageId;
   END;
