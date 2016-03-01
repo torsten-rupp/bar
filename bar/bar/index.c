@@ -977,6 +977,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
   fixBrokenIds(oldIndexHandle,"links");
   fixBrokenIds(oldIndexHandle,"special");
 
+uint64 tx;
   // transfer entities with storage and entries
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
@@ -1025,6 +1026,7 @@ uint64 t0 = Misc_getTimestamp();
 
                                                             error = ERROR_NONE;
 
+tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1050,7 +1052,9 @@ Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                         );
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit(12); }
+fprintf(stderr,"%s, %d: copt dir %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
+tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1076,9 +1080,10 @@ Database_getTableColumnListInt64(fromColumnList,"size",0)
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a\n",__FILE__,__LINE__); exit(12); }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
+fprintf(stderr,"%s, %d: copt files %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
-
+tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1098,8 +1103,10 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a\n",__FILE__,__LINE__); exit
                                                                                         );
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
+fprintf(stderr,"%s, %d: copt image %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
 #if 0
+tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1118,9 +1125,11 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Err
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit(12); }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
+fprintf(stderr,"%s, %d: copt dir %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 #endif
 
+tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1139,8 +1148,10 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d\n",__FILE__,__LINE__); exit(12); }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
+fprintf(stderr,"%s, %d: copt links %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
+tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1159,8 +1170,10 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d\n",__FILE__,__LINE__); exit
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e\n",__FILE__,__LINE__); exit(12); }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
+fprintf(stderr,"%s, %d: copt hardlinks %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
+tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1179,9 +1192,10 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e\n",__FILE__,__LINE__); exit
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f\n",__FILE__,__LINE__); exit(12); }
+if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
+fprintf(stderr,"%s, %d: copt special %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 uint64 t1 = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: %llums\n",__FILE__,__LINE__,(t1-t0)/1000);
+fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)/1000);
 
                                                             return error;
                                                           },NULL),
