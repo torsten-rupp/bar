@@ -2024,6 +2024,48 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
+Errors Database_beginTransaction(DatabaseHandle *databaseHandle)
+{
+  int sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+
+  sqliteResult = sqlite3_exec(databaseHandle->handle,
+                              "TRANSACTION BEGIN",
+                              NULL,
+                              NULL,
+                              NULL
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(fromDatabaseHandle->handle));
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Database_endTransaction(DatabaseHandle *databaseHandle)
+{
+  int sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+
+  sqliteResult = sqlite3_exec(databaseHandle->handle,
+                              "TRANSACTION END",
+                              NULL,
+                              NULL,
+                              NULL
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(fromDatabaseHandle->handle));
+  }
+
+  return ERROR_NONE;
+}
+
 Errors Database_execute(DatabaseHandle      *databaseHandle,
                         DatabaseRowFunction databaseRowFunction,
                         void                *databaseRowUserData,

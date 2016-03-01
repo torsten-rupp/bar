@@ -316,6 +316,9 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                              const char     *columnName
                             );
 
+Errors Database_beginTransaction(DatabaseHandle *databaseHandle);
+Errors Database_endTransaction(DatabaseHandle *databaseHandle);
+
 /***********************************************************************\
 * Name   : Database_execute
 * Purpose: execute SQL statement
