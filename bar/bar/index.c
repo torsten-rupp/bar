@@ -4692,10 +4692,10 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.totalEntryCount, \
                                    entities.totalEntrySize \
                             FROM entities \
-                              LEFT JOIN uuids WHERE uuids.jobUUID=entities.jobUUID \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                             WHERE     (%d OR uuids.id=%lld) \
-                                  AND (%d OR jobUUID=%'S) \
-                                  AND (%d OR scheduleUUID=%'S) \
+                                  AND (%d OR entities.jobUUID=%'S) \
+                                  AND (%d OR entities.scheduleUUID=%'S) \
                             ORDER BY entities.created %s \
                             LIMIT %llu,%llu \
                            ",
