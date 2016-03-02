@@ -4571,43 +4571,6 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   {
     return indexHandle->upgradeError;
   }
-/*
-                                        (SELECT id FROM storage WHERE entityId IN \
-                                          (SELECT id FROM entities WHERE (%d OR jobUUID=%'S) AND (%d OR scheduleUUID=%'S)) \
-                                        ) \
-
-                                   ( \
-                                      (SELECT COUNT(id) FROM files WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                     +(SELECT COUNT(id) FROM images WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                     +(SELECT COUNT(id) FROM directories WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                     +(SELECT COUNT(id) FROM links WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                     +(SELECT COUNT(id) FROM hardlinks WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                     +(SELECT COUNT(id) FROM special WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                   ), \
-                                   ( \
-                                      (SELECT TOTAL(size) FROM files WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                     +(SELECT TOTAL(size) FROM images WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                     +(SELECT TOTAL(size) FROM hardlinks WHERE storageId IN \
-                                        (SELECT id FROM storage WHERE entityId=entities.id) \
-                                      ) \
-                                   ), \
-*/
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
