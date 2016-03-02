@@ -1026,6 +1026,7 @@ uint64 t0 = Misc_getTimestamp();
 
                                                             error = ERROR_NONE;
 
+                                                            // Note: first directories to update totalEntryCount/totalEntrySize
 tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
@@ -1104,30 +1105,6 @@ tx=Misc_getTimestamp();
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
 fprintf(stderr,"%s, %d: copt image %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
-
-#if 0
-tx=Misc_getTimestamp();
-                                                            if (error == ERROR_NONE)
-                                                            {
-                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                         &newIndexHandle->databaseHandle,
-                                                                                         "directories",
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                         {
-                                                                                           UNUSED_VARIABLE(fromColumnList);
-                                                                                           UNUSED_VARIABLE(userData);
-
-                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-                                                                                           return ERROR_NONE;
-                                                                                         },NULL),
-                                                                                         CALLBACK(NULL,NULL),
-                                                                                         "WHERE storageId=%lld",
-                                                                                         fromStorageId
-                                                                                        );
-                                                            }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
-fprintf(stderr,"%s, %d: copt dir %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
-#endif
 
 tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
@@ -1275,6 +1252,26 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
 
                                error = ERROR_NONE;
 
+                               // Note: first directories to update totalEntryCount/totalEntrySize
+                               if (error == ERROR_NONE)
+                               {
+                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                            &newIndexHandle->databaseHandle,
+                                                            "directories",
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(userData);
+
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              return ERROR_NONE;
+                                                            },NULL),
+                                                            CALLBACK(NULL,NULL),
+                                                            "WHERE storageId=%lld",
+                                                            fromStorageId
+                                                           );
+                               }
+
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1299,25 +1296,6 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                            {
-                                                              UNUSED_VARIABLE(fromColumnList);
-                                                              UNUSED_VARIABLE(userData);
-
-                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-                                                              return ERROR_NONE;
-                                                            },NULL),
-                                                            CALLBACK(NULL,NULL),
-                                                            "WHERE storageId=%lld",
-                                                            fromStorageId
-                                                           );
-                               }
-
-                               if (error == ERROR_NONE)
-                               {
-                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                            &newIndexHandle->databaseHandle,
-                                                            "directories",
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1472,6 +1450,26 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 //fprintf(stderr,"%s, %d: start storage %llu -> %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                                             error = ERROR_NONE;
 
+                                                            // Note: first directories to update totalEntryCount/totalEntrySize
+                                                            if (error == ERROR_NONE)
+                                                            {
+                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                         &newIndexHandle->databaseHandle,
+                                                                                         "directories",
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           UNUSED_VARIABLE(fromColumnList);
+                                                                                           UNUSED_VARIABLE(userData);
+
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           return ERROR_NONE;
+                                                                                         },NULL),
+                                                                                         CALLBACK(NULL,NULL),
+                                                                                         "WHERE storageId=%lld",
+                                                                                         fromStorageId
+                                                                                        );
+                                                            }
+
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1497,25 +1495,6 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "images",
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                         {
-                                                                                           UNUSED_VARIABLE(fromColumnList);
-                                                                                           UNUSED_VARIABLE(userData);
-
-                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-                                                                                           return ERROR_NONE;
-                                                                                         },NULL),
-                                                                                         CALLBACK(NULL,NULL),
-                                                                                         "WHERE storageId=%lld",
-                                                                                         fromStorageId
-                                                                                        );
-                                                            }
-
-                                                            if (error == ERROR_NONE)
-                                                            {
-                                                              error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                         &newIndexHandle->databaseHandle,
-                                                                                         "directories",
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1662,6 +1641,28 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
 
+                               error = ERROR_NONE;
+
+                               // Note: first directories to update totalEntryCount/totalEntrySize
+                               if (error == ERROR_NONE)
+                               {
+                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                            &newIndexHandle->databaseHandle,
+                                                            "directories",
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              UNUSED_VARIABLE(fromColumnList);
+                                                              UNUSED_VARIABLE(userData);
+
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              return ERROR_NONE;
+                                                            },NULL),
+                                                            CALLBACK(NULL,NULL),
+                                                            "WHERE storageId=%lld",
+                                                            fromStorageId
+                                                           );
+                               }
+
                                if (error == ERROR_NONE)
                                {
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1686,25 +1687,6 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                            {
-                                                              UNUSED_VARIABLE(fromColumnList);
-                                                              UNUSED_VARIABLE(userData);
-
-                                                              (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-                                                              return ERROR_NONE;
-                                                            },NULL),
-                                                            CALLBACK(NULL,NULL),
-                                                            "WHERE storageId=%lld",
-                                                            fromStorageId
-                                                           );
-                               }
-
-                               if (error == ERROR_NONE)
-                               {
-                                 error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                            &newIndexHandle->databaseHandle,
-                                                            "directories",
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -3352,9 +3334,11 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
                                  jobUUID,
+                                 INDEX_ID_ANY,  // uuidId
                                  NULL, // scheduldUUID
                                  DATABASE_ORDERING_ASCENDING,
-                                 0LL   // offset
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
                                 );
   if (error != ERROR_NONE)
   {
@@ -3496,9 +3480,11 @@ LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
                                  jobUUID,
+                                 INDEX_ID_ANY,  // uuidId
                                  NULL, // scheduldUUID
                                  DATABASE_ORDERING_ASCENDING,
-                                 0LL   // offset
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
                                 );
   if (error != ERROR_NONE)
   {
@@ -4568,9 +4554,11 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
                               ConstString      jobUUID,
+                              IndexId          uuidId,
                               ConstString      scheduleUUID,
                               DatabaseOrdering ordering,
-                              ulong            offset
+                              ulong            offset,
+                              uint64           limit
                              )
 {
   Errors error;
@@ -4704,15 +4692,19 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.totalEntryCount, \
                                    entities.totalEntrySize \
                             FROM entities \
-                            WHERE     (%d OR jobUUID=%'S) \
+                              LEFT JOIN uuids WHERE uuids.jobUUID=entities.jobUUID \
+                            WHERE     (%d OR uuids.id=%lld) \
+                                  AND (%d OR jobUUID=%'S) \
                                   AND (%d OR scheduleUUID=%'S) \
                             ORDER BY entities.created %s \
-                            LIMIT -1 OFFSET %lu \
+                            LIMIT %llu,%llu \
                            ",
-                           String_isEmpty(jobUUID     ) ? 1 : 0, jobUUID,
+                           (uuidId == INDEX_ID_ANY) ? 1 : 0, INDEX_DATABASE_ID_(uuidId),
+                           String_isEmpty(jobUUID) ? 1 : 0, jobUUID,
                            String_isEmpty(scheduleUUID) ? 1 : 0, scheduleUUID,
                            getOrderingString(ordering),
-                           offset
+                           offset,
+                           limit
 #endif
                           );
   if (error != ERROR_NONE)
@@ -4953,22 +4945,23 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   if (size != NULL) (*size) = 0LL;
 
   indexStateSetString = String_new();
-//Database_debugEnable(1);
+Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(storage.id),\
                                    TOTAL(storage.totalEntryCount), \
                                    TOTAL(storage.totalEntrySize) \
                             FROM storage \
-                            WHERE storage.id IN (  SELECT storage.id FROM storage WHERE     (storage.id IN (%S)) \
-                                                                                        AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
-                                                                                        AND (%d OR REGEXP(%S,0,storage.name)) \
-                                                 UNION ALL \
-                                                   SELECT storage.id FROM storage WHERE storage.entityId IN (%S) \
-                                                 UNION ALL \
-                                                   SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))) \
-                                                ) \
+                            WHERE %d OR storage.id IN (  SELECT storage.id FROM storage WHERE     (storage.id IN (%S)) \
+                                                                                              AND (%d OR (storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S))) \
+                                                                                              AND (%d OR REGEXP(%S,0,storage.name)) \
+                                                       UNION ALL \
+                                                         SELECT storage.id FROM storage WHERE storage.entityId IN (%S) \
+                                                       UNION ALL \
+                                                         SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S))) \
+                                                      ) \
                            ",
+                           String_isEmpty(storageIdsString) && String_isEmpty(entityIdsString) && String_isEmpty(uuidIdsString),
                            storageIdsString,
                            String_isEmpty(pattern) ? 1 : 0,ftsString,
 1||                           String_isEmpty(pattern) ? 1 : 0,regexpString,
@@ -4976,7 +4969,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                            uuidIdsString
                           );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
-//Database_debugEnable(0);
+Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     String_delete(indexStateSetString);
@@ -5035,6 +5028,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert((entityId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5064,7 +5058,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 
   indexStateSetString = String_new();
 //TODO
-//Database_debugEnable(1);
+Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -5160,7 +5154,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-//Database_debugEnable(0);
+Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -6653,7 +6647,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 
 Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             IndexHandle      *indexHandle,
-                            const IndexId    *storageIds,
+                            const IndexId    storageIds[],
                             uint             storageIdCount,
                             const IndexId    entryIds[],
                             uint             entryIdCount,
@@ -6800,7 +6794,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 
 Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  IndexHandle      *indexHandle,
-                                 const IndexId    *storageIds,
+                                 const IndexId    storageIds[],
                                  uint             storageIdCount,
                                  const IndexId    entryIds[],
                                  uint             entryIdCount,
@@ -6947,7 +6941,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
 
 Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
-                           const IndexId    *storageIds,
+                           const IndexId    storageIds[],
                            uint             storageIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
@@ -7099,7 +7093,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 
 Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                IndexHandle      *indexHandle,
-                               const IndexId    *storageIds,
+                               const IndexId    storageIds[],
                                uint             storageIdCount,
                                const IndexId    entryIds[],
                                uint             entryIdCount,
@@ -7255,7 +7249,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 
 Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
-                             const IndexId    *storageIds,
+                             const IndexId    storageIds[],
                              uint             storageIdCount,
                              const IndexId    entryIds[],
                              uint             entryIdCount,

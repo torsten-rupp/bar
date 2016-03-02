@@ -567,9 +567,11 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
                               ConstString      jobUUID,
+                              IndexId          uuidId,
                               ConstString      scheduleUUID,
                               DatabaseOrdering ordering,
-                              ulong            offset
+                              ulong            offset,
+                              uint64           limit
                              );
 
 /***********************************************************************\
@@ -660,7 +662,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          uuid             - unique job id or NULL
+*          jobUUID          - unique job id or NULL
 *          entityId         - entity id or INDEX_ID_ANY
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
@@ -681,7 +683,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 
 Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
-                              ConstString      uuid,
+                              ConstString      jobUUID,
                               IndexId          entityId,
                               StorageTypes     storageType,
                               ConstString      storageName,
@@ -1013,7 +1015,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 
 Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             IndexHandle      *indexHandle,
-                            const IndexId    *storageIds,
+                            const IndexId    storageIds[],
                             uint             storageIdCount,
                             const IndexId    entryIds[],
                             uint             entryIdCount,
@@ -1074,7 +1076,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 
 Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  IndexHandle      *indexHandle,
-                                 const IndexId    *storageIds,
+                                 const IndexId    storageIds[],
                                  uint             storageIdCount,
                                  const IndexId    entryIds[],
                                  uint             entryIdCount,
@@ -1136,7 +1138,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
 
 Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
-                           const IndexId    *storageIds,
+                           const IndexId    storageIds[],
                            uint             storageIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
@@ -1200,7 +1202,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 
 Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                IndexHandle      *indexHandle,
-                               const IndexId    *storageIds,
+                               const IndexId    storageIds[],
                                uint             storageIdCount,
                                const IndexId    entryIds[],
                                uint             entryIdCount,
@@ -1269,7 +1271,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 
 Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
-                             const IndexId    *storageIds,
+                             const IndexId    storageIds[],
                              uint             storageIdCount,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
