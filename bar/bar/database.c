@@ -114,7 +114,7 @@ typedef union
       \
       databaseHandle->locked.t1 = Misc_getTimestamp(); \
       assert(databaseHandle->locked.t1 >= databaseHandle->locked.t0); \
-      if (databaseDebugCounter > 0) \
+      if ((databaseDebugCounter > 0) && (((databaseHandle->locked.t1-databaseHandle->locked.t0)/1000LL) > 100LL)) \
       { \
         fprintf(stderr, \
                 "DEBUG database: locked time %llums: %s\n", \
