@@ -12587,7 +12587,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         return;
       }
-      while (Index_getNextEntity(&indexQueryHandle,
+      while (Index_getNextEntity(&indexQueryHandle1,
                                   &entityId,
                                   NULL, // job UUID
                                   NULL, // schedule UUID
@@ -12637,7 +12637,6 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                    )
               )
         {
-  fprintf(stderr,"%s, %d: e=%llu storageId=%llu\n",__FILE__,__LINE__,Index_getDatabaseId(indexId),Index_getDatabaseId(storageId));
           Array_append(&clientInfo->storageIdArray,&storageId);
         }
         Index_doneList(&indexQueryHandle2);
@@ -12684,7 +12683,6 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                  )
             )
       {
-fprintf(stderr,"%s, %d: e=%llu storageId=%llu\n",__FILE__,__LINE__,Index_getDatabaseId(indexId),Index_getDatabaseId(storageId));
         Array_append(&clientInfo->storageIdArray,&storageId);
       }
       Index_doneList(&indexQueryHandle);
@@ -12696,7 +12694,6 @@ fprintf(stderr,"%s, %d: e=%llu storageId=%llu\n",__FILE__,__LINE__,Index_getData
       // ignore others
       break;
   }
-fprintf(stderr,"%s, %d: done ----------------------- %d\n",__FILE__,__LINE__,Array_length(&clientInfo->storageIdArray));
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
