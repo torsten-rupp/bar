@@ -4153,9 +4153,11 @@ LOCAL Errors deleteUUID(const String jobUUID)
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
                                  jobUUID,
+                                 INDEX_ID_ANY,  // entityId
                                  NULL, // scheduldUUID
                                  DATABASE_ORDERING_ASCENDING,
-                                 0LL   // offset
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
                                 );
   if (error != ERROR_NONE)
   {
@@ -4229,9 +4231,11 @@ LOCAL void purgeExpiredEntities(void)
     error = Index_initListEntities(&indexQueryHandle1,
                                    indexHandle,
                                    NULL, // jobUUID
+                                   INDEX_ID_ANY,  // entityId
                                    NULL, // scheduldUUID,
                                    DATABASE_ORDERING_ASCENDING,
-                                   0LL   // offset
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
                                   );
     if (error != ERROR_NONE)
     {
@@ -4287,9 +4291,11 @@ LOCAL void purgeExpiredEntities(void)
             error = Index_initListEntities(&indexQueryHandle2,
                                            indexHandle,
                                            jobUUID,
+                                           INDEX_ID_ANY,  // entityId
                                            scheduleUUID,
                                            DATABASE_ORDERING_DESCENDING,
-                                           (ulong)minKeep
+                                           (ulong)minKeep,
+                                           INDEX_UNLIMITED
                                           );
             if (error == ERROR_NONE)
             {
@@ -4337,9 +4343,11 @@ LOCAL void purgeExpiredEntities(void)
             error = Index_initListEntities(&indexQueryHandle2,
                                            indexHandle,
                                            jobUUID,
+                                           INDEX_ID_ANY,  // entityId
                                            scheduleUUID,
                                            DATABASE_ORDERING_DESCENDING,
-                                           (ulong)maxKeep
+                                           (ulong)maxKeep,
+                                           INDEX_UNLIMITED
                                           );
             if (error == ERROR_NONE)
             {
@@ -10803,9 +10811,11 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
         error = Index_initListEntities(&indexQueryHandle,
                                        indexHandle,
                                        NULL, // jobUUID,
+                                       INDEX_ID_ANY,  // entityId
                                        scheduleNode->uuid,
                                        DATABASE_ORDERING_ASCENDING,
-                                       0LL   // offset
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
                                       );
         if (error == ERROR_NONE)
         {
@@ -12537,8 +12547,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
   IndexId          indexId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   Errors           error;
-  IndexId          storageId;
-  IndexQueryHandle indexQueryHandle;
+  IndexId          entityId,storageId;
+  IndexQueryHandle indexQueryHandle,indexQueryHandle1,indexQueryHandle2;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12563,19 +12573,12 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
       // get uuid
 
       // add all storage ids with specified uuid
-      error = Index_initListStorages(&indexQueryHandle,
+      error = Index_initListEntities(&indexQueryHandle1,
                                      indexHandle,
                                      jobUUID,
-                                     DATABASE_ID_ANY, // entity id
-                                     STORAGE_TYPE_ANY,
-                                     NULL, // storageName
-                                     NULL, // hostName
-                                     NULL, // loginName
-                                     NULL, // deviceName
-                                     NULL, // fileName
-                                     INDEX_STATE_SET_ALL,
-                                     NULL,  // storageIds
-                                     0,  // storageIdCount
+                                     indexId,
+                                     NULL,  // scheduleUUID,
+                                     DATABASE_ORDERING_ASCENDING,
                                      0LL,  // offset
                                      INDEX_UNLIMITED
                                     );
@@ -12584,27 +12587,62 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
         return;
       }
-      while (Index_getNextStorage(&indexQueryHandle,
-                                  &storageId,
-                                  NULL, // entity id
+      while (Index_getNextEntity(&indexQueryHandle,
+                                  &entityId,
                                   NULL, // job UUID
                                   NULL, // schedule UUID
-                                  NULL, // archive type
-                                  NULL, // storageName
                                   NULL, // createdDateTime
-                                  NULL, // entries
-                                  NULL, // size
-                                  NULL, // indexState
-                                  NULL, // indexMode
-                                  NULL, // lastCheckedDateTime
-                                  NULL  // errorMessage
+                                  NULL, // archive type
+                                  NULL, // lastErrorMessage
+                                  NULL, // totalEntries
+                                  NULL // totalSize
                                  )
             )
       {
-fprintf(stderr,"%s, %d: e=%llu storageId=%llu\n",__FILE__,__LINE__,Index_getDatabaseId(indexId),Index_getDatabaseId(storageId));
-        Array_append(&clientInfo->storageIdArray,&storageId);
+        error = Index_initListStorages(&indexQueryHandle2,
+                                       indexHandle,
+                                       NULL,  // jobUUID,
+                                       entityId,
+                                       STORAGE_TYPE_ANY,
+                                       NULL, // storageName
+                                       NULL, // hostName
+                                       NULL, // loginName
+                                       NULL, // deviceName
+                                       NULL, // fileName
+                                       INDEX_STATE_SET_ALL,
+                                       NULL,  // storageIds
+                                       0,  // storageIdCount
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
+                                      );
+        if (error != ERROR_NONE)
+        {
+          sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+          return;
+        }
+        while (Index_getNextStorage(&indexQueryHandle2,
+                                    &storageId,
+                                    NULL, // entity id
+                                    NULL, // job UUID
+                                    NULL, // schedule UUID
+                                    NULL, // archive type
+                                    NULL, // storageName
+                                    NULL, // createdDateTime
+                                    NULL, // entries
+                                    NULL, // size
+                                    NULL, // indexState
+                                    NULL, // indexMode
+                                    NULL, // lastCheckedDateTime
+                                    NULL  // errorMessage
+                                   )
+              )
+        {
+  fprintf(stderr,"%s, %d: e=%llu storageId=%llu\n",__FILE__,__LINE__,Index_getDatabaseId(indexId),Index_getDatabaseId(storageId));
+          Array_append(&clientInfo->storageIdArray,&storageId);
+        }
+        Index_doneList(&indexQueryHandle2);
       }
-      Index_doneList(&indexQueryHandle);
+      Index_doneList(&indexQueryHandle1);
       break;
     case INDEX_TYPE_ENTITY:
       // add all storage ids with entity id
@@ -13869,9 +13907,11 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
                                  jobUUID,
+                                 INDEX_ID_ANY,  // entityId
                                  NULL, // scheduldUUID
                                  DATABASE_ORDERING_ASCENDING,
-                                 0LL   // offset
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
                                 );
   if (error != ERROR_NONE)
   {
