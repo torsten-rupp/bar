@@ -12572,6 +12572,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
     case INDEX_TYPE_UUID:
       // get uuid
 
+fprintf(stderr,"%s, %d: +++++++++++++++++++++++++++++++++++++++++++\n",__FILE__,__LINE__);
       // add all storage ids with specified uuid
       error = Index_initListEntities(&indexQueryHandle1,
                                      indexHandle,
@@ -12599,6 +12600,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                  )
             )
       {
+fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
+#if 0
         error = Index_initListStorages(&indexQueryHandle2,
                                        indexHandle,
                                        NULL,  // jobUUID,
@@ -12617,6 +12620,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                       );
         if (error != ERROR_NONE)
         {
+          Index_doneList(&indexQueryHandle1);
           sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
           return;
         }
@@ -12640,8 +12644,11 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
           Array_append(&clientInfo->storageIdArray,&storageId);
         }
         Index_doneList(&indexQueryHandle2);
+#endif
       }
       Index_doneList(&indexQueryHandle1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
       break;
     case INDEX_TYPE_ENTITY:
       // add all storage ids with entity id
@@ -12691,8 +12698,9 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
       Array_append(&clientInfo->storageIdArray,&indexId);
       break;
     default:
-      // ignore others
-      break;
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"invalid index type %d",Index_getType(indexId));
+      return;
+      break; // not reached
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -12942,10 +12950,8 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
     case INDEX_TYPE_HARDLINK : Array_append(&clientInfo->hardLinkIdArray, &entryId); break;
     case INDEX_TYPE_SPECIAL  : Array_append(&clientInfo->specialIdArray,  &entryId); break;
     default:
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Index_getType(entryId));
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"invalid index type %d",Index_getType(entryId));
+      return;
       break; /* not reached */
   }
 
