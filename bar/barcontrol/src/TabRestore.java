@@ -1744,12 +1744,12 @@ return 0;
      */
     private void updateUUIDTreeItems(final HashSet<TreeItem> uuidTreeItems)
     {
-      // UUID comperator
-      final Comparator<UUIDIndexData> comparator = new Comparator<UUIDIndexData>()
+      // index data comparator
+      final Comparator<IndexData> comparator = new Comparator<IndexData>()
       {
-        public int compare(UUIDIndexData uuidIndexData1, UUIDIndexData uuidIndexData2)
+        public int compare(IndexData indexData1, IndexData indexData2)
         {
-          return (uuidIndexData1.indexId == uuidIndexData2.indexId) ? 0 : 1;
+          return (indexData1.indexId == indexData2.indexId) ? 0 : 1;
         }
       };
 
@@ -1923,12 +1923,12 @@ Dprintf.dprintf("");
      */
     private void updateEntityTreeItems(final TreeItem uuidTreeItem, final HashSet<TreeItem> entityTreeItems)
     {
-      // entity comperator
-      final Comparator<EntityIndexData> comparator = new Comparator<EntityIndexData>()
+      // index data comparator
+      final Comparator<IndexData> comparator = new Comparator<IndexData>()
       {
-        public int compare(EntityIndexData entityIndexData1, EntityIndexData entityIndexData2)
+        public int compare(IndexData indexData1, IndexData indexData2)
         {
-          return (entityIndexData1.indexId == entityIndexData2.indexId) ? 0 : 1;
+          return (indexData1.indexId == indexData2.indexId) ? 0 : 1;
         }
       };
 
