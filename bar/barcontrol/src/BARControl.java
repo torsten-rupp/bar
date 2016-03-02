@@ -1167,16 +1167,18 @@ public class BARControl
   }
 
   /** set wait cursor
+   * @param shell shell
    */
-  public static void waitCursor()
+  public static void waitCursor(Shell shell)
   {
     shell.setCursor(waitCursor);
     waitCursorCount++;
   }
 
   /** reset wait cursor
+   * @param shell shell
    */
-  public static void resetCursor()
+  public static void resetCursor(Shell shell)
   {
     assert waitCursorCount > 0;
 
@@ -1185,6 +1187,20 @@ public class BARControl
     {
       shell.setCursor(null);
     }
+  }
+
+  /** set wait cursor
+   */
+  public static void waitCursor()
+  {
+    waitCursor(shell);
+  }
+
+  /** reset wait cursor
+   */
+  public static void resetCursor()
+  {
+    resetCursor(shell);
   }
 
   // ----------------------------------------------------------------------
