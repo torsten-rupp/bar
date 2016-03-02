@@ -933,6 +933,7 @@ public class TabRestore
       {
         EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
+Dprintf.dprintf("remove");
         Widgets.updateTreeItem(treeItem,
                                (Object)entityIndexData,
                                entityIndexData.archiveType.toString(),
@@ -1321,7 +1322,7 @@ return 0;
     }
   };
 
-  /** find index for insert of item in sorted storage data list
+  /** find index for insert of item in sorted storage item list
    * @param indexData index data
    * @return index in tree
    */
@@ -1344,7 +1345,7 @@ return 0;
     return treeItems.length;
   }
 
-  /** find index for insert of item in sorted index data tree
+  /** find index for insert of item in sorted index item tree
    * @param treeItem tree item
    * @param indexData index data
    * @return index in tree
@@ -1480,8 +1481,6 @@ return 0;
                 {
                   BARControl.waitCursor();
                   widgetStorageTree.setForeground(COLOR_MODIFIED);
-  //TODO
-  //                widgetStorageTree.setRedraw(true);
                   widgetStorageTable.setForeground(COLOR_MODIFIED);
                 }
               });
@@ -1493,7 +1492,6 @@ return 0;
             // update tree/table
             try
             {
-  Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.size());
               if (updateCount)
               {
                 updateStorageTableCount();
@@ -1518,7 +1516,6 @@ return 0;
               {
                 updateStorageTable(updateOffsets);
               }
-  Dprintf.dprintf("%d %s %d",System.currentTimeMillis(),updateCount,updateOffsets.size());
             }
             catch (CommunicationError error)
             {
@@ -1566,14 +1563,12 @@ return 0;
                 public void run()
                 {
                   widgetStorageTree.setForeground(null);
-  //                widgetStorageTree.setRedraw(true);
                   widgetStorageTable.setForeground(null);
                   BARControl.resetCursor();
                 }
               });
             }
           }
-
 
           // wait for trigger or sleep a short time
           synchronized(trigger)
@@ -1749,6 +1744,7 @@ return 0;
      */
     private void updateUUIDTreeItems(final HashSet<TreeItem> uuidTreeItems)
     {
+      // UUID comperator
       final Comparator<UUIDIndexData> comparator = new Comparator<UUIDIndexData>()
       {
         public int compare(UUIDIndexData uuidIndexData1, UUIDIndexData uuidIndexData2)
@@ -1757,20 +1753,21 @@ return 0;
         }
       };
 
-      final HashSet<TreeItem> removeUUIDTreeItemSet = new HashSet<TreeItem>();
-      Command                 command;
-      String[]                errorMessage          = new String[1];
-      ValueMap                valueMap              = new ValueMap();
+//      Command                 command;
+//      String[]                errorMessage          = new String[1];
+//      ValueMap                valueMap              = new ValueMap();
 
       uuidTreeItems.clear();
 
-      // get UUID items
-      final TreeItem[] topTreeItem = new TreeItem[]{null};
+      // get top tree item, UUID items
+      final TreeItem[]        topTreeItem           = new TreeItem[]{null};
+      final HashSet<TreeItem> removeUUIDTreeItemSet = new HashSet<TreeItem>();
       display.syncExec(new Runnable()
       {
         public void run()
         {
           topTreeItem[0] = widgetStorageTree.getTopItem();
+
           for (TreeItem treeItem : widgetStorageTree.getItems())
           {
             assert treeItem.getData() instanceof UUIDIndexData;
@@ -1787,15 +1784,14 @@ return 0;
         {
           public void run()
           {
+Dprintf.dprintf("");
             widgetStorageTree.setRedraw(false);
           }
         });
 
         // update UUID list
-        BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S offset=%d limit=%d",
-                                                     storagePattern,
-                                                     0,//offset
-                                                     64 //limit
+        BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S",
+                                                     storagePattern
                                                     ),
                                  1,
                                  new CommandResultHandler()
@@ -1812,7 +1808,7 @@ return 0;
                                        long   totalEntries        = valueMap.getLong  ("totalEntries"       );
                                        long   totalSize           = valueMap.getLong  ("totalSize"          );
 
-                                       // add/update index map
+                                       // add/update UUID index
                                        final UUIDIndexData uuidIndexData = new UUIDIndexData(indexId,
                                                                                              jobUUID,
                                                                                              name,
@@ -1840,13 +1836,14 @@ return 0;
                                                                                    (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                                                                    ""
                                                                                   );
-  //                                           uuidIndexData.setTreeItem(uuidTreeItem);
+//TODO
+//uuidIndexData.setTreeItem(uuidTreeItem);
+                                             uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.indexId));
                                            }
                                            else
                                            {
                                              // update tree item
                                              assert uuidTreeItem.getData() instanceof UUIDIndexData;
-
                                              Widgets.updateTreeItem(uuidTreeItem,
                                                                     (Object)uuidIndexData,
                                                                     uuidIndexData.name,
@@ -1913,6 +1910,7 @@ Dprintf.dprintf("");
         {
           public void run()
           {
+Dprintf.dprintf("");
             widgetStorageTree.setRedraw(true);
           }
         });
@@ -1925,6 +1923,15 @@ Dprintf.dprintf("");
      */
     private void updateEntityTreeItems(final TreeItem uuidTreeItem, final HashSet<TreeItem> entityTreeItems)
     {
+      // entity comperator
+      final Comparator<EntityIndexData> comparator = new Comparator<EntityIndexData>()
+      {
+        public int compare(EntityIndexData entityIndexData1, EntityIndexData entityIndexData2)
+        {
+          return (entityIndexData1.indexId == entityIndexData2.indexId) ? 0 : 1;
+        }
+      };
+
       // get job items, UUID index data
       final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
       final UUIDIndexData     uuidIndexData[]         = new UUIDIndexData[1];
@@ -1991,22 +1998,34 @@ Dprintf.dprintf("");
                                        {
                                          public void run()
                                          {
-                                           TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
+                                           TreeItem entityTreeItem = Widgets.getTreeItem(uuidTreeItem,comparator,entityIndexData);
                                            if (entityTreeItem == null)
                                            {
                                              // insert tree item
                                              entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
                                                                                      findStorageTreeIndex(uuidTreeItem,entityIndexData),
                                                                                      (Object)entityIndexData,
-                                                                                     true
+                                                                                     true,
+                                                                                     entityIndexData.archiveType.toString(),
+                                                                                     Units.formatByteSize(entityIndexData.totalSize),
+                                                                                     (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                                                     ""
                                                                                     );
-                                             entityIndexData.setTreeItem(entityTreeItem);
+//TODO
+//entityIndexData.setTreeItem(entityTreeItem);
+                                             entityTreeItem.setChecked(selectedIndexIdSet.contains(entityIndexData.indexId));
                                            }
                                            else
                                            {
+                                             // update tree item
                                              assert entityTreeItem.getData() instanceof EntityIndexData;
-
-                                             // keep tree item
+                                             Widgets.updateTreeItem(entityTreeItem,
+                                                                    (Object)entityIndexData,
+                                                                    entityIndexData.archiveType.toString(),
+                                                                    Units.formatByteSize(entityIndexData.totalSize),
+                                                                    (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                                    ""
+                                                                   );
                                              removeEntityTreeItemSet.remove(entityTreeItem);
                                            }
                                            if (entityTreeItem.getExpanded())
@@ -2028,6 +2047,7 @@ Dprintf.dprintf("");
                                    }
                                  }
                                 );
+        if (isUpdateTriggered()) return;
 
         // remove not existing entries
         display.syncExec(new Runnable()
@@ -2245,7 +2265,6 @@ Dprintf.dprintf("");
     {
       assert storagePattern != null;
 
-Dprintf.dprintf("updateStorageTableCount+++++++++++++++++++++++++++++");
       // get storages info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
@@ -7197,12 +7216,12 @@ assert storagePattern != null;
     composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Entries:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Archives:"));
       Widgets.layout(label,0,0,TableLayoutData.W);
       widgetCount = Widgets.newLabel(composite,"-");
       Widgets.layout(widgetCount,0,1,TableLayoutData.WE);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Size:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Total size:"));
       Widgets.layout(label,1,0,TableLayoutData.W);
       widgetSize = Widgets.newLabel(composite,"-");
       Widgets.layout(widgetSize,1,1,TableLayoutData.WE);
@@ -7358,50 +7377,73 @@ assert storagePattern != null;
       @Override
       public void run(BusyDialog busyDialog, Object userData)
       {
-        IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
+        final IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
 
-        // set entries to restore
-        BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
-//TODO: optimize send more than one entry?
-        for (Long indexId : indexIdSet)
         {
-          BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
-                                                       indexId
-                                                      ),
-                                   0  // debugLevel
-                                  );
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              BARControl.waitCursor(dialog);
+            }
+          });
         }
-
-        // get number entries, size
-        final String[] errorMessage = new String[1];
-        ValueMap       valueMap     = new ValueMap();
-        if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                     0,  // debugLevel
-                                     errorMessage,
-                                     valueMap
-                                    ) == Errors.NONE
-           )
+        try
         {
-          final long count = valueMap.getLong("count");
-          final long size  = valueMap.getLong("size");
+          // set entries to restore
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+  //TODO: optimize send more than one entry?
+          for (Long indexId : indexIdSet)
+          {
+            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
+                                                         indexId
+                                                        ),
+                                     0  // debugLevel
+                                    );
+          }
+
+          // get number entries, size
+          final String[] errorMessage = new String[1];
+          ValueMap       valueMap     = new ValueMap();
+          if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
+                                       0,  // debugLevel
+                                       errorMessage,
+                                       valueMap
+                                      ) == Errors.NONE
+             )
+          {
+            final long count = valueMap.getLong("count");
+            final long size  = valueMap.getLong("size");
+
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                widgetCount.setText(Long.toString(count));
+                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
+              }
+            });
+          }
 
           display.syncExec(new Runnable()
           {
             public void run()
             {
-              widgetCount.setText(Long.toString(count));
-              widgetSize.setText(Units.formatByteSize(size));
+              widgetRestore.setEnabled(!indexIdSet.isEmpty());
             }
           });
         }
-
-        display.syncExec(new Runnable()
+        finally
         {
-          public void run()
+          // reset cursor and foreground color
+          display.syncExec(new Runnable()
           {
-            widgetRestore.setEnabled(true);
-          }
-        });
+            public void run()
+            {
+              BARControl.resetCursor(dialog);
+            }
+          });
+        }
       }
     };
 
@@ -7899,7 +7941,7 @@ Dprintf.dprintf("");
       widgetCount = Widgets.newLabel(composite,"-");
       Widgets.layout(widgetCount,0,1,TableLayoutData.WE);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Size:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Total size:"));
       Widgets.layout(label,1,0,TableLayoutData.W);
       widgetSize = Widgets.newLabel(composite,"-");
       Widgets.layout(widgetSize,1,1,TableLayoutData.WE);
@@ -8087,7 +8129,7 @@ Dprintf.dprintf("");
             public void run()
             {
               widgetCount.setText(Long.toString(count));
-              widgetSize.setText(Units.formatByteSize(size));
+              widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
             }
           });
         }
