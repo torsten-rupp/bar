@@ -2039,7 +2039,7 @@ Errors Database_beginTransaction(DatabaseHandle *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
-    return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(fromDatabaseHandle->handle));
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(databaseHandle->handle));
   }
 
   return ERROR_NONE;
@@ -2060,7 +2060,7 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
-    return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(fromDatabaseHandle->handle));
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(databaseHandle->handle));
   }
 
   return ERROR_NONE;
