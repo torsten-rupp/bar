@@ -335,22 +335,6 @@ public class TabRestore
       this.menuItem      = null;
     }
 
-    /** get index comparator instance
-     * @param tree tree
-     */
-    IndexDataComparator getComparatorInstance(Tree tree)
-    {
-      return new IndexDataComparator(tree);
-    }
-
-    /** get index comparator instance
-     * @param table table
-     */
-    IndexDataComparator getComparatorInstance(Table table)
-    {
-      return new IndexDataComparator(table);
-    }
-
     /** get tree item reference
      * @param tree item or null
      */
@@ -436,6 +420,22 @@ public class TabRestore
       this.menuItem = null;
     }
 
+    /** get name
+     * @return name
+     */
+    public String getName()
+    {
+      return "";
+    }
+
+    /** get date/time
+     * @return date/time [s]
+     */
+    public long getDateTime()
+    {
+      return 0;
+    }
+
     /** get number of entries
      * @return entries
      */
@@ -450,6 +450,14 @@ public class TabRestore
     public long getSize()
     {
       return 0;
+    }
+
+    /** get index state
+     * @return index state
+     */
+    public IndexStates getState()
+    {
+      return IndexStates.OK;
     }
 
     /** set index state
@@ -516,7 +524,7 @@ public class TabRestore
 
   /** index data comparator
    */
-  static class IndexDataComparator<T extends IndexData> implements Comparator<T>
+  static class IndexDataComparator implements Comparator<IndexData>
   {
     // sort modes
     enum SortModes
@@ -585,14 +593,26 @@ public class TabRestore
                 1 iff indexData1 > indexData2
      */
     @Override
-    public int compare(T indexData1, T indexData2)
+    public int compare(IndexData indexData1, IndexData indexData2)
     {
       switch (sortMode)
       {
         case NAME:
+          String name1 = indexData1.getName();
+          String name2 = indexData2.getName();
+          return name1.compareTo(name2);
         case SIZE:
+          long size1 = indexData1.getSize();
+          long size2 = indexData2.getSize();
+          return new Long(size1).compareTo(size2);
         case CREATED_DATETIME:
+          long date1 = indexData1.getDateTime();
+          long date2 = indexData2.getDateTime();
+          return new Long(date1).compareTo(date2);
         case STATE:
+          IndexStates indexState1 = indexData1.getState();
+          IndexStates indexState2 = indexData2.getState();
+          return indexState1.compareTo(indexState2);
         default:
           return 0;
       }
@@ -810,12 +830,20 @@ public class TabRestore
       this.totalSize           = totalSize;
     }
 
-    /** get index comparator instance
-     * @param tree tree
+    /** get name
+     * @return name
      */
-    UUIDIndexDataComparator getComparatorInstance(Tree tree)
+    public String getName()
     {
-      return new UUIDIndexDataComparator(tree);
+      return name;
+    }
+
+    /** get date/time
+     * @return date/time [s]
+     */
+    public long getDateTime()
+    {
+      return lastCreatedDateTime;
     }
 
     /** get number of entries
@@ -865,55 +893,6 @@ public class TabRestore
     public String toString()
     {
       return "UUIDIndexData {"+jobUUID+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes}";
-    }
-  }
-
-  /** index data comparator
-   */
-  static class UUIDIndexDataComparator extends IndexDataComparator<UUIDIndexData>
-  {
-    /** create index data comparator
-     * @param tree tree
-     */
-    UUIDIndexDataComparator(Tree tree)
-    {
-      super(tree);
-    }
-
-    /** compare UUID index data
-     * @param uuidIndexData1, uuidIndexData2 index data to compare
-     * @return -1 iff uuidIndexData1 < uuidIndexData2,
-                0 iff uuidIndexData1 = uuidIndexData2,
-                1 iff uuidIndexData1 > indeuuidIndexData2xData2
-     */
-    @Override
-    public int compare(UUIDIndexData uuidIndexData1, UUIDIndexData uuidIndexData2)
-    {
-      switch (sortMode)
-      {
-        case NAME:
-          return uuidIndexData1.name.compareTo(uuidIndexData2.name);
-        case SIZE:
-          if      (uuidIndexData1.totalSize < uuidIndexData2.totalSize) return -1;
-          else if (uuidIndexData1.totalSize > uuidIndexData2.totalSize) return  1;
-          else                                                          return  0;
-        case CREATED_DATETIME:
-          if      (uuidIndexData1.lastCreatedDateTime < uuidIndexData2.lastCreatedDateTime) return -1;
-          else if (uuidIndexData1.lastCreatedDateTime > uuidIndexData2.lastCreatedDateTime) return  1;
-          else                                                                              return  0;
-        case STATE:
-        default:
-          return 0;
-      }
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    @Override
-    public String toString()
-    {
-      return "UUIDIndexDataComparator {"+sortMode+"}";
     }
   }
 
@@ -979,6 +958,14 @@ Dprintf.dprintf("");
       this.totalSize           = totalSize;
     }
 
+    /** get date/time
+     * @return date/time [s]
+     */
+    public long getDateTime()
+    {
+      return lastCreatedDateTime;
+    }
+
     /** get number of entries
      * @return entries
      */
@@ -1010,30 +997,6 @@ Dprintf.dprintf("");
     public void setMenuItem(MenuItem menuItem)
     {
       setMenuItem(menuItem,menuItemUpdateRunnable);
-    }
-
-    /** compare index data
-     * @return <0/=0/>0 if name </=/> entityIndexData.date/entityIndexData.archiveType
-     */
-    public int compareTo(IndexData indexData)
-    {
-      EntityIndexData entityIndexData = (EntityIndexData)indexData;
-      int             result;
-
-      if      (lastCreatedDateTime < entityIndexData.lastCreatedDateTime)
-      {
-        result = -1;
-      }
-      else if (lastCreatedDateTime > entityIndexData.lastCreatedDateTime)
-      {
-        result = 1;
-      }
-      else
-      {
-        result = archiveType.toString().compareTo(entityIndexData.toString());
-      }
-
-      return result;
     }
 
     /** get info string
@@ -1204,6 +1167,22 @@ Dprintf.dprintf("");
       this(storageId,jobName,archiveType,name,0L,0L);
     }
 
+    /** get name
+     * @return name
+     */
+    public String getName()
+    {
+      return name;
+    }
+
+    /** get date/time
+     * @return date/time [s]
+     */
+    public long getDateTime()
+    {
+      return lastCreatedDateTime;
+    }
+
     /** get number of entries
      * @return entries
      */
@@ -1218,6 +1197,14 @@ Dprintf.dprintf("");
     public long getSize()
     {
       return totalSize;
+    }
+
+    /** get index state
+     * @return index state
+     */
+    public IndexStates getState()
+    {
+      return indexState;
     }
 
     /** set tree item reference
@@ -1243,16 +1230,6 @@ Dprintf.dprintf("");
                               indexState.toString()
                              );
 
-    }
-
-    /** compare index data
-     * @return <0/=0/>0 if name </=/> indexData.name
-     */
-    public int compareTo(IndexData indexData)
-    {
-//      return name.compareTo(indexData.name);
-Dprintf.dprintf("");
-return 0;
     }
 
     /** get info string
@@ -1329,8 +1306,9 @@ return 0;
   private int findStorageTreeIndex(IndexData indexData)
   {
     TreeItem            treeItems[]         = widgetStorageTree.getItems();
-    IndexDataComparator indexDataComparator = indexData.getComparatorInstance(widgetStorageTree);
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
+/* Note: binary search not possible because items are not sorted
     int i0 = 0;
     int i1 = treeItems.length-1;
     while (i0 < i1)
@@ -1343,6 +1321,16 @@ return 0;
     }
 
     return treeItems.length;
+*/
+    int index = 0;
+    while (   (index < treeItems.length)
+           && (indexDataComparator.compare(indexData,(IndexData)treeItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
   }
 
   /** find index for insert of item in sorted index item tree
@@ -1353,8 +1341,9 @@ return 0;
   private int findStorageTreeIndex(TreeItem treeItem, IndexData indexData)
   {
     TreeItem            subTreeItems[]      = treeItem.getItems();
-    IndexDataComparator indexDataComparator = indexData.getComparatorInstance(widgetStorageTree);
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
+/* Note: binary search not possible because items are not sorted
     int i0 = 0;
     int i1 = subTreeItems.length-1;
     while (i0 < i1)
@@ -1367,6 +1356,16 @@ return 0;
     }
 
     return subTreeItems.length;
+*/
+    int index = 0;
+    while (   (index < subTreeItems.length)
+           && (indexDataComparator.compare(indexData,(IndexData)subTreeItems[index].getData()) > 0)
+          )
+    {
+      index++;
+    }
+
+    return index;
   }
 
   /** find index for insert of item in sorted storage menu
@@ -1378,7 +1377,6 @@ return 0;
     MenuItem            menuItems[]         = widgetStorageTreeAssignToMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
-//TODO: binary search
     int index = STORAGE_TREE_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(uuidIndexData,(UUIDIndexData)menuItems[index].getData()) > 0)
@@ -1400,7 +1398,6 @@ return 0;
     MenuItem            menuItems[]         = subMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
-//TODO: binary search
     int index = STORAGE_LIST_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(entityIndexData,(EntityIndexData)menuItems[index].getData()) > 0)
@@ -1419,7 +1416,7 @@ return 0;
   private int findStorageTableIndex(IndexData indexData)
   {
     TableItem           tableItems[]        = widgetStorageTable.getItems();
-    IndexDataComparator indexDataComparator = indexData.getComparatorInstance(widgetStorageTable);
+    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable);
 
     int i0 = 0;
     int i1 = tableItems.length-1;
@@ -1899,7 +1896,12 @@ Dprintf.dprintf("");
                 indexData.clearTreeItem();
               }
             }
-            if (topTreeItem[0] != null) widgetStorageTree.setTopItem(topTreeItem[0]);
+            if (topTreeItem[0] != null)
+            {
+Dprintf.dprintf("topTreeItem[0]=%s %s",topTreeItem[0],topTreeItem[0].isDisposed());
+if (!topTreeItem[0].isDisposed())
+            widgetStorageTree.setTopItem(topTreeItem[0]);
+            }
           }
         });
       }
@@ -1934,20 +1936,24 @@ Dprintf.dprintf("");
 
       // get job items, UUID index data
       final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
-      final UUIDIndexData     uuidIndexData[]         = new UUIDIndexData[1];
+      final UUIDIndexData     uuidIndexData[]         = new UUIDIndexData[]{null};
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          assert uuidTreeItem.getData() instanceof UUIDIndexData;
-
-          for (TreeItem treeItem : uuidTreeItem.getItems())
+Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
+          if (!uuidTreeItem.isDisposed())
           {
-            assert treeItem.getData() instanceof EntityIndexData;
-            removeEntityTreeItemSet.add(treeItem);
-          }
+            assert uuidTreeItem.getData() instanceof UUIDIndexData;
 
-          uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
+            for (TreeItem treeItem : uuidTreeItem.getItems())
+            {
+              assert treeItem.getData() instanceof EntityIndexData;
+              removeEntityTreeItemSet.add(treeItem);
+            }
+
+            uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
+          }
         }
       });
       if (isUpdateTriggered()) return;
@@ -3347,6 +3353,8 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     {
       assert entryPattern != null;
 
+      int oldCount = count;
+
       // get entries info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
@@ -3361,7 +3369,6 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                   ) == Errors.NONE
          )
       {
-        int oldCount = count;
         count = valueMap.getInt("count");
         if ((oldCount > 0) && (oldCount <= MAX_SHOWN_ENTRIES) && (count > MAX_SHOWN_ENTRIES))
         {
@@ -3381,24 +3388,27 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         }
       }
 
-      // set count
-      display.syncExec(new Runnable()
+      if (oldCount != count)
       {
-        public void run()
+        // set count
+        display.syncExec(new Runnable()
         {
-          widgetEntryTableTitle.redraw();
+          public void run()
+          {
+            widgetEntryTableTitle.redraw();
 
-          widgetEntryTable.setRedraw(false);
+            widgetEntryTable.setRedraw(false);
 
-          widgetEntryTable.setItemCount(0);
-          widgetEntryTable.clearAll();
+            widgetEntryTable.setItemCount(0);
+            widgetEntryTable.clearAll();
 
-          widgetEntryTable.setTopIndex(0);
-          widgetEntryTable.setItemCount(Math.min(count,MAX_SHOWN_ENTRIES));
+            widgetEntryTable.setTopIndex(0);
+            widgetEntryTable.setItemCount(Math.min(count,MAX_SHOWN_ENTRIES));
 
-          widgetEntryTable.setRedraw(true);
-        }
-      });
+            widgetEntryTable.setRedraw(true);
+          }
+        });
+      }
     }
 
     /** refresh entry table items
@@ -3684,7 +3694,8 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                    // check if aborted
                                    if (isUpdateTriggered() || (n[0] >= limit))
                                    {
-                                     abort();
+Dprintf.dprintf("");
+//                                     abort();
                                    }
 
                                    return Errors.NONE;
@@ -5878,6 +5889,7 @@ Dprintf.dprintf("");
    * @param storageIndexDataHashSet storage index data hash set to fill
    * @return checked storage hash set
    */
+//TODO: obsolete
   private HashSet<IndexData> getCheckedIndexData(HashSet<IndexData> indexDataHashSet)
   {
 Dprintf.dprintf("remove");
@@ -5945,6 +5957,7 @@ Dprintf.dprintf("remove");
    * @param indexDataHashSet index data hash set to fill
    * @return selected storage hash set
    */
+//TODO: obsolete?
   private HashSet<IndexData> getSelectedIndexData(HashSet<IndexData> indexDataHashSet)
   {
 Dprintf.dprintf("");
