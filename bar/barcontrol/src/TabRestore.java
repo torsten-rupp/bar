@@ -2314,8 +2314,8 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
           widgetStorageTable.setItemCount(0);
           widgetStorageTable.clearAll();
 
-          widgetStorageTable.setTopIndex(0);
           widgetStorageTable.setItemCount(count);
+          widgetStorageTable.setTopIndex(0);
 
           widgetStorageTable.setRedraw(true);
         }
@@ -2334,6 +2334,9 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
 
       // get limit
       final int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
+
+//TODO: sort
+//IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
 
       // update storage table segment
       final String[] errorMessage = new String[1];
@@ -3417,8 +3420,8 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             widgetEntryTable.setItemCount(0);
             widgetEntryTable.clearAll();
 
-            widgetEntryTable.setTopIndex(0);
             widgetEntryTable.setItemCount(Math.min(count,MAX_SHOWN_ENTRIES));
+            widgetEntryTable.setTopIndex(0);
 
             widgetEntryTable.setRedraw(true);
           }
@@ -3438,6 +3441,9 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
 
       // get limit
       final int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
+
+//TODO: sort
+//IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
 
       // update entry table segment
       final String[] errorMessage = new String[1];
@@ -4637,11 +4643,23 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
-          IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
+          TableColumn tableColumn = (TableColumn)selectionEvent.widget;
           synchronized(widgetStorageTable)
           {
-            Widgets.sortTableColumn(widgetStorageTable,tableColumn,indexDataComparator);
+            widgetStorageTable.setRedraw(false);
+
+            Widgets.setSortTableColumn(widgetStorageTable,tableColumn);
+
+            int count        = widgetStorageTable.getItemCount();
+            int topItemIndex = widgetStorageTable.getTopIndex();
+
+            widgetStorageTable.setItemCount(0);
+            widgetStorageTable.clearAll();
+
+            widgetStorageTable.setItemCount(count);
+            widgetStorageTable.setTopIndex(topItemIndex);
+
+            widgetStorageTable.setRedraw(true);
           }
         }
       };
