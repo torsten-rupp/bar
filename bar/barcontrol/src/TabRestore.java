@@ -4387,45 +4387,13 @@ Dprintf.dprintf("");
               boolean   isChecked = treeItem.getChecked();
               IndexData indexData = (IndexData)treeItem.getData();
 
-              // set checked for sub-items: jobs, entity, storage
-              if      (indexData instanceof UUIDIndexData)
+              selectedIndexIdSet.set(indexData.indexId,isChecked);
+              if (treeItem.getExpanded())
               {
-                UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
-                selectedIndexIdSet.set(uuidIndexData.indexId,isChecked);
-
-                if (treeItem.getExpanded())
+                // check/uncheck all
+                for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
                 {
-                  // check/uncheck all entities
-                  for (TreeItem entityTreeItem : treeItem.getItems())
-                  {
-                    entityTreeItem.setChecked(isChecked);
-
-                    EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-                    selectedIndexIdSet.set(entityIndexData.indexId,isChecked);
-
-                    if (entityTreeItem.getExpanded())
-                    {
-                      // check/uncheck all storages
-                      for (TreeItem storageTreeItem : entityTreeItem.getItems())
-                      {
-                        storageTreeItem.setChecked(isChecked);
-                      }
-                    }
-                  }
-                }
-              }
-              else if (indexData instanceof EntityIndexData)
-              {
-                EntityIndexData entityIndexData = (EntityIndexData)indexData;
-                selectedIndexIdSet.set(entityIndexData.indexId,isChecked);
-
-                if (treeItem.getExpanded())
-                {
-                  // check/uncheck all storages
-                  for (TreeItem storageTreeItem : treeItem.getItems())
-                  {
-                    storageTreeItem.setChecked(isChecked);
-                  }
+                  subTreeItem.setChecked(isChecked);
                 }
               }
 
@@ -5507,17 +5475,16 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
+            setAllCheckedEntries(selectedEntryIdSet.isEmpty());
             if (!selectedEntryIdSet.isEmpty())
             {
-              setAllCheckedEntries(false);
-              button.setImage(IMAGE_MARK_ALL);
-              button.setToolTipText(BARControl.tr("Mark all entries in list."));
+              button.setImage(IMAGE_UNMARK_ALL);
+              button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
             else
             {
-              setAllCheckedEntries(true);
-              button.setImage(IMAGE_UNMARK_ALL);
-              button.setToolTipText(BARControl.tr("Unmark all entries in list."));
+              button.setImage(IMAGE_MARK_ALL);
+              button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
           }
         });
@@ -7733,7 +7700,7 @@ boolean overwriteFiles = false;
     final String[] errorMessage = new String[1];
     ValueMap       valueMap     = new ValueMap();
 
-    // confirm check
+    // confirm check if there are many entries
     final int     count[] = new int[]{0};
     final boolean doit[]  = new boolean[]{true};
     if (checked)
@@ -7768,40 +7735,58 @@ boolean overwriteFiles = false;
       }
     }
 
-    if (doit[0])
+    // check/uncheck all entries
+    if (checked)
     {
-      // check/uncheck all entries
-      final int n[] = new int[]{0};
-      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
-      busyDialog.setMaximum(count[0]);
-      int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y",
-                                                               updateEntryTableThread.getEntryPattern(),
-                                                               updateEntryTableThread.getEntryType().toString(),
-                                                               updateEntryTableThread.getNewestEntriesOnly()
-                                                              ),
-                                           1,
-                                           errorMessage,
-                                           new CommandResultHandler()
-                                           {
-                                             public int handleResult(int i, ValueMap valueMap)
-                                             {
-                                               long entryId = valueMap.getLong("entryId");
-
-                                               selectedEntryIdSet.set(entryId,checked);
-
-                                               n[0]++;
-                                               busyDialog.updateProgressBar(n[0]);
-
-                                               return Errors.NONE;
-                                             }
-                                           }
-                                          );
-      busyDialog.close();
-      if (error != Errors.NONE)
+      if (doit[0])
       {
-        Dialogs.error(shell,BARControl.tr("Cannot mark all index entries\n\n(error: {0})",errorMessage[0]));
-        return;
+        final int n[] = new int[]{0};
+        final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
+        busyDialog.setMaximum(count[0]);
+        int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y",
+                                                                 updateEntryTableThread.getEntryPattern(),
+                                                                 updateEntryTableThread.getEntryType().toString(),
+                                                                 updateEntryTableThread.getNewestEntriesOnly()
+                                                                ),
+                                             1,
+                                             errorMessage,
+                                             new CommandResultHandler()
+                                             {
+                                               public int handleResult(int i, ValueMap valueMap)
+                                               {
+                                                 long entryId = valueMap.getLong("entryId");
+
+                                                 selectedEntryIdSet.set(entryId,checked);
+
+                                                 n[0]++;
+                                                 busyDialog.updateProgressBar(n[0]);
+
+                                                 if (busyDialog.isAborted())
+                                                 {
+                                                   abort();
+                                                 }
+
+                                                 return Errors.NONE;
+                                               }
+                                             }
+                                            );
+        busyDialog.close();
+        if (error != Errors.NONE)
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot mark all index entries\n\n(error: {0})",errorMessage[0]));
+          return;
+        }
+
+        // refresh table
+        Widgets.refreshVirtualTable(widgetEntryTable);
+
+        // trigger update checked
+        checkedEntryEvent.trigger();
       }
+    }
+    else
+    {
+      selectedEntryIdSet.clear();
 
       // refresh table
       Widgets.refreshVirtualTable(widgetEntryTable);
