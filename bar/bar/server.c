@@ -13046,7 +13046,7 @@ fprintf(stderr,"%s, %d: +++++++++++++++++++ %d\n",__FILE__,__LINE__,Array_length
 
 /***********************************************************************\
 * Name   : serverCommand_entryListClear
-* Purpose: clear restore entry list
+* Purpose: clear selected entry list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -13077,7 +13077,7 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, uint id, const S
 
 /***********************************************************************\
 * Name   : serverCommand_entryListAdd
-* Purpose: add to restore entry list
+* Purpose: add to selected entry list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -13121,6 +13121,61 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
     case INDEX_TYPE_LINK     : Array_append(&clientInfo->linkIdArray,     &entryId); break;
     case INDEX_TYPE_HARDLINK : Array_append(&clientInfo->hardLinkIdArray, &entryId); break;
     case INDEX_TYPE_SPECIAL  : Array_append(&clientInfo->specialIdArray,  &entryId); break;
+    default:
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"invalid index type %d",Index_getType(entryId));
+      return;
+      break; /* not reached */
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_entryListRemove
+* Purpose: remove from selected entry list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entryId=<id>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  IndexId entryId;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get entry ids
+  if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
+    return;
+  }
+
+  // check if index database is available, check if index database is ready
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // add to id array
+#warning TODO: single array
+  Array_remove(&clientInfo->entryIdArray,&entryId);
+  switch (Index_getType(entryId))
+  {
+    case INDEX_TYPE_FILE     : Array_remove(&clientInfo->fileIdArray,     &entryId); break;
+    case INDEX_TYPE_IMAGE    : Array_remove(&clientInfo->imageIdArray,    &entryId); break;
+    case INDEX_TYPE_DIRECTORY: Array_remove(&clientInfo->directoryIdArray,&entryId); break;
+    case INDEX_TYPE_LINK     : Array_remove(&clientInfo->linkIdArray,     &entryId); break;
+    case INDEX_TYPE_HARDLINK : Array_remove(&clientInfo->hardLinkIdArray, &entryId); break;
+    case INDEX_TYPE_SPECIAL  : Array_remove(&clientInfo->specialIdArray,  &entryId); break;
     default:
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"invalid index type %d",Index_getType(entryId));
       return;
