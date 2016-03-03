@@ -7179,6 +7179,21 @@ private static void printTree(Tree tree)
     return treeItemSet.toArray(new TreeItem[treeItemSet.size()]);
   }
 
+  /** get all sub tree items of tree item
+   * @param treeItem tree item
+   * @return tree items array
+   */
+  public static TreeItem[] getAllTreeItems(TreeItem treeItem)
+  {
+    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
+    if (!treeItem.isDisposed())
+    {
+      getSubTreeItems(treeItemSet,treeItem);
+    }
+
+    return treeItemSet.toArray(new TreeItem[treeItemSet.size()]);
+  }
+
   /** re-expand entries
    * @param expandedItemSet data entries to re-expand
    * @return treeItem tree item to start
