@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS uuids(
 
   // updated by triggers
   totalEntityCount    INTEGER DEFAULT 0,  // total number of entities
-  totalEntitySize     INTEGER DEFAULT 0,  // total size of entities [bytes]
+//  totalEntitySize     INTEGER DEFAULT 0,  // total size of entities [bytes]
   lastCreated         INTEGER DEFAULT 0,  // date/time last created entity
   lastErrorMessage    TEXT DEFAULT '',    // last entity error message
 
@@ -85,7 +85,7 @@ CREATE TRIGGER entityInsert AFTER INSERT ON entities
       (jobUUID) VALUES (NEW.jobUUID);
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   +1,
-          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,
+//          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
 
@@ -110,7 +110,7 @@ CREATE TRIGGER entityDelete BEFORE DELETE ON entities
   BEGIN
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   -1,
-          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,
+//          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
 
@@ -135,7 +135,7 @@ CREATE TRIGGER entityUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEn
   BEGIN
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   -1,
-          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,
+//          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
 
@@ -157,7 +157,7 @@ CREATE TRIGGER entityUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEn
       WHERE uuids.jobUUID=OLD.jobUUID;
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   +1,
-          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,
+//          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
 
@@ -224,7 +224,7 @@ CREATE TRIGGER storageInsert AFTER INSERT ON storage
   BEGIN
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  +1,
-          totalStorageSize   =totalStorageSize   +NEW.totalEntrySize,
+          totalStorageSize   =totalStorageSize   +NEW.size,
           lastCreated        =(SELECT storage.created      FROM storage WHERE storage.entityId=NEW.entityId ORDER BY storage.created DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT storage.errorMessage FROM storage WHERE storage.entityId=NEW.entityId ORDER BY storage.created DESC LIMIT 0,1),
 
@@ -247,7 +247,7 @@ CREATE TRIGGER storageDelete BEFORE DELETE ON storage
   BEGIN
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  -1,
-          totalStorageSize   =totalStorageSize   -OLD.totalEntrySize,
+          totalStorageSize   =totalStorageSize   -OLD.size,
           lastCreated        =(SELECT storage.created      FROM storage WHERE storage.entityId=OLD.entityId ORDER BY storage.created DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT storage.errorMessage FROM storage WHERE storage.entityId=OLD.entityId ORDER BY storage.created DESC LIMIT 0,1),
 
@@ -270,7 +270,7 @@ CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalE
   BEGIN
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  -1,
-          totalStorageSize   =totalStorageSize   -OLD.totalEntrySize,
+          totalStorageSize   =totalStorageSize   -OLD.size,
           lastCreated        =(SELECT storage.created      FROM storage WHERE storage.entityId=OLD.entityId ORDER BY storage.created DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT storage.errorMessage FROM storage WHERE storage.entityId=OLD.entityId ORDER BY storage.created DESC LIMIT 0,1),
 
@@ -289,7 +289,7 @@ CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalE
       WHERE entities.id=OLD.entityId;
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  +1,
-          totalStorageSize   =totalStorageSize   +NEW.totalEntrySize,
+          totalStorageSize   =totalStorageSize   +NEW.size,
           lastCreated        =(SELECT storage.created      FROM storage WHERE storage.entityId=NEW.entityId ORDER BY storage.created DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT storage.errorMessage FROM storage WHERE storage.entityId=NEW.entityId ORDER BY storage.created DESC LIMIT 0,1),
 
@@ -346,8 +346,8 @@ CREATE TRIGGER filesInsert AFTER INSERT ON files
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size,
-          totalFileCount =totalFileCount+1,
-          totalFileSize  =totalFileSize +NEW.size
+          totalFileCount =totalFileCount +1,
+          totalFileSize  =totalFileSize  +NEW.size
       WHERE storage.id=NEW.storageId;
     UPDATE directories
       SET totalEntryCount=totalEntryCount+1,
@@ -361,8 +361,8 @@ CREATE TRIGGER filesDelete BEFORE DELETE ON files
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size,
-          totalFileCount =totalFileCount-1,
-          totalFileSize  =totalFileSize -OLD.size
+          totalFileCount =totalFileCount -1,
+          totalFileSize  =totalFileSize  -OLD.size
       WHERE storage.id=OLD.storageId;
     UPDATE directories
       SET totalEntryCount=totalEntryCount-1,
@@ -376,8 +376,8 @@ CREATE TRIGGER filesUpdateStorageSize AFTER UPDATE OF storageId,size ON files
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size,
-          totalFileCount =totalFileCount-1,
-          totalFileSize  =totalFileSize -OLD.size
+          totalFileCount =totalFileCount -1,
+          totalFileSize  =totalFileSize  -OLD.size
       WHERE storage.id=OLD.storageId;
     UPDATE directories
       SET totalEntryCount=totalEntryCount-1,
@@ -387,8 +387,8 @@ CREATE TRIGGER filesUpdateStorageSize AFTER UPDATE OF storageId,size ON files
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size,
-          totalFileCount =totalFileCount+1,
-          totalFileSize  =totalFileSize +NEW.size
+          totalFileCount =totalFileCount +1,
+          totalFileSize  =totalFileSize  +NEW.size
       WHERE storage.id=NEW.storageId;
     UPDATE directories
       SET totalEntryCount=totalEntryCount+1,
@@ -499,7 +499,7 @@ CREATE VIRTUAL TABLE FTS_directories USING FTS4(
 CREATE TRIGGER directoriesInsert AFTER INSERT ON directories
   BEGIN
     UPDATE storage
-      SET totalEntryCount    =totalEntryCount+1,
+      SET totalEntryCount    =totalEntryCount    +1,
           totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_directories VALUES (NEW.id,NEW.name);
@@ -507,7 +507,7 @@ CREATE TRIGGER directoriesInsert AFTER INSERT ON directories
 CREATE TRIGGER directoriesDelete BEFORE DELETE ON directories
   BEGIN
     UPDATE storage
-      SET totalEntryCount    =totalEntryCount-1,
+      SET totalEntryCount    =totalEntryCount    -1,
           totalDirectoryCount=totalDirectoryCount-1
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_directories WHERE directoryId MATCH OLD.id;
@@ -515,11 +515,11 @@ CREATE TRIGGER directoriesDelete BEFORE DELETE ON directories
 CREATE TRIGGER directoriesUpdate AFTER UPDATE OF storageId ON directories
   BEGIN
     UPDATE storage
-      SET totalEntryCount    =totalEntryCount-1,
+      SET totalEntryCount    =totalEntryCount    -1,
           totalDirectoryCount=totalDirectoryCount-1
       WHERE storage.id=OLD.storageId;
     UPDATE storage
-      SET totalEntryCount    =totalEntryCount+1,
+      SET totalEntryCount    =totalEntryCount    +1,
           totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
   END;
@@ -572,7 +572,7 @@ CREATE TRIGGER linksInsert AFTER INSERT ON links
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
-          totalLinkCount =totalLinkCount+1
+          totalLinkCount =totalLinkCount +1
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_links VALUES (NEW.id,NEW.name);
   END;
@@ -580,7 +580,7 @@ CREATE TRIGGER linksDelete BEFORE DELETE ON links
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
-          totalLinkCount =totalLinkCount-1
+          totalLinkCount =totalLinkCount -1
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_links WHERE linkId MATCH OLD.id;
   END;
@@ -588,11 +588,11 @@ CREATE TRIGGER linsUpdateStorage AFTER UPDATE OF storageId ON links
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
-          totalLinkCount =totalLinkCount-1
+          totalLinkCount =totalLinkCount -1
       WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
-          totalLinkCount =totalLinkCount+1
+          totalLinkCount =totalLinkCount +1
       WHERE storage.id=NEW.storageId;
   END;
 CREATE TRIGGER linksUpdateName AFTER UPDATE OF name ON links
@@ -632,8 +632,8 @@ CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
 CREATE TRIGGER hardlinksInsert AFTER INSERT ON hardlinks
   BEGIN
     UPDATE storage
-      SET totalEntryCount   =totalEntryCount+1,
-          totalEntrySize    =totalEntrySize +NEW.size,
+      SET totalEntryCount   =totalEntryCount   +1,
+          totalEntrySize    =totalEntrySize    +NEW.size,
           totalHardlinkCount=totalHardlinkCount+1,
           totalHardlinkSize =totalHardlinkSize +NEW.size
       WHERE storage.id=NEW.storageId;
@@ -647,8 +647,8 @@ CREATE TRIGGER hardlinksInsert AFTER INSERT ON hardlinks
 CREATE TRIGGER hardlinksDelete BEFORE DELETE ON hardlinks
   BEGIN
     UPDATE storage
-      SET totalEntryCount   =totalEntryCount-1,
-          totalEntrySize    =totalEntrySize -OLD.size,
+      SET totalEntryCount   =totalEntryCount   -1,
+          totalEntrySize    =totalEntrySize    -OLD.size,
           totalHardlinkCount=totalHardlinkCount-1,
           totalHardlinkSize =totalHardlinkSize -OLD.size
       WHERE storage.id=OLD.storageId;
@@ -662,8 +662,8 @@ CREATE TRIGGER hardlinksDelete BEFORE DELETE ON hardlinks
 CREATE TRIGGER hardlinksUpdateStorageSize AFTER UPDATE OF storageId,size ON hardlinks
   BEGIN
     UPDATE storage
-      SET totalEntryCount   =totalEntryCount-1,
-          totalEntrySize    =totalEntrySize -OLD.size,
+      SET totalEntryCount   =totalEntryCount   -1,
+          totalEntrySize    =totalEntrySize    -OLD.size,
           totalHardlinkCount=totalHardlinkCount-1,
           totalHardlinkSize =totalHardlinkSize -OLD.size
       WHERE storage.id=OLD.storageId;
@@ -673,8 +673,8 @@ CREATE TRIGGER hardlinksUpdateStorageSize AFTER UPDATE OF storageId,size ON hard
       WHERE     directories.storageId=OLD.storageId
             AND directories.name=DIRNAME(OLD.name);
     UPDATE storage
-      SET totalEntryCount   =totalEntryCount+1,
-          totalEntrySize    =totalEntrySize +NEW.size,
+      SET totalEntryCount   =totalEntryCount   +1,
+          totalEntrySize    =totalEntrySize    +NEW.size,
           totalHardlinkCount=totalHardlinkCount+1,
           totalHardlinkSize =totalHardlinkSize +NEW.size
       WHERE storage.id=NEW.storageId;
@@ -721,7 +721,7 @@ CREATE VIRTUAL TABLE FTS_special USING FTS4(
 CREATE TRIGGER specialInsert AFTER INSERT ON special
   BEGIN
     UPDATE storage
-      SET totalEntryCount  =totalEntryCount+1,
+      SET totalEntryCount  =totalEntryCount  +1,
           totalSpecialCount=totalSpecialCount+1
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_special VALUES (NEW.id,NEW.name);
@@ -729,7 +729,7 @@ CREATE TRIGGER specialInsert AFTER INSERT ON special
 CREATE TRIGGER specialDelete BEFORE DELETE ON special
   BEGIN
     UPDATE storage
-      SET totalEntryCount  =totalEntryCount-1,
+      SET totalEntryCount  =totalEntryCount  -1,
           totalSpecialCount=totalSpecialCount-1
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_special WHERE specialId MATCH OLD.id;
@@ -737,11 +737,11 @@ CREATE TRIGGER specialDelete BEFORE DELETE ON special
 CREATE TRIGGER specialUpdateStorage AFTER UPDATE OF storageId ON special
   BEGIN
     UPDATE storage
-      SET totalEntryCount  =totalEntryCount-1,
+      SET totalEntryCount  =totalEntryCount  -1,
           totalSpecialCount=totalSpecialCount-1
       WHERE storage.id=OLD.storageId;
     UPDATE storage
-      SET totalEntryCount  =totalEntryCount+1,
+      SET totalEntryCount  =totalEntryCount  +1,
           totalSpecialCount=totalSpecialCount+1
       WHERE storage.id=NEW.storageId;
   END;
