@@ -5180,16 +5180,15 @@ e composite widget
     tableItems[j].setChecked(checked);
   }
 
-  /** select sort column and sort table
+  /** set sort column
    * @param table table
    * @param tableColumn table column to sort by
-   * @param comparator table data comparator
    */
-  public static void sortTableColumn(Table table, TableColumn tableColumn, Comparator comparator)
+  public static void setSortTableColumn(Table table, TableColumn tableColumn)
   {
     if (!table.isDisposed())
     {
-      // get sorting direction
+      // set sort column, toggle sorting direction
       int sortDirection = table.getSortDirection();
       if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
       if (table.getSortColumn() == tableColumn)
@@ -5202,8 +5201,22 @@ e composite widget
       }
       table.setSortColumn(tableColumn);
       table.setSortDirection(sortDirection);
+    }
+  }
 
-      // sort column
+  /** select sort column and sort table
+   * @param table table
+   * @param tableColumn table column to sort by
+   * @param comparator table data comparator
+   */
+  public static void sortTableColumn(Table table, TableColumn tableColumn, Comparator comparator)
+  {
+    if (!table.isDisposed())
+    {
+      // set sort column, toggle sorting direction
+      setSortTableColumn(table,tableColumn);
+
+      // sort table
       sortTableColumn(table,comparator);
     }
   }
@@ -7198,6 +7211,32 @@ private static void printTree(Tree tree)
     }
   }
 
+  /** set sort tree column
+   * @param tree tree
+   * @param tableColumn table column to sort by
+   */
+  public static void setSortTreeColumn(Tree tree, TreeColumn treeColumn)
+  {
+    if (!tree.isDisposed())
+    {
+      // get sorting direction
+      int sortDirection = tree.getSortDirection();
+      if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
+      if (tree.getSortColumn() == treeColumn)
+      {
+        switch (sortDirection)
+        {
+          case SWT.UP:   sortDirection = SWT.DOWN; break;
+          case SWT.DOWN: sortDirection = SWT.UP;   break;
+        }
+      }
+
+      // set column sort indicators
+      tree.setSortColumn(treeColumn);
+      tree.setSortDirection(sortDirection);
+    }
+  }
+
   /** sort tree column
    * @param tree tree
    * @param tableColumn table column to sort by
@@ -7245,8 +7284,6 @@ private static void printTree(Tree tree)
       // set column sort indicators
       tree.setSortColumn(treeColumn);
       tree.setSortDirection(sortDirection);
-//System.err.println("2 ---------------");
-//printTree(tree);
     }
   }
 
