@@ -1436,7 +1436,7 @@ Dprintf.dprintf("");
    */
   class UpdateStorageTreeTableThread extends Thread
   {
-    private final int PAGE_SIZE = 64;
+    private final int PAGE_SIZE = 32;
 
     private Object           trigger              = new Object();   // trigger update object
     private boolean          updateCount          = false;
@@ -4365,6 +4365,9 @@ Dprintf.dprintf("");
               // toggle check
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
               selectedIndexIdSet.set(storageIndexData.indexId,treeItem.getChecked());
+
+              updateStorageList(selectedIndexIdSet);
+
               checkedStorageEvent.trigger();
             }
           }
@@ -4396,6 +4399,8 @@ Dprintf.dprintf("");
                   subTreeItem.setChecked(isChecked);
                 }
               }
+
+              updateStorageList(selectedIndexIdSet);
 
               // trigger update checked
               checkedStorageEvent.trigger();
@@ -4664,6 +4669,9 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           {
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
             selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
+
+            updateStorageList(selectedIndexIdSet);
+
             checkedStorageEvent.trigger();
           }
         }
@@ -4684,6 +4692,9 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             if (storageIndexData != null)
             {
               selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
+
+              setStorageList(storageIndexData.indexId,tabletem.getChecked());
+
               checkedStorageEvent.trigger();
             }
           }
@@ -5310,7 +5321,7 @@ Dprintf.dprintf("remove");
             }
           }
 
-          // trigger update checked
+          // trigger update entries
           checkedEntryEvent.trigger();
         }
       });
@@ -5734,6 +5745,58 @@ Dprintf.dprintf("remove");
 
   //-----------------------------------------------------------------------
 
+  /** clear selected storage entries
+   */
+  private void clearStorageList()
+  {
+    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+  }
+
+  /** set/clear checked storage entry
+   * @param indexId index id
+   * @param checked true for set checked, false for clear checked
+   */
+  private void setStorageList(long indexId, boolean checked)
+  {
+    if (checked)
+    {
+      BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
+                                                   indexId
+                                                  ),
+                               0  // debugLevel
+                              );
+    }
+    else
+    {
+      BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexId=%ld",
+                                                   indexId
+                                                  ),
+                               0  // debugLevel
+                              );
+    }
+  }
+
+  /** set/clear checked storage entry
+   * @param indexId index id
+   */
+  private void setStorageList(long indexId)
+  {
+    setStorageList(indexId,true);
+  }
+
+  /** set checked storage entries
+   * @param indexIdSet index id set
+   */
+  private void updateStorageList(IndexIdSet indexIdSet)
+  {
+    clearStorageList();
+//TODO: optimize send more than one entry?
+    for (Long indexId : indexIdSet)
+    {
+      setStorageList(indexId);
+    }
+  }
+
   /** set/clear checked all storage entries
    * @param checked true for set checked, false for clear checked
    */
@@ -5744,66 +5807,47 @@ Dprintf.dprintf("remove");
     final String[] errorMessage = new String[1];
     ValueMap       valueMap     = new ValueMap();
 
+    clearStorageList();
+
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
         // tree view
-        TreeItem treeItems[] = widgetStorageTree.getSelection();
-        if (treeItems.length <= 0) treeItems = widgetStorageTree.getItems();
-
-        for (TreeItem treeItem : treeItems)
+        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
         {
-          IndexData indexData = (IndexData)treeItem.getData();
+          uuidTreeItem.setChecked(checked);
 
-          if      (indexData instanceof UUIDIndexData)
+          UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
+          selectedIndexIdSet.set(uuidIndexData.indexId,checked);
+          if (checked) setStorageList(uuidIndexData.indexId,true);
+
+          if (uuidTreeItem.getExpanded())
           {
-            UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
-Dprintf.dprintf("");
-//            uuidIndexData.setChecked(checked);
-
-            if (treeItem.getExpanded())
+            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
             {
-              for (TreeItem entityTreeItem : treeItem.getItems())
-              {
-                EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-Dprintf.dprintf("");
-//                entityIndexData.setChecked(checked);
+              entityTreeItem.setChecked(checked);
 
-                if (entityTreeItem.getExpanded())
+              EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
+              selectedIndexIdSet.set(entityIndexData.indexId,checked);
+              if (checked) setStorageList(entityIndexData.indexId,true);
+
+              if (entityTreeItem.getExpanded())
+              {
+                for (TreeItem storageTreeItem : entityTreeItem.getItems())
                 {
-                  for (TreeItem storageTreeItem : entityTreeItem.getItems())
-                  {
-                    StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-Dprintf.dprintf("");
-//                    storageIndexData.setChecked(checked);
-                  }
+                  storageTreeItem.setChecked(checked);
+
+                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+                  selectedIndexIdSet.set(storageIndexData.indexId,checked);
+                  if (checked) setStorageList(storageIndexData.indexId,true);
                 }
               }
             }
           }
-          else if (indexData instanceof EntityIndexData)
-          {
-            EntityIndexData entityIndexData = (EntityIndexData)indexData;
-Dprintf.dprintf("");
-//            entityIndexData.setChecked(checked);
-
-            if (treeItem.getExpanded())
-            {
-              for (TreeItem storageTreeItem : treeItem.getItems())
-              {
-                StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-Dprintf.dprintf("");
-//                storageIndexData.setChecked(checked);
-              }
-            }
-          }
-          else if (indexData instanceof StorageIndexData)
-          {
-            StorageIndexData storageIndexData = (StorageIndexData)indexData;
-Dprintf.dprintf("");
-//            storageIndexData.setChecked(checked);
-          }
         }
+
+        // trigger update entries
+        checkedEntryEvent.trigger();
         break;
       case 1:
         final int     count[] = new int[]{0};
@@ -5840,45 +5884,63 @@ Dprintf.dprintf("");
           }
         }
 
-        if (doit[0])
+        if (checked)
         {
-          // check/uncheck all entries
-          final int n[] = new int[]{0};
-          final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
-          busyDialog.setMaximum(count[0]);
-          int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s",
-                                                                   "*",
-                                                                   updateStorageTreeTableThread.getStoragePattern(),
-                                                                   updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                                   "*"
-                                                                  ),
-                                               1,  // debugLevel
-                                               errorMessage,
-                                               new CommandResultHandler()
-                                               {
-                                                 public int handleResult(int i, ValueMap valueMap)
-                                                 {
-                                                   long storageId = valueMap.getLong("storageId");
-
-                                                   selectedIndexIdSet.set(storageId,checked);
-
-                                                   n[0]++;
-                                                   busyDialog.updateProgressBar(n[0]);
-
-                                                   return Errors.NONE;
-                                                 }
-                                               }
-                                              );
-          busyDialog.close();
-          if (error != Errors.NONE)
+          if (doit[0])
           {
-            Dialogs.error(shell,BARControl.tr("Cannot mark all storages\n\n(error: {0})",errorMessage[0]));
-            return;
+            // check/uncheck all entries
+            final int n[] = new int[]{0};
+            final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
+            busyDialog.setMaximum(count[0]);
+            int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s",
+                                                                     "*",
+                                                                     updateStorageTreeTableThread.getStoragePattern(),
+                                                                     updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                                     "*"
+                                                                    ),
+                                                 1,  // debugLevel
+                                                 errorMessage,
+                                                 new CommandResultHandler()
+                                                 {
+                                                   public int handleResult(int i, ValueMap valueMap)
+                                                   {
+                                                     long storageId = valueMap.getLong("storageId");
+
+                                                     selectedIndexIdSet.set(storageId,checked);
+                                                     if (checked) setStorageList(storageId,true);
+
+                                                     n[0]++;
+                                                     busyDialog.updateProgressBar(n[0]);
+
+                                                     return Errors.NONE;
+                                                   }
+                                                 }
+                                                );
+            busyDialog.close();
+            if (error != Errors.NONE)
+            {
+              Dialogs.error(shell,BARControl.tr("Cannot mark all storages\n\n(error: {0})",errorMessage[0]));
+              return;
+            }
+
+            // refresh table
+            Widgets.refreshVirtualTable(widgetStorageTable);
+
+            // trigger update entries
+            checkedEntryEvent.trigger();
           }
+        }
+        else
+        {
+          selectedIndexIdSet.clear();
 
           // refresh table
           Widgets.refreshVirtualTable(widgetStorageTable);
+
+          // trigger update entries
+          checkedEntryEvent.trigger();
         }
+        break;
     }
 
     // trigger update checked
@@ -7404,16 +7466,7 @@ assert storagePattern != null;
         try
         {
           // set entries to restore
-          BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
-  //TODO: optimize send more than one entry?
-          for (Long indexId : indexIdSet)
-          {
-            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
-                                                         indexId
-                                                        ),
-                                     0  // debugLevel
-                                    );
-          }
+          updateStorageList(indexIdSet);
 
           // get number entries, size
           final String[] errorMessage = new String[1];
@@ -7780,7 +7833,7 @@ boolean overwriteFiles = false;
         // refresh table
         Widgets.refreshVirtualTable(widgetEntryTable);
 
-        // trigger update checked
+        // trigger update entries
         checkedEntryEvent.trigger();
       }
     }
@@ -7791,7 +7844,7 @@ boolean overwriteFiles = false;
       // refresh table
       Widgets.refreshVirtualTable(widgetEntryTable);
 
-      // trigger update checked
+      // trigger update entries
       checkedEntryEvent.trigger();
     }
   }
@@ -7940,7 +7993,7 @@ Dprintf.dprintf("");
       }
     }
 */
-    // enable/disable restore button
+    // trigger update entries
     checkedEntryEvent.trigger();
   }
 
