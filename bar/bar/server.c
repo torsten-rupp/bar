@@ -12647,8 +12647,6 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
 #endif
       }
       Index_doneList(&indexQueryHandle1);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
       break;
     case INDEX_TYPE_ENTITY:
       // add all storage ids with entity id
