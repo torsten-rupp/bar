@@ -4365,8 +4365,7 @@ Dprintf.dprintf("");
               // toggle check
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
               selectedIndexIdSet.set(storageIndexData.indexId,treeItem.getChecked());
-
-              updateStorageList(selectedIndexIdSet);
+              setStorageList(storageIndexData.indexId,treeItem.getChecked());
 
               checkedStorageEvent.trigger();
             }
@@ -4399,8 +4398,7 @@ Dprintf.dprintf("");
                   subTreeItem.setChecked(isChecked);
                 }
               }
-
-              updateStorageList(selectedIndexIdSet);
+              setStorageList(indexData.indexId,treeItem.getChecked());
 
               // trigger update checked
               checkedStorageEvent.trigger();
@@ -4669,8 +4667,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           {
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
             selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
-
-            updateStorageList(selectedIndexIdSet);
+            setStorageList(storageIndexData.indexId,tabletem.getChecked());
 
             checkedStorageEvent.trigger();
           }
@@ -4689,14 +4686,14 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
           {
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
-            if (storageIndexData != null)
-            {
+Dprintf.dprintf("");
+//            if (storageIndexData != null)
+//            {
               selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
-
               setStorageList(storageIndexData.indexId,tabletem.getChecked());
 
               checkedStorageEvent.trigger();
-            }
+//            }
           }
         }
       });
@@ -5752,7 +5749,7 @@ Dprintf.dprintf("remove");
     BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
   }
 
-  /** set/clear checked storage entry
+  /** set/clear selected storage entry
    * @param indexId index id
    * @param checked true for set checked, false for clear checked
    */
@@ -5776,7 +5773,7 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** set/clear checked storage entry
+  /** set selected storage entry
    * @param indexId index id
    */
   private void setStorageList(long indexId)
@@ -5784,10 +5781,10 @@ Dprintf.dprintf("remove");
     setStorageList(indexId,true);
   }
 
-  /** set checked storage entries
+  /** set selected storage entries
    * @param indexIdSet index id set
    */
-  private void updateStorageList(IndexIdSet indexIdSet)
+  private void setStorageList(IndexIdSet indexIdSet)
   {
     clearStorageList();
 //TODO: optimize send more than one entry?
@@ -5846,8 +5843,8 @@ Dprintf.dprintf("remove");
           }
         }
 
-        // trigger update entries
-        checkedEntryEvent.trigger();
+        // trigger update storage
+        checkedStorageEvent.trigger();
         break;
       case 1:
         final int     count[] = new int[]{0};
@@ -5926,8 +5923,8 @@ Dprintf.dprintf("remove");
             // refresh table
             Widgets.refreshVirtualTable(widgetStorageTable);
 
-            // trigger update entries
-            checkedEntryEvent.trigger();
+            // trigger update storage
+            checkedStorageEvent.trigger();
           }
         }
         else
@@ -5937,14 +5934,11 @@ Dprintf.dprintf("remove");
           // refresh table
           Widgets.refreshVirtualTable(widgetStorageTable);
 
-          // trigger update entries
-          checkedEntryEvent.trigger();
+          // trigger update storage
+          checkedStorageEvent.trigger();
         }
         break;
     }
-
-    // trigger update checked
-    checkedStorageEvent.trigger();
   }
 
   /** get checked storage
@@ -7466,7 +7460,7 @@ assert storagePattern != null;
         try
         {
           // set entries to restore
-          updateStorageList(indexIdSet);
+          setStorageList(indexIdSet);
 
           // get number entries, size
           final String[] errorMessage = new String[1];
