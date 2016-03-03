@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-03-02 16:44+0100\n"
+"POT-Creation-Date: 2016-03-03 03:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,9 +56,9 @@ msgid "Server"
 msgstr ""
 
 #: src/BARControl.java:1425 src/Dialogs.java:2560 src/ServerSettings.java:537
-#: src/ServerSettings.java:2371 src/TabJobs.java:6308 src/TabRestore.java:7563
-#: src/TabRestore.java:8275 src/TabRestore.java:8310 src/TabRestore.java:8345
-#: src/TabRestore.java:8380
+#: src/ServerSettings.java:2371 src/TabJobs.java:6308 src/TabRestore.java:7576
+#: src/TabRestore.java:8288 src/TabRestore.java:8323 src/TabRestore.java:8358
+#: src/TabRestore.java:8393
 msgid "Password"
 msgstr ""
 
@@ -75,7 +75,7 @@ msgstr ""
 #: src/TabJobs.java:8697 src/TabJobs.java:8816 src/TabJobs.java:8948
 #: src/TabJobs.java:10289 src/TabJobs.java:10624 src/TabJobs.java:10973
 #: src/TabJobs.java:11412 src/TabJobs.java:12641 src/TabJobs.java:13230
-#: src/TabRestore.java:6700 src/TabRestore.java:7339 src/TabRestore.java:8059
+#: src/TabRestore.java:6713 src/TabRestore.java:7352 src/TabRestore.java:8072
 #: src/TabStatus.java:1847 src/TabStatus.java:2047
 msgid "Cancel"
 msgstr ""
@@ -97,7 +97,7 @@ msgid "Start"
 msgstr ""
 
 #: src/BARControl.java:1700 src/BusyDialog.java:263 src/Dialogs.java:153
-#: src/TabRestore.java:7116 src/TabRestore.java:7606 src/TabRestore.java:8426
+#: src/TabRestore.java:7129 src/TabRestore.java:7619 src/TabRestore.java:8439
 #: src/TabStatus.java:738 src/TabStatus.java:1337 src/TabStatus.java:1932
 msgid "Abort"
 msgstr ""
@@ -201,8 +201,8 @@ msgstr ""
 #: src/BARWidgets.java:779 src/BARWidgets.java:787 src/Dialogs.java:3933
 #: src/TabJobs.java:10201 src/TabJobs.java:10212 src/TabJobs.java:10932
 #: src/TabJobs.java:10940 src/TabJobs.java:11384 src/TabJobs.java:11392
-#: src/TabRestore.java:5693 src/TabRestore.java:5701 src/TabRestore.java:7303
-#: src/TabRestore.java:7311 src/TabRestore.java:8023 src/TabRestore.java:8031
+#: src/TabRestore.java:5704 src/TabRestore.java:5712 src/TabRestore.java:7316
+#: src/TabRestore.java:7324 src/TabRestore.java:8036 src/TabRestore.java:8044
 msgid "Select path"
 msgstr ""
 
@@ -228,7 +228,7 @@ msgstr ""
 msgid "Information"
 msgstr ""
 
-#: src/Dialogs.java:1453 src/TabRestore.java:4112
+#: src/Dialogs.java:1453 src/TabRestore.java:4123
 msgid "Error"
 msgstr ""
 
@@ -248,8 +248,8 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: src/Dialogs.java:2056 src/TabRestore.java:7114 src/TabRestore.java:7602
-#: src/TabRestore.java:8420 src/TabStatus.java:1840
+#: src/Dialogs.java:2056 src/TabRestore.java:7127 src/TabRestore.java:7615
+#: src/TabRestore.java:8433 src/TabStatus.java:1840
 msgid "Confirmation"
 msgstr ""
 
@@ -261,8 +261,8 @@ msgstr ""
 #: src/Dialogs.java:2548 src/Dialogs.java:3250 src/ServerSettings.java:555
 #: src/ServerSettings.java:2306 src/TabJobs.java:2084 src/TabJobs.java:3883
 #: src/TabJobs.java:8682 src/TabJobs.java:8799 src/TabJobs.java:10529
-#: src/TabRestore.java:3869 src/TabRestore.java:3940 src/TabRestore.java:4042
-#: src/TabRestore.java:4263 src/TabRestore.java:5241 src/TabStatus.java:543
+#: src/TabRestore.java:3880 src/TabRestore.java:3951 src/TabRestore.java:4053
+#: src/TabRestore.java:4274 src/TabRestore.java:5252 src/TabStatus.java:543
 #: src/TabStatus.java:581
 msgid "Name"
 msgstr ""
@@ -271,7 +271,7 @@ msgstr ""
 msgid "Path"
 msgstr ""
 
-#: src/Dialogs.java:3232 src/TabRestore.java:5049 src/TabRestore.java:5481
+#: src/Dialogs.java:3232 src/TabRestore.java:5060 src/TabRestore.java:5492
 msgid "Filter"
 msgstr ""
 
@@ -411,7 +411,7 @@ msgstr ""
 #: src/TabJobs.java:7360 src/TabJobs.java:7371 src/TabJobs.java:7539
 #: src/TabJobs.java:7550 src/TabJobs.java:7862 src/TabJobs.java:7873
 #: src/TabJobs.java:10203 src/TabJobs.java:10214 src/TabJobs.java:10561
-#: src/TabJobs.java:10572 src/TabRestore.java:6681
+#: src/TabJobs.java:10572 src/TabRestore.java:6694
 msgid "All files"
 msgstr ""
 
@@ -465,7 +465,7 @@ msgid "Storage servers"
 msgstr ""
 
 #: src/ServerSettings.java:552 src/TabJobs.java:10226 src/TabJobs.java:13062
-#: src/TabRestore.java:3859 src/TabRestore.java:4062 src/TabRestore.java:5244
+#: src/TabRestore.java:3870 src/TabRestore.java:4073 src/TabRestore.java:5255
 #: src/TabStatus.java:552 src/TabStatus.java:624
 msgid "Type"
 msgstr ""
@@ -487,8 +487,8 @@ msgid "Click to sort by max. number of concurrent connections."
 msgstr ""
 
 #: src/ServerSettings.java:561 src/TabJobs.java:7563 src/TabJobs.java:7886
-#: src/TabRestore.java:3879 src/TabRestore.java:4082 src/TabRestore.java:4266
-#: src/TabRestore.java:5247
+#: src/TabRestore.java:3890 src/TabRestore.java:4093 src/TabRestore.java:4277
+#: src/TabRestore.java:5258
 msgid "Size"
 msgstr ""
 
@@ -509,7 +509,7 @@ msgstr ""
 #: src/TabJobs.java:3522 src/TabJobs.java:3890 src/TabJobs.java:3967
 #: src/TabJobs.java:4553 src/TabJobs.java:4677 src/TabJobs.java:8369
 #: src/TabJobs.java:8448 src/TabJobs.java:8694 src/TabJobs.java:13311
-#: src/TabJobs.java:13448 src/TabRestore.java:6697
+#: src/TabJobs.java:13448 src/TabRestore.java:6710
 msgid "Add"
 msgstr ""
 
@@ -993,7 +993,7 @@ msgstr ""
 msgid "Total size limit for storage."
 msgstr ""
 
-#: src/TabJobs.java:2075 src/TabRestore.java:4241
+#: src/TabJobs.java:2075 src/TabRestore.java:4252
 msgid "Jobs"
 msgstr ""
 
@@ -1028,7 +1028,7 @@ msgstr ""
 msgid "Rename a job entry."
 msgstr ""
 
-#: src/TabJobs.java:2184 src/TabRestore.java:4961 src/TabStatus.java:828
+#: src/TabJobs.java:2184 src/TabRestore.java:4972 src/TabStatus.java:828
 msgid "Delete"
 msgstr ""
 
@@ -1313,7 +1313,7 @@ msgid ""
 "If disabled try to detect file system and only store used blocks to image."
 msgstr ""
 
-#: src/TabJobs.java:4108 src/TabRestore.java:3836 src/TabRestore.java:4224
+#: src/TabJobs.java:4108 src/TabRestore.java:3847 src/TabRestore.java:4235
 #: src/TabStatus.java:1206
 msgid "Storage"
 msgstr ""
@@ -1384,7 +1384,7 @@ msgid "Select source file"
 msgstr ""
 
 #: src/TabJobs.java:4467 src/TabJobs.java:4479 src/TabJobs.java:5467
-#: src/TabJobs.java:5479 src/TabRestore.java:6680
+#: src/TabJobs.java:5479 src/TabRestore.java:6693
 msgid "BAR files"
 msgstr ""
 
@@ -1496,7 +1496,7 @@ msgstr ""
 msgid "Mode"
 msgstr ""
 
-#: src/TabJobs.java:5267 src/TabJobs.java:13068 src/TabRestore.java:4792
+#: src/TabJobs.java:5267 src/TabJobs.java:13068 src/TabRestore.java:4803
 msgid "normal"
 msgstr ""
 
@@ -1504,7 +1504,7 @@ msgstr ""
 msgid "Normal mode: do not create incremental data files."
 msgstr ""
 
-#: src/TabJobs.java:5292 src/TabJobs.java:13073 src/TabRestore.java:4808
+#: src/TabJobs.java:5292 src/TabJobs.java:13073 src/TabRestore.java:4819
 msgid "full"
 msgstr ""
 
@@ -1512,7 +1512,7 @@ msgstr ""
 msgid "Full mode: store all entries and create incremental data files."
 msgstr ""
 
-#: src/TabJobs.java:5317 src/TabJobs.java:13078 src/TabRestore.java:4824
+#: src/TabJobs.java:5317 src/TabJobs.java:13078 src/TabRestore.java:4835
 msgid "incremental"
 msgstr ""
 
@@ -1522,7 +1522,7 @@ msgid ""
 "storage."
 msgstr ""
 
-#: src/TabJobs.java:5342 src/TabJobs.java:13083 src/TabRestore.java:4840
+#: src/TabJobs.java:5342 src/TabJobs.java:13083 src/TabRestore.java:4851
 msgid "differential"
 msgstr ""
 
@@ -1562,7 +1562,7 @@ msgstr ""
 msgid "BAR incremental data"
 msgstr ""
 
-#: src/TabJobs.java:5600 src/TabRestore.java:5615
+#: src/TabJobs.java:5600 src/TabRestore.java:5626
 msgid "Destination"
 msgstr ""
 
@@ -1925,11 +1925,11 @@ msgstr ""
 msgid "Total entities"
 msgstr ""
 
-#: src/TabJobs.java:8291 src/TabRestore.java:3971
+#: src/TabJobs.java:8291 src/TabRestore.java:3982
 msgid "Total entries"
 msgstr ""
 
-#: src/TabJobs.java:8301 src/TabRestore.java:3981
+#: src/TabJobs.java:8301 src/TabRestore.java:3992
 msgid "Total size"
 msgstr ""
 
@@ -1937,8 +1937,8 @@ msgstr ""
 msgid "%d bytes (%s)"
 msgstr ""
 
-#: src/TabJobs.java:8355 src/TabJobs.java:12956 src/TabRestore.java:3889
-#: src/TabRestore.java:5250
+#: src/TabJobs.java:8355 src/TabJobs.java:12956 src/TabRestore.java:3900
+#: src/TabRestore.java:5261
 msgid "Date"
 msgstr ""
 
@@ -2418,230 +2418,230 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabRestore.java:2521
+#: src/TabRestore.java:2527
 msgid "new normal"
 msgstr ""
 
-#: src/TabRestore.java:2538
+#: src/TabRestore.java:2544
 msgid "new full"
 msgstr ""
 
-#: src/TabRestore.java:2555
+#: src/TabRestore.java:2561
 msgid "new incremental"
 msgstr ""
 
-#: src/TabRestore.java:2572
+#: src/TabRestore.java:2578
 msgid "new differenial"
 msgstr ""
 
-#: src/TabRestore.java:3374 src/TabRestore.java:4188
+#: src/TabRestore.java:3381 src/TabRestore.java:4199
 #, java-format
 msgid "There are {0} entries. Only the first {1} are shown in the list."
 msgstr ""
 
-#: src/TabRestore.java:3846 src/TabRestore.java:4052
+#: src/TabRestore.java:3857 src/TabRestore.java:4063
 msgid "Created"
 msgstr ""
 
-#: src/TabRestore.java:3884 src/TabRestore.java:3986 src/TabRestore.java:4087
-#: src/TabRestore.java:7423 src/TabRestore.java:8132
+#: src/TabRestore.java:3895 src/TabRestore.java:3997 src/TabRestore.java:4098
+#: src/TabRestore.java:7436 src/TabRestore.java:8145
 msgid "%s (%d bytes)"
 msgstr ""
 
-#: src/TabRestore.java:3951
+#: src/TabRestore.java:3962
 msgid "Last created"
 msgstr ""
 
-#: src/TabRestore.java:3961
+#: src/TabRestore.java:3972
 msgid "Last error"
 msgstr ""
 
-#: src/TabRestore.java:4032
+#: src/TabRestore.java:4043
 msgid "Job"
 msgstr ""
 
-#: src/TabRestore.java:4072 src/TabRestore.java:5191
+#: src/TabRestore.java:4083 src/TabRestore.java:5202
 msgid "Entries"
 msgstr ""
 
-#: src/TabRestore.java:4092 src/TabRestore.java:4272 src/TabRestore.java:5099
+#: src/TabRestore.java:4103 src/TabRestore.java:4283 src/TabRestore.java:5110
 #: src/TabStatus.java:546 src/TabStatus.java:610
 msgid "State"
 msgstr ""
 
-#: src/TabRestore.java:4102
+#: src/TabRestore.java:4113
 msgid "Last checked"
 msgstr ""
 
-#: src/TabRestore.java:4168 src/TabRestore.java:4937 src/TabRestore.java:5137
-#: src/TabRestore.java:5384 src/TabRestore.java:5586
+#: src/TabRestore.java:4179 src/TabRestore.java:4948 src/TabRestore.java:5148
+#: src/TabRestore.java:5395 src/TabRestore.java:5597
 msgid "Restore"
 msgstr ""
 
-#: src/TabRestore.java:4231 src/TabRestore.java:5199
+#: src/TabRestore.java:4242 src/TabRestore.java:5210
 #, java-format
 msgid "Count: {0}"
 msgstr ""
 
-#: src/TabRestore.java:4264 src/TabRestore.java:4623 src/TabRestore.java:5242
+#: src/TabRestore.java:4275 src/TabRestore.java:4634 src/TabRestore.java:5253
 #: src/TabStatus.java:544
 msgid "Click to sort for name."
 msgstr ""
 
-#: src/TabRestore.java:4267 src/TabRestore.java:4626 src/TabRestore.java:5248
+#: src/TabRestore.java:4278 src/TabRestore.java:4637 src/TabRestore.java:5259
 msgid "Click to sort for size."
 msgstr ""
 
-#: src/TabRestore.java:4269
+#: src/TabRestore.java:4280
 msgid "Modified"
 msgstr ""
 
-#: src/TabRestore.java:4270 src/TabRestore.java:4629
+#: src/TabRestore.java:4281 src/TabRestore.java:4640
 msgid "Click to sort for modification date/time."
 msgstr ""
 
-#: src/TabRestore.java:4273 src/TabRestore.java:4632 src/TabStatus.java:547
+#: src/TabRestore.java:4284 src/TabRestore.java:4643 src/TabStatus.java:547
 msgid "Click to sort for state."
 msgstr ""
 
-#: src/TabRestore.java:4598
+#: src/TabRestore.java:4609
 msgid "List"
 msgstr ""
 
-#: src/TabRestore.java:4754
+#: src/TabRestore.java:4765
 msgid "Refresh index"
 msgstr ""
 
-#: src/TabRestore.java:4769
+#: src/TabRestore.java:4780
 msgid "Refresh all indizes with error"
 msgstr ""
 
-#: src/TabRestore.java:4784
+#: src/TabRestore.java:4795
 msgid "Assign to job"
 msgstr ""
 
-#: src/TabRestore.java:4788
+#: src/TabRestore.java:4799
 msgid "Set job type…"
 msgstr ""
 
-#: src/TabRestore.java:4858
+#: src/TabRestore.java:4869
 msgid "Add to index"
 msgstr ""
 
-#: src/TabRestore.java:4873
+#: src/TabRestore.java:4884
 msgid "Remove from index"
 msgstr ""
 
-#: src/TabRestore.java:4888
+#: src/TabRestore.java:4899
 msgid "Remove all indizes with error"
 msgstr ""
 
-#: src/TabRestore.java:4905 src/TabRestore.java:5352
+#: src/TabRestore.java:4916 src/TabRestore.java:5363
 msgid "Mark all"
 msgstr ""
 
-#: src/TabRestore.java:4920 src/TabRestore.java:5367
+#: src/TabRestore.java:4931 src/TabRestore.java:5378
 msgid "Unmark all"
 msgstr ""
 
-#: src/TabRestore.java:5015 src/TabRestore.java:5044 src/TabRestore.java:5447
-#: src/TabRestore.java:5476
+#: src/TabRestore.java:5026 src/TabRestore.java:5055 src/TabRestore.java:5458
+#: src/TabRestore.java:5487
 msgid "Unmark all entries in list."
 msgstr ""
 
-#: src/TabRestore.java:5020 src/TabRestore.java:5038 src/TabRestore.java:5452
-#: src/TabRestore.java:5470
+#: src/TabRestore.java:5031 src/TabRestore.java:5049 src/TabRestore.java:5463
+#: src/TabRestore.java:5481
 msgid "Mark all entries in list."
 msgstr ""
 
-#: src/TabRestore.java:5053
+#: src/TabRestore.java:5064
 msgid "Enter filter pattern for storage list. Wildcards: * and ?."
 msgstr ""
 
-#: src/TabRestore.java:5054
+#: src/TabRestore.java:5065
 msgid "Enter text to filter storage list"
 msgstr ""
 
-#: src/TabRestore.java:5103
+#: src/TabRestore.java:5114
 msgid "Storage states filter."
 msgstr ""
 
-#: src/TabRestore.java:5138
+#: src/TabRestore.java:5149
 msgid "Start restoring selected archives."
 msgstr ""
 
-#: src/TabRestore.java:5238
+#: src/TabRestore.java:5249
 msgid "Archive"
 msgstr ""
 
-#: src/TabRestore.java:5239
+#: src/TabRestore.java:5250
 msgid "Click to sort for archive name."
 msgstr ""
 
-#: src/TabRestore.java:5245 src/TabStatus.java:553
+#: src/TabRestore.java:5256 src/TabStatus.java:553
 msgid "Click to sort for type."
 msgstr ""
 
-#: src/TabRestore.java:5251
+#: src/TabRestore.java:5262
 msgid "Click to sort for date."
 msgstr ""
 
-#: src/TabRestore.java:5485
+#: src/TabRestore.java:5496
 msgid "Enter filter pattern for entry list. Wildcards: * and ?."
 msgstr ""
 
-#: src/TabRestore.java:5486
+#: src/TabRestore.java:5497
 msgid "Enter text to filter entry list"
 msgstr ""
 
-#: src/TabRestore.java:5532
+#: src/TabRestore.java:5543
 msgid "Entry type."
 msgstr ""
 
-#: src/TabRestore.java:5564
+#: src/TabRestore.java:5575
 msgid "newest only"
 msgstr ""
 
-#: src/TabRestore.java:5565
+#: src/TabRestore.java:5576
 msgid ""
 "When this checkbox is enabled, only show newest entry instances and hide all "
 "older entry instances."
 msgstr ""
 
-#: src/TabRestore.java:5587
+#: src/TabRestore.java:5598
 msgid "Start restoring selected entries."
 msgstr ""
 
-#: src/TabRestore.java:5623 src/TabRestore.java:7233 src/TabRestore.java:7953
+#: src/TabRestore.java:5634 src/TabRestore.java:7246 src/TabRestore.java:7966
 msgid "to"
 msgstr ""
 
-#: src/TabRestore.java:5624 src/TabRestore.java:7234 src/TabRestore.java:7954
+#: src/TabRestore.java:5635 src/TabRestore.java:7247 src/TabRestore.java:7967
 msgid ""
 "Enable this checkbox and select a directory to restore entries to different "
 "location."
 msgstr ""
 
-#: src/TabRestore.java:5714
+#: src/TabRestore.java:5725
 msgid "overwrite existing entries"
 msgstr ""
 
-#: src/TabRestore.java:5715 src/TabRestore.java:7326 src/TabRestore.java:8046
+#: src/TabRestore.java:5726 src/TabRestore.java:7339 src/TabRestore.java:8059
 msgid ""
 "Enable this checkbox when existing entries in destination should be "
 "overwritten."
 msgstr ""
 
-#: src/TabRestore.java:5822 src/TabRestore.java:7715
+#: src/TabRestore.java:5833 src/TabRestore.java:7728
 #, java-format
 msgid "There are {0} entries. Really mark all entries?"
 msgstr ""
 
-#: src/TabRestore.java:5836 src/TabRestore.java:7729
+#: src/TabRestore.java:5847 src/TabRestore.java:7742
 msgid "Mark entries"
 msgstr ""
 
-#: src/TabRestore.java:5864
+#: src/TabRestore.java:5875
 #, java-format
 msgid ""
 "Cannot mark all storages\n"
@@ -2649,7 +2649,7 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:6320 src/TabRestore.java:6415
+#: src/TabRestore.java:6333 src/TabRestore.java:6428
 #, java-format
 msgid ""
 "Cannot assign index for\n"
@@ -2659,7 +2659,7 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:6326
+#: src/TabRestore.java:6339
 #, java-format
 msgid ""
 "Cannot create entity for\n"
@@ -2669,7 +2669,7 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:6331 src/TabRestore.java:6421
+#: src/TabRestore.java:6344 src/TabRestore.java:6434
 #, java-format
 msgid ""
 "Communication error while assigning index database\n"
@@ -2677,7 +2677,7 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:6503
+#: src/TabRestore.java:6516
 #, java-format
 msgid ""
 "Cannot set entity type for\n"
@@ -2687,7 +2687,7 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:6509
+#: src/TabRestore.java:6522
 #, java-format
 msgid ""
 "Communication error while set entity type in index database\n"
@@ -2695,12 +2695,12 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:6551
+#: src/TabRestore.java:6564
 #, java-format
 msgid "Refresh index for {0} {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 
-#: src/TabRestore.java:6595
+#: src/TabRestore.java:6608
 #, java-format
 msgid ""
 "Cannot refresh index for\n"
@@ -2710,7 +2710,7 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:6603
+#: src/TabRestore.java:6616
 #, java-format
 msgid ""
 "Communication error while refreshing index database\n"
@@ -2718,16 +2718,16 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:6613
+#: src/TabRestore.java:6626
 msgid "Refresh all indizes with error state?"
 msgstr ""
 
-#: src/TabRestore.java:6629
+#: src/TabRestore.java:6642
 #, java-format
 msgid "Cannot refresh database indizes with error state (error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:6635
+#: src/TabRestore.java:6648
 #, java-format
 msgid ""
 "Communication error while refreshing database indizes\n"
@@ -2735,27 +2735,27 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:6650
+#: src/TabRestore.java:6663
 msgid "Add storage to index database"
 msgstr ""
 
-#: src/TabRestore.java:6657
+#: src/TabRestore.java:6670
 msgid "Storage name"
 msgstr ""
 
-#: src/TabRestore.java:6661
+#: src/TabRestore.java:6674
 msgid "Enter local or remote storage name."
 msgstr ""
 
-#: src/TabRestore.java:6665
+#: src/TabRestore.java:6678
 msgid "Select local storage file."
 msgstr ""
 
-#: src/TabRestore.java:6678
+#: src/TabRestore.java:6691
 msgid "Select local storage file"
 msgstr ""
 
-#: src/TabRestore.java:6749
+#: src/TabRestore.java:6762
 #, java-format
 msgid ""
 "Cannot add index database for storage file\n"
@@ -2765,16 +2765,16 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:6764
+#: src/TabRestore.java:6777
 #, java-format
 msgid "Remove index of {0} {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 
-#: src/TabRestore.java:6766
+#: src/TabRestore.java:6779
 msgid "Remove indizes"
 msgstr ""
 
-#: src/TabRestore.java:6829
+#: src/TabRestore.java:6842
 #, java-format
 msgid ""
 "Cannot remove index for\n"
@@ -2784,7 +2784,7 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:6863 src/TabRestore.java:6997 src/TabRestore.java:7015
+#: src/TabRestore.java:6876 src/TabRestore.java:7010 src/TabRestore.java:7028
 #, java-format
 msgid ""
 "Communication error while removing database indizes\n"
@@ -2792,22 +2792,22 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:6901
+#: src/TabRestore.java:6914
 #, java-format
 msgid "Cannot get database indizes with error state (error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:6910
+#: src/TabRestore.java:6923
 #, java-format
 msgid "Remove {0} {0,choice,0#indizes|1#index|1<indizes} with error state?"
 msgstr ""
 
-#: src/TabRestore.java:6963
+#: src/TabRestore.java:6976
 #, java-format
 msgid "Cannot remove database indizes with error state (error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:7039
+#: src/TabRestore.java:7052
 #, java-format
 msgid ""
 "Delete {0} "
@@ -2816,7 +2816,7 @@ msgid ""
 "{2,choice,0#bytes|1#byte|1<bytes}?"
 msgstr ""
 
-#: src/TabRestore.java:7115 src/TabRestore.java:7130
+#: src/TabRestore.java:7128 src/TabRestore.java:7143
 #, java-format
 msgid ""
 "Cannot delete storage\n"
@@ -2826,16 +2826,16 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:7116 src/TabStatus.java:764 src/TabStatus.java:1368
+#: src/TabRestore.java:7129 src/TabStatus.java:764 src/TabStatus.java:1368
 #: src/TabStatus.java:1660 src/TabStatus.java:1672
 msgid "Continue"
 msgstr ""
 
-#: src/TabRestore.java:7116
+#: src/TabRestore.java:7129
 msgid "Continue with all"
 msgstr ""
 
-#: src/TabRestore.java:7180 src/TabStatus.java:1976
+#: src/TabRestore.java:7193 src/TabStatus.java:1976
 #, java-format
 msgid ""
 "Communication error while deleting storage\n"
@@ -2843,40 +2843,40 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:7206 src/TabRestore.java:7458
+#: src/TabRestore.java:7219 src/TabRestore.java:7471
 msgid "Restore archives"
 msgstr ""
 
-#: src/TabRestore.java:7219
+#: src/TabRestore.java:7232
 msgid "Archives:"
 msgstr ""
 
-#: src/TabRestore.java:7224 src/TabRestore.java:7944
+#: src/TabRestore.java:7237 src/TabRestore.java:7957
 msgid "Total size:"
 msgstr ""
 
-#: src/TabRestore.java:7325 src/TabRestore.java:8045
+#: src/TabRestore.java:7338 src/TabRestore.java:8058
 msgid "Overwrite existing entries"
 msgstr ""
 
-#: src/TabRestore.java:7335 src/TabRestore.java:8055
+#: src/TabRestore.java:7348 src/TabRestore.java:8068
 msgid "Start restore"
 msgstr ""
 
-#: src/TabRestore.java:7458
+#: src/TabRestore.java:7471
 #, java-format
 msgid "Restore archives to: {0}"
 msgstr ""
 
-#: src/TabRestore.java:7464 src/TabRestore.java:8160
+#: src/TabRestore.java:7477 src/TabRestore.java:8173
 msgid "Failed entries:"
 msgstr ""
 
-#: src/TabRestore.java:7562 src/TabRestore.java:8378
+#: src/TabRestore.java:7575 src/TabRestore.java:8391
 msgid "Decrypt password"
 msgstr ""
 
-#: src/TabRestore.java:7603
+#: src/TabRestore.java:7616
 #, java-format
 msgid ""
 "Cannot restore archive:\n"
@@ -2884,19 +2884,19 @@ msgid ""
 " {0}"
 msgstr ""
 
-#: src/TabRestore.java:7606 src/TabRestore.java:8426
+#: src/TabRestore.java:7619 src/TabRestore.java:8439
 msgid "Skip"
 msgstr ""
 
-#: src/TabRestore.java:7606 src/TabRestore.java:8426
+#: src/TabRestore.java:7619 src/TabRestore.java:8439
 msgid "Skip all"
 msgstr ""
 
-#: src/TabRestore.java:7627 src/TabRestore.java:8447
+#: src/TabRestore.java:7640 src/TabRestore.java:8460
 msgid "Aborting"
 msgstr ""
 
-#: src/TabRestore.java:7662
+#: src/TabRestore.java:7675
 #, java-format
 msgid ""
 "Error while restoring archives:\n"
@@ -2904,7 +2904,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabRestore.java:7756
+#: src/TabRestore.java:7769
 #, java-format
 msgid ""
 "Cannot mark all index entries\n"
@@ -2912,32 +2912,32 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:7926 src/TabRestore.java:8154
+#: src/TabRestore.java:7939 src/TabRestore.java:8167
 msgid "Restore entries"
 msgstr ""
 
-#: src/TabRestore.java:7939
+#: src/TabRestore.java:7952
 msgid "Entries:"
 msgstr ""
 
-#: src/TabRestore.java:8154
+#: src/TabRestore.java:8167
 #, java-format
 msgid "Restore entries to: {0}"
 msgstr ""
 
-#: src/TabRestore.java:8273
+#: src/TabRestore.java:8286
 msgid "FTP login password"
 msgstr ""
 
-#: src/TabRestore.java:8308
+#: src/TabRestore.java:8321
 msgid "SSH (TLS) login password"
 msgstr ""
 
-#: src/TabRestore.java:8343
+#: src/TabRestore.java:8356
 msgid "Webdav login password"
 msgstr ""
 
-#: src/TabRestore.java:8421
+#: src/TabRestore.java:8434
 #, java-format
 msgid ""
 "Cannot restore entry\n"
@@ -2951,7 +2951,7 @@ msgid ""
 "(error: {2})"
 msgstr ""
 
-#: src/TabRestore.java:8486
+#: src/TabRestore.java:8499
 #, java-format
 msgid ""
 "Error while restoring entries:\n"
