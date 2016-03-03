@@ -431,6 +431,7 @@ bool abortFlag;
 
   Array               storageIdArray;                      // ids of storage archives to list/restore
   Array               entryIdArray;                        // ids of entries to restore
+//TODO remove
   Array               fileIdArray;                         // ids of file entries to restore
   Array               imageIdArray;                        // ids of image entries to restore
   Array               directoryIdArray;                    // ids of directory entries to restore
@@ -12505,7 +12506,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 
 /***********************************************************************\
 * Name   : serverCommand_storageListClear
-* Purpose: clear restore storage list
+* Purpose: clear selected storage list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -12530,7 +12531,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 
 /***********************************************************************\
 * Name   : serverCommand_storageListAdd
-* Purpose: add to restore storage list
+* Purpose: add to selected storage list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -12601,7 +12602,6 @@ fprintf(stderr,"%s, %d: +++++++++++++++++++++++++++++++++++++++++++\n",__FILE__,
             )
       {
 fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
-#if 0
         error = Index_initListStorages(&indexQueryHandle2,
                                        indexHandle,
                                        NULL,  // jobUUID,
@@ -12644,7 +12644,6 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
           Array_append(&clientInfo->storageIdArray,&storageId);
         }
         Index_doneList(&indexQueryHandle2);
-#endif
       }
       Index_doneList(&indexQueryHandle1);
       break;
@@ -12705,8 +12704,182 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
 }
 
 /***********************************************************************\
+* Name   : serverCommand_storageListRemove
+* Purpose: remove from selected storage list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            indexId=<id>|0
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  IndexId          indexId;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  Errors           error;
+  IndexId          entityId,storageId;
+  IndexQueryHandle indexQueryHandle,indexQueryHandle1,indexQueryHandle2;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get index id
+  if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<id>");
+    return;
+  }
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  switch (Index_getType(indexId))
+  {
+    case INDEX_TYPE_UUID:
+      // get uuid
+
+fprintf(stderr,"%s, %d: +++++++++++++++++++++++++++++++++++++++++++\n",__FILE__,__LINE__);
+      // add all storage ids with specified uuid
+      error = Index_initListEntities(&indexQueryHandle1,
+                                     indexHandle,
+                                     jobUUID,
+                                     indexId,
+                                     NULL,  // scheduleUUID,
+                                     DATABASE_ORDERING_ASCENDING,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+        return;
+      }
+      while (Index_getNextEntity(&indexQueryHandle1,
+                                  &entityId,
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
+                                  NULL, // createdDateTime
+                                  NULL, // archive type
+                                  NULL, // lastErrorMessage
+                                  NULL, // totalEntries
+                                  NULL // totalSize
+                                 )
+            )
+      {
+fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
+        error = Index_initListStorages(&indexQueryHandle2,
+                                       indexHandle,
+                                       NULL,  // jobUUID,
+                                       entityId,
+                                       STORAGE_TYPE_ANY,
+                                       NULL, // storageName
+                                       NULL, // hostName
+                                       NULL, // loginName
+                                       NULL, // deviceName
+                                       NULL, // fileName
+                                       INDEX_STATE_SET_ALL,
+                                       NULL,  // storageIds
+                                       0,  // storageIdCount
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
+                                      );
+        if (error != ERROR_NONE)
+        {
+          Index_doneList(&indexQueryHandle1);
+          sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+          return;
+        }
+        while (Index_getNextStorage(&indexQueryHandle2,
+                                    &storageId,
+                                    NULL, // entity id
+                                    NULL, // job UUID
+                                    NULL, // schedule UUID
+                                    NULL, // archive type
+                                    NULL, // storageName
+                                    NULL, // createdDateTime
+                                    NULL, // entries
+                                    NULL, // size
+                                    NULL, // indexState
+                                    NULL, // indexMode
+                                    NULL, // lastCheckedDateTime
+                                    NULL  // errorMessage
+                                   )
+              )
+        {
+          Array_remove(&clientInfo->storageIdArray,&storageId);
+        }
+        Index_doneList(&indexQueryHandle2);
+      }
+      Index_doneList(&indexQueryHandle1);
+      break;
+    case INDEX_TYPE_ENTITY:
+      // add all storage ids with entity id
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     NULL, // uuid
+                                     indexId,
+                                     STORAGE_TYPE_ANY,
+                                     NULL, // storageName
+                                     NULL, // hostName
+                                     NULL, // loginName
+                                     NULL, // deviceName
+                                     NULL, // fileName
+                                     INDEX_STATE_SET_ALL,
+                                     NULL,  // storageIds
+                                     0,  // storageIdCount
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+        return;
+      }
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  &storageId,
+                                  NULL, // entity id
+                                  NULL, // job UUID
+                                  NULL, // schedule UUID
+                                  NULL, // archive type
+                                  NULL, // storageName
+                                  NULL, // createdDateTime
+                                  NULL, // entries
+                                  NULL, // size
+                                  NULL, // indexState
+                                  NULL, // indexMode
+                                  NULL, // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 )
+            )
+      {
+        Array_remove(&clientInfo->storageIdArray,&storageId);
+      }
+      Index_doneList(&indexQueryHandle);
+      break;
+    case INDEX_TYPE_STORAGE:
+      Array_remove(&clientInfo->storageIdArray,&indexId);
+      break;
+    default:
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"invalid index type %d",Index_getType(indexId));
+      return;
+      break; // not reached
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : serverCommand_storageListInfo
-* Purpose: get restore storage list info
+* Purpose: get selected storage list info
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -12735,6 +12908,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
+fprintf(stderr,"%s, %d: +++++++++++++++++++ %d\n",__FILE__,__LINE__,Array_length(&clientInfo->storageIdArray));
   error = Index_getStoragesInfo(indexHandle,
                                 Array_cArray(&clientInfo->storageIdArray),
                                 Array_length(&clientInfo->storageIdArray),
@@ -16662,9 +16836,11 @@ SERVER_COMMANDS[] =
 
   { "STORAGE_LIST_CLEAR",          serverCommand_storageListClear,         AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_ADD",            serverCommand_storageListAdd,           AUTHORIZATION_STATE_OK      },
+  { "STORAGE_LIST_REMOVE",         serverCommand_storageListRemove,        AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_INFO",           serverCommand_storageListInfo,          AUTHORIZATION_STATE_OK      },
   { "ENTRY_LIST_CLEAR",            serverCommand_entryListClear,           AUTHORIZATION_STATE_OK      },
   { "ENTRY_LIST_ADD",              serverCommand_entryListAdd,             AUTHORIZATION_STATE_OK      },
+  { "ENTRY_LIST_REMOVE",           serverCommand_entryListRemove,             AUTHORIZATION_STATE_OK      },
   { "ENTRY_LIST_INFO",             serverCommand_entryListInfo,            AUTHORIZATION_STATE_OK      },
 
   { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_OK      },
