@@ -91,6 +91,11 @@ const char *ENTRY_TABLE_NAMES[] =
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
 
 /***************************** Datatypes *******************************/
+typedef enum
+{
+  INDEX_OPEN_MODE_READ,
+  INDEX_OPEN_MODE_READ_WRITE,
+} IndexOpenModes;
 
 /***************************** Variables *******************************/
 LOCAL Thread cleanupIndexThread;    // clean-up thread
@@ -118,20 +123,23 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
 * Name   : openIndex
 * Purpose: open index database
 * Input  : databaseFileName - database file name
+*          indexOpenMode    - open mode; see IndexOpenModes
 * Output : indexHandle - index handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  LOCAL Errors openIndex(IndexHandle *indexHandle,
-                         const char  *databaseFileName
+  LOCAL Errors openIndex(IndexHandle    *indexHandle,
+                         const char     *databaseFileName,
+                         IndexOpenModes indexOpenMode
                         )
 #else /* not NDEBUG */
-  LOCAL Errors __openIndex(const char  *__fileName__,
-                           uint        __lineNb__,
-                           IndexHandle *indexHandle,
-                           const char  *databaseFileName
+  LOCAL Errors __openIndex(const char     *__fileName__,
+                           uint           __lineNb__,
+                           IndexHandle    *indexHandle,
+                           const char     *databaseFileName
+                           IndexOpenModes indexOpenMode
                           )
 #endif /* NDEBUG */
 {
@@ -154,11 +162,14 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
   indexHandle->upgradeError     = ERROR_NONE;
   indexHandle->quitFlag         = FALSE;
 
-  // disable synchronous mode and journal to increase transaction speed
-  Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
+  if (indexOpenMode == INDEX_OPEN_MODE_READ)
+  {
+    // disable synchronous mode and journal to increase transaction speed
+    (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
 
-  // enable foreign key constrains
-  Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+    // enable foreign key constrains
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+  }
 
   return ERROR_NONE;
 }
@@ -272,7 +283,7 @@ LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
   IndexHandle indexHandle;
 
   // open index database
-  error = openIndex(&indexHandle,databaseFileName);
+  error = openIndex(&indexHandle,databaseFileName,INDEX_OPEN_MODE_READ);
   if (error != ERROR_NONE)
   {
     return error;
@@ -1791,7 +1802,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   int64       indexVersion;
 
   // open old index
-  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName));
+  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ);
   if (error != ERROR_NONE)
   {
     return error;
@@ -3766,7 +3777,7 @@ Errors Index_init(IndexHandle *indexHandle,
     else
     {
       // open index
-      error = openIndex(indexHandle,databaseFileName);
+      error = openIndex(indexHandle,databaseFileName,INDEX_OPEN_MODE_READ_WRITE);
       if (error != ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle
@@ -5070,9 +5081,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   indexStateSetString = String_new();
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT storage.id, \
-                                   uuids.id, \
+                           "SELECT uuids.id, \
                                    entities.id, \
+                                   storage.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    entities.type, \
@@ -5097,7 +5108,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                             ORDER BY storage.created DESC \
                             LIMIT %llu,%llu \
                            ",
-                           (entityId == DATABASE_ID_ANY) ? 1 : 0, INDEX_DATABASE_ID_(entityId),
+                           (entityId == INDEX_ID_ANY) ? 1 : 0, INDEX_DATABASE_ID_(entityId),
                            String_isEmpty(jobUUID) ? 1 : 0, jobUUID,
                            getIndexStateSetString(indexStateSetString,indexStateSet),
                            String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
