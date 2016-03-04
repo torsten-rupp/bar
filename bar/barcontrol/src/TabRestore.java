@@ -2079,6 +2079,8 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
               {
                 IndexData indexData = (IndexData)treeItem.getData();
                 Widgets.removeTreeItem(widgetStorageTree,treeItem);
+                selectedIndexIdSet.set(indexData.indexId,false);
+//TODO: remove?
                 indexData.clearTreeItem();
               }
             }
@@ -2206,13 +2208,14 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
       try
       {
 Dprintf.dprintf("-------- storageIndexDataList=%d",storageIndexDataList.size());
+Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
         for (final StorageIndexData storageIndexData : storageIndexDataList)
         {
           display.syncExec(new Runnable()
           {
             public void run()
             {
-              TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,indexDataComparator,storageIndexData);
+              TreeItem storageTreeItem = Widgets.getTreeItem(entityTreeItem,indexDataComparator,storageIndexData);
               if (storageTreeItem == null)
               {
                 // insert tree item
