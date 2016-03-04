@@ -14373,7 +14373,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 
   UNUSED_VARIABLE(argumentMap);
 
-  // get index state set, filter pattern
+  // get filter pattern, index state set
   storagePatternString = String_new();
   if (!StringMap_getString(argumentMap,"storagePattern",storagePatternString,NULL))
   {
@@ -14407,8 +14407,8 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 
   // get index info
   error = Index_getStoragesInfo(indexHandle,
-                                Array_cArray(&clientInfo->storageIdArray),
-                                Array_length(&clientInfo->storageIdArray),
+                                NULL,  // indexIds,
+                                0,  // indexIdCount,
                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                 storagePatternString,
                                 &count,
@@ -14492,18 +14492,18 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   assert(argumentMap != NULL);
 
   // get entity id, filter storage pattern, index state set, index mode set, offset, limit
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
   {
-    entityId = DATABASE_ID_ANY;
+    entityId = INDEX_ID_ANY;
+  }
+  else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_NONE))
+  {
+    entityId = (IndexId)n;
   }
   else
   {
-    if (!StringMap_getUInt64(argumentMap,"entityId",&n,0))
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
-      return;
-    }
-    entityId = (IndexId)n;
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
+    return;
   }
   storagePatternString = String_new();
   if (!StringMap_getString(argumentMap,"storagePattern",storagePatternString,NULL))
