@@ -19,7 +19,7 @@ INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 // --- uuids -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uuids(
   id                  INTEGER PRIMARY KEY,
-  jobUUID             TEXT NOT NULL,
+  jobUUID             TEXT UNIQUE NOT NULL,
 
   // updated by triggers
   totalEntityCount    INTEGER DEFAULT 0,  // total number of entities
