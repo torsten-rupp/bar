@@ -1,4 +1,4 @@
-2015-10-?? 0.20
+2016-10-?? 0.20
   * TLS port is now optional: if possible as SSL protected
     connection is establed via the standard plain port, too.
   * added option --archive-file-mode: stop, append or
@@ -26,6 +26,8 @@
   * added configuration options include-file-command,
     include-image-command, exclude-command
   * add job option comment: free text comment
+  * improved database access
+  * moved database file /usr/lib/bar -> /var/lib/bar
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store
