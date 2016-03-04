@@ -3966,6 +3966,7 @@ LOCAL Errors deleteStorage(IndexId storageId)
                              storageId,
                              jobUUID,
                              NULL,  // scheduleUUID
+                             NULL,  // uuidId
                              NULL,  // entityId
                              storageName,
                              NULL,  // indexState
@@ -4786,6 +4787,7 @@ LOCAL void indexThreadCode(void)
                                 INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
+                                NULL,  // uuidId
                                 NULL,  // entityId
                                 &storageId,
                                 storageName,
@@ -5087,6 +5089,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                                                        storageSpecifier.loginName,
                                                                        storageSpecifier.deviceName,
                                                                        storageSpecifier.archiveName,
+                                                                       NULL,  // uuidId
                                                                        NULL,  // entityId
                                                                        NULL,  // jobUUID
                                                                        NULL,  // scheduleUUID
@@ -14713,6 +14716,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
                                                            storageSpecifier.loginName,
                                                            storageSpecifier.deviceName,
                                                            storageSpecifier.archiveName,
+                                                           NULL,  // uuidId
                                                            NULL,  // entityId
                                                            NULL,  // jobUUID
                                                            NULL,  // scheduleUUID

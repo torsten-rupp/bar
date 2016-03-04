@@ -319,7 +319,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 * Input  : indexHandle      - index handle
 *          jobUUID          - unique job id (can be NULL)
 *          scheduleUUID     - unique schedule id (can be NULL)
-* Output : entityId         - entity id
+* Output : uuidId           - index id of UUID entry (can be NULL)
+*          entityId         - index id of entity entry (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          archiveType      - archive type (can be NULL)
 *          lastErrorMessage - last error message (can be NULL)
@@ -332,6 +333,7 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 bool Index_findByJobUUID(IndexHandle  *indexHandle,
                          ConstString  jobUUID,
                          ConstString  scheduleUUID,
+                         IndexId      *uuidId,
                          IndexId      *entityId,
                          uint64       *createdDateTime,
                          ArchiveTypes *archiveType,
@@ -347,7 +349,8 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
 *          storageId   - index id of storage
 * Output : jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
-*          entityId            - index id of entity (can be NULL)
+*          uuidId              - index id of UUID entry (can be NULL)
+*          entityId            - index id of entity entry (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          indexState          - index state (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
@@ -360,6 +363,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
                            IndexId     storageId,
                            String      jobUUID,
                            String      scheduleUUID,
+                           IndexId     *uuidId,
                            IndexId     *entityId,
                            String      storageName,
                            IndexStates *indexState,
@@ -378,7 +382,9 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
 * Output : entityId            - index id of entity (can be NULL)
 *          jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
-*          storageId           - index id of storage (can be NULL)
+*          uuidId              - index id of UUID entry (can be NULL)
+*          entityId            - index id of entity entry (can be NULL)
+*          storageId           - index id of storage entry (can be NULL)
 *          indexState          - index state (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
 *                                be NULL)
@@ -392,6 +398,7 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
                              ConstString  findLoginName,
                              ConstString  findDeviceName,
                              ConstString  findFileName,
+                             IndexId      *uuidId,
                              IndexId      *entityId,
                              String       jobUUID,
                              String       scheduleUUID,
@@ -420,6 +427,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                        IndexStateSet indexStateSet,
                        String        jobUUID,
                        String        scheduleUUID,
+                       IndexId       *uuidId,
                        IndexId       *entityId,
                        IndexId       *storageId,
                        String        storageName,

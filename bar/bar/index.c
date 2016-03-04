@@ -1206,6 +1206,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                                             INDEX_ID_(INDEX_TYPE_STORAGE,Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             NULL,  // jobUUID
                                                             NULL,  // scheduleUUDI
+                                                            NULL,  // uuidId
                                                             &entityId,
                                                             NULL,  // storageName
                                                             NULL,  // indexState
@@ -1213,13 +1214,14 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                                            )
                                    && Index_findByJobUUID(newIndexHandle,
                                                           jobUUID,
-                                                          NULL,  // scheduleUUDI,
+                                                          NULL,  // scheduleUUDI
+                                                          NULL,  // uuidId
                                                           &entityId,
-                                                          NULL,  // createdDateTime,
-                                                          NULL,  // archiveType,
+                                                          NULL,  // createdDateTime
+                                                          NULL,  // archiveType
                                                           NULL,  // lastErrorMessage
-                                                          NULL,  // totalEntryCount,
-                                                          NULL  // totalSize,
+                                                          NULL,  // totalEntryCount
+                                                          NULL  // totalSize
                                                          )
                                   )
                                {
@@ -1598,6 +1600,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             INDEX_ID_(INDEX_TYPE_STORAGE,Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             jobUUID,
                                                             NULL,  // scheduleUUDI
+                                                            NULL,  // uuidId
                                                             NULL,  // entityId
                                                             NULL,  // storageName
                                                             NULL,  // indexState
@@ -1605,12 +1608,13 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                            )
                                    && Index_findByJobUUID(newIndexHandle,
                                                           jobUUID,
-                                                          NULL,  // scheduleUUDI,
+                                                          NULL,  // scheduleUUDI
+                                                          NULL,  // uuidId
                                                           &entityId,
-                                                          NULL,  // createdDateTime,
-                                                          NULL,  // archiveType,
+                                                          NULL,  // createdDateTime
+                                                          NULL,  // archiveType
                                                           NULL,  // lastErrorMessage
-                                                          NULL,  // totalEntryCount,
+                                                          NULL,  // totalEntryCount
                                                           NULL  // totalSize,
                                                          )
                                   )
@@ -1951,11 +1955,12 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   error = ERROR_NONE;
   while (Index_findByState(indexHandle,
                            INDEX_STATE_SET(INDEX_STATE_UPDATE),
-                           NULL, // jobUUID
-                           NULL, // scheduleUUID
-                           NULL, // entityId
+                           NULL,  // jobUUID
+                           NULL,  // scheduleUUID
+                           NULL,  // uuidId
+                           NULL,  // entityId
                            &storageId,
-                           NULL, // storageName
+                           NULL,  // storageName
                            NULL  // lastCheckedDateTime
                           )
          && (error == ERROR_NONE)
@@ -2030,9 +2035,10 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   error = ERROR_NONE;
   while (Index_findByState(indexHandle,
                            INDEX_STATE_SET(INDEX_STATE_CREATE),
-                           NULL, // jobUUID
-                           NULL, // scheduleUUID
-                           NULL, // entityId
+                           NULL,  // jobUUID
+                           NULL,  // scheduleUUID
+                           NULL,  // uuidId
+                           NULL,  // entityId
                            &storageId,
                            storageName,
                            NULL  // lastCheckedDateTime
@@ -3824,6 +3830,7 @@ Errors Index_init(IndexHandle *indexHandle,
 bool Index_findByJobUUID(IndexHandle  *indexHandle,
                          ConstString  jobUUID,
                          ConstString  scheduleUUID,
+                         IndexId      *uuidId,
                          IndexId      *entityId,
                          uint64       *createdDateTime,
                          ArchiveTypes *archiveType,
@@ -3835,7 +3842,7 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   bool                result;
-  DatabaseId          entityId_;
+  DatabaseId          uuidId_,entityId_;
 
   assert(indexHandle != NULL);
 
@@ -3848,15 +3855,18 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
 //TODO errorMessage
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT id, \
-                                   STRFTIME('%%s',created), \
-                                   type, \
+                           "SELECT uuids.id, \
+                                   entities.id, \
+                                   STRFTIME('%%s',entities.created), \
+                                   entities.type, \
                                    '', \
-                                   totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount, \
-                                   totalFileSize+totalImageSize+totalHardlinkSize \
+                                   entities.totalEntryCount, \
+                                   entities.totalEntrySize \
                             FROM entities \
+                              LEFT JOIN uuids ON uuids.jobUUID=entityId.jobUUID \
                             WHERE    (%d AND jobUUID=%'S) \
                                   OR (%d AND scheduleUUID=%'S) \
+                            GROUP BY entities.id \
                             LIMIT 0,1 \
                            ",
                            !String_isEmpty(jobUUID     ),jobUUID,
@@ -3867,7 +3877,8 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%llu %llu %d %S %llu %llu",
+                               "%llu %llu %llu %d %S %llu %llu",
+                               &uuidId_,
                                &entityId_,
                                createdDateTime,
                                archiveType,
@@ -3876,6 +3887,7 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
                                totalSize
                               );
   Database_finalize(&databaseQueryHandle);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
   if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
 
   return result;
@@ -3885,6 +3897,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
                            IndexId     storageId,
                            String      jobUUID,
                            String      scheduleUUID,
+                           IndexId     *uuidId,
                            IndexId     *entityId,
                            String      storageName,
                            IndexStates *indexState,
@@ -3894,7 +3907,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   bool                result;
-  DatabaseId          entityId_;
+  DatabaseId          uuidId_,entityId_;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
@@ -3907,7 +3920,8 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT entities.id, \
+                           "SELECT uuids.id, \
+                                   entities.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    storage.name, \
@@ -3915,7 +3929,9 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
                                    STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
                               LEFT JOIN entities ON storage.entityId=entities.id \
+                              LEFT JOIN uuids ON entitys.jobUUID=uuids.jobUUID \
                             WHERE storage.id=%lld \
+                            GROUP BY storage.id \
                             LIMIT 0,1 \
                            ",
                            storageId
@@ -3925,7 +3941,8 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%llu %S %S %S %d %llu",
+                               "%llu %llu %S %S %S %d %llu",
+                               &uuidId_,
                                &entityId_,
                                jobUUID,
                                scheduleUUID,
@@ -3934,6 +3951,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
                                lastCheckedDateTime
                               );
   Database_finalize(&databaseQueryHandle);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
   if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
 
   return result;
@@ -3945,6 +3963,7 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
                              ConstString  loginName,
                              ConstString  deviceName,
                              ConstString  fileName,
+                             IndexId      *uuidId,
                              IndexId      *entityId,
                              String       jobUUID,
                              String       scheduleUUID,
@@ -3958,7 +3977,7 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
   String              storageName;
   StorageSpecifier    storageSpecifier;
   bool                foundFlag;
-  DatabaseId          entityId_,storageId_;
+  DatabaseId          uuidId_,entityId_,storageId_;
 
   assert(indexHandle != NULL);
   assert(storageId != NULL);
@@ -3973,15 +3992,18 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT entities.id, \
+                           "SELECT uuids.id, \
+                                   entities.id, \
+                                   storage.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
-                                   storage.id, \
                                    storage.name, \
                                    storage.state, \
                                    STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
                               LEFT JOIN entities ON storage.entityId=entities.id \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                            GROUP BY storage.id \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3994,17 +4016,19 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
   foundFlag   = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&databaseQueryHandle,
-                                "%llu %S %S %lld %S %d %llu",
+                                "%llu %llu %lld %S %S %S %d %llu",
+                                &uuidId_,
                                 &entityId_,
+                                &storageId_,
                                 jobUUID,
                                 scheduleUUID,
-                                &storageId_,
                                 storageName,
                                 indexState,
                                 lastCheckedDateTime
                                )
         )
   {
+    if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
     if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
     if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
     if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
@@ -4080,6 +4104,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                        IndexStateSet indexStateSet,
                        String        jobUUID,
                        String        scheduleUUID,
+                       IndexId       *uuidId,
                        IndexId       *entityId,
                        IndexId       *storageId,
                        String        storageName,
@@ -4089,7 +4114,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
   Errors              error;
   String              indexStateSetString;
   DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId          entityId_,storageId_;
+  DatabaseId          uuidId_,entityId_,storageId_;
   bool                result;
 
   assert(indexHandle != NULL);
@@ -4109,14 +4134,16 @@ bool Index_findByState(IndexHandle   *indexHandle,
   indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT entities.id, \
+                           "SELECT uuids.id, \
+                                   entities.id, \
+                                   storage.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
-                                   storage.id, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.lastChecked) \
                             FROM storage \
                               LEFT JOIN entities ON storage.entityId=entities.id \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                             WHERE (storage.state IN (%S)) \
                             LIMIT 0,1 \
                            ",
@@ -4129,16 +4156,18 @@ bool Index_findByState(IndexHandle   *indexHandle,
   }
   String_delete(indexStateSetString);
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%llu %S %S %lld %S %llu",
+                               "%llu %llu %lld %S %S %S %llu",
+                               &uuidId_,
                                &entityId_,
+                               &storageId_,
                                jobUUID,
                                scheduleUUID,
-                               &storageId_,
                                storageName,
                                lastCheckedDateTime
                               );
   Database_finalize(&databaseQueryHandle);
 
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
   if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
   if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
 
@@ -5039,69 +5068,8 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   }
 
   indexStateSetString = String_new();
-//TODO
-//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-#if 0
-                           "SELECT storage.id, \
-                                   storage.entityId, \
-                                   entities.jobUUID, \
-                                   entities.scheduleUUID, \
-                                   entities.type, \
-                                   storage.name, \
-                                   STRFTIME('%%s',storage.created), \
-                                   storage.entries, \
-                                   storage.size, \
-                                   storage.state, \
-                                   storage.mode, \
-                                   STRFTIME('%%s',storage.lastChecked), \
-                                   storage.errorMessage \
-                            FROM storage \
-                            LEFT JOIN entities ON entities.id=storage.entityId \
-                            WHERE     (%d OR (storage.entityId=%lld)) \
-                                  AND (%d OR (entities.jobUUID='%S')) \
-                                  AND (storage.state IN (%S)) \
-                                  AND %S \
-                            ORDER BY storage.created DESC \
-                           ",
-#elif 0
-                           "SELECT storage.id, \
-                                   storage.entityId, \
-                                   entities.jobUUID, \
-                                   entities.scheduleUUID, \
-                                   entities.type, \
-                                   storage.name, \
-                                   STRFTIME('%%s',storage.created), \
-                                   ( \
-                                      (SELECT COUNT(id) FROM files       WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM images      WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM directories WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM links       WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM hardlinks   WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM special     WHERE storageId=storage.id) \
-                                   ), \
-                                   ( \
-                                      (SELECT TOTAL(size) FROM files     WHERE storageId=storage.id) \
-                                     +(SELECT TOTAL(size) FROM images    WHERE storageId=storage.id) \
-                                     +(SELECT TOTAL(size) FROM hardlinks WHERE storageId=storage.id) \
-                                   ), \
-                                   storage.state, \
-                                   storage.mode, \
-                                   STRFTIME('%%s',storage.lastChecked), \
-                                   storage.errorMessage \
-                            FROM storage \
-                              LEFT JOIN entities ON entities.id=storage.entityId \
-                            WHERE     (%d OR (storage.entityId=%lld)) \
-                                  AND (%d OR (entities.jobUUID='%S')) \
-                                  AND (storage.state IN (%S)) \
-                                  AND (%d OR (storage.id IN (%S))) \
-                                  AND (%d OR (entities.type!=%d)) \
-                                  AND (%d OR REGEXP(%S,0,storage.name)) \
-                            ORDER BY storage.created DESC \
-                            LIMIT %llu,%llu \
-                           ",
-#else
                            "SELECT storage.id, \
                                    uuids.id, \
                                    entities.id, \
@@ -5129,7 +5097,6 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                             ORDER BY storage.created DESC \
                             LIMIT %llu,%llu \
                            ",
-#endif
                            (entityId == DATABASE_ID_ANY) ? 1 : 0, INDEX_DATABASE_ID_(entityId),
                            String_isEmpty(jobUUID) ? 1 : 0, jobUUID,
                            getIndexStateSetString(indexStateSetString,indexStateSet),
@@ -5139,7 +5106,6 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
