@@ -3372,14 +3372,16 @@ LOCAL void purgeStorageByJobUUID(ConstString jobUUID, uint64 maxStorageSize, Log
   StorageSpecifier storageSpecifier;
   Errors           error;
   uint64           totalStorageSize;
-  IndexId          oldestStorageId;
+  IndexId          oldestUUIDId;
   IndexId          oldestEntityId;
+  IndexId          oldestStorageId;
   String           oldestStorageName;
   uint64           oldestCreatedDateTime;
   uint64           oldestSize;
   IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
+  IndexId          uuidId;
   IndexId          entityId;
+  IndexId          storageId;
   uint64           createdDateTime;
   uint64           size;
   StorageHandle    storageHandle;
@@ -3406,8 +3408,9 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
     oldestSize            = 0LL;
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
-                                   jobUUID,
+                                   INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId
+                                   jobUUID,
                                    STORAGE_TYPE_ANY,  // storageType
                                    NULL,  // storageName
                                    NULL,  // hostName
@@ -3433,8 +3436,9 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                &storageId,
+                                &uuidId,
                                 &entityId,
+                                &storageId,
                                 NULL,  //String           jobUUID,
                                 NULL,  //String           scheduleUUID,
                                 NULL,  //ArchiveTypes     *archiveType,
@@ -3452,8 +3456,9 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
 //fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
       if (createdDateTime < oldestCreatedDateTime)
       {
-        oldestStorageId       = storageId;
+        oldestUUIDId          = uuidId;
         oldestEntityId        = entityId;
+        oldestStorageId       = storageId;
         String_set(oldestStorageName,storageName);
         oldestCreatedDateTime = createdDateTime;
         oldestSize            = size;
@@ -3515,6 +3520,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
         break;
       }
       (void)Index_pruneEntity(indexHandle,oldestEntityId);
+      (void)Index_pruneEntity(indexHandle,oldestUUIDId);
 
       // log
       Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
@@ -3557,14 +3563,16 @@ LOCAL void purgeStorageByServer(const Server *server, uint64 maxStorageSize, Log
   StorageSpecifier storageSpecifier;
   Errors           error;
   uint64           totalStorageSize;
+  IndexId          oldestUUIDId;
   IndexId          oldestStorageId;
   IndexId          oldestEntityId;
   String           oldestStorageName;
   uint64           oldestCreatedDateTime;
   uint64           oldestSize;
   IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
+  IndexId          uuidId;
   IndexId          entityId;
+  IndexId          storageId;
   uint64           createdDateTime;
   uint64           size;
   StorageHandle    storageHandle;
@@ -3594,8 +3602,9 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
     oldestSize            = 0LL;
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
-                                   NULL,  // jobUUID,
+                                   INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId
+                                   NULL,  // jobUUID,
                                    STORAGE_TYPE_ANY,  // storageType
                                    storagePattern,  // storageName
                                    NULL,  // hostName
@@ -3621,8 +3630,9 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                &storageId,
+                                &uuidId,
                                 &entityId,
+                                &storageId,
                                 NULL,  //String           jobUUID,
                                 NULL,  //String           scheduleUUID,
                                 NULL,  //ArchiveTypes     *archiveType,
@@ -3640,8 +3650,9 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
 //fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
       if (createdDateTime < oldestCreatedDateTime)
       {
-        oldestStorageId       = storageId;
+        oldestUUIDId          = uuidId;
         oldestEntityId        = entityId;
+        oldestStorageId       = storageId;
         String_set(oldestStorageName,storageName);
         oldestCreatedDateTime = createdDateTime;
         oldestSize            = size;
@@ -3703,6 +3714,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
         break;
       }
       (void)Index_pruneEntity(indexHandle,oldestEntityId);
+      (void)Index_pruneUUID(indexHandle,oldestUUIDId);
 
       // log
       Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
@@ -3760,6 +3772,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   String                     pattern;
 
   IndexQueryHandle           indexQueryHandle;
+  IndexId                    oldUUIDId;
   IndexId                    oldStorageId;
   IndexId                    oldEntityId;
   IndexId                    entityId;
@@ -4084,8 +4097,9 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
         // delete old indizes for same storage file
         error = Index_initListStorages(&indexQueryHandle,
                                        indexHandle,
-                                       NULL, // jobUUID,
+                                       INDEX_ID_ANY, // uuidId
                                        INDEX_ID_ANY, // entityId
+                                       NULL, // jobUUID,
                                        STORAGE_TYPE_ANY,  // storageType
                                        NULL, // storageName
                                        createInfo->storageSpecifier->hostName,
@@ -4099,8 +4113,9 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
                                        INDEX_UNLIMITED
                                       );
         while (Index_getNextStorage(&indexQueryHandle,
-                                    &oldStorageId,
+                                    &oldUUIDId,
                                     &oldEntityId,
+                                    &oldStorageId,
                                     NULL, // job UUID
                                     NULL, // schedule UUID
                                     NULL, // archive type
@@ -4135,6 +4150,19 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
             if (error != ERROR_NONE)
             {
               printError("Cannot delete old entity #%llu for storage '%s' (error: %s)!\n",
+                         oldEntityId,
+                         String_cString(printableStorageName),
+                         Error_getText(error)
+                        );
+              createInfo->failError = error;
+              break;
+            }
+
+            // delete uuid if empty
+            error = Index_pruneUUID(indexHandle,oldUUIDId);
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot delete old uuid #%llu for storage '%s' (error: %s)!\n",
                          oldEntityId,
                          String_cString(printableStorageName),
                          Error_getText(error)

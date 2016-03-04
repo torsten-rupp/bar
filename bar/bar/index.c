@@ -2344,16 +2344,17 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
   n = 0L;
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
-                                 NULL, // uuid
-                                 DATABASE_ID_ANY, // entity id
+                                 INDEX_ID_ANY,  // uuidId
+                                 INDEX_ID_ANY,  // entityId
+                                 NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 NULL, // storageName
-                                 NULL, // hostName
-                                 NULL, // loginName
-                                 NULL, // deviceName
-                                 NULL, // fileName
+                                 NULL,  // storageName
+                                 NULL,  // hostName
+                                 NULL,  // loginName
+                                 NULL,  // deviceName
+                                 NULL,  // fileName
                                  INDEX_STATE_SET_ALL,
-                                 NULL, // storageIds
+                                 NULL,  // storageIds
                                  0,  // storageIdCount,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -2361,18 +2362,19 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
   if (error == ERROR_NONE)
   {
     while (Index_getNextStorage(&indexQueryHandle,
+                                NULL,  // uuidId
+                                NULL,  // entityId
                                 &storageId,
-                                NULL, // entity id
-                                NULL, // job UUID
-                                NULL, // schedule UUID
-                                NULL, // archive type
+                                NULL,  // jobUUID
+                                NULL,  // schedule UUID
+                                NULL,  // archive type
                                 storageName,
-                                NULL, // createdDateTime
-                                NULL, // entries
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
+                                NULL,  // createdDateTime
+                                NULL,  // entries
+                                NULL,  // size
+                                NULL,  // indexState
+                                NULL,  // indexMode
+                                NULL,  // lastCheckedDateTime
                                 NULL  // errorMessage
                                )
           )
@@ -2627,16 +2629,17 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     // get storage entry
     error = Index_initListStorages(&indexQueryHandle1,
                                    indexHandle,
-                                   NULL, // uuid
-                                   DATABASE_ID_ANY, // entity id
+                                   INDEX_ID_ANY,  // uuidId
+                                   INDEX_ID_ANY,  // entityId
+                                   NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL, // storageName
-                                   NULL, // hostName
-                                   NULL, // loginName
-                                   NULL, // deviceName
-                                   NULL, // fileName
+                                   NULL,  // storageName
+                                   NULL,  // hostName
+                                   NULL,  // loginName
+                                   NULL,  // deviceName
+                                   NULL,  // fileName
                                    INDEX_STATE_SET_ALL,
-                                   NULL, // storageIds
+                                   NULL,  // storageIds
                                    0,  // storageIdCount
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -2648,35 +2651,37 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     while (   !indexHandle->quitFlag
            && !deletedIndexFlag
            && Index_getNextStorage(&indexQueryHandle1,
+                                   NULL,  // uuidId
+                                   NULL,  // entityId
                                    &storageId,
-                                   NULL, // entity id
-                                   NULL, // job UUID
-                                   NULL, // schedule UUID
-                                   NULL, // archive type
+                                   NULL,  // jobUUID
+                                   NULL,  // scheduleUUID
+                                   NULL,  // archiveType
                                    storageName,
-                                   NULL, // createdDateTime
-                                   NULL, // entries
-                                   NULL, // size
-                                   NULL, // indexState
-                                   NULL, // indexMode
-                                   NULL, // lastCheckedDateTime
-                                   NULL  // errorMessage
+                                   NULL,  // createdDateTime
+                                   NULL,  // entries
+                                   NULL,  // size
+                                   NULL,  // indexState
+                                   NULL,  // indexMode
+                                   NULL,  // lastCheckedDateTime
+                                   NULL   // errorMessage
                                   )
           )
     {
       // check for duplicate entry
       error = Index_initListStorages(&indexQueryHandle2,
                                      indexHandle,
-                                     NULL, // uuid
-                                     DATABASE_ID_ANY, // entity id
+                                     INDEX_ID_ANY,  // uuidId
+                                     INDEX_ID_ANY,  // entityId
+                                     NULL,  // jobUUID
                                      STORAGE_TYPE_ANY,
-                                     NULL, // storageName
-                                     NULL, // hostName
-                                     NULL, // loginName
-                                     NULL, // deviceName
-                                     NULL, // fileName
+                                     NULL,  // storageName
+                                     NULL,  // hostName
+                                     NULL,  // loginName
+                                     NULL,  // deviceName
+                                     NULL,  // fileName
                                      INDEX_STATE_SET_ALL,
-                                     NULL, // storageIds
+                                     NULL,  // storageIds
                                      0,  // storageIdCount
                                      0LL,  // offset
                                      INDEX_UNLIMITED
@@ -2688,19 +2693,20 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
       while (   !indexHandle->quitFlag
              && !deletedIndexFlag
              && Index_getNextStorage(&indexQueryHandle2,
+                                     NULL,  // uuidId
+                                     NULL,  // entityId
                                      &duplicateStorageId,
-                                     NULL, // entity id
-                                     NULL, // job UUID
-                                     NULL, // schedule UUID
-                                     NULL, // archive type
+                                     NULL,  // jobUUID
+                                     NULL,  // scheduleUUID
+                                     NULL,  // archiveType
                                      duplicateStorageName,
-                                     NULL, // createdDateTime
-                                     NULL, // entries
-                                     NULL, // size
-                                     NULL, // indexState
-                                     NULL, // indexMode
-                                     NULL, // lastCheckedDateTime
-                                     NULL  // errorMessage
+                                     NULL,  // createdDateTime
+                                     NULL,  // entries
+                                     NULL,  // size
+                                     NULL,  // indexState
+                                     NULL,  // indexMode
+                                     NULL,  // lastCheckedDateTime
+                                     NULL   // errorMessage
                                     )
             )
       {
@@ -2885,6 +2891,8 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   String_delete(absoluteFileName);
 
   // single clean-ups
+#warning remove
+#if 0
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -2916,6 +2924,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
       sleepTime += 10;
     }
   }
+#endif
 }
 
 /***********************************************************************\
@@ -3245,16 +3254,17 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
 
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
-                                 NULL, // uuid
+                                 INDEX_ID_ANY,  // uuidId
                                  entityId,
+                                 NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 NULL, // storageName
-                                 NULL, // hostName
-                                 NULL, // loginName
-                                 NULL, // deviceName
-                                 NULL, // fileName
+                                 NULL,  // storageName
+                                 NULL,  // hostName
+                                 NULL,  // loginName
+                                 NULL,  // deviceName
+                                 NULL,  // fileName
                                  INDEX_STATE_SET_ALL,
-                                 NULL, // storageIds
+                                 NULL,  // storageIds
                                  0,  // storageIdCount
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -3264,19 +3274,20 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
     return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
+                              NULL,  // uuidId
+                              NULL,  // entityId
                               &storageId,
-                              NULL, // entity id
-                              NULL, // job UUID
-                              NULL, // schedule UUID
-                              NULL, // archive type
-                              NULL, // storageName
-                              NULL, // createdDateTime
-                              NULL, // entries
-                              NULL, // size
-                              NULL, // indexState
-                              NULL, // indexMode
-                              NULL, // lastCheckedDateTime
-                              NULL  // errorMessage
+                              NULL,  // jobUUID
+                              NULL,  // scheduleUUID
+                              NULL,  // archiveType
+                              NULL,  // storageName
+                              NULL,  // createdDateTime
+                              NULL,  // entries
+                              NULL,  // size
+                              NULL,  // indexState
+                              NULL,  // indexMode
+                              NULL,  // lastCheckedDateTime
+                              NULL   // errorMessage
                              )
         )
   {
@@ -3333,8 +3344,8 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
-                                 jobUUID,
                                  INDEX_ID_ANY,  // uuidId
+                                 jobUUID,
                                  NULL, // scheduldUUID
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
@@ -3345,6 +3356,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
     return error;
   }
   while (Index_getNextEntity(&indexQueryHandle,
+                             NULL,  // uuidId,
                              &entityId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
@@ -3479,8 +3491,8 @@ LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
-                                 jobUUID,
                                  INDEX_ID_ANY,  // uuidId
+                                 jobUUID,
                                  NULL, // scheduldUUID
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
@@ -3491,6 +3503,7 @@ LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
     return error;
   }
   while (Index_getNextEntity(&indexQueryHandle,
+                             NULL,  // uuidId,
                              &entityId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
@@ -4424,7 +4437,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
-                       IndexId          *indexId,
+                       IndexId          *uuidId,
                        String           jobUUID,
                        uint64           *lastCreatedDateTime,
                        String           lastErrorMessage,
@@ -4466,7 +4479,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
 
   return TRUE;
 #endif
@@ -4553,8 +4566,8 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
-                              ConstString      jobUUID,
                               IndexId          uuidId,
+                              ConstString      jobUUID,
                               ConstString      scheduleUUID,
                               DatabaseOrdering ordering,
                               ulong            offset,
@@ -4646,7 +4659,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            getOrderingString(ordering),
                            offset
 #else
-                           "SELECT entities.id, \
+                           "SELECT uuids.id,\
+                                   entities.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    STRFTIME('%%s',entities.created), \
@@ -4682,7 +4696,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
-                         IndexId          *indexId,
+                         IndexId          *uuidId,
+                         IndexId          *entityId,
                          String           jobUUID,
                          String           scheduleUUID,
                          uint64           *createdDateTime,
@@ -4692,7 +4707,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          uint64           *totalSize
                         )
 {
-  DatabaseId databaseId;
+  DatabaseId uuidId_,entityId_;
   double     totalSize_;
 
   assert(indexQueryHandle != NULL);
@@ -4706,8 +4721,9 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 
 #if 0
   return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%lld %S %S %llu %u %S %llu %llu",
-                             &databaseId,
+                             "%lld %lld %S %S %llu %u %S %llu %llu",
+                             &uuidId_,
+                             &entityId_,
                              jobUUID,
                              scheduleUUID,
                              createdDateTime,
@@ -4718,8 +4734,9 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                             );
 #else
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %S %llu %u %S %llu %lf",
-                           &databaseId,
+                           "%lld %lld %S %S %llu %u %S %llu %lf",
+                           &uuidId_,
+                           &entityId_,
                            jobUUID,
                            scheduleUUID,
                            createdDateTime,
@@ -4732,7 +4749,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_ENTITY,uuidId_);
+  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
   if (totalSize != NULL) (*totalSize) = (uint64)totalSize_;
 
   return TRUE;
@@ -4908,7 +4926,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   if (size != NULL) (*size) = 0LL;
 
   indexStateSetString = String_new();
-Database_debugEnable(1);
+//Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(storage.id),\
@@ -4932,7 +4950,7 @@ Database_debugEnable(1);
                            uuidIdsString
                           );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
-Database_debugEnable(0);
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     String_delete(indexStateSetString);
@@ -4967,8 +4985,9 @@ Database_debugEnable(0);
 
 Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
-                              ConstString      jobUUID,
+                              IndexId          uuidId,
                               IndexId          entityId,
+                              ConstString      jobUUID,
                               StorageTypes     storageType,
                               ConstString      storageName,
                               ConstString      hostName,
@@ -5021,7 +5040,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 
   indexStateSetString = String_new();
 //TODO
-Database_debugEnable(1);
+//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 #if 0
@@ -5084,7 +5103,8 @@ Database_debugEnable(1);
                            ",
 #else
                            "SELECT storage.id, \
-                                   storage.entityId, \
+                                   uuids.id, \
+                                   entities.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    entities.type, \
@@ -5098,12 +5118,14 @@ Database_debugEnable(1);
                                    storage.errorMessage \
                             FROM storage \
                               LEFT JOIN entities ON entities.id=storage.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=uuids.jobUUID \
                             WHERE     (%d OR (storage.entityId=%lld)) \
                                   AND (%d OR (entities.jobUUID='%S')) \
                                   AND (storage.state IN (%S)) \
                                   AND (%d OR (storage.id IN (%S))) \
                                   AND (%d OR (entities.type!=%d)) \
                                   AND (%d OR REGEXP(%S,0,storage.name)) \
+                            GROUP BY storage.id \
                             ORDER BY storage.created DESC \
                             LIMIT %llu,%llu \
                            ",
@@ -5117,7 +5139,7 @@ Database_debugEnable(1);
                            offset,
                            limit
                           );
-Database_debugEnable(0);
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -5136,8 +5158,9 @@ Database_debugEnable(0);
 }
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          IndexId          *storageId,
+                          IndexId          *uuidId,
                           IndexId          *entityId,
+                          IndexId          *storageId,
                           String           jobUUID,
                           String           scheduleUUID,
                           ArchiveTypes     *archiveType,
@@ -5153,7 +5176,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 {
   StorageSpecifier storageSpecifier;
   bool             foundFlag;
-  DatabaseId       entityId_,storageId_;
+  DatabaseId       uuidId_,entityId_,storageId_;
   String           storageName_;
   double           size_;
 
@@ -5173,9 +5196,10 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   while (   !foundFlag
 #if 0
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %lld %S %S %d %S %llu %llu %llu %d %d %llu %S",
-                                &storageId_,
+                                "%lld %lld %lld %S %S %d %S %llu %llu %llu %d %d %llu %S",
+                                &uuidId_,
                                 &entityId_,
+                                &storageId_,
                                 jobUUID,
                                 scheduleUUID,
                                 archiveType,
@@ -5190,9 +5214,10 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                                )
 #else
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %lld %S %S %d %S %llu %llu %lf %d %d %llu %S",
-                                &storageId_,
+                                "%lld %lld %lld %S %S %d %S %llu %llu %lf %d %d %llu %S",
+                                &uuidId_,
                                 &entityId_,
+                                &storageId_,
                                 jobUUID,
                                 scheduleUUID,
                                 archiveType,
@@ -5283,6 +5308,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
       foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FILESYSTEM))
                   && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,PATTERN_MATCH_MODE_ANY));
     }
+    if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
     if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
     if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
     if (storageName != NULL) String_set(storageName,storageName_);
@@ -6215,10 +6241,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                               FROM files \
                                 LEFT JOIN storage ON storage.id=files.storageId \
                               WHERE     %d \
-                                    AND (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
-                                    AND (%d OR REGEXP(%S,0,files.name)) \
                                     AND (%d OR (files.storageId IN (%S))) \
                                     AND (%d OR (files.id IN (%S))) \
+                                    AND (%d OR (files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,files.name)) \
                            "
                            "UNION ALL"
                            "  SELECT images.id, \
@@ -6238,10 +6264,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                               FROM images \
                                 LEFT JOIN storage ON storage.id=images.storageId \
                               WHERE     %d \
-                                    AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
-                                    AND (%d OR REGEXP(%S,0,images.name)) \
                                     AND (%d OR (images.storageId IN (%S))) \
                                     AND (%d OR (images.id IN (%S))) \
+                                    AND (%d OR (images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,images.name)) \
                            "
                            "UNION ALL"
                            "  SELECT directories.id, \
@@ -6261,10 +6287,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                               FROM directories \
                                 LEFT JOIN storage ON storage.id=directories.storageId \
                               WHERE     %d \
-                                    AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
-                                    AND (%d OR REGEXP(%S,0,directories.name)) \
                                     AND (%d OR (directories.storageId IN (%S))) \
                                     AND (%d OR (directories.id IN (%S))) \
+                                    AND (%d OR (directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,directories.name)) \
                            "
                            "UNION ALL"
                            "  SELECT links.id, \
@@ -6284,10 +6310,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                               FROM links \
                                 LEFT JOIN storage ON storage.id=links.storageId \
                               WHERE     %d \
-                                    AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
-                                    AND (%d OR REGEXP(%S,0,links.name)) \
                                     AND (%d OR (links.storageId IN (%S))) \
                                     AND (%d OR (links.id IN (%S))) \
+                                    AND (%d OR (links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,links.name)) \
                            "
                            "UNION ALL"
                            "  SELECT hardlinks.id, \
@@ -6307,10 +6333,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                               FROM hardlinks \
                                 LEFT JOIN storage ON storage.id=hardlinks.storageId \
                               WHERE     %d \
-                                    AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
-                                    AND (%d OR REGEXP(%S,0,hardlinks.name)) \
                                     AND (%d OR (hardlinks.storageId IN (%S))) \
                                     AND (%d OR (hardlinks.id IN (%S))) \
+                                    AND (%d OR (hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,hardlinks.name)) \
                            "
                            "UNION ALL"
                            "  SELECT special.id, \
@@ -6330,53 +6356,53 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                               FROM special \
                                 LEFT JOIN storage ON storage.id=special.storageId \
                               WHERE     %d \
-                                    AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
-                                    AND (%d OR REGEXP(%S,0,special.name)) \
                                     AND (%d OR (special.storageId IN (%S))) \
                                     AND (%d OR (special.id IN (%S))) \
+                                    AND (%d OR (special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S))) \
+                                    AND (%d OR REGEXP(%S,0,special.name)) \
                            "
                            "LIMIT %llu,%llu",
                            INDEX_TYPE_FILE,
                            IN_SET(indexTypeSet,INDEX_TYPE_FILE),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-                           String_isEmpty(pattern) ? 1 : 0,regexpString,
                            String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
                            String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
 
                            INDEX_TYPE_IMAGE,
                            IN_SET(indexTypeSet,INDEX_TYPE_IMAGE),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-                           String_isEmpty(pattern) ? 1 : 0,regexpString,
                            String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
                            String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
 
                            INDEX_TYPE_DIRECTORY,
                            IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-                           String_isEmpty(pattern) ? 1 : 0,regexpString,
                            String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
                            String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
 
                            INDEX_TYPE_LINK,
                            IN_SET(indexTypeSet,INDEX_TYPE_LINK),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-                           String_isEmpty(pattern) ? 1 : 0,regexpString,
                            String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
                            String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
 
                            INDEX_TYPE_HARDLINK,
                            IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-                           String_isEmpty(pattern) ? 1 : 0,regexpString,
                            String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
                            String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
 
                            INDEX_TYPE_SPECIAL,
                            IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL),
-                           String_isEmpty(pattern) ? 1 : 0,ftsString,
-                           String_isEmpty(pattern) ? 1 : 0,regexpString,
                            String_isEmpty(storageIdsString) ? 1 : 0,storageIdsString,
                            String_isEmpty(entryIdsString) ? 1 : 0,entryIdsString,
+                           String_isEmpty(pattern) ? 1 : 0,ftsString,
+                           String_isEmpty(pattern) ? 1 : 0,regexpString,
 
                            offset,
                            limit
@@ -6475,6 +6501,8 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   {
     return indexHandle->upgradeError;
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
@@ -7974,6 +8002,89 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
+Errors Index_pruneUUID(IndexHandle *indexHandle,
+                       IndexId     uuidId
+                      )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          entityId;
+  bool             existsFlag;
+
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE_(uuidId) == INDEX_TYPE_UUID);
+
+fprintf(stderr,"%s, %d: try prune uuid %llu\n",__FILE__,__LINE__,uuidId);
+
+  // prune entities of uuid
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 uuidId,
+                                 NULL,  // jobUUID,
+                                 NULL,  // scheduldUUID
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Index_getNextEntity(&indexQueryHandle,
+                             NULL,  // uuidId,
+                             &entityId,
+                             NULL,  // jobUUID,
+                             NULL,  // scheduleUUID,
+                             NULL,  // createdDateTime,
+                             NULL,  // archiveType,
+                             NULL,   // lastErrorMessage
+                             NULL,  // totalEntryCount,
+                             NULL  // totalSize,
+                            )
+        )
+  {
+    error = Index_pruneEntity(indexHandle,entityId);
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // check if entity exists
+  existsFlag = FALSE;
+  if (Database_exists(&indexHandle->databaseHandle,
+                      "entities",
+                      "id",
+                      "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
+                      INDEX_DATABASE_ID_(uuidId)
+                     )
+     )
+  {
+    existsFlag = TRUE;
+  }
+
+  // prune entity if empty
+  if (!existsFlag)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM uuids WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(uuidId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
 Errors Index_pruneEntity(IndexHandle *indexHandle,
                          IndexId     entityId
                          )
@@ -7991,18 +8102,19 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
   // prune storage of entity
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
-                                 NULL, // uuid
+                                 INDEX_ID_ANY,  // uuidId
                                  entityId,
+                                 NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 NULL, // storageName
-                                 NULL, // hostName
-                                 NULL, // loginName
-                                 NULL, // deviceName
-                                 NULL, // fileName
+                                 NULL,  // storageName
+                                 NULL,  // hostName
+                                 NULL,  // loginName
+                                 NULL,  // deviceName
+                                 NULL,  // fileName
                                  INDEX_STATE_SET_ALL,
-                                 NULL,  // storageIds
-                                 0,   // storageIdCount
-                                 0LL,  // offset
+                                 NULL,   // storageIds
+                                 0,  // storageIdCount
+                                 0LL,   // offset
                                  INDEX_UNLIMITED
                                 );
   if (error != ERROR_NONE)
@@ -8010,19 +8122,20 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
     return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
+                              NULL,  // uuidId
+                              NULL,  // entityId
                               &storageId,
-                              NULL, // entity id
-                              NULL, // job UUID
-                              NULL, // schedule UUID
-                              NULL, // archive type
-                              NULL, // storageName,
-                              NULL, // createdDateTime
-                              NULL, // entries
-                              NULL, // size
-                              NULL, // indexState
-                              NULL, // indexMode
-                              NULL, // lastCheckedDateTime
-                              NULL  // errorMessage
+                              NULL,  // jobUUID
+                              NULL,  // scheduleUUID
+                              NULL,  // archiveType
+                              NULL,  // storageName,
+                              NULL,  // createdDateTime
+                              NULL,  // entries
+                              NULL,  // size
+                              NULL,  // indexState
+                              NULL,  // indexMode
+                              NULL,  // lastCheckedDateTime
+                              NULL   // errorMessage
                              )
         )
   {
@@ -8050,7 +8163,6 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
   {
     existsFlag = TRUE;
   }
-  UNUSED_VARIABLE(storageId);
 
   // prune entity if empty
   if (!existsFlag)

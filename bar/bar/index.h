@@ -506,7 +506,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextUUID
 * Purpose: get next index uuid entry
 * Input  : IndexQueryHandle - index query handle
-* Output : indexId             - index id of UUID
+* Output : uuidId              - index id of UUID entry
 *          jobUUID             - unique job id (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
 *          lastErrorMessage    - last storage error message (can be NULL)
@@ -517,7 +517,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
-                       IndexId          *indexId,
+                       IndexId          *uuidId,
                        String           jobUUID,
                        uint64           *lastCreatedDateTime,
                        String           lastErrorMessage,
@@ -530,7 +530,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 * Purpose: create new entity index
 * Input  : indexHandle  - index handle
 *          jobUUID      - unique job id (can be NULL)
-* Output : uuidId - index id of new entity index (can be NULL)
+* Output : uuidId - index id of new UUID entry (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -558,6 +558,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 * Purpose: list entity entries and aggregated data of storage
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          jobUUID          - job UUID or NULL
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
@@ -566,8 +567,8 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
-                              ConstString      jobUUID,
                               IndexId          uuidId,
+                              ConstString      jobUUID,
                               ConstString      scheduleUUID,
                               DatabaseOrdering ordering,
                               ulong            offset,
@@ -578,7 +579,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextEntity
 * Purpose: get next index entity entry
 * Input  : IndexQueryHandle - index query handle
-* Output : entityId         - index id of entity
+* Output : uuidId           - index id of UUID entry (can be NULL)
+*          entityId         - index id of entity entry
 *          jobUUID          - unique job id (can be NULL)
 *          scheduleUUID     - unique schedule id (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
@@ -591,6 +593,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
+                         IndexId          *uuidId,
                          IndexId          *entityId,
                          String           jobUUID,
                          String           scheduleUUID,
@@ -638,8 +641,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 * Purpose: get storages info
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          storageIds       - storage ids or NULL
-*          storageIdCount   - storage id count or 0
+*          indexIds         - index ids or NULL
+*          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          pattern          - name pattern (glob, can be NULL)
 * Output : count - entry count (can be NULL)
@@ -649,8 +652,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
-                             const IndexId storageIds[],
-                             uint          storageIdCount,
+                             const IndexId indexIds[],
+                             uint          indexIdCount,
                              IndexStateSet indexStateSet,
                              ConstString   pattern,
                              ulong         *count,
@@ -662,8 +665,9 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
+*          entityId         - index id of entity entry id or INDEX_ID_ANY
 *          jobUUID          - unique job id or NULL
-*          entityId         - entity id or INDEX_ID_ANY
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          storageName      - storage name pattern (glob) or NULL
 *          hostName         - host name pattern (glob) or NULL
@@ -683,8 +687,9 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 
 Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
-                              ConstString      jobUUID,
+                              IndexId          uuidId,
                               IndexId          entityId,
+                              ConstString      jobUUID,
                               StorageTypes     storageType,
                               ConstString      storageName,
                               ConstString      hostName,
@@ -702,8 +707,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextStorage
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
-* Output : storageId           - index storage id of entry
-*          entityId            - index entity id (can be NULL)
+* Output : uuidId              - index id of UUID entry (can be NULL)
+*          entityId            - index id of entity entry (can be NULL)
+*          storageId           - index id of storage entry (can be NULL)
 *          jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
 *          archiveType         - archive type (can be NULL)
@@ -713,15 +719,17 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 *          size                - size [bytes] (can be NULL)
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
-*          lastCheckedDateTime - last checked date/time stamp [s] (can be NULL)
+*          lastCheckedDateTime - last checked date/time stamp [s] (can be
+*                                NULL)
 *          errorMessage        - last error message
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          IndexId          *storageId,
+                          IndexId          *uuidId,
                           IndexId          *entityId,
+                          IndexId          *storageId,
                           String           jobUUID,
                           String           scheduleUUID,
                           ArchiveTypes     *archiveType,
@@ -1554,10 +1562,24 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
                          );
 
 /***********************************************************************\
+* Name   : Index_pruneUUID
+* Purpose: delete uuid from index if not used anymore (empty)
+* Input  : indexHandle - index handle
+*          uuidId      - index id of UUID entry
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_pruneUUID(IndexHandle *indexHandle,
+                       IndexId     uuidId
+                      );
+
+/***********************************************************************\
 * Name   : Index_pruneEntity
 * Purpose: delete entity from index if not used anymore (empty)
 * Input  : indexHandle - index handle
-*          storageId   - storage id
+*          entityId    - index id of entity entry
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
