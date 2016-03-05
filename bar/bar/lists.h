@@ -29,10 +29,19 @@
   type *prev; \
   type *next
 
-#define LIST_HEADER(type) \
-  type          *head; \
-  type          *tail; \
-  unsigned long count
+#ifndef NDEBUG
+  #define LIST_HEADER(type) \
+    type          *head; \
+    type          *tail; \
+    unsigned long count; \
+    const char    *fileName; \
+    ulong         lineNb
+#else /* NDEBUG */
+  #define LIST_HEADER(type) \
+    type          *head; \
+    type          *tail; \
+    unsigned long count
+#endif /* not NDEBUG */
 
 // list node
 typedef struct Node
@@ -106,6 +115,9 @@ typedef enum
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
+  #define List_init(...) __List_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define List_initDuplicate(...) __List_initDuplicate(__FILE__,__LINE__,__VA_ARGS__)
+  #define List_duplicate(...) __List_duplicate(__FILE__,__LINE__,__VA_ARGS__)
   #define List_newNode(...) __List_newNode(__FILE__,__LINE__,__VA_ARGS__)
   #define List_deleteNode(...) __List_deleteNode(__FILE__,__LINE__,__VA_ARGS__)
   #define List_insert(...) __List_insert(__FILE__,__LINE__,__VA_ARGS__)
@@ -319,7 +331,11 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void List_init(void *list);
+#else /* not NDEBUG */
+void __List_init(const char *__fileName__, ulong __lineNb__, void *list);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_initDuplicate
@@ -335,6 +351,7 @@ void List_init(void *list);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void List_initDuplicate(void                      *list,
                         const void                *fromList,
                         const void                *fromListFromNode,
@@ -342,6 +359,17 @@ void List_initDuplicate(void                      *list,
                         ListNodeDuplicateFunction listNodeDuplicateFunction,
                         void                      *listNodeDuplicateUserData
                        );
+#else /* not NDEBUG */
+void __List_initDuplicate(const char                *__fileName__,
+                          ulong                     __lineNb__,
+                          void                      *list,
+                          const void                *fromList,
+                          const void                *fromListFromNode,
+                          const void                *fromListToNode,
+                          ListNodeDuplicateFunction listNodeDuplicateFunction,
+                          void                      *listNodeDuplicateUserData
+                         );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_done
@@ -398,12 +426,23 @@ void __List_new(const char *fileName,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 List *List_duplicate(const void                *fromList,
                      const void                *fromListFromNode,
                      const void                *fromListToNode,
                      ListNodeDuplicateFunction listNodeDuplicateFunction,
                      void                      *listNodeDuplicateUserData
                     );
+#else /* not NDEBUG */
+List *__List_duplicate(const char                *__fileName__,
+                       ulong                     __lineNb__,
+                       const void                *fromList,
+                       const void                *fromListFromNode,
+                       const void                *fromListToNode,
+                       ListNodeDuplicateFunction listNodeDuplicateFunction,
+                       void                      *listNodeDuplicateUserData
+                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_delete

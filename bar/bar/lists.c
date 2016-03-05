@@ -239,11 +239,11 @@ LOCAL void debugCheckDuplicateNode(const char *fileName,
     {
       if      (debugListNode->list == list)
       {
-         HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is already in list %p!",node,list);
+         HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is already in list %p initialized at %s, %lu!",node,list,list->fileName,list->lineNb);
       }
       else if (debugListNode->list != NULL)
       {
-         HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is still in other list %p!",node,debugListNode->list);
+         HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is still in other list %p initialized at %s, %lu!",node,debugListNode->list,debugListNode->list->fileName,debugListNode->list->lineNb);
       }
     }
     debugListNode = debugListNode->next;
@@ -593,15 +593,24 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
   return nextNode;
 }
 
+#ifdef NDEBUG
 void List_init(void *list)
+#else /* not NDEBUG */
+void __List_init(const char *__fileName__, ulong __lineNb__, void *list)
+#endif /* NDEBUG */
 {
   assert(list != NULL);
 
   ((List*)list)->head  = NULL;
   ((List*)list)->tail  = NULL;
   ((List*)list)->count = 0;
+  #ifndef NDEBUG
+    ((List*)list)->fileName = __fileName__;
+    ((List*)list)->lineNb   = __lineNb__;
+  #endif /* not NDEBUG */
 }
 
+#ifdef NDEBUG
 void List_initDuplicate(void                      *list,
                         const void                *fromList,
                         const void                *fromListFromNode,
@@ -609,11 +618,26 @@ void List_initDuplicate(void                      *list,
                         ListNodeDuplicateFunction listNodeDuplicateFunction,
                         void                      *listNodeDuplicateUserData
                        )
+#else /* not NDEBUG */
+void __List_initDuplicate(const char                *__fileName__,
+                          ulong                     __lineNb__,
+                          void                      *list,
+                          const void                *fromList,
+                          const void                *fromListFromNode,
+                          const void                *fromListToNode,
+                          ListNodeDuplicateFunction listNodeDuplicateFunction,
+                          void                      *listNodeDuplicateUserData
+                         )
+#endif /* NDEBUG */
 {
   assert(list != NULL);
   assert(fromList != NULL);
 
-  List_init(list);
+  #ifdef NDEBUG
+    List_init(list);
+  #else /* not NDEBUG */
+    __List_init(__fileName__,__lineNb__,list);
+  #endif /* NDEBUG */
   List_copy(fromList,
             list,
             fromListFromNode,
@@ -646,12 +670,23 @@ List *List_new(void)
   return list;
 }
 
+#ifdef NDEBUG
 List *List_duplicate(const void                *fromList,
                      const void                *fromListFromNode,
                      const void                *fromListToNode,
                      ListNodeDuplicateFunction listNodeDuplicateFunction,
                      void                      *listNodeDuplicateUserData
                     )
+#else /* not NDEBUG */
+List *__List_duplicate(const char                *__fileName__,
+                       ulong                     __lineNb__,
+                       const void                *fromList,
+                       const void                *fromListFromNode,
+                       const void                *fromListToNode,
+                       ListNodeDuplicateFunction listNodeDuplicateFunction,
+                       void                      *listNodeDuplicateUserData
+                      )
+#endif /* NDEBUG */
 {
   List *list;
 
@@ -661,13 +696,25 @@ List *List_duplicate(const void                *fromList,
   list = (List*)malloc(sizeof(List));
   if (list == NULL) return NULL;
 
-  List_initDuplicate(list,
-                     fromList,
-                     fromListFromNode,
-                     fromListToNode,
-                     listNodeDuplicateFunction,
-                     listNodeDuplicateUserData
-                    );
+  #ifdef NDEBUG
+    List_initDuplicate(list,
+                       fromList,
+                       fromListFromNode,
+                       fromListToNode,
+                       listNodeDuplicateFunction,
+                       listNodeDuplicateUserData
+                      );
+  #else /* not NDEBUG */
+    __List_initDuplicate(__fileName__,
+                         __lineNb__,
+                         list,
+                         fromList,
+                         fromListFromNode,
+                         fromListToNode,
+                         listNodeDuplicateFunction,
+                         listNodeDuplicateUserData
+                        );
+  #endif /* NDEBUG */
 
   return list;
 }
