@@ -2425,7 +2425,7 @@ public class BARControl
             BARServer.disconnect();
             System.exit(1);
           }
-          String type = valueMap.getString("type");
+          String type = valueMap.getString("status");
           if      (type.equalsIgnoreCase("running"))
           {
             serverState = null;
