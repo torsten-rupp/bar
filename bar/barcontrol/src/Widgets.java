@@ -6349,7 +6349,7 @@ e composite widget
     return index;
   }
 
-  /** insert tree item
+  /** insert tree item at index
    * @param tree tree widget
    * @param index index (0..n)
    * @param data data
@@ -6573,6 +6573,33 @@ e composite widget
    * @param data tree item data
    * @return tree item or null if not found
    */
+  public static <T extends Comparable> TreeItem getTreeItem(TreeItem parentTreeItem, T data)
+  {
+    for (TreeItem treeItem : parentTreeItem.getItems())
+    {
+      if (data.compareTo(treeItem.getData()) == 0)
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        treeItem = getTreeItem(treeItem,data);
+        if (treeItem != null)
+        {
+          return treeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+
+  /** get tree item from sub-tree items
+   * @param parentTreeItem parent tree item
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
   public static TreeItem getTreeItem(TreeItem parentTreeItem, Object data)
   {
     for (TreeItem treeItem : parentTreeItem.getItems())
@@ -6613,6 +6640,34 @@ e composite widget
         if (treeItem != null)
         {
           return treeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** get tree item
+   * @param tree tree
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  public static <T extends Comparable> TreeItem getTreeItem(Tree tree, T data)
+  {
+    TreeItem subTreeItem;
+
+    for (TreeItem treeItem : tree.getItems())
+    {
+      if (data.compareTo(treeItem.getData()) == 0)
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        subTreeItem = getTreeItem(treeItem,data);
+        if (subTreeItem != null)
+        {
+          return subTreeItem;
         }
       }
     }
