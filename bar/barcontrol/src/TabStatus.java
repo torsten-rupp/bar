@@ -1646,7 +1646,7 @@ public class TabStatus
       return;
     }
 
-    String statusText = resultMap.getString("status");
+    String statusText = resultMap.getString("status","running");
     if      (statusText.equals("pause"))
     {
       final long pauseTime = resultMap.getLong("time");
