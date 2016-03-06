@@ -10429,6 +10429,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            LogHandle                    *logHandle
                           )
 {
+  #define TRANSACTION_NAME "ARCHIVE_INDEX"
+
   StorageSpecifier  storageSpecifier;
   String            printableStorageName;
   Errors            error;
@@ -10547,7 +10549,11 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-  error                       = ERROR_NONE;
+  error = Index_beginTransaction(indexHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
@@ -10953,6 +10959,14 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
   }
+  if (error == ERROR_NONE)
+  {
+    error = Index_endTransaction(indexHandle,TRANSACTION_NAME);
+  }
+  else
+  {
+    (void)Index_rollbackTransaction(indexHandle,TRANSACTION_NAME);
+  }
   if      (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
@@ -11034,6 +11048,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   Storage_doneSpecifier(&storageSpecifier);
 
   return error;
+
+  #undef TRANSACTION_NAME
 }
 
 Errors Archive_remIndex(IndexHandle *indexHandle,
