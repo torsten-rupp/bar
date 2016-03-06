@@ -316,8 +316,38 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                              const char     *columnName
                             );
 
-Errors Database_beginTransaction(DatabaseHandle *databaseHandle);
-Errors Database_endTransaction(DatabaseHandle *databaseHandle);
+/***********************************************************************\
+* Name   : Database_beginTransaction
+* Purpose: begin transaction
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *name);
+
+/***********************************************************************\
+* Name   : Database_endTransaction
+* Purpose: end transaction (commit)
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name);
+
+/***********************************************************************\
+* Name   : Database_rollbackTransaction
+* Purpose: rollback transcation (discard)
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *name);
 
 /***********************************************************************\
 * Name   : Database_execute

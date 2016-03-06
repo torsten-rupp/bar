@@ -1177,6 +1177,8 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
                           ...
                          )
 {
+  #define TRANSACTION_NAME "COPY_TABLE"
+
   Errors             error;
   DatabaseColumnList fromColumnList,toColumnList;
   DatabaseColumnNode *columnNode;
@@ -1272,13 +1274,14 @@ ulong xxx=0;
               DATABASE_UNLOCK(toDatabaseHandle);
             },
   {
+    Errors error;
+
 #if 1
-    sqliteResult = sqlite3_exec(toDatabaseHandle->handle,
-                                "TRANSACTION BEGIN",
-                                NULL,
-                                NULL,
-                                NULL
-                               );
+    error = Database_beginTransaction(toDatabaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 #endif
 
     // create select statement
@@ -1290,6 +1293,7 @@ ulong xxx=0;
                                      );
     if (sqliteResult != SQLITE_OK)
     {
+      (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
       return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle));
     }
 
@@ -1304,6 +1308,7 @@ ulong xxx=0;
     if (sqliteResult != SQLITE_OK)
     {
       sqlite3_finalize(fromHandle);
+      (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
       return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
     }
 #endif
@@ -1399,6 +1404,7 @@ xxx++;
         {
 //          sqlite3_finalize(toHandle);
           sqlite3_finalize(fromHandle);
+          (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
           return error;
         }
 
@@ -1440,6 +1446,7 @@ xxx++;
       if (sqliteResult != SQLITE_OK)
       {
         sqlite3_finalize(fromHandle);
+        (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
         return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
       }
 
@@ -1486,6 +1493,7 @@ xxx++;
       {
         sqlite3_finalize(toHandle);
         sqlite3_finalize(fromHandle);
+        (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
         return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
       }
       lastRowId = (uint64)sqlite3_last_insert_rowid(toDatabaseHandle->handle);
@@ -1525,18 +1533,18 @@ xxx++;
         {
 //          sqlite3_finalize(toHandle);
           sqlite3_finalize(fromHandle);
+          (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
           return error;
         }
       }
     }
 
 #if 1
-    sqliteResult = sqlite3_exec(toDatabaseHandle->handle,
-                                "TRANSACTION END",
-                                NULL,
-                                NULL,
-                                NULL
-                               );
+    error = Database_endTransaction(toDatabaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 #endif
 
     // free resources
@@ -2024,44 +2032,98 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
-Errors Database_beginTransaction(DatabaseHandle *databaseHandle)
+Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *name)
 {
-  int sqliteResult;
+  String sqlString;
+  int    sqliteResult;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
+  // format SQL command string
+  sqlString = String_format(String_new(),"SAVEPOINT %s;",name);
+  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+
+  // start transaction (create savepoint)
   sqliteResult = sqlite3_exec(databaseHandle->handle,
-                              "TRANSACTION BEGIN",
+                              String_cString(sqlString),
                               NULL,
                               NULL,
                               NULL
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    String_delete(sqlString);
     return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(databaseHandle->handle));
   }
+
+  // free resources
+  String_delete(sqlString);
 
   return ERROR_NONE;
 }
 
-Errors Database_endTransaction(DatabaseHandle *databaseHandle)
+Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
 {
-  int sqliteResult;
+  String sqlString;
+  int    sqliteResult;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
+  // format SQL command string
+  sqlString = String_format(String_new(),"RELEASE %s;",name);
+  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+
+  // end transaction (release savepoint)
   sqliteResult = sqlite3_exec(databaseHandle->handle,
-                              "TRANSACTION END",
+                              String_cString(sqlString),
                               NULL,
                               NULL,
                               NULL
                              );
   if (sqliteResult != SQLITE_OK)
   {
-    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(databaseHandle->handle));
+    String_delete(sqlString);
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION END: %s",sqlite3_errmsg(databaseHandle->handle));
   }
+
+  // free resources
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
+Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *name)
+{
+  String sqlString;
+  int    sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+
+  // format SQL command string
+  sqlString = String_format(String_new(),"ROLLBACK TO %s;",name);
+  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+
+  // rollback transaction (rollback savepoint)
+  sqliteResult = sqlite3_exec(databaseHandle->handle,
+                              String_cString(sqlString),
+                              NULL,
+                              NULL,
+                              NULL
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    String_delete(sqlString);
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION ROLLBACK: %s",sqlite3_errmsg(databaseHandle->handle));
+  }
+
+  // free resources
+  String_delete(sqlString);
 
   return ERROR_NONE;
 }
