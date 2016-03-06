@@ -138,7 +138,7 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
   LOCAL Errors __openIndex(const char     *__fileName__,
                            uint           __lineNb__,
                            IndexHandle    *indexHandle,
-                           const char     *databaseFileName
+                           const char     *databaseFileName,
                            IndexOpenModes indexOpenMode
                           )
 #endif /* NDEBUG */
@@ -3439,17 +3439,19 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : assignEntityToEntity
 * Purpose: assign all storage entries of entity to other entity
-* Input  : indexHandle - index handle
-*          entityId    - entity id
-*          toEntityId  - to entity id
+* Input  : indexHandle   - index handle
+*          entityId      - entity id
+*          toEntityId    - to entity id
+*          toArchiveType - archive type or ARCHIVE_TYPE_NONE
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors assignEntityToEntity(IndexHandle *indexHandle,
-                                  IndexId     entityId,
-                                  IndexId     toEntityId
+LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
+                                  IndexId      entityId,
+                                  IndexId      toEntityId,
+                                  ArchiveTypes toArchiveType
                                  )
 {
   Errors error;
@@ -3480,23 +3482,43 @@ LOCAL Errors assignEntityToEntity(IndexHandle *indexHandle,
     return error;
   }
 
+  // set archive type
+  if (toArchiveType != ARCHIVE_TYPE_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE entities \
+                              SET type=%d \
+                              WHERE id=%lld; \
+                             ",
+                             toArchiveType,
+                             INDEX_DATABASE_ID_(toEntityId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
   return ERROR_NONE;
 }
 
 /***********************************************************************\
 * Name   : assignJobToEntity
 * Purpose: assign all entities of job to other entity
-* Input  : indexHandle - index handle
-*          jobUUID     - job UUID
-*          toEntityId  - to entity id
+* Input  : indexHandle   - index handle
+*          jobUUID       - job UUID
+*          toEntityId    - to entity id
+*          toArchiveType - archive type or ARCHIVE_TYPE_NONE
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
-                               ConstString jobUUID,
-                               IndexId     toEntityId
+LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
+                               ConstString  jobUUID,
+                               IndexId      toEntityId,
+                               ArchiveTypes toArchiveType
                               )
 {
   Errors           error;
@@ -3533,7 +3555,7 @@ LOCAL Errors assignJobToEntity(IndexHandle *indexHandle,
         )
   {
     // assign all storage entries of entity to other entity
-    error = assignEntityToEntity(indexHandle,entityId,toEntityId);
+    error = assignEntityToEntity(indexHandle,entityId,toEntityId,toArchiveType);
     if (error != ERROR_NONE)
     {
       return error;
@@ -7835,6 +7857,8 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
   if      (toEntityId != INDEX_ID_NONE)
   {
     // assign to other entity
@@ -7861,7 +7885,8 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
       // assign all storage entries of entity to other entity
       error = assignEntityToEntity(indexHandle,
                                    entityId,
-                                   toEntityId
+                                   toEntityId,
+                                   toArchiveType
                                   );
       if (error != ERROR_NONE)
       {
@@ -7874,7 +7899,8 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
       // assign all entities of job to other entity
       error = assignJobToEntity(indexHandle,
                                 jobUUID,
-                                toEntityId
+                                toEntityId,
+                                toArchiveType
                                );
       if (error != ERROR_NONE)
       {
@@ -7923,8 +7949,6 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
       }
     }
   }
-
-#warning TODO toArchiveType
 
   return ERROR_NONE;
 }
