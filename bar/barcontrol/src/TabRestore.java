@@ -1656,6 +1656,7 @@ Dprintf.dprintf("cirrect?");
         for (;;)
         {
           boolean updateIndicator = false;
+
           {
             // set busy cursor and foreground color to inform about update
             if (setUpdateIndicator)
@@ -1664,6 +1665,7 @@ Dprintf.dprintf("cirrect?");
               {
                 public void run()
                 {
+Dprintf.dprintf("set indi");
                   BARControl.waitCursor();
                   widgetStorageTree.setForeground(COLOR_MODIFIED);
                   widgetStorageTable.setForeground(COLOR_MODIFIED);
@@ -1685,7 +1687,9 @@ Dprintf.dprintf("cirrect?");
               HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
               if (!this.updateCount)
               {
+Dprintf.dprintf("");
                 updateUUIDTreeItems(uuidTreeItems);
+Dprintf.dprintf("");
               }
               HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
               if (!this.updateCount)
@@ -1716,18 +1720,23 @@ Dprintf.dprintf("cirrect?");
                 System.exit(1);
               }
             }
+Dprintf.dprintf("");
 
             // update menues
             try
             {
+Dprintf.dprintf("");
               updateUUIDMenus();
+Dprintf.dprintf("");
             }
             catch (CommunicationError error)
             {
               // ignored
+Dprintf.dprintf("");
             }
             catch (Exception exception)
             {
+Dprintf.dprintf("");
               if (Settings.debugLevel > 0)
               {
                 BARServer.disconnect();
@@ -1736,10 +1745,12 @@ Dprintf.dprintf("cirrect?");
                 System.exit(1);
               }
             }
+Dprintf.dprintf("");
           }
           finally
           {
             // reset cursor and foreground color
+Dprintf.dprintf("updateIndicator=%s",updateIndicator);
             if (updateIndicator)
             {
               display.syncExec(new Runnable()
@@ -1749,6 +1760,7 @@ Dprintf.dprintf("cirrect?");
                   widgetStorageTree.setForeground(null);
                   widgetStorageTable.setForeground(null);
                   BARControl.resetCursor();
+Dprintf.dprintf("reset indi");
                 }
               });
             }
@@ -2022,6 +2034,7 @@ Dprintf.dprintf("");
           {
             if (true ||widgetStorageTree.getItemCount() > 0)
             {
+Dprintf.dprintf("start");
               for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
               {
                 TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexData);
@@ -2059,6 +2072,7 @@ Dprintf.dprintf("");
                   uuidTreeItems.add(uuidTreeItem);
                 }
               }
+Dprintf.dprintf("end");
             }
             else
             {
@@ -2707,6 +2721,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
           }
         }
       });
+Dprintf.dprintf("");
       if (isUpdateTriggered()) return;
 
       // update UUIDs menu items
@@ -2856,6 +2871,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                }
                               );
       if (isUpdateTriggered()) return;
+Dprintf.dprintf("");
 
       // remove not existing UUID menus
       display.syncExec(new Runnable()
@@ -2872,6 +2888,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
           }
         }
       });
+Dprintf.dprintf("");
 
       // get entity menu items
       display.syncExec(new Runnable()
@@ -2894,6 +2911,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
         }
       });
       if (isUpdateTriggered()) return;
+Dprintf.dprintf("");
 
       // update entity menu items
       for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
@@ -2901,8 +2919,8 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
         final Menu subMenu = uuidIndexData.getSubMenu();
 
         BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=*",
-                                                           uuidIndexData.jobUUID
-                                                          ),
+                                                     uuidIndexData.jobUUID
+                                                    ),
                                  1,  // debugLevel
                                  new CommandResultHandler()
                                  {
@@ -2990,6 +3008,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                 );
         if (isUpdateTriggered()) return;
       }
+Dprintf.dprintf("");
 
       // remove not existing entity menu items
       display.syncExec(new Runnable()
@@ -3005,6 +3024,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
           }
         }
       });
+Dprintf.dprintf("");
     }
   }
 
@@ -3609,7 +3629,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                        entryType.toString(),
                                                        newestEntriesOnly
                                                       ),
-                                   1,  // debugLevel
+                                   0,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -4908,10 +4928,12 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           if (tabletem != null)
           {
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
-            selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
-            setStorageList(storageIndexData.indexId,tabletem.getChecked());
-
-            checkedStorageEvent.trigger();
+            if (storageIndexData != null)
+            {
+              selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
+              setStorageList(storageIndexData.indexId,tabletem.getChecked());
+              checkedStorageEvent.trigger();
+            }
           }
         }
       });
@@ -4928,14 +4950,12 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
           {
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
-Dprintf.dprintf("");
-//            if (storageIndexData != null)
-//            {
+            if (storageIndexData != null)
+            {
               selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
               setStorageList(storageIndexData.indexId,tabletem.getChecked());
-
               checkedStorageEvent.trigger();
-//            }
+            }
           }
         }
       });
