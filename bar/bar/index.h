@@ -280,6 +280,39 @@ void __Index_done(const char  *__fileName__,
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Index_beginTransaction
+* Purpose: begin transaction
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name);
+
+/***********************************************************************\
+* Name   : Index_endTransaction
+* Purpose: end transaction (commit)
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_endTransaction(IndexHandle *indexHandle, const char *name);
+
+/***********************************************************************\
+* Name   : Index_rollbackTransaction
+* Purpose: rollback transcation (discard)
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_rollbackTransaction(IndexHandle *indexHandle, const char *name);
+
+/***********************************************************************\
 * Name   : Index_getType
 * Purpose: get index type
 * Input  : indexId - index id

@@ -2812,17 +2812,12 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   uint                oldDatabaseCount;
   uint                sleepTime;
 
-  plogMessage(NULL,  // logHandle
-              LOG_TYPE_INDEX,
-              "INDEX",
-              "Start upgrade index database\n"
-             );
-
   // get absolute file name of database
   absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexHandle->databaseFileName);
 
   // open directory
   pathName = File_getFilePathName(String_new(),absoluteFileName);
+fprintf(stderr,"%s, %d: File_openDirectoryList %s \n",__FILE__,__LINE__,String_cString(pathName));
   error = File_openDirectoryList(&directoryListHandle,pathName);
   if (error != ERROR_NONE)
   {
@@ -2853,7 +2848,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Upgrade index database\n"
+                    "Start upgrade index database\n"
                    );
       }
       plogMessage(NULL,  // logHandle
@@ -3858,6 +3853,27 @@ Errors Index_init(IndexHandle *indexHandle,
   #else /* not NDEBUG */
     (void)__closeIndex(__fileName__,__lineNb__,indexHandle);
   #endif /* NDEBUG */
+}
+
+Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name)
+{
+  assert(indexHandle != NULL);
+
+  return Database_beginTransaction(&indexHandle->databaseHandle,name);
+}
+
+Errors Index_endTransaction(IndexHandle *indexHandle, const char *name)
+{
+  assert(indexHandle != NULL);
+
+  return Database_endTransaction(&indexHandle->databaseHandle,name);
+}
+
+Errors Index_rollbackTransaction(IndexHandle *indexHandle, const char *name)
+{
+  assert(indexHandle != NULL);
+
+  return Database_rollbackTransaction(&indexHandle->databaseHandle,name);
 }
 
 bool Index_findByJobUUID(IndexHandle  *indexHandle,
@@ -7857,8 +7873,6 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
   if      (toEntityId != INDEX_ID_NONE)
   {
     // assign to other entity
