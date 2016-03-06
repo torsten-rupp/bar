@@ -13817,10 +13817,8 @@ restoreCommandInfo.clientInfo->abortFlag = FALSE;
 * Return : -
 * Notes  : Arguments:
 *            pattern=<text>
-*            [offset=<n>]
-*            [limit=<n>]
 *          Result:
-*            indexId=<n>
+*            uuidId=<n>
 *            jobUUID=<uuid> \
 *            name=<name> \
 *            lastCreatedDateTime=<created date/time [s]> \
@@ -13926,8 +13924,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   }
 
   String           patternString;
-  uint64           offset;
-  uint64           limit;
   UUIDDataList     uuidDataList;
   String           lastErrorMessage;
   Errors           error;
@@ -13939,6 +13935,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
   UUIDDataNode     *uuidDataNode;
+  String           name;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13951,8 +13948,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     String_delete(patternString);
     return;
   }
-  StringMap_getUInt64(argumentMap,"offset",&offset,0);
-  StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -13962,8 +13957,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     return;
   }
 
+//TODO: remove
+#warning remove
+#if 0
   // initialize variables
   List_init(&uuidDataList);
+  name             = String_new();
   lastErrorMessage = String_new();
 
   // get uuids from job list
@@ -14087,7 +14086,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "indexId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
+                     "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
                      uuidDataNode->indexId,
                      uuidDataNode->jobUUID,
                      uuidDataNode->name,
@@ -14096,6 +14095,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
                      uuidDataNode->totalEntries,
                      uuidDataNode->totalSize
                     );
+fprintf(stderr,"%s, %d: %llu %s %s\n",__FILE__,__LINE__,uuidDataNode->indexId,String_cString(uuidDataNode->jobUUID),String_cString(uuidDataNode->name));
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -14104,6 +14104,66 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   String_delete(lastErrorMessage);
   List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
   String_delete(patternString);
+#else
+  name             = String_new();
+  lastErrorMessage = String_new();
+
+  error = Index_initListUUIDs(&indexQueryHandle,
+                              indexHandle,
+                              0,
+                              INDEX_UNLIMITED
+                             );
+  if (error != ERROR_NONE)
+  {
+    String_delete(lastErrorMessage);
+    List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
+
+    String_delete(patternString);
+    return;
+  }
+  while (   !isCommandAborted(clientInfo,id)
+         && Index_getNextUUID(&indexQueryHandle,
+                              &uuidId,
+                              jobUUID,
+                              &lastCreatedDateTime,
+                              lastErrorMessage,
+                              &totalEntries,
+                              &totalSize
+                             )
+        )
+  {
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode != NULL)
+    {
+      String_set(name,jobNode->name);
+    }
+    else
+    {
+      String_set(name,jobUUID);
+    }
+
+    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                     "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
+                     uuidId,
+                     jobUUID,
+                     name,
+                     lastCreatedDateTime,
+                     lastErrorMessage,
+                     totalEntries,
+                     totalSize
+                    );
+  }
+  Index_doneList(&indexQueryHandle);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(name);
+  String_delete(lastErrorMessage);
+  String_delete(patternString);
+#endif
 }
 
 /***********************************************************************\
@@ -14448,9 +14508,10 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 *            uuidId=<id>
 *            entityId=<id>
 *            storageId=<id>
-*            entityId=<id>
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
+*            jobName=<name>
+*            archiveType=<type>
 *            name=<name>
 *            dateTime=<date/time>
 *            entries=<n>
@@ -14781,12 +14842,13 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            toEntityId=<id>|0
+*            toJobUUID=<uuid>|""
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
 *            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
 *
 *          or
 *
-*            toJobUUID=<uuid>|""
+*            toEntityId=<id>|0
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
 *            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
 *
@@ -14816,19 +14878,10 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
-  if (String_isEmpty(toJobUUID) && (toEntityId == INDEX_ID_NONE))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected non-empty toJobUUID or toEntityId");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
-  }
-  archiveType = ARCHIVE_TYPE_UNKNOWN;
-  if (toEntityId == INDEX_ID_NONE)
-  {
-    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
-      return;
-    }
   }
   String_clear(jobUUID);
   entityId  = INDEX_ID_NONE;
@@ -14853,14 +14906,14 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
   {
     if      (toEntityId != INDEX_ID_NONE)
     {
-      // assign all storage of all entities of job to other entity
+      // assign all storages of all entities of job to other entity
       error = Index_assignTo(indexHandle,
                              jobUUID,
                              INDEX_ID_NONE,  // entityId,
                              INDEX_ID_NONE,  // storageId
                              toEntityId,
                              INDEX_ID_NONE,  // toStorageId
-                             ARCHIVE_TYPE_NONE
+                             archiveType
                             );
       if (error != ERROR_NONE)
       {
@@ -14883,14 +14936,14 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
         return;
       }
 
-      // assign all storage of all entities of job to other entity
+      // assign all storages of all entities of job to other entity
       error = Index_assignTo(indexHandle,
                              jobUUID,
                              INDEX_ID_NONE,  // entityId
                              INDEX_ID_NONE,  // storageId
                              toEntityId,
                              INDEX_ID_NONE,  // toStorageId
-                             ARCHIVE_TYPE_NONE
+                             archiveType
                             );
       if (error != ERROR_NONE)
       {
@@ -14905,14 +14958,14 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
     // assign entity to another entity
     if      (toEntityId != INDEX_ID_NONE)
     {
-      // assign all storage of entity to other entity
+      // assign all storages of entity to other entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
                              entityId,
                              INDEX_ID_NONE,  // storageId
                              toEntityId,
                              INDEX_ID_NONE,  // toStorageId
-                             ARCHIVE_TYPE_NONE
+                             archiveType
                             );
       if (error != ERROR_NONE)
       {
@@ -14935,14 +14988,14 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
         return;
       }
 
-      // assign all storage of entity to other entity
+      // assign all storages of entity to other entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
                              INDEX_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
                              INDEX_ID_NONE,  // toStorageId
-                             ARCHIVE_TYPE_NONE
+                             archiveType
                             );
       if (error != ERROR_NONE)
       {
@@ -14956,14 +15009,14 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
   {
     if      (toEntityId != INDEX_ID_NONE)
     {
-      // assign storage to another entity
+      // assign storages to another entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
                              INDEX_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
                              INDEX_ID_NONE,  // toStorageId
-                             ARCHIVE_TYPE_NONE
+                             archiveType
                             );
       if (error != ERROR_NONE)
       {
@@ -14993,7 +15046,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
                              storageId,
                              toEntityId,
                              INDEX_ID_NONE,  // toStorageId
-                             ARCHIVE_TYPE_NONE
+                             archiveType
                             );
       if (error != ERROR_NONE)
       {
