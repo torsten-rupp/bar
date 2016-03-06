@@ -291,7 +291,7 @@ public class TabRestore
 
   /** index data
    */
-  class IndexData implements Serializable
+  class IndexData implements Comparable<IndexData>,Serializable
   {
     /** tree item update runnable
      */
@@ -490,6 +490,17 @@ public class TabRestore
       return "";
     }
 
+    /** compare index data
+     * @param
+     * @return
+     */
+    public int compareTo(IndexData otherIndexData)
+    {
+      if      (indexId < otherIndexData.indexId) return -1;
+      else if (indexId > otherIndexData.indexId) return  1;
+      else                                       return  0;
+    }
+
     /** write index data object to object stream
      * Note: must be implented because Java serializaion API cannot write
      *       inner classes without writing outer classes, too!
@@ -584,6 +595,42 @@ public class TabRestore
     IndexDataComparator()
     {
       sortMode = SortModes.NAME;
+    }
+
+    /** get index data comparator instance
+     * @param tree tree widget
+     * @return index data comparator
+     */
+    static IndexDataComparator getInstance(final Tree tree)
+    {
+      final IndexDataComparator indexDataComparator[] = new IndexDataComparator[1];
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          indexDataComparator[0] = new IndexDataComparator(tree);
+        }
+      });
+
+      return indexDataComparator[0];
+    }
+
+    /** get index data comparator instance
+     * @param table table widget
+     * @return index data comparator
+     */
+    static IndexDataComparator getInstance(final Table table)
+    {
+      final IndexDataComparator indexDataComparator[] = new IndexDataComparator[1];
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          indexDataComparator[0] = new IndexDataComparator(table);
+        }
+      });
+
+      return indexDataComparator[0];
     }
 
     /** compare index data
@@ -910,7 +957,7 @@ Dprintf.dprintf("remove");
      */
     public String toString()
     {
-      return "UUIDIndexData {"+jobUUID+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes}";
+      return "UUIDIndexData {"+indexId+", jobUUID="+jobUUID+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes}";
     }
   }
 
@@ -1320,12 +1367,12 @@ Dprintf.dprintf("");
 
   /** find index for insert of item in sorted storage item list
    * @param indexData index data
+   * @param indexDataComparator index data comparator
    * @return index in tree
    */
-  private int findStorageTreeIndex(IndexData indexData)
+  private int findStorageTreeIndex(IndexData indexData, IndexDataComparator indexDataComparator)
   {
-    TreeItem            treeItems[]         = widgetStorageTree.getItems();
-    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
+    TreeItem treeItems[] = widgetStorageTree.getItems();
 
 /* Note: binary search not possible because items are not sorted
     int i0 = 0;
@@ -1341,6 +1388,7 @@ Dprintf.dprintf("");
 
     return treeItems.length;
 */
+/*
     int index = 0;
     while (   (index < treeItems.length)
            && (indexDataComparator.compare(indexData,(IndexData)treeItems[index].getData()) > 0)
@@ -1350,17 +1398,58 @@ Dprintf.dprintf("");
     }
 
     return index;
+*/
+//Dprintf.dprintf("---------- %d",treeItems.length);
+    int index = 0;
+
+    if (treeItems.length > 0)
+    {
+      int i      = 0;
+      int i0     = 0;
+      int i1     = treeItems.length-1;
+      int result = -1;
+      while (i0 < i1)
+      {
+        i = (i1+i0)/2;
+//  Dprintf.dprintf("i=%d: %s <-> %s",i,indexData,(IndexData)treeItems[i].getData());
+        result = indexDataComparator.compare(indexData,(IndexData)treeItems[i].getData());
+        if      (result < 0) i1 = i-1;     // before i
+        else if (result > 0) i0 = i+1;     // after i
+        else                 i0 = i1 = i;  // exactly found at i
+      }
+//Dprintf.dprintf("%d: %d %d %d",result,i,i0,i1);
+      if (indexDataComparator.compare(indexData,(IndexData)treeItems[i0].getData()) < 0)
+      {
+        index = i0;
+      }
+      else
+      {
+        index = i0+1;
+      }
+    }
+
+//Dprintf.dprintf("at=%d",index);
+    return index;
+  }
+
+  /** find index for insert of item in sorted storage item list
+   * @param indexData index data
+   * @return index in tree
+   */
+  private int findStorageTreeIndex(IndexData indexData)
+  {
+    return findStorageTreeIndex(indexData,new IndexDataComparator(widgetStorageTree));
   }
 
   /** find index for insert of item in sorted index item tree
    * @param treeItem tree item
    * @param indexData index data
+   * @param indexDataComparator index data comparator
    * @return index in tree
    */
-  private int findStorageTreeIndex(TreeItem treeItem, IndexData indexData)
+  private int findStorageTreeIndex(TreeItem treeItem, IndexData indexData, IndexDataComparator indexDataComparator)
   {
-    TreeItem            subTreeItems[]      = treeItem.getItems();
-    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
+    TreeItem subTreeItems[] = treeItem.getItems();
 
 /* Note: binary search not possible because items are not sorted
     int i0 = 0;
@@ -1376,6 +1465,7 @@ Dprintf.dprintf("");
 
     return subTreeItems.length;
 */
+/*
     int index = 0;
     while (   (index < subTreeItems.length)
            && (indexDataComparator.compare(indexData,(IndexData)subTreeItems[index].getData()) > 0)
@@ -1384,7 +1474,45 @@ Dprintf.dprintf("");
       index++;
     }
 
+    return index;*/
+
+    int index = 0;
+
+    if (subTreeItems.length > 0)
+    {
+      int i      = 0;
+      int i0     = 0;
+      int i1     = subTreeItems.length-1;
+      int result = -1;
+      while (i0 < i1)
+      {
+        i = (i1+i0)/2;
+        result = indexDataComparator.compare(indexData,(IndexData)subTreeItems[i].getData());
+        if      (result < 0) i1 = i-1;     // before i
+        else if (result > 0) i0 = i+1;     // after i
+        else                 i0 = i1 = i;  // exactly found at i
+      }
+      if (indexDataComparator.compare(indexData,(IndexData)subTreeItems[i0].getData()) < 0)
+      {
+        index = i0;
+      }
+      else
+      {
+        index = i0+1;
+      }
+    }
+
     return index;
+  }
+
+  /** find index for insert of item in sorted index item tree
+   * @param treeItem tree item
+   * @param indexData index data
+   * @return index in tree
+   */
+  private int findStorageTreeIndex(TreeItem treeItem, IndexData indexData)
+  {
+    return findStorageTreeIndex(treeItem,indexData,new IndexDataComparator(widgetStorageTree));
   }
 
   /** find index for insert of item in sorted storage menu
@@ -1396,6 +1524,7 @@ Dprintf.dprintf("");
     MenuItem            menuItems[]         = widgetStorageTreeAssignToMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
+//TODO: binary search
     int index = STORAGE_TREE_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(uuidIndexData,(UUIDIndexData)menuItems[index].getData()) > 0)
@@ -1417,6 +1546,7 @@ Dprintf.dprintf("");
     MenuItem            menuItems[]         = subMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
+//TODO: binary search
     int index = STORAGE_LIST_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(entityIndexData,(EntityIndexData)menuItems[index].getData()) > 0)
@@ -1429,14 +1559,15 @@ Dprintf.dprintf("");
   }
 
   /** find index for insert of item in sorted storage data table
-   * @param storageIndexData data of tree item
+   * @param storageIndexData storage index data
+   * @param indexDataComparator index data comparator
    * @return index in table
    */
-  private int findStorageTableIndex(IndexData indexData)
+  private int findStorageTableIndex(StorageIndexData storageIndexData, IndexDataComparator indexDataComparator)
   {
-    TableItem           tableItems[]        = widgetStorageTable.getItems();
-    IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable);
+    TableItem tableItems[] = widgetStorageTable.getItems();
 
+/*
     int i0 = 0;
     int i1 = tableItems.length-1;
     while (i0 < i1)
@@ -1448,7 +1579,45 @@ Dprintf.dprintf("");
       else return i;
     }
 
-    return tableItems.length;
+    return tableItems.length;*/
+
+    int index = 0;
+Dprintf.dprintf("cirrect?");
+
+    if (tableItems.length > 0)
+    {
+      int i      = 0;
+      int i0     = 0;
+      int i1     = tableItems.length-1;
+      int result = -1;
+      while (i0 < i1)
+      {
+        i = (i1+i0)/2;
+        result = indexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[i].getData());
+        if      (result < 0) i1 = i-1;     // before i
+        else if (result > 0) i0 = i+1;     // after i
+        else                 i0 = i1 = i;  // exactly found at i
+      }
+      if (indexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[i0].getData()) < 0)
+      {
+        index = i0;
+      }
+      else
+      {
+        index = i0+1;
+      }
+    }
+
+    return index;
+  }
+
+  /** find index for insert of item in sorted storage data table
+   * @param storageIndexData storage index data
+   * @return index in table
+   */
+  private int findStorageTableIndex(StorageIndexData storageIndexData)
+  {
+    return findStorageTableIndex(storageIndexData,new IndexDataComparator(widgetStorageTable));
   }
 
   /** update storage tree/table thread
@@ -1759,21 +1928,14 @@ Dprintf.dprintf("");
      */
     private void updateUUIDTreeItems(final HashSet<TreeItem> uuidTreeItems)
     {
-//      Command                 command;
-//      String[]                errorMessage          = new String[1];
-//      ValueMap                valueMap              = new ValueMap();
-
       uuidTreeItems.clear();
 
-      // get top tree item, UUID items
-      final TreeItem[]        topTreeItem           = new TreeItem[]{null};
+      // get UUID items
       final HashSet<TreeItem> removeUUIDTreeItemSet = new HashSet<TreeItem>();
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          topTreeItem[0] = widgetStorageTree.getTopItem();
-
           for (TreeItem treeItem : widgetStorageTree.getItems())
           {
             assert treeItem.getData() instanceof UUIDIndexData;
@@ -1795,7 +1957,7 @@ Dprintf.dprintf("");
                                  {
                                    try
                                    {
-                                     long   indexId             = valueMap.getLong  ("indexId"            );
+                                     long   uuidId              = valueMap.getLong  ("uuidId"             );
                                      String jobUUID             = valueMap.getString("jobUUID"            );
                                      String name                = valueMap.getString("name"               );
                                      long   lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
@@ -1803,7 +1965,7 @@ Dprintf.dprintf("");
                                      long   totalEntries        = valueMap.getLong  ("totalEntries"       );
                                      long   totalSize           = valueMap.getLong  ("totalSize"          );
 
-                                     uuidIndexDataList.add(new UUIDIndexData(indexId,
+                                     uuidIndexDataList.add(new UUIDIndexData(uuidId,
                                                                              jobUUID,
                                                                              name,
                                                                              lastCreatedDateTime,
@@ -1835,6 +1997,11 @@ Dprintf.dprintf("");
                               );
       if (isUpdateTriggered()) return;
 
+      // get pre-sorted array with index data
+      final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
+      final UUIDIndexData uuidIndexDataArray[] = uuidIndexDataList.toArray(new UUIDIndexData[uuidIndexDataList.size()]);
+      Arrays.sort(uuidIndexDataArray,indexDataComparator);
+
       // update UUID tree
       {
         // disable redraw
@@ -1848,52 +2015,75 @@ Dprintf.dprintf("");
       }
       try
       {
-        for(final UUIDIndexData uuidIndexData : uuidIndexDataList)
+        // add/update tree items
+        display.syncExec(new Runnable()
         {
-          // update/insert tree item
-          display.syncExec(new Runnable()
+          public void run()
           {
-            public void run()
+            if (true ||widgetStorageTree.getItemCount() > 0)
             {
-              TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,indexDataComparator,uuidIndexData);
-              if (uuidTreeItem == null)
+              for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
               {
-                // insert tree item
-                uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
-                                                      findStorageTreeIndex(uuidIndexData),
-                                                      (Object)uuidIndexData,
-                                                      true,  // folderFlag
-                                                      uuidIndexData.name,
-                                                      Units.formatByteSize(uuidIndexData.totalSize),
-                                                      (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
-                                                      ""
-                                                     );
+                TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexData);
+                if (uuidTreeItem == null)
+                {
+                  // insert tree item
+                  uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
+                                                        findStorageTreeIndex(uuidIndexData,indexDataComparator),
+                                                        (Object)uuidIndexData,
+                                                        true,  // folderFlag
+                                                        uuidIndexData.name,
+                                                        Units.formatByteSize(uuidIndexData.totalSize),
+                                                        (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                        ""
+                                                       );
+  //TODO
+  //uuidIndexData.setTreeItem(uuidTreeItem);
+                  uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.indexId));
+                }
+                else
+                {
+                  // update tree item
+                  assert uuidTreeItem.getData() instanceof UUIDIndexData;
+                  Widgets.updateTreeItem(uuidTreeItem,
+                                         (Object)uuidIndexData,
+                                         uuidIndexData.name,
+                                         Units.formatByteSize(uuidIndexData.totalSize),
+                                         (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                         ""
+                                        );
+                  removeUUIDTreeItemSet.remove(uuidTreeItem);
+                }
+                if (uuidTreeItem.getExpanded())
+                {
+                  uuidTreeItems.add(uuidTreeItem);
+                }
+              }
+            }
+            else
+            {
+              for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
+              {
+                // add tree item
+                TreeItem uuidTreeItem = Widgets.addTreeItem(widgetStorageTree,
+                                                            (Object)uuidIndexData,
+                                                            true,  // folderFlag
+                                                            uuidIndexData.name,
+                                                            Units.formatByteSize(uuidIndexData.totalSize),
+                                                            (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                            ""
+                                                           );
 //TODO
 //uuidIndexData.setTreeItem(uuidTreeItem);
                 uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.indexId));
+                if (uuidTreeItem.getExpanded())
+                {
+                  uuidTreeItems.add(uuidTreeItem);
+                }
               }
-              else
-              {
-                // update tree item
-                assert uuidTreeItem.getData() instanceof UUIDIndexData;
-                Widgets.updateTreeItem(uuidTreeItem,
-                                       (Object)uuidIndexData,
-                                       uuidIndexData.name,
-                                       Units.formatByteSize(uuidIndexData.totalSize),
-                                       (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
-                                       ""
-                                      );
-                removeUUIDTreeItemSet.remove(uuidTreeItem);
-              }
-              if (uuidTreeItem.getExpanded())
-              {
-                uuidTreeItems.add(uuidTreeItem);
-              }
-
-              if (topTreeItem[0] == null) topTreeItem[0] = uuidTreeItem;
             }
-          });
-        }
+          }
+        });
         if (isUpdateTriggered()) return;
 
         // remove not existing entries
@@ -1909,12 +2099,6 @@ Dprintf.dprintf("");
                 Widgets.removeTreeItem(widgetStorageTree,treeItem);
                 indexData.clearTreeItem();
               }
-            }
-            if (topTreeItem[0] != null)
-            {
-Dprintf.dprintf("topTreeItem[0]=%s %s",topTreeItem[0],topTreeItem[0].isDisposed());
-if (!topTreeItem[0].isDisposed())
-            widgetStorageTree.setTopItem(topTreeItem[0]);
             }
           }
         });
@@ -2009,6 +2193,11 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
                               );
       if (isUpdateTriggered()) return;
 
+      // get pre-sorted array with index data
+      final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
+      final EntityIndexData entityIndexDataArray[] = entityIndexDataList.toArray(new EntityIndexData[entityIndexDataList.size()]);
+      Arrays.sort(entityIndexDataArray,indexDataComparator);
+
       // update entity tree
       {
         // disable redraw
@@ -2028,12 +2217,12 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
           {
             public void run()
             {
-              TreeItem entityTreeItem = Widgets.getTreeItem(uuidTreeItem,indexDataComparator,entityIndexData);
+              TreeItem entityTreeItem = Widgets.getTreeItem(uuidTreeItem,entityIndexData);
               if (entityTreeItem == null)
               {
                 // insert tree item
                 entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
-                                                        findStorageTreeIndex(uuidTreeItem,entityIndexData),
+                                                        findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator),
                                                         (Object)entityIndexData,
                                                         true,
                                                         entityIndexData.archiveType.toString(),
@@ -2216,7 +2405,7 @@ Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
             {
               if (!entityTreeItem.isDisposed())
               {
-                TreeItem storageTreeItem = Widgets.getTreeItem(entityTreeItem,indexDataComparator,storageIndexData);
+                TreeItem storageTreeItem = Widgets.getTreeItem(entityTreeItem,storageIndexData);
                 if (storageTreeItem == null)
                 {
                   // insert tree item
@@ -2319,7 +2508,7 @@ Dprintf.dprintf("******************************************");
                                                        storagePattern,
                                                        storageIndexStateSet.nameList("|")
                                                       ),
-                                   0,  // debugLevel
+                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -2362,6 +2551,7 @@ Dprintf.dprintf("******************************************");
       final int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
 
 //TODO: sort
+Dprintf.dprintf("/TODO: sort");
 //IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
 
       // update storage table segment
@@ -2528,7 +2718,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                  {
                                    try
                                    {
-                                     long   indexId             = valueMap.getLong  ("indexId"            );
+                                     long   uuidId              = valueMap.getLong  ("uuidId"             );
                                      String jobUUID             = valueMap.getString("jobUUID"            );
                                      String name                = valueMap.getString("name"               );
                                      long   lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
@@ -2537,7 +2727,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                      long   totalSize           = valueMap.getLong  ("totalSize"          );
 
                                      // add UUID index data
-                                     final UUIDIndexData uuidIndexData = new UUIDIndexData(indexId,
+                                     final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
                                                                                            jobUUID,
                                                                                            name,
                                                                                            lastCreatedDateTime,
@@ -2658,9 +2848,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                    // check if aborted
                                    if (isUpdateTriggered())
                                    {
-  Dprintf.dprintf("");
-  //TODO
-  //                                     abort();
+                                     abort();
                                    }
 
                                    return Errors.NONE;
@@ -3421,7 +3609,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                        entryType.toString(),
                                                        newestEntriesOnly
                                                       ),
-                                   0,  // debugLevel
+                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -4782,9 +4970,11 @@ Dprintf.dprintf("");
           if ((tableItem != null) && (mouseEvent.x > table.getBounds().width/2))
           {
             StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-
-            Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
-            showStorageIndexToolTip(storageIndexData,point.x,point.y);
+            if (storageIndexData != null)
+            {
+              Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              showStorageIndexToolTip(storageIndexData,point.x,point.y);
+            }
           }
         }
       });
@@ -5403,12 +5593,14 @@ Dprintf.dprintf("remove");
             widgetEntryTableToolTip = null;
           }
 
-          if ((tableItem != null) && (mouseEvent.x < 64))
+          if ((tableItem != null) && (mouseEvent.x > table.getBounds().width/2))
           {
             EntryData entryData = (EntryData)tableItem.getData();
-
-            Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
-            showEntryToolTip(entryData,point.x,point.y);
+            if (entryData != null)
+            {
+              Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              showEntryToolTip(entryData,point.x,point.y);
+            }
           }
         }
       });
@@ -5910,7 +6102,7 @@ Dprintf.dprintf("remove");
                                                            updateStorageTreeTableThread.getStoragePattern(),
                                                            updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|")
                                                           ),
-                                       0,  // debugLevel
+                                       1,  // debugLevel
                                        errorMessage,
                                        valueMap
                                       ) == Errors.NONE
@@ -5995,82 +6187,12 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** get checked storage
-   * @param storageIndexDataHashSet storage index data hash set to fill
-   * @return checked storage hash set
-   */
-//TODO: obsolete
-  private HashSet<IndexData> getCheckedIndexData(HashSet<IndexData> indexDataHashSet)
-  {
-Dprintf.dprintf("remove");
-    IndexData indexData;
-    switch (widgetStorageTabFolder.getSelectionIndex())
-    {
-      case 0:
-        // tree view
-        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
-        {
-          indexData = (IndexData)uuidTreeItem.getData();
-          if      (!uuidTreeItem.getGrayed())// && indexData.isChecked())
-          {
-            indexDataHashSet.add(indexData);
-          }
-          else if (uuidTreeItem.getExpanded())
-          {
-            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
-            {
-              indexData = (IndexData)entityTreeItem.getData();
-              if      (!entityTreeItem.getGrayed())// && indexData.isChecked())
-              {
-                indexDataHashSet.add(indexData);
-              }
-              else if (entityTreeItem.getExpanded())
-              {
-                for (TreeItem storageTreeItem : entityTreeItem.getItems())
-                {
-                  indexData = (IndexData)storageTreeItem.getData();
-                  if (!storageTreeItem.getGrayed())// && indexData.isChecked())
-                  {
-                    indexDataHashSet.add(indexData);
-                  }
-                }
-              }
-            }
-          }
-        }
-        break;
-      case 1:
-        // table view
-        for (TableItem tableItem : widgetStorageTable.getItems())
-        {
-          indexData = (StorageIndexData)tableItem.getData();
-          if ((indexData != null) && !tableItem.getGrayed() && tableItem.getChecked())
-          {
-            indexDataHashSet.add(indexData);
-          }
-        }
-        break;
-    }
-
-    return indexDataHashSet;
-  }
-
-  /** get checked storage
-   * @return checked index data hash set
-   */
-  private HashSet<IndexData> getCheckedIndexData()
-  {
-    return getCheckedIndexData(new HashSet<IndexData>());
-  }
-
   /** get selected storage
-   * @param indexDataHashSet index data hash set to fill
-   * @return selected storage hash set
+   * @return selected index hash set
    */
-//TODO: obsolete?
-  private HashSet<IndexData> getSelectedIndexData(HashSet<IndexData> indexDataHashSet)
+  private HashSet<IndexData> getSelectedIndexData()
   {
-Dprintf.dprintf("");
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
 
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
@@ -6108,14 +6230,6 @@ Dprintf.dprintf("");
     }
 
     return indexDataHashSet;
-  }
-
-  /** get selected storage
-   * @return selected index data hash set
-   */
-  private HashSet<IndexData> getSelectedIndexData()
-  {
-    return getSelectedIndexData(new HashSet<IndexData>());
   }
 
   /** update storage tree item
@@ -6411,7 +6525,7 @@ assert storagePattern != null;
 
             if      (indexData instanceof UUIDIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
                                                                    toUUIDIndexData.jobUUID,
                                                                    archiveType.toString(),
                                                                    ((UUIDIndexData)indexData).jobUUID
@@ -6422,7 +6536,7 @@ assert storagePattern != null;
             }
             else if (indexData instanceof EntityIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
                                                                    toUUIDIndexData.jobUUID,
                                                                    archiveType.toString(),
                                                                    indexData.indexId
@@ -6433,7 +6547,7 @@ assert storagePattern != null;
             }
             else if (indexData instanceof StorageIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
                                                                    toUUIDIndexData.jobUUID,
                                                                    archiveType.toString(),
                                                                    indexData.indexId
@@ -6480,10 +6594,7 @@ assert storagePattern != null;
    */
   private void assignStorage(UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
   {
-    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-    getCheckedIndexData(indexDataHashSet);
-    getSelectedIndexData(indexDataHashSet);
+    HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     assignStorage(indexDataHashSet,toUUIDIndexData,archiveType);
   }
 
@@ -6568,10 +6679,7 @@ assert storagePattern != null;
    */
   private void assignStorage(EntityIndexData toEntityIndexData)
   {
-    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-    getCheckedIndexData(indexDataHashSet);
-    getSelectedIndexData(indexDataHashSet);
+    HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     assignStorage(indexDataHashSet,toEntityIndexData);
   }
 
@@ -6595,7 +6703,7 @@ assert storagePattern != null;
           {
             UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
 
-            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toJobUUID=%'S archiveType=%s jobUUID=%'S",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S archiveType=%s jobUUID=%'S",
                                                                  uuidIndexData.jobUUID,
                                                                  archiveType.toString(),
                                                                  uuidIndexData.jobUUID
@@ -6608,7 +6716,7 @@ assert storagePattern != null;
           {
             EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
-            error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
                                                                  entityIndexData.indexId,
                                                                  archiveType.toString(),
                                                                  entityIndexData.indexId
@@ -6656,10 +6764,7 @@ assert storagePattern != null;
    */
   private void setEntityType(Settings.ArchiveTypes archiveType)
   {
-    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-    getCheckedIndexData(indexDataHashSet);
-    getSelectedIndexData(indexDataHashSet);
+    HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     setEntityType(indexDataHashSet,archiveType);
   }
 
@@ -6669,10 +6774,7 @@ assert storagePattern != null;
   {
     try
     {
-      HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-      getCheckedIndexData(indexDataHashSet);
-      getSelectedIndexData(indexDataHashSet);
+      HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
       if (!indexDataHashSet.isEmpty())
       {
         if (Dialogs.confirm(shell,BARControl.tr("Refresh index for {0} {0,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size())))
@@ -6882,10 +6984,7 @@ assert storagePattern != null;
    */
   private void removeStorageIndex()
   {
-    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-    getCheckedIndexData(indexDataHashSet);
-    getSelectedIndexData(indexDataHashSet);
+    HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     if (!indexDataHashSet.isEmpty())
     {
       if (Dialogs.confirm(shell,BARControl.tr("Remove index of {0} {0,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size())))
@@ -7014,7 +7113,7 @@ assert storagePattern != null;
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
       if (BARServer.executeCommand("INDEX_STORAGES_INFO storagePattern='*' indexStateSet=ERROR",
-                                   0,  // debugLevel
+                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) != Errors.NONE
@@ -7147,10 +7246,7 @@ assert storagePattern != null;
    */
   private void deleteStorage()
   {
-    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
-
-    getCheckedIndexData(indexDataHashSet);
-    getSelectedIndexData(indexDataHashSet);
+    HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     if (!indexDataHashSet.isEmpty())
     {
       // get number of entries
