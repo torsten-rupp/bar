@@ -14526,11 +14526,11 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 {
   uint64           n;
   IndexId          entityId;
+  String           storagePatternString;
   IndexStateSet    indexStateSet;
   IndexModeSet     indexModeSet;
   uint64           offset;
   uint64           limit;
-  String           storagePatternString;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   StorageSpecifier storageSpecifier;
@@ -14539,6 +14539,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   String           jobName;
   String           storageName;
   String           printableStorageName;
+  Pattern          storagePattern;
   String           errorMessage;
   IndexId          uuidId,storageId;
   ArchiveTypes     archiveType;
@@ -14557,7 +14558,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   {
     entityId = INDEX_ID_ANY;
   }
-  else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_NONE))
+  else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_ANY))
   {
     entityId = (IndexId)n;
   }
@@ -14603,6 +14604,20 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   errorMessage         = String_new();
   printableStorageName = String_new();
 
+  // init pattern
+  error = Pattern_init(&storagePattern,storagePatternString,PATTERN_TYPE_GLOB,PATTERN_FLAG_NONE);
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_PATTERN,"init pattern fail");
+    String_delete(printableStorageName);
+    String_delete(errorMessage);
+    String_delete(storageName);
+    String_delete(jobName);
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(storagePatternString);
+    return;
+  }
+
   // list index
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
@@ -14610,7 +14625,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  entityId,
                                  NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 storagePatternString,
+                                 NULL,  // storageName
                                  NULL,  // hostName
                                  NULL,  // loginName
                                  NULL,  // deviceName
@@ -14623,14 +14638,13 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                 );
   if (error != ERROR_NONE)
   {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
+    Pattern_done(&storagePattern);
     String_delete(printableStorageName);
     String_delete(errorMessage);
     String_delete(storageName);
     String_delete(jobName);
     Storage_doneSpecifier(&storageSpecifier);
-
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
-
     String_delete(storagePatternString);
     return;
   }
@@ -14653,52 +14667,56 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                 )
         )
   {
-    // get job name
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode != NULL)
+    if (Pattern_match(&storagePattern,storageName,PATTERN_MATCH_MODE_EXACT))
     {
-      String_set(jobName,jobNode->name);
-    }
-    else
-    {
-      String_clear(jobName);
-    }
+      // get job name
+      jobNode = findJobByUUID(jobUUID);
+      if (jobNode != NULL)
+      {
+        String_set(jobName,jobNode->name);
+      }
+      else
+      {
+        String_clear(jobName);
+      }
 
-    // get printable name (if possible)
-    error = Storage_parseName(&storageSpecifier,storageName);
-    if (error == ERROR_NONE)
-    {
-      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-    }
-    else
-    {
-      String_set(printableStorageName,storageName);
-    }
+      // get printable name (if possible)
+      error = Storage_parseName(&storageSpecifier,storageName);
+      if (error == ERROR_NONE)
+      {
+        String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+      }
+      else
+      {
+        String_set(printableStorageName,storageName);
+      }
 
-    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu entityId=%llu storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu entries=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
-                     uuidId,
-                     entityId,
-                     storageId,
-                     jobUUID,
-                     scheduleUUID,
-                     jobName,
-                     ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                     printableStorageName,
-                     dateTime,
-                     entries,
-                     size,
-                     Index_stateToString(indexState,"unknown"),
-                     Index_modeToString(indexMode,"unknown"),
-                     lastCheckedDateTime,
-                     errorMessage
-                    );
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "uuidId=%llu entityId=%llu storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu entries=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                       uuidId,
+                       entityId,
+                       storageId,
+                       jobUUID,
+                       scheduleUUID,
+                       jobName,
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                       printableStorageName,
+                       dateTime,
+                       entries,
+                       size,
+                       Index_stateToString(indexState,"unknown"),
+                       Index_modeToString(indexMode,"unknown"),
+                       lastCheckedDateTime,
+                       errorMessage
+                      );
+    }
   }
   Index_doneList(&indexQueryHandle);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
+  Pattern_done(&storagePattern);
   String_delete(printableStorageName);
   String_delete(errorMessage);
   String_delete(storageName);
@@ -15425,7 +15443,6 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
       String_delete(patternString);
       return;
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     while (Index_getNextStorage(&indexQueryHandle,
                                 NULL,  // uuidId
                                 NULL,  // entityId
