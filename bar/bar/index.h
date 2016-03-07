@@ -89,11 +89,11 @@ typedef struct
   struct
   {
     StorageTypes type;
-    Pattern      *storageNamePattern;
-    Pattern      *hostNamePattern;
-    Pattern      *loginNamePattern;
-    Pattern      *deviceNamePattern;
-    Pattern      *fileNamePattern;
+//    Pattern      *storageNamePattern;
+//    Pattern      *hostNamePattern;
+//    Pattern      *loginNamePattern;
+//    Pattern      *deviceNamePattern;
+//    Pattern      *fileNamePattern;
   } storage;
 } IndexQueryHandle;
 
@@ -716,8 +716,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 *          deviceName       - device name pattern (glob) or NULL
 *          fileName         - file name pattern (glob) or NULL
 *          indexStateSet    - index state set
-*          storageIds       - storage ids or NULL
-*          storageIdCount   - storage id count or 0
+*          indexIds         - index ids or NULL
+*          indexIdCount     - index id count or 0
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -732,14 +732,10 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexId          entityId,
                               ConstString      jobUUID,
                               StorageTypes     storageType,
-                              ConstString      storageName,
-                              ConstString      hostName,
-                              ConstString      loginName,
-                              ConstString      deviceName,
-                              ConstString      fileName,
+                              const IndexId    indexIds[],
+                              uint             indexIdCount,
                               IndexStateSet    indexStateSet,
-                              const IndexId    storageIds[],
-                              uint             storageIdCount,
+                              ConstString      pattern,
                               uint64           offset,
                               uint64           limit
                              );

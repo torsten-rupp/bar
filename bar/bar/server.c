@@ -4089,14 +4089,10 @@ LOCAL Errors deleteEntity(IndexId entityId)
                                  entityId,
                                  NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 NULL,  // storageName
-                                 NULL,  // hostName
-                                 NULL,  // loginName
-                                 NULL,  // deviceName
-                                 NULL,  // fileName
-                                 INDEX_STATE_SET_ALL,
                                  NULL,  // storageIds
                                  0,  // storageIdCount
+                                 INDEX_STATE_SET_ALL,
+                                 NULL,  // pattern
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -5164,14 +5160,10 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    INDEX_ID_ANY,  // entity id
                                    NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -12621,14 +12613,10 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
                                        entityId,
                                        NULL,  // jobUUID
                                        STORAGE_TYPE_ANY,
-                                       NULL, // storageName
-                                       NULL, // hostName
-                                       NULL, // loginName
-                                       NULL, // deviceName
-                                       NULL, // fileName
-                                       INDEX_STATE_SET_ALL,
                                        NULL,  // storageIds
                                        0,  // storageIdCount
+                                       INDEX_STATE_SET_ALL,
+                                       NULL,  // pattern
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
@@ -12670,14 +12658,10 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
                                      indexId,
                                      NULL,  // jobUUID
                                      STORAGE_TYPE_ANY,
-                                     NULL,  // storageName
-                                     NULL,  // hostName
-                                     NULL,  // loginName
-                                     NULL,  // deviceName
-                                     NULL,  // fileName
-                                     INDEX_STATE_SET_ALL,
                                      NULL,  // storageIds
                                      0,  // storageIdCount
+                                     INDEX_STATE_SET_ALL,
+                                     NULL,  // pattern
                                      0LL,  // offset
                                      INDEX_UNLIMITED
                                     );
@@ -12800,14 +12784,10 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
                                        entityId,
                                        NULL,  // jobUUID,
                                        STORAGE_TYPE_ANY,
-                                       NULL,  // storageName
-                                       NULL,  // hostName
-                                       NULL,  // loginName
-                                       NULL,  // deviceName
-                                       NULL,  // fileName
-                                       INDEX_STATE_SET_ALL,
                                        NULL,  // storageIds
                                        0,  // storageIdCount
+                                       INDEX_STATE_SET_ALL,
+                                       NULL,  // pattern
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
@@ -12849,14 +12829,10 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
                                      indexId,
                                      NULL,  // jobUUID
                                      STORAGE_TYPE_ANY,
-                                     NULL,  // storageName
-                                     NULL,  // hostName
-                                     NULL,  // loginName
-                                     NULL,  // deviceName
-                                     NULL, // fileName
-                                     INDEX_STATE_SET_ALL,
                                      NULL,  // storageIds
                                      0,  // storageIdCount
+                                     INDEX_STATE_SET_ALL,
+                                     NULL,  // pattern
                                      0LL,  // offset
                                      INDEX_UNLIMITED
                                     );
@@ -12973,14 +12949,10 @@ fprintf(stderr,"%s, %d: +++++++++++++++++++ %d\n",__FILE__,__LINE__,Array_length
                                    INDEX_ID_ANY,  // entity id
                                    jobUUID,
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -13021,14 +12993,10 @@ fprintf(stderr,"%s, %d: +++++++++++++++++++ %d\n",__FILE__,__LINE__,Array_length
                                    entityId,
                                    NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -13495,14 +13463,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                        INDEX_ID_ANY,  // entityId
                                        NULL,  // jobUUID
                                        STORAGE_TYPE_ANY,
-                                       NULL,  // storageName
-                                       NULL,  // hostName
-                                       NULL,  // loginName
-                                       NULL,  // deviceName
-                                       NULL,  // fileName
-                                       INDEX_STATE_SET_ALL,
                                        Array_cArray(&clientInfo->storageIdArray),
                                        Array_length(&clientInfo->storageIdArray),
+                                       INDEX_STATE_SET_ALL,
+                                       NULL,  // pattern
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
@@ -14527,7 +14491,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   uint64           n;
   IndexId          entityId;
   String           storagePatternString;
+  bool             indexStateAny;
   IndexStateSet    indexStateSet;
+  bool             indexModeAny;
   IndexModeSet     indexModeSet;
   uint64           offset;
   uint64           limit;
@@ -14539,7 +14505,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   String           jobName;
   String           storageName;
   String           printableStorageName;
-  Pattern          storagePattern;
   String           errorMessage;
   IndexId          uuidId,storageId;
   ArchiveTypes     archiveType;
@@ -14574,13 +14539,29 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     String_delete(storagePatternString);
     return;
   }
-  if (!StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  {
+    indexStateAny = TRUE;
+  }
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  {
+    indexStateAny = FALSE;
+  }
+  else
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     String_delete(storagePatternString);
     return;
   }
-  if (!StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  {
+    indexModeAny = TRUE;
+  }
+  if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  {
+    indexModeAny = FALSE;
+  }
+  else
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
     String_delete(storagePatternString);
@@ -14604,20 +14585,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   errorMessage         = String_new();
   printableStorageName = String_new();
 
-  // init pattern
-  error = Pattern_init(&storagePattern,storagePatternString,PATTERN_TYPE_GLOB,PATTERN_FLAG_NONE);
-  if (error != ERROR_NONE)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_PATTERN,"init pattern fail");
-    String_delete(printableStorageName);
-    String_delete(errorMessage);
-    String_delete(storageName);
-    String_delete(jobName);
-    Storage_doneSpecifier(&storageSpecifier);
-    String_delete(storagePatternString);
-    return;
-  }
-
   // list index
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
@@ -14625,21 +14592,16 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  entityId,
                                  NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 NULL,  // storageName
-                                 NULL,  // hostName
-                                 NULL,  // loginName
-                                 NULL,  // deviceName
-                                 NULL,  // fileName
-                                 indexStateSet,
-                                 NULL,  // storageIds
-                                 0,  // storageIdCount
+                                 NULL,  // indexIds
+                                 0,  // indexIdCount
+                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                                 storagePatternString,
                                  offset,
                                  limit
                                 );
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
-    Pattern_done(&storagePattern);
     String_delete(printableStorageName);
     String_delete(errorMessage);
     String_delete(storageName);
@@ -14667,56 +14629,52 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                 )
         )
   {
-    if (Pattern_match(&storagePattern,storageName,PATTERN_MATCH_MODE_EXACT))
+    // get job name
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode != NULL)
     {
-      // get job name
-      jobNode = findJobByUUID(jobUUID);
-      if (jobNode != NULL)
-      {
-        String_set(jobName,jobNode->name);
-      }
-      else
-      {
-        String_clear(jobName);
-      }
-
-      // get printable name (if possible)
-      error = Storage_parseName(&storageSpecifier,storageName);
-      if (error == ERROR_NONE)
-      {
-        String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-      }
-      else
-      {
-        String_set(printableStorageName,storageName);
-      }
-
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "uuidId=%llu entityId=%llu storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu entries=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
-                       uuidId,
-                       entityId,
-                       storageId,
-                       jobUUID,
-                       scheduleUUID,
-                       jobName,
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                       printableStorageName,
-                       dateTime,
-                       entries,
-                       size,
-                       Index_stateToString(indexState,"unknown"),
-                       Index_modeToString(indexMode,"unknown"),
-                       lastCheckedDateTime,
-                       errorMessage
-                      );
+      String_set(jobName,jobNode->name);
     }
+    else
+    {
+      String_clear(jobName);
+    }
+
+    // get printable name (if possible)
+    error = Storage_parseName(&storageSpecifier,storageName);
+    if (error == ERROR_NONE)
+    {
+      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+    }
+    else
+    {
+      String_set(printableStorageName,storageName);
+    }
+
+    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                     "uuidId=%llu entityId=%llu storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu entries=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                     uuidId,
+                     entityId,
+                     storageId,
+                     jobUUID,
+                     scheduleUUID,
+                     jobName,
+                     ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                     printableStorageName,
+                     dateTime,
+                     entries,
+                     size,
+                     Index_stateToString(indexState,"unknown"),
+                     Index_modeToString(indexMode,"unknown"),
+                     lastCheckedDateTime,
+                     errorMessage
+                    );
   }
   Index_doneList(&indexQueryHandle);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  Pattern_done(&storagePattern);
   String_delete(printableStorageName);
   String_delete(errorMessage);
   String_delete(storageName);
@@ -15165,14 +15123,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    INDEX_ID_ANY,  // entity id
                                    NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15225,14 +15179,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    INDEX_ID_ANY,  // entityId,
                                    NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15284,14 +15234,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    entityId,
                                    NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15355,14 +15301,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    INDEX_ID_ANY,  // entity id
                                    jobUUID,
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15424,14 +15366,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    INDEX_ID_ANY,  // entityId,
                                    NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15564,14 +15502,10 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
                                    INDEX_ID_ANY, // entity id
                                    NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );

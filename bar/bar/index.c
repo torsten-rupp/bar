@@ -2365,14 +2365,10 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  INDEX_ID_ANY,  // entityId
                                  NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 NULL,  // storageName
-                                 NULL,  // hostName
-                                 NULL,  // loginName
-                                 NULL,  // deviceName
-                                 NULL,  // fileName
-                                 INDEX_STATE_SET_ALL,
                                  NULL,  // storageIds
                                  0,  // storageIdCount,
+                                 INDEX_STATE_SET_ALL,
+                                 NULL,  // pattern
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -2650,14 +2646,10 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                    INDEX_ID_ANY,  // entityId
                                    NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
-                                   INDEX_STATE_SET_ALL,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -2692,14 +2684,10 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                      INDEX_ID_ANY,  // entityId
                                      NULL,  // jobUUID
                                      STORAGE_TYPE_ANY,
-                                     NULL,  // storageName
-                                     NULL,  // hostName
-                                     NULL,  // loginName
-                                     NULL,  // deviceName
-                                     NULL,  // fileName
-                                     INDEX_STATE_SET_ALL,
                                      NULL,  // storageIds
                                      0,  // storageIdCount
+                                     INDEX_STATE_SET_ALL,
+                                     NULL,  // pattern
                                      0LL,  // offset
                                      INDEX_UNLIMITED
                                     );
@@ -2956,11 +2944,6 @@ LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle, IndexHandle 
 
   indexQueryHandle->indexHandle                = indexHandle;
   indexQueryHandle->storage.type               = STORAGE_TYPE_NONE;
-  indexQueryHandle->storage.storageNamePattern = NULL;
-  indexQueryHandle->storage.hostNamePattern    = NULL;
-  indexQueryHandle->storage.loginNamePattern   = NULL;
-  indexQueryHandle->storage.deviceNamePattern  = NULL;
-  indexQueryHandle->storage.fileNamePattern    = NULL;
 }
 
 /***********************************************************************\
@@ -2977,11 +2960,11 @@ LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
 
-  if (indexQueryHandle->storage.fileNamePattern    != NULL) Pattern_delete(indexQueryHandle->storage.fileNamePattern);
-  if (indexQueryHandle->storage.deviceNamePattern  != NULL) Pattern_delete(indexQueryHandle->storage.deviceNamePattern);
-  if (indexQueryHandle->storage.loginNamePattern   != NULL) Pattern_delete(indexQueryHandle->storage.loginNamePattern);
-  if (indexQueryHandle->storage.hostNamePattern    != NULL) Pattern_delete(indexQueryHandle->storage.hostNamePattern);
-  if (indexQueryHandle->storage.storageNamePattern != NULL) Pattern_delete(indexQueryHandle->storage.storageNamePattern);
+//  if (indexQueryHandle->storage.fileNamePattern    != NULL) Pattern_delete(indexQueryHandle->storage.fileNamePattern);
+//  if (indexQueryHandle->storage.deviceNamePattern  != NULL) Pattern_delete(indexQueryHandle->storage.deviceNamePattern);
+//  if (indexQueryHandle->storage.loginNamePattern   != NULL) Pattern_delete(indexQueryHandle->storage.loginNamePattern);
+//  if (indexQueryHandle->storage.hostNamePattern    != NULL) Pattern_delete(indexQueryHandle->storage.hostNamePattern);
+//  if (indexQueryHandle->storage.storageNamePattern != NULL) Pattern_delete(indexQueryHandle->storage.storageNamePattern);
 }
 
 /***********************************************************************\
@@ -3295,14 +3278,10 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                                  entityId,
                                  NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 NULL,  // storageName
-                                 NULL,  // hostName
-                                 NULL,  // loginName
-                                 NULL,  // deviceName
-                                 NULL,  // fileName
-                                 INDEX_STATE_SET_ALL,
                                  NULL,  // storageIds
                                  0,  // storageIdCount
+                                 INDEX_STATE_SET_ALL,
+                                 NULL,  // pattern
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -5018,6 +4997,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
+    String_delete(filter);
     String_delete(storageIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
@@ -5041,6 +5021,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   Database_finalize(&databaseQueryHandle);
 
   // free resources
+  String_delete(filter);
   String_delete(storageIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
@@ -5056,24 +5037,19 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexId          entityId,
                               ConstString      jobUUID,
                               StorageTypes     storageType,
-                              ConstString      storageName,
-                              ConstString      hostName,
-                              ConstString      loginName,
-                              ConstString      deviceName,
-                              ConstString      fileName,
+                              const IndexId    indexIds[],
+                              uint             indexIdCount,
                               IndexStateSet    indexStateSet,
-                              const IndexId    storageIds[],
-                              uint             storageIdCount,
+                              ConstString      pattern,
                               uint64           offset,
                               uint64           limit
                              )
 {
   String regexpStorageName;
-
+  String uuidIdsString,entityIdsString,storageIdsString;
   Errors error;
   String filter;
   String indexStateSetString;
-  String storageIdsString;
   uint   i;
 
   assert(indexQueryHandle != NULL);
@@ -5086,23 +5062,38 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
+//TODO required?
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   indexQueryHandle->storage.type = storageType;
-  if (storageName != NULL) indexQueryHandle->storage.storageNamePattern = Pattern_new(storageName,PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
-  if (hostName    != NULL) indexQueryHandle->storage.hostNamePattern    = Pattern_new(hostName,   PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
-  if (loginName   != NULL) indexQueryHandle->storage.loginNamePattern   = Pattern_new(loginName,  PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
-  if (deviceName  != NULL) indexQueryHandle->storage.deviceNamePattern  = Pattern_new(deviceName, PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
-  if (fileName    != NULL) indexQueryHandle->storage.fileNamePattern    = Pattern_new(fileName,   PATTERN_TYPE_GLOB,PATTERN_FLAG_IGNORE_CASE);
 
-  regexpStorageName = getREGEXPString(String_new(),storageName);
+  regexpStorageName = getREGEXPString(String_new(),pattern);
 
+  // get id sets
+  uuidIdsString    = String_new();
+  entityIdsString  = String_new();
   storageIdsString = String_new();
-  if (storageIds != NULL)
+  if (indexIds != NULL)
   {
-    for (i = 0; i < storageIdCount; i++)
+    for (i = 0; i < indexIdCount; i++)
     {
-      if (i > 0) String_appendChar(storageIdsString,',');
-      String_format(storageIdsString,"%d",INDEX_DATABASE_ID_(storageIds[i]));
+      switch (Index_getType(indexIds[i]))
+      {
+        case INDEX_TYPE_UUID:
+          if (i > 0) String_appendChar(uuidIdsString,',');
+          String_format(uuidIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          break;
+        case INDEX_TYPE_ENTITY:
+          if (i > 0) String_appendChar(entityIdsString,',');
+          String_format(entityIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          break;
+        case INDEX_TYPE_STORAGE:
+          if (i > 0) String_appendChar(storageIdsString,',');
+          String_format(storageIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          break;
+        default:
+          // ignore other types
+          break;
+      }
     }
   }
 
@@ -5190,6 +5181,8 @@ Database_debugEnable(0);
     String_delete(filter);
     String_delete(indexStateSetString);
     String_delete(storageIdsString);
+    String_delete(entityIdsString);
+    String_delete(uuidIdsString);
     String_delete(regexpStorageName);
     return error;
   }
@@ -5197,6 +5190,8 @@ Database_debugEnable(0);
   String_delete(filter);
   String_delete(indexStateSetString);
   String_delete(storageIdsString);
+  String_delete(entityIdsString);
+  String_delete(uuidIdsString);
   String_delete(regexpStorageName);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
@@ -5267,61 +5262,70 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
       {
         case STORAGE_TYPE_FILESYSTEM:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FILESYSTEM))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,             PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,             PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         case STORAGE_TYPE_FTP:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FTP))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,                PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.hostNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern,   storageSpecifier.hostName,   PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.loginNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,  storageSpecifier.loginName,  PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,   storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,                PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.hostNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern,   storageSpecifier.hostName,   PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.loginNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,  storageSpecifier.loginName,  PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,   storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         case STORAGE_TYPE_SSH:
         case STORAGE_TYPE_SCP:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_SSH) || (indexQueryHandle->storage.type == STORAGE_TYPE_SCP))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,              PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.hostNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName,   PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.loginNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,  PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,              PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.hostNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName,   PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.loginNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,  PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         case STORAGE_TYPE_SFTP:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_SFTP))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,              PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.hostNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName,   PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.loginNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,  PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,              PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.hostNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName,   PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.loginNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,  PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         case STORAGE_TYPE_WEBDAV:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_WEBDAV))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,              PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.hostNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName,   PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.loginNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,  PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,              PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.hostNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.hostNamePattern, storageSpecifier.hostName,   PATTERN_MATCH_MODE_ANY))
+//                    && ((indexQueryHandle->storage.loginNamePattern   == NULL) || Pattern_match(indexQueryHandle->storage.loginNamePattern,storageSpecifier.loginName,  PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern, storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         case STORAGE_TYPE_CD:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_CD))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,               PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.deviceNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName, PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,               PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.deviceNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName, PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         case STORAGE_TYPE_DVD:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_DVD))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,               PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.deviceNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName, PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,               PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.deviceNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName, PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         case STORAGE_TYPE_BD:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_BD))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName,                PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.deviceNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName, PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName,                PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.deviceNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName, PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         case STORAGE_TYPE_DEVICE:
           foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_DEVICE))
-                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,               PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.deviceNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName, PATTERN_MATCH_MODE_ANY))
-                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+//                      && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,               PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.deviceNamePattern  == NULL) || Pattern_match(indexQueryHandle->storage.deviceNamePattern,storageSpecifier.deviceName, PATTERN_MATCH_MODE_ANY))
+//                      && ((indexQueryHandle->storage.fileNamePattern    == NULL) || Pattern_match(indexQueryHandle->storage.fileNamePattern,  storageSpecifier.archiveName,PATTERN_MATCH_MODE_ANY));
+;
           break;
         default:
           #ifndef NDEBUG
@@ -5333,7 +5337,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
     else
     {
       foundFlag =    ((indexQueryHandle->storage.type == STORAGE_TYPE_ANY) || (indexQueryHandle->storage.type == STORAGE_TYPE_FILESYSTEM))
-                  && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,PATTERN_MATCH_MODE_ANY));
+;//                  && ((indexQueryHandle->storage.storageNamePattern == NULL) || Pattern_match(indexQueryHandle->storage.storageNamePattern,storageName_,PATTERN_MATCH_MODE_ANY));
     }
     if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
     if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
@@ -8118,14 +8122,10 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
                                  entityId,
                                  NULL,  // jobUUID
                                  STORAGE_TYPE_ANY,
-                                 NULL,  // storageName
-                                 NULL,  // hostName
-                                 NULL,  // loginName
-                                 NULL,  // deviceName
-                                 NULL,  // fileName
-                                 INDEX_STATE_SET_ALL,
                                  NULL,   // storageIds
                                  0,  // storageIdCount
+                                 INDEX_STATE_SET_ALL,
+                                 NULL,  // pattern
                                  0LL,   // offset
                                  INDEX_UNLIMITED
                                 );
