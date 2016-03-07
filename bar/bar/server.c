@@ -15072,9 +15072,10 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
 * Return : -
 * Notes  : Arguments:
 *            state=<state>|*
-*            jobUUID=<uuid>|"" and/or
+*            uuidId=<id>|0 and/or
 *            entityId=<id>|0 and/or
 *            storageId=<id>|0 and/or
+*            jobUUID=<uuid>|"" and/or
 *            pattern=<text>
 *            [patternType=<type>]
 *          Result:
@@ -15084,20 +15085,22 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
 {
   bool             stateAny;
   IndexStates      state;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  IndexId          uuidId;
   IndexId          entityId;
   IndexId          storageId;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   PatternTypes     patternType;
   String           patternString;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexStates      indexState;
-//  String           storageName;
+  Pattern          pattern;
+  String           storageName;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // state and uuid, entityId, or storageId
+  // state, uuidId/entityId/storageId/jobUUID/pattern, pattern type
   if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
   {
     stateAny = TRUE;
@@ -15112,13 +15115,14 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     return;
   }
   patternString = String_new();
-  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+  if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
+      && !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getString(argumentMap,"pattern",patternString,NULL)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id> or pattern=<text>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuidId=<id> or entityId=<id> or storageId=<id> or jobUUID=<uuid> or pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -15132,7 +15136,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     return;
   }
 
-  if (String_isEmpty(jobUUID) && (storageId == INDEX_ID_NONE) && (entityId == INDEX_ID_NONE) && String_isEmpty(patternString))
+  storageName = String_new();
+
+  if ((uuidId == INDEX_ID_NONE) && (storageId == INDEX_ID_NONE) && (entityId == INDEX_ID_NONE) && String_isEmpty(jobUUID) && String_isEmpty(patternString))
   {
     // refresh all storage with specific state
     error = Index_initListStorages(&indexQueryHandle,
@@ -15155,6 +15161,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(storageName);
       String_delete(patternString);
       return;
     }
@@ -15191,14 +15198,14 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     Index_doneList(&indexQueryHandle);
   }
 
-  if (!String_isEmpty(jobUUID))
+  if (uuidId != INDEX_ID_NONE)
   {
-    // refresh all storage of all entities of job
+    // refresh all storage of uuid
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entity id
-                                   jobUUID,
+                                   uuidId,
+                                   INDEX_ID_ANY,  // entityId,
+                                   NULL,  // jobUUID
                                    STORAGE_TYPE_ANY,
                                    NULL,  // storageName
                                    NULL,  // hostName
@@ -15214,6 +15221,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(storageName);
       String_delete(patternString);
       return;
     }
@@ -15235,13 +15243,16 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                )
           )
     {
-      // set state
-      Index_setState(indexHandle,
-                     storageId,
-                     INDEX_STATE_UPDATE_REQUESTED,
-                     0LL,
-                     NULL
-                    );
+      if (stateAny || (state == indexState))
+      {
+        // set state
+        Index_setState(indexHandle,
+                       storageId,
+                       INDEX_STATE_UPDATE_REQUESTED,
+                       0LL,
+                       NULL
+                      );
+      }
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -15269,6 +15280,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(storageName);
       String_delete(patternString);
       return;
     }
@@ -15290,13 +15302,16 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                )
           )
     {
-      // set state
-      Index_setState(indexHandle,
-                     storageId,
-                     INDEX_STATE_UPDATE_REQUESTED,
-                     0LL,
-                     NULL
-                    );
+      if (stateAny || (state == indexState))
+      {
+        // set state
+        Index_setState(indexHandle,
+                       storageId,
+                       INDEX_STATE_UPDATE_REQUESTED,
+                       0LL,
+                       NULL
+                      );
+      }
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -15312,16 +15327,17 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                   );
   }
 
-  if (!String_isEmpty(patternString))
+
+  if (!String_isEmpty(jobUUID))
   {
-    // refresh all storage which match pattern
+    // refresh all storage of all entities of job
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
                                    INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entityId,
-                                   NULL,  // jobUUID
+                                   INDEX_ID_ANY,  // entity id
+                                   jobUUID,
                                    STORAGE_TYPE_ANY,
-                                   patternString,//NULL, // storageName
+                                   NULL,  // storageName
                                    NULL,  // hostName
                                    NULL,  // loginName
                                    NULL,  // deviceName
@@ -15335,6 +15351,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      String_delete(storageName);
       String_delete(patternString);
       return;
     }
@@ -15345,7 +15362,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
                                 NULL,  // archiveType
-                                NULL,  // storageName,
+                                NULL,  // storageName
                                 NULL,  // createdDateTime
                                 NULL,  // entries
                                 NULL,  // size
@@ -15356,7 +15373,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                )
           )
     {
-//      if (Pattern_match(&pattern,storageName,patternType,PATTERN_MATCH_MODE_EXACT))
+      if (stateAny || (state == indexState))
       {
         // set state
         Index_setState(indexHandle,
@@ -15370,9 +15387,84 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     Index_doneList(&indexQueryHandle);
   }
 
+  if (!String_isEmpty(patternString))
+  {
+    // init pattern
+    error = Pattern_init(&pattern,patternString,patternType,PATTERN_FLAG_NONE);
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_PATTERN,"init pattern fail");
+      String_delete(storageName);
+      String_delete(patternString);
+      return;
+    }
+
+    // refresh all storage which match pattern
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   INDEX_ID_ANY,  // uuidId
+                                   INDEX_ID_ANY,  // entityId,
+                                   NULL,  // jobUUID
+                                   STORAGE_TYPE_ANY,
+                                   NULL,  // storageName
+                                   NULL,  // hostName
+                                   NULL,  // loginName
+                                   NULL,  // deviceName
+                                   NULL,  // fileName
+                                   INDEX_STATE_SET_ALL,
+                                   NULL,  // storageIds
+                                   0,  // storageIdCount
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
+                                  );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      Pattern_done(&pattern);
+      String_delete(storageName);
+      String_delete(patternString);
+      return;
+    }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    while (Index_getNextStorage(&indexQueryHandle,
+                                NULL,  // uuidId
+                                NULL,  // entityId
+                                &storageId,
+                                NULL,  // jobUUID
+                                NULL,  // scheduleUUID
+                                NULL,  // archiveType
+                                storageName,
+                                NULL,  // createdDateTime
+                                NULL,  // entries
+                                NULL,  // size
+                                &indexState,
+                                NULL,  // indexMode
+                                NULL,  // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      if (   (stateAny || (state == indexState))
+          && Pattern_match(&pattern,storageName,PATTERN_MATCH_MODE_EXACT)
+         )
+      {
+        // set state
+        Index_setState(indexHandle,
+                       storageId,
+                       INDEX_STATE_UPDATE_REQUESTED,
+                       0LL,
+                       NULL
+                      );
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+    Pattern_done(&pattern);
+  }
+
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
+  String_delete(storageName);
   String_delete(patternString);
 }
 
@@ -15581,7 +15673,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 * Return : -
 * Notes  : Arguments:
 *            entryPattern=<text>
-*            indexType=<text>|*
+*            indexType=<type>|*
 *            newestEntriesOnly=yes|no
 *          Result:
 *            count=<n>
@@ -15589,7 +15681,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 
 LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String     entryPatternString;
+  String     entryPattern;
   bool       indexTypeAny;
   IndexTypes indexType;
   bool       newestEntriesOnly;
@@ -15600,12 +15692,12 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // entry pattern, get type, new entries only
-  entryPatternString = String_new();
-  if (!StringMap_getString(argumentMap,"entryPattern",entryPatternString,NULL))
+  // get entry pattern, index type, new entries only
+  entryPattern = String_new();
+  if (!StringMap_getString(argumentMap,"entryPattern",entryPattern,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryPattern=<text>");
-    String_delete(entryPatternString);
+    String_delete(entryPattern);
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
@@ -15619,13 +15711,13 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   else
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
-    String_delete(entryPatternString);
+    String_delete(entryPattern);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestEntriesOnly",&newestEntriesOnly,FALSE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestEntriesOnly=yes|no");
-    String_delete(entryPatternString);
+    String_delete(entryPattern);
     return;
   }
 
@@ -15633,7 +15725,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(entryPatternString);
+    String_delete(entryPattern);
     return;
   }
 
@@ -15644,14 +15736,14 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
                                NULL,  // entryIds
                                0,  // entryIdCount
                                indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
-                               entryPatternString,
+                               entryPattern,
                                &count,
                                &size
                               );
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"get entries info index database fail: %s",Error_getText(error));
-    String_delete(entryPatternString);
+    String_delete(entryPattern);
     return;
   }
 
@@ -15659,7 +15751,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
 
   // free resources
-  String_delete(entryPatternString);
+  String_delete(entryPattern);
 }
 
 /***********************************************************************\
