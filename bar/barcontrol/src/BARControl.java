@@ -1231,6 +1231,7 @@ public class BARControl
     System.out.println("         --abort=<name>                             - abort execution of job <name>");
     System.out.println("         --index-database-add=<name>                - add storage archive <name> to index");
     System.out.println("         --index-database-remove=<pattern>          - remove storage archive <name> from index");
+    System.out.println("         --index-database-refresh=<pattern>         - refresh storage archive <name> in index");
     System.out.println("         -a|--index-database-storage-list=<pattern> - list storage archives matching pattern <pattern>");
     System.out.println("         -e|--index-database-entries-list=<pattern> - list entries matching pattern <pattern>");
     System.out.println("         -t|--pause=<n>                             - pause job execution for <n> seconds");
@@ -2130,8 +2131,8 @@ public class BARControl
                                           )
                             );
           System.out.println(StringUtils.repeat("-",12+1+19+1+5+1+5+40));
-          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
-                                                           0L,
+          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
+                                                           "*",
                                                            "*",
                                                            "*",
                                                            Settings.indexDatabaseStorageListPattern,
