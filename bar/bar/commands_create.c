@@ -3412,16 +3412,12 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
                                    INDEX_ID_ANY,  // entityId
                                    jobUUID,
                                    STORAGE_TYPE_ANY,  // storageType
-                                   NULL,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
+                                   NULL,  // storageIds
+                                   0,   // storageIdCount
                                      INDEX_STATE_SET(INDEX_STATE_OK)
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
-                                   NULL,  // storageIds
-                                   0,   // storageIdCount
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -3429,7 +3425,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
     {
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
-                 "Purged storage for job %s fail (error: %s)\n",
+                 "Purged storage for job '%s' fail (error: %s)\n",
                  String_cString(jobUUID),
                  Error_getText(error)
                 );
@@ -3546,8 +3542,8 @@ fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
-* Name   : purgeStorageByJobUUID
-* Purpose: purge old storages by job UUID
+* Name   : purgeStorageByServer
+* Purpose: purge old storages by serer
 * Input  : jobUUID        - job UUID
 *          maxStorageSize - max. storage size [bytes] or 0
 *          logHandle      - log handle (can be NULL)
@@ -3558,7 +3554,6 @@ fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
 
 LOCAL void purgeStorageByServer(const Server *server, uint64 maxStorageSize, LogHandle *logHandle)
 {
-  String storagePattern;
   String           storageName;
   StorageSpecifier storageSpecifier;
   Errors           error;
@@ -3582,11 +3577,10 @@ LOCAL void purgeStorageByServer(const Server *server, uint64 maxStorageSize, Log
   assert(maxStorageSize > 0LL);
 
   // init variables
-  storagePattern    = String_appendCString(String_duplicate(server->name),"/*");
-  storageName       = String_new();
-  oldestStorageName = String_new();
   Storage_initSpecifier(&storageSpecifier);
-  dateTime          = String_new();
+  storageName          = String_new();
+  oldestStorageName    = String_new();
+  dateTime             = String_new();
 
 fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,maxStorageSize);
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -3606,16 +3600,12 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
                                    INDEX_ID_ANY,  // entityId
                                    NULL,  // jobUUID,
                                    STORAGE_TYPE_ANY,  // storageType
-                                   storagePattern,  // storageName
-                                   NULL,  // hostName
-                                   NULL,  // loginName
-                                   NULL,  // deviceName
-                                   NULL,  // fileName
+                                   NULL,  // storageIds
+                                   0,   // storageIdCount
                                      INDEX_STATE_SET(INDEX_STATE_OK)
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
-                                   NULL,  // storageIds
-                                   0,   // storageIdCount
+                                   NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -3623,8 +3613,8 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
     {
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
-                 "Purged storage for job %s fail (error: %s)\n",
-                 String_cString(storagePattern),
+                 "Purged storage for server '%s' fail (error: %s)\n",
+                 String_cString(server),
                  Error_getText(error)
                 );
       break;
@@ -3648,16 +3638,22 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
           )
     {
 //fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
-      if (createdDateTime < oldestCreatedDateTime)
+      error = Storage_parseName(&storageSpecifier,storageName);
+      if (   (error == ERROR_NONE)
+          && String_equals(storageSpecifier.hostName,server->name)
+         )
       {
-        oldestUUIDId          = uuidId;
-        oldestEntityId        = entityId;
-        oldestStorageId       = storageId;
-        String_set(oldestStorageName,storageName);
-        oldestCreatedDateTime = createdDateTime;
-        oldestSize            = size;
+        if (createdDateTime < oldestCreatedDateTime)
+        {
+          oldestUUIDId          = uuidId;
+          oldestEntityId        = entityId;
+          oldestStorageId       = storageId;
+          String_set(oldestStorageName,storageName);
+          oldestCreatedDateTime = createdDateTime;
+          oldestSize            = size;
+        }
+        totalStorageSize += size;
       }
-      totalStorageSize += size;
     }
     Index_doneList(&indexQueryHandle);
 
@@ -3737,7 +3733,6 @@ fprintf(stderr,"%s, %d: done purgeStorageByServer\n",__FILE__,__LINE__);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(oldestStorageName);
   String_delete(storageName);
-  String_delete(storagePattern);
 }
 
 /***********************************************************************\
@@ -4102,14 +4097,16 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
                                        INDEX_ID_ANY, // entityId
                                        NULL, // jobUUID,
                                        STORAGE_TYPE_ANY,  // storageType
-                                       NULL, // storageName
-                                       createInfo->storageSpecifier->hostName,
-                                       createInfo->storageSpecifier->loginName,
-                                       createInfo->storageSpecifier->deviceName,
-                                       storageMsg.archiveName,
-                                       INDEX_STATE_SET_ALL,
+#warning TODO
+//                                       NULL, // storageName
+//                                       createInfo->storageSpecifier->hostName,
+//                                       createInfo->storageSpecifier->loginName,
+//                                       createInfo->storageSpecifier->deviceName,
+//                                       storageMsg.archiveName,
                                        NULL,  // storageIds
                                        0,  // storageIdCount
+                                       INDEX_STATE_SET_ALL,
+                                       NULL,  // pattern
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
