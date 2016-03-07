@@ -89,11 +89,6 @@ typedef struct
   struct
   {
     StorageTypes type;
-//    Pattern      *storageNamePattern;
-//    Pattern      *hostNamePattern;
-//    Pattern      *loginNamePattern;
-//    Pattern      *deviceNamePattern;
-//    Pattern      *fileNamePattern;
   } storage;
 } IndexQueryHandle;
 
