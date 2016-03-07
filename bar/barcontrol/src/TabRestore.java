@@ -1665,7 +1665,6 @@ Dprintf.dprintf("cirrect?");
               {
                 public void run()
                 {
-Dprintf.dprintf("set indi");
                   BARControl.waitCursor();
                   widgetStorageTree.setForeground(COLOR_MODIFIED);
                   widgetStorageTable.setForeground(COLOR_MODIFIED);
@@ -1687,9 +1686,7 @@ Dprintf.dprintf("set indi");
               HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
               if (!this.updateCount)
               {
-Dprintf.dprintf("");
                 updateUUIDTreeItems(uuidTreeItems);
-Dprintf.dprintf("");
               }
               HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
               if (!this.updateCount)
@@ -1720,23 +1717,18 @@ Dprintf.dprintf("");
                 System.exit(1);
               }
             }
-Dprintf.dprintf("");
 
             // update menues
             try
             {
-Dprintf.dprintf("");
               updateUUIDMenus();
-Dprintf.dprintf("");
             }
             catch (CommunicationError error)
             {
               // ignored
-Dprintf.dprintf("");
             }
             catch (Exception exception)
             {
-Dprintf.dprintf("");
               if (Settings.debugLevel > 0)
               {
                 BARServer.disconnect();
@@ -1745,12 +1737,10 @@ Dprintf.dprintf("");
                 System.exit(1);
               }
             }
-Dprintf.dprintf("");
           }
           finally
           {
             // reset cursor and foreground color
-Dprintf.dprintf("updateIndicator=%s",updateIndicator);
             if (updateIndicator)
             {
               display.syncExec(new Runnable()
@@ -1760,7 +1750,6 @@ Dprintf.dprintf("updateIndicator=%s",updateIndicator);
                   widgetStorageTree.setForeground(null);
                   widgetStorageTable.setForeground(null);
                   BARControl.resetCursor();
-Dprintf.dprintf("reset indi");
                 }
               });
             }
@@ -1871,7 +1860,12 @@ Dprintf.dprintf("reset indi");
 
       synchronized(trigger)
       {
-        if (!this.storagePattern.equals(storagePattern))
+//        if (!this.storagePattern.equals(storagePattern))
+//Note: at least 3 characters?
+        if (   (this.storagePattern == null)
+            || (storagePattern == null)
+            || ((storagePattern.length() >= 3) && !this.storagePattern.equals(storagePattern))
+           )
         {
           this.storagePattern     = storagePattern;
           this.setUpdateIndicator = true;
@@ -3533,7 +3527,12 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
 
       synchronized(trigger)
       {
-        if ((this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern))
+        // if ((this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern))
+//Note: at least 3 characters?
+        if (   (this.entryPattern == null)
+            || (entryPattern == null)
+            || ((entryPattern.length() >= 3) && !this.entryPattern.equals(entryPattern))
+           )
         {
           this.entryPattern       = entryPattern;
           this.setUpdateIndicator = true;
@@ -5334,7 +5333,7 @@ Dprintf.dprintf("");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
         widgetStoragePattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
-        widgetStoragePattern.setToolTipText(BARControl.tr("Enter filter pattern for storage list. Wildcards: * and ?."));
+        widgetStoragePattern.setToolTipText(BARControl.tr("Enter filter key words for storage list."));
         widgetStoragePattern.setMessage(BARControl.tr("Enter text to filter storage list"));
         Widgets.layout(widgetStoragePattern,0,2,TableLayoutData.WE);
         widgetStoragePattern.addSelectionListener(new SelectionListener()
@@ -5767,7 +5766,7 @@ Dprintf.dprintf("remove");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
         text = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
-        text.setToolTipText(BARControl.tr("Enter filter pattern for entry list. Wildcards: * and ?."));
+        text.setToolTipText(BARControl.tr("Enter filter key words for entry list."));
         text.setMessage(BARControl.tr("Enter text to filter entry list"));
         Widgets.layout(text,0,2,TableLayoutData.WE);
         text.addSelectionListener(new SelectionListener()
