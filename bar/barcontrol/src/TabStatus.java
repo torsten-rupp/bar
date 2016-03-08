@@ -69,6 +69,10 @@ class JobData
     WAITING,
     RUNNING,
     DRY_RUNNING,
+    REQUEST_FTP_PASSWORD,
+    REQUEST_SSH_PASSWORD,
+    REQUEST_WEBDAV_PASSWORD,
+    REQUEST_CRYPT_PASSWORD,
     REQUEST_VOLUME,
     DONE,
     ERROR,
@@ -81,14 +85,18 @@ class JobData
     {
       switch (this)
       {
-        case NONE:           return "-";
-        case WAITING:        return BARControl.tr("waiting");
-        case RUNNING:        return BARControl.tr("running");
-        case DRY_RUNNING:    return BARControl.tr("dry Run");
-        case REQUEST_VOLUME: return BARControl.tr("request volume");
-        case DONE:           return BARControl.tr("done");
-        case ERROR:          return BARControl.tr("ERROR");
-        case ABORTED:        return BARControl.tr("aborted");
+        case NONE:                    return "-";
+        case WAITING:                 return BARControl.tr("waiting");
+        case RUNNING:                 return BARControl.tr("running");
+        case DRY_RUNNING:             return BARControl.tr("dry Run");
+        case REQUEST_FTP_PASSWORD:    return BARControl.tr("request FTP password");
+        case REQUEST_SSH_PASSWORD:    return BARControl.tr("request SSH password");
+        case REQUEST_WEBDAV_PASSWORD: return BARControl.tr("request webDAV password");
+        case REQUEST_CRYPT_PASSWORD:  return BARControl.tr("request crypt password");
+        case REQUEST_VOLUME:          return BARControl.tr("request volume");
+        case DONE:                    return BARControl.tr("done");
+        case ERROR:                   return BARControl.tr("ERROR");
+        case ABORTED:                 return BARControl.tr("aborted");
       }
 
       return "";
@@ -1646,7 +1654,7 @@ public class TabStatus
       return;
     }
 
-    String statusText = resultMap.getString("status","running");
+    String statusText = resultMap.getString("state","running");
     if      (statusText.equals("pause"))
     {
       final long pauseTime = resultMap.getLong("time");
