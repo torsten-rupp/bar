@@ -13346,7 +13346,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
       if (error == ERROR_NONE)
       {
         if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_cArray(&clientInfo->entryIdArray),
+                               Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_FILE
                               )
            )
@@ -13390,7 +13390,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
       if (error == ERROR_NONE)
       {
         if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_cArray(&clientInfo->entryIdArray),
+                               Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_IMAGE
                               )
            )
@@ -13431,13 +13431,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
       if (error == ERROR_NONE)
       {
         if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_cArray(&clientInfo->entryIdArray),
+                               Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_DIRECTORY
                               )
            )
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
           error = Index_initListDirectories(&indexQueryHandle,
                                             indexHandle,
                                             NULL, // Array_cArray(clientInfo->storageIdArray),
@@ -13474,7 +13472,7 @@ asm("int3");
       if (error == ERROR_NONE)
       {
         if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_cArray(&clientInfo->entryIdArray),
+                               Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_LINK
                               )
            )
@@ -13516,7 +13514,7 @@ asm("int3");
       if (error == ERROR_NONE)
       {
         if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_cArray(&clientInfo->entryIdArray),
+                               Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_HARDLINK
                               )
            )
@@ -13560,7 +13558,7 @@ asm("int3");
       if (error == ERROR_NONE)
       {
         if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_cArray(&clientInfo->entryIdArray),
+                               Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_SPECIAL
                               )
            )
