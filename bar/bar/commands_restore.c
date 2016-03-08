@@ -185,18 +185,30 @@ LOCAL String getDestinationDeviceName(String       destinationDeviceName,
 * Name   : updateStatusInfo
 * Purpose: update status info
 * Input  : restoreInfo - restore info
+*          forceUpdate - true to force update
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : Update only every 500ms or if forced
 \***********************************************************************/
 
-LOCAL void updateStatusInfo(RestoreInfo *restoreInfo)
+LOCAL void updateStatusInfo(RestoreInfo *restoreInfo, bool forceUpdate)
 {
+  static uint64 lastTimestamp = 0LL;
+  uint64        timestamp;
+
   assert(restoreInfo != NULL);
 
   if (restoreInfo->statusInfoFunction != NULL)
   {
-    restoreInfo->statusInfoFunction(restoreInfo->statusInfoUserData,restoreInfo->failError,&restoreInfo->statusInfo);
+    timestamp = Misc_getTimestamp();
+    if (forceUpdate || (timestamp > (lastTimestamp+500LL*MISC_US_PER_MS)))
+    {
+      restoreInfo->statusInfoFunction(restoreInfo->statusInfoUserData,
+                                      restoreInfo->failError,
+                                      &restoreInfo->statusInfo
+                                     );
+      lastTimestamp = timestamp;
+    }
   }
 }
 
@@ -269,8 +281,8 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK(NULL,NULL),
-                       CALLBACK(NULL,NULL)
+                       CALLBACK(NULL,NULL),  // storageRequestVolume
+                       CALLBACK(NULL,NULL)  // storageStatusInfo
                       );
   if (error != ERROR_NONE)
   {
@@ -307,7 +319,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
   String_set(restoreInfo->statusInfo.storageName,Storage_getPrintableName(storageSpecifier,archiveName));
   restoreInfo->statusInfo.storageDoneBytes  = 0LL;
   restoreInfo->statusInfo.storageTotalBytes = Archive_getSize(&archiveInfo);
-  updateStatusInfo(restoreInfo);
+  updateStatusInfo(restoreInfo,TRUE);
 
   // read archive entries
   printInfo(0,"Restore from archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
@@ -339,7 +351,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
 
     // update storage status
     restoreInfo->statusInfo.storageDoneBytes = Archive_tell(&archiveInfo);
-    updateStatusInfo(restoreInfo);
+    updateStatusInfo(restoreInfo,TRUE);
 
     switch (archiveEntryType)
     {
@@ -398,7 +410,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
             String_set(restoreInfo->statusInfo.entryName,fileName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = fragmentSize;
-            updateStatusInfo(restoreInfo);
+            updateStatusInfo(restoreInfo,TRUE);
 
             // get destination filename
             destinationFileName = getDestinationFileName(String_new(),
@@ -578,7 +590,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                 }
               }
               restoreInfo->statusInfo.entryDoneBytes += (uint64)n;
-              updateStatusInfo(restoreInfo);
+              updateStatusInfo(restoreInfo,FALSE);
 
               length += (uint64)n;
 
@@ -778,7 +790,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
             String_set(restoreInfo->statusInfo.entryName,deviceName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = blockCount;
-            updateStatusInfo(restoreInfo);
+            updateStatusInfo(restoreInfo,TRUE);
 
             // get destination filename
             destinationDeviceName = getDestinationDeviceName(String_new(),
@@ -1034,7 +1046,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                 }
               }
               restoreInfo->statusInfo.entryDoneBytes += bufferBlockCount*deviceInfo.blockSize;
-              updateStatusInfo(restoreInfo);
+              updateStatusInfo(restoreInfo,FALSE);
 
               block += (uint64)bufferBlockCount;
 
@@ -1172,7 +1184,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
             String_set(restoreInfo->statusInfo.entryName,directoryName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = 0LL;
-            updateStatusInfo(restoreInfo);
+            updateStatusInfo(restoreInfo,TRUE);
 
             // get destination filename
             destinationFileName = getDestinationFileName(String_new(),
@@ -1338,7 +1350,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
             String_set(restoreInfo->statusInfo.entryName,linkName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = 0LL;
-            updateStatusInfo(restoreInfo);
+            updateStatusInfo(restoreInfo,TRUE);
 
             // get destination filename
             destinationFileName = getDestinationFileName(String_new(),
@@ -1578,7 +1590,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
               String_set(restoreInfo->statusInfo.entryName,fileName);
               restoreInfo->statusInfo.entryDoneBytes  = 0LL;
               restoreInfo->statusInfo.entryTotalBytes = fragmentSize;
-              updateStatusInfo(restoreInfo);
+              updateStatusInfo(restoreInfo,TRUE);
 
               // get destination filename
               getDestinationFileName(destinationFileName,
@@ -1782,7 +1794,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                     }
                   }
                   restoreInfo->statusInfo.entryDoneBytes += (uint64)n;
-                  updateStatusInfo(restoreInfo);
+                  updateStatusInfo(restoreInfo,FALSE);
 
                   length += (uint64)n;
 
@@ -2014,7 +2026,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
             String_set(restoreInfo->statusInfo.entryName,fileName);
             restoreInfo->statusInfo.entryDoneBytes  = 0LL;
             restoreInfo->statusInfo.entryTotalBytes = 0LL;
-            updateStatusInfo(restoreInfo);
+            updateStatusInfo(restoreInfo,TRUE);
 
             // get destination filename
             destinationFileName = getDestinationFileName(String_new(),
@@ -2199,7 +2211,7 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
 
     // update storage status
     restoreInfo->statusInfo.storageDoneBytes = Archive_tell(&archiveInfo);
-    updateStatusInfo(restoreInfo);
+    updateStatusInfo(restoreInfo,TRUE);
   }
 
   // close archive
