@@ -3628,7 +3628,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                        entryType.toString(),
                                                        newestEntriesOnly
                                                       ),
-                                   0,  // debugLevel
+                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -6262,248 +6262,242 @@ Dprintf.dprintf("remove");
     }
     try
     {
-      try
+      if      (treeItem.getData() instanceof UUIDIndexData)
       {
-        String[] errorMessage = new String[1];
-        ValueMap valueMap     = new ValueMap();
-
-        if      (treeItem.getData() instanceof UUIDIndexData)
+        // get job index data
+        final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
+        display.syncExec(new Runnable()
         {
-          // get job index data
-          final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
-          display.syncExec(new Runnable()
+          @Override
+          public void run()
           {
-            @Override
-            public void run()
+            for (TreeItem entityTreeItem : treeItem.getItems())
             {
-              for (TreeItem entityTreeItem : treeItem.getItems())
-              {
-                assert entityTreeItem.getData() instanceof EntityIndexData;
-                removeEntityTreeItemSet.add(entityTreeItem);
-              }
-            }
-          });
-
-          // update job list
-          UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
-          Command command = BARServer.runCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=%'S",
-                                                                     uuidIndexData.jobUUID,
-                                                                     (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
-                                                                    ),
-                                                 0
-                                                );
-          while (   !command.endOfData()
-                 && command.getNextResult(errorMessage,
-                                          valueMap,
-                                          Command.TIMEOUT
-                                         ) == Errors.NONE
-                )
-          {
-            try
-            {
-              long                  entityId            = valueMap.getLong  ("entityId"                               );
-              String                jobUUID             = valueMap.getString("jobUUID"                                );
-              String                scheuduleUUID       = valueMap.getString("scheduleUUID"                           );
-              Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-              long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
-              String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
-              long                  totalEntries        = valueMap.getLong  ("totalEntries"                           );
-              long                  totalSize           = valueMap.getLong  ("totalSize"                              );
-
-              // add entity data index
-              final EntityIndexData entityIndexData = new EntityIndexData(entityId,
-                                                                          archiveType,
-                                                                          lastCreatedDateTime,
-                                                                          lastErrorMessage,
-                                                                          totalEntries,
-                                                                          totalSize
-                                                                         );
-
-              // insert/update tree item
-              display.syncExec(new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
-                  if (entityTreeItem == null)
-                  {
-                    // insert tree item
-                    entityTreeItem = Widgets.insertTreeItem(treeItem,
-                                                            findStorageTreeIndex(treeItem,entityIndexData),
-                                                            (Object)entityIndexData,
-                                                            true
-                                                           );
-                    entityIndexData.setTreeItem(entityTreeItem);
-                  }
-                  else
-                  {
-                    assert entityTreeItem.getData() instanceof EntityIndexData;
-
-                    // keep tree item
-                    removeEntityTreeItemSet.remove(entityTreeItem);
-                  }
-                }
-              });
-            }
-            catch (IllegalArgumentException exception)
-            {
-              if (Settings.debugLevel > 0)
-              {
-                System.err.println("ERROR: "+exception.getMessage());
-              }
+              assert entityTreeItem.getData() instanceof EntityIndexData;
+              removeEntityTreeItemSet.add(entityTreeItem);
             }
           }
+        });
 
-          // remove not existing entries
-          display.syncExec(new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              for (TreeItem treeItem : removeEntityTreeItemSet)
-              {
-                IndexData indexData = (IndexData)treeItem.getData();
-                Widgets.removeTreeItem(widgetStorageTree,treeItem);
-                selectedIndexIdSet.set(indexData.indexId,false);
-//TODO: remove?
-                indexData.clearTreeItem();
-              }
-            }
-          });
-        }
-        else if (treeItem.getData() instanceof EntityIndexData)
+        // update job list
+        UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
+        BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=%'S",
+                                                     uuidIndexData.jobUUID,
+                                                     (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*")
+                                                    ),
+                                               0,  // debugLevel
+                                 new CommandResultHandler()
+                                 {
+                                   public int handleResult(int i, ValueMap valueMap)
+                                   {
+                                     try
+                                     {
+                                       long                  entityId            = valueMap.getLong  ("entityId"                               );
+                                       String                jobUUID             = valueMap.getString("jobUUID"                                );
+                                       String                scheuduleUUID       = valueMap.getString("scheduleUUID"                           );
+                                       Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+                                       long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
+                                       String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
+                                       long                  totalEntries        = valueMap.getLong  ("totalEntries"                           );
+                                       long                  totalSize           = valueMap.getLong  ("totalSize"                              );
+
+                                       // add entity data index
+                                       final EntityIndexData entityIndexData = new EntityIndexData(entityId,
+                                                                                                   archiveType,
+                                                                                                   lastCreatedDateTime,
+                                                                                                   lastErrorMessage,
+                                                                                                   totalEntries,
+                                                                                                   totalSize
+                                                                                                  );
+
+                                       // insert/update tree item
+                                       display.syncExec(new Runnable()
+                                       {
+                                         @Override
+                                         public void run()
+                                         {
+                                           TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
+                                           if (entityTreeItem == null)
+                                           {
+                                             // insert tree item
+                                             entityTreeItem = Widgets.insertTreeItem(treeItem,
+                                                                                     findStorageTreeIndex(treeItem,entityIndexData),
+                                                                                     (Object)entityIndexData,
+                                                                                     true
+                                                                                    );
+                                             entityIndexData.setTreeItem(entityTreeItem);
+                                           }
+                                           else
+                                           {
+                                             assert entityTreeItem.getData() instanceof EntityIndexData;
+
+                                             // keep tree item
+                                             removeEntityTreeItemSet.remove(entityTreeItem);
+                                           }
+                                         }
+                                       });
+                                     }
+                                     catch (IllegalArgumentException exception)
+                                     {
+                                       if (Settings.debugLevel > 0)
+                                       {
+                                         System.err.println("ERROR: "+exception.getMessage());
+                                       }
+                                     }
+
+                                     return Errors.NONE;
+                                   }
+                                 }
+                                );
+
+        // remove not existing entries
+        display.syncExec(new Runnable()
         {
-          // get job index data
-          final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
-          display.syncExec(new Runnable()
+          @Override
+          public void run()
           {
-            @Override
-            public void run()
+            for (TreeItem treeItem : removeEntityTreeItemSet)
             {
-              for (TreeItem storageTreeItem : treeItem.getItems())
-              {
-                assert treeItem.getData() instanceof StorageIndexData;
-                removeStorageTreeItemSet.add(storageTreeItem);
-              }
+              IndexData indexData = (IndexData)treeItem.getData();
+              Widgets.removeTreeItem(widgetStorageTree,treeItem);
+              selectedIndexIdSet.set(indexData.indexId,false);
+//TODO: remove?
+              indexData.clearTreeItem();
             }
-          });
+          }
+        });
+      }
+      else if (treeItem.getData() instanceof EntityIndexData)
+      {
+        // get job index data
+        final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
+        display.syncExec(new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            for (TreeItem storageTreeItem : treeItem.getItems())
+            {
+              assert treeItem.getData() instanceof StorageIndexData;
+              removeStorageTreeItemSet.add(storageTreeItem);
+            }
+          }
+        });
 
-          // update storage list
-          EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
+        // update storage list
+        EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
 // TODO
 assert storagePattern != null;
-          Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
-                                                                     entityIndexData.indexId,
-                                                                     -1,
-                                                                     storagePattern,
-                                                                     "*",
-                                                                     "*"
-                                                                    ),
-                                                 1
-                                                );
-          while (   !command.endOfData()
-                 && command.getNextResult(errorMessage,
-                                          valueMap,
-                                          Command.TIMEOUT
-                                         ) == Errors.NONE
-                )
+        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
+                                                     entityIndexData.indexId,
+                                                     -1,
+                                                     storagePattern,
+                                                     "*",
+                                                     "*"
+                                                    ),
+                                               1,  // debugLevel
+                                 new CommandResultHandler()
+                                 {
+                                   public int handleResult(int i, ValueMap valueMap)
+                                   {
+                                     try
+                                     {
+                                       long                  storageId           = valueMap.getLong  ("storageId"                              );
+                                       String                jobUUID             = valueMap.getString("jobUUID"                                );
+                                       String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
+                                       String                jobName             = valueMap.getString("jobName"                                );
+                                       Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+                                       String                name                = valueMap.getString("name"                                   );
+                                       long                  dateTime            = valueMap.getLong  ("dateTime"                               );
+                                       long                  entries             = valueMap.getLong  ("entries"                                );
+                                       long                  size                = valueMap.getLong  ("size"                                   );
+                                       IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
+                                       IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
+                                       long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
+                                       String                errorMessage_       = valueMap.getString("errorMessage"                           );
+
+                                       // add storage index data
+                                       final StorageIndexData storageIndexData = new StorageIndexData(storageId,
+                                                                                                      jobName,
+                                                                                                      archiveType,
+                                                                                                      name,
+                                                                                                      dateTime,
+                                                                                                      entries,
+                                                                                                      size,
+                                                                                                      indexState,
+                                                                                                      indexMode,
+                                                                                                      lastCheckedDateTime,
+                                                                                                      errorMessage_
+                                                                                                     );
+
+                                       // insert/update tree item
+                                       display.syncExec(new Runnable()
+                                       {
+                                         @Override
+                                         public void run()
+                                         {
+                                           TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
+                                           if (storageTreeItem == null)
+                                           {
+                                             // insert tree item
+                                             storageTreeItem = Widgets.insertTreeItem(treeItem,
+                                                                                      findStorageTreeIndex(treeItem,storageIndexData),
+                                                                                      (Object)storageIndexData,
+                                                                                      false
+                                                                                     );
+                                             storageIndexData.setTreeItem(storageTreeItem);
+                                           }
+                                           else
+                                           {
+                                             // keep tree item
+                                             removeStorageTreeItemSet.remove(storageTreeItem);
+                                           }
+                                         }
+                                       });
+                                     }
+                                     catch (IllegalArgumentException exception)
+                                     {
+                                       if (Settings.debugLevel > 0)
+                                       {
+                                         System.err.println("ERROR: "+exception.getMessage());
+                                       }
+                                     }
+
+                                     return Errors.NONE;
+                                   }
+                                 }
+                                );
+
+        // remove not existing entries
+        display.syncExec(new Runnable()
+        {
+          @Override
+          public void run()
           {
-            try
+            for (TreeItem treeItem : removeStorageTreeItemSet)
             {
-              long                  storageId           = valueMap.getLong  ("storageId"                              );
-              String                jobUUID             = valueMap.getString("jobUUID"                                );
-              String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
-              String                jobName             = valueMap.getString("jobName"                                );
-              Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-              String                name                = valueMap.getString("name"                                   );
-              long                  dateTime            = valueMap.getLong  ("dateTime"                               );
-              long                  entries             = valueMap.getLong  ("entries"                                );
-              long                  size                = valueMap.getLong  ("size"                                   );
-              IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
-              IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
-              long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
-              String                errorMessage_       = valueMap.getString("errorMessage"                           );
-
-              // add storage index data
-              final StorageIndexData storageIndexData = new StorageIndexData(storageId,
-                                                                             jobName,
-                                                                             archiveType,
-                                                                             name,
-                                                                             dateTime,
-                                                                             entries,
-                                                                             size,
-                                                                             indexState,
-                                                                             indexMode,
-                                                                             lastCheckedDateTime,
-                                                                             errorMessage_
-                                                                            );
-
-              // insert/update tree item
-              display.syncExec(new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
-                  if (storageTreeItem == null)
-                  {
-                    // insert tree item
-                    storageTreeItem = Widgets.insertTreeItem(treeItem,
-                                                             findStorageTreeIndex(treeItem,storageIndexData),
-                                                             (Object)storageIndexData,
-                                                             false
-                                                            );
-                    storageIndexData.setTreeItem(storageTreeItem);
-                  }
-                  else
-                  {
-                    // keep tree item
-                    removeStorageTreeItemSet.remove(storageTreeItem);
-                  }
-                }
-              });
-            }
-            catch (IllegalArgumentException exception)
-            {
-              if (Settings.debugLevel > 0)
-              {
-                System.err.println("ERROR: "+exception.getMessage());
-              }
+              IndexData indexData = (IndexData)treeItem.getData();
+              Widgets.removeTreeItem(widgetStorageTree,treeItem);
+              selectedIndexIdSet.set(indexData.indexId,false);
+//TODO: remove?
+              indexData.clearTreeItem();
             }
           }
-
-          // remove not existing entries
-          display.syncExec(new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              for (TreeItem treeItem : removeStorageTreeItemSet)
-              {
-                IndexData indexData = (IndexData)treeItem.getData();
-                Widgets.removeTreeItem(widgetStorageTree,treeItem);
-                selectedIndexIdSet.set(indexData.indexId,false);
-//TODO: remove?
-                indexData.clearTreeItem();
-              }
-            }
-          });
-        }
+        });
       }
-      catch (CommunicationError error)
+    }
+    catch (CommunicationError error)
+    {
+      // ignored
+    }
+    catch (Exception exception)
+    {
+      if (Settings.debugLevel > 0)
       {
-        // ignored
-      }
-      catch (Exception exception)
-      {
-        if (Settings.debugLevel > 0)
-        {
-          BARServer.disconnect();
-          System.err.println("ERROR: "+exception.getMessage());
-          BARControl.printStackTrace(exception);
-          System.exit(1);
-        }
+        BARServer.disconnect();
+        System.err.println("ERROR: "+exception.getMessage());
+        BARControl.printStackTrace(exception);
+        System.exit(1);
       }
     }
     finally
@@ -7577,6 +7571,19 @@ assert storagePattern != null;
       widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
       widgetRestore.setEnabled(false);
       Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      widgetRestore.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,true);
+        }
+      });
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
@@ -7595,25 +7602,9 @@ assert storagePattern != null;
       });
     }
 
-    // add selection listeners
-/*
-    widgetRestore.addSelectionListener(new SelectionListener()
-    {
-      @Override
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-      @Override
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Button widget = (Button)selectionEvent.widget;
-        Dialogs.close(dialog,widgetStorageName.getText());
-      }
-    });
-*/
-
     Dialogs.show(dialog);
 
+    // get number/size of entries to restore
     new BackgroundTask((BusyDialog)null,new Object[]{indexIdSet})
     {
       @Override
@@ -8245,8 +8236,9 @@ Dprintf.dprintf("");
             if (bounds.contains(mouseEvent.x,mouseEvent.y))
             {
               widgetRestoreTo.setSelection(true);
-              selectRestoreToEvent.trigger();
+              widgetRestoreToDirectory.setEnabled(true);
               Widgets.setFocus(widgetRestoreToDirectory);
+              selectRestoreToEvent.trigger();
             }
           }
           @Override
@@ -8306,6 +8298,19 @@ Dprintf.dprintf("");
       widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
       widgetRestore.setEnabled(false);
       Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      widgetRestore.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,true);
+        }
+      });
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
@@ -8324,74 +8329,84 @@ Dprintf.dprintf("");
       });
     }
 
-    // add selection listeners
-/*
-    widgetRestore.addSelectionListener(new SelectionListener()
-    {
-      @Override
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-      @Override
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Button widget = (Button)selectionEvent.widget;
-        Dialogs.close(dialog,widgetStorageName.getText());
-      }
-    });
-*/
-
     Dialogs.show(dialog);
 
+    // get number/size of entries to restore
     new BackgroundTask((BusyDialog)null,new Object[]{entryIdSet})
     {
       @Override
       public void run(BusyDialog busyDialog, Object userData)
       {
-        IndexIdSet entryIdSet = (IndexIdSet)((Object[])userData)[0];
+        final IndexIdSet entryIdSet = (IndexIdSet)((Object[])userData)[0];
 
-        // set entries to restore
-        BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
-    //TODO: optimize send more than one entry?
-        for (Long entryId : entryIdSet)
         {
-          BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryId=%ld",
-                                                       entryId
-                                                      ),
-                                   0  // debugLevel
-                                  );
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              BARControl.waitCursor(dialog);
+            }
+          });
         }
-
-        // get number entries, size
-        final String[] errorMessage = new String[1];
-        ValueMap       valueMap     = new ValueMap();
-        if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
-                                     0,  // debugLevel
-                                     errorMessage,
-                                     valueMap
-                                    ) == Errors.NONE
-           )
+        try
         {
-          final long count = valueMap.getLong("count");
-          final long size  = valueMap.getLong("size");
+          // set entries to restore
+          setStorageList(entryIdSet);
+
+          // set entries to restore
+          BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
+  //TODO: optimize send more than one entry?
+          for (Long entryId : entryIdSet)
+          {
+            BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryId=%ld",
+                                                         entryId
+                                                        ),
+                                     0  // debugLevel
+                                    );
+          }
+
+          // get number entries, size
+          final String[] errorMessage = new String[1];
+          ValueMap       valueMap     = new ValueMap();
+          if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+                                       0,  // debugLevel
+                                       errorMessage,
+                                       valueMap
+                                      ) == Errors.NONE
+             )
+          {
+            final long count = valueMap.getLong("count");
+            final long size  = valueMap.getLong("size");
+
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                widgetCount.setText(Long.toString(count));
+                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
+              }
+            });
+          }
 
           display.syncExec(new Runnable()
           {
             public void run()
             {
-              widgetCount.setText(Long.toString(count));
-              widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
+              widgetRestore.setEnabled(!entryIdSet.isEmpty());
             }
           });
         }
-
-        display.syncExec(new Runnable()
+        finally
         {
-          public void run()
+          // reset cursor and foreground color
+          display.syncExec(new Runnable()
           {
-            widgetRestore.setEnabled(true);
-          }
-        });
+            public void run()
+            {
+              BARControl.resetCursor(dialog);
+            }
+          });
+        }
       }
     };
 
