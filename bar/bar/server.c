@@ -138,7 +138,9 @@ typedef enum
   JOB_STATE_NONE,
   JOB_STATE_WAITING,
   JOB_STATE_RUNNING,
-  JOB_STATE_REQUEST_LOGIN_PASSWORD,
+  JOB_STATE_REQUEST_FTP_PASSWORD,
+  JOB_STATE_REQUEST_SSH_PASSWORD,
+  JOB_STATE_REQUEST_WEBDAV_PASSWORD,
   JOB_STATE_REQUEST_CRYPT_PASSWORD,
   JOB_STATE_REQUEST_VOLUME,
   JOB_STATE_DONE,
@@ -613,13 +615,17 @@ LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 #define IS_JOB_ACTIVE(jobNode) (   (jobNode->state == JOB_STATE_WAITING) \
                                 || (jobNode->state == JOB_STATE_RUNNING) \
-                                || (jobNode->state == JOB_STATE_REQUEST_LOGIN_PASSWORD) \
+                                || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD) \
+                                || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD) \
+                                || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD) \
                                 || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
                                 || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
                                )
 
 #define IS_JOB_RUNNING(jobNode) (   (jobNode->state == JOB_STATE_RUNNING) \
-                                 || (jobNode->state == JOB_STATE_REQUEST_LOGIN_PASSWORD) \
+                                 || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD) \
+                                 || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD) \
+                                 || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD) \
                                  || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
                                  || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
                                 )
@@ -3761,17 +3767,19 @@ LOCAL void remoteThreadCode(void)
     assert(stateText != NULL);
     assert(jobState != NULL);
 
-    if      (stringEqualsIgnoreCase(stateText,"-"                     )) (*jobState) = JOB_STATE_NONE;
-    else if (stringEqualsIgnoreCase(stateText,"waiting"               )) (*jobState) = JOB_STATE_WAITING;
-    else if (stringEqualsIgnoreCase(stateText,"dry-run"               )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(stateText,"running"               )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(stateText,"request login password")) (*jobState) = JOB_STATE_REQUEST_LOGIN_PASSWORD;
-    else if (stringEqualsIgnoreCase(stateText,"request crypt password")) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
-    else if (stringEqualsIgnoreCase(stateText,"request volume"        )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
-    else if (stringEqualsIgnoreCase(stateText,"done"                  )) (*jobState) = JOB_STATE_DONE;
-    else if (stringEqualsIgnoreCase(stateText,"ERROR"                 )) (*jobState) = JOB_STATE_ERROR;
-    else if (stringEqualsIgnoreCase(stateText,"aborted"               )) (*jobState) = JOB_STATE_ABORTED;
-    else                                                                 (*jobState) = JOB_STATE_NONE;
+    if      (stringEqualsIgnoreCase(stateText,"-"                      )) (*jobState) = JOB_STATE_NONE;
+    else if (stringEqualsIgnoreCase(stateText,"waiting"                )) (*jobState) = JOB_STATE_WAITING;
+    else if (stringEqualsIgnoreCase(stateText,"dry-run"                )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEqualsIgnoreCase(stateText,"running"                )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEqualsIgnoreCase(stateText,"request FTP password"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request SSH password"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request webDAV password")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request crypt password" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request volume"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
+    else if (stringEqualsIgnoreCase(stateText,"done"                   )) (*jobState) = JOB_STATE_DONE;
+    else if (stringEqualsIgnoreCase(stateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
+    else if (stringEqualsIgnoreCase(stateText,"aborted"                )) (*jobState) = JOB_STATE_ABORTED;
+    else                                                                  (*jobState) = JOB_STATE_NONE;
 
     return TRUE;
   }
@@ -5724,8 +5732,14 @@ LOCAL const char *getJobStateText(JobStates jobState, const JobOptions *jobOptio
     case JOB_STATE_RUNNING:
       stateText = (jobOptions->dryRunFlag) ? "dry_running" : "running";
       break;
-    case JOB_STATE_REQUEST_LOGIN_PASSWORD:
-      stateText = "request_login_password";
+    case JOB_STATE_REQUEST_FTP_PASSWORD:
+      stateText = "request_ftp_password";
+      break;
+    case JOB_STATE_REQUEST_SSH_PASSWORD:
+      stateText = "request_ssh_password";
+      break;
+    case JOB_STATE_REQUEST_WEBDAV_PASSWORD:
+      stateText = "request_webdav_password";
       break;
     case JOB_STATE_REQUEST_CRYPT_PASSWORD:
       stateText = "request_crypt_password";
@@ -6996,7 +7010,7 @@ clientInfo->abortFlag = TRUE;
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            status=<status>
+*            state=<status>
 *            time=<pause time [s]>
 \***********************************************************************/
 
@@ -7015,14 +7029,14 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const StringMap
     switch (serverState)
     {
       case SERVER_STATE_RUNNING:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"status=running");
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=running");
         break;
       case SERVER_STATE_PAUSE:
         nowTimestamp = Misc_getCurrentDateTime();
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"status=pause time=%llu",(pauseEndTimestamp > nowTimestamp) ? pauseEndTimestamp-nowTimestamp : 0LL);
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=pause time=%llu",(pauseEndTimestamp > nowTimestamp) ? pauseEndTimestamp-nowTimestamp : 0LL);
         break;
       case SERVER_STATE_SUSPENDED:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"status=suspended");
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=suspended");
         break;
     }
   }
@@ -13261,6 +13275,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     assert(restoreStatusInfo != NULL);
     assert(restoreStatusInfo->entryName != NULL);
     assert(restoreStatusInfo->storageName != NULL);
+static int n = 0;
+n++;
 
     UNUSED_VARIABLE(error);
 
@@ -13268,7 +13284,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                      restoreCommandInfo->id,
                      FALSE,
                      ERROR_NONE,
-                     "status=running storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu",
+                     "state=%s storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu",
+//                     "running"
+(n >=1) ? "request_ftp_password":"running",
                      restoreStatusInfo->storageName,
                      restoreStatusInfo->storageDoneBytes,
                      restoreStatusInfo->storageTotalBytes,
