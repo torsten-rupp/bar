@@ -2426,16 +2426,16 @@ public class BARControl
             BARServer.disconnect();
             System.exit(1);
           }
-          String type = valueMap.getString("status");
-          if      (type.equalsIgnoreCase("running"))
+          serverState = valueMap.getString("state");
+          if      (serverState.equalsIgnoreCase("running"))
           {
             serverState = null;
           }
-          else if (type.equalsIgnoreCase("pause"))
+          else if (serverState.equalsIgnoreCase("pause"))
           {
             serverState = "pause";
           }
-          else if (type.equalsIgnoreCase("suspended"))
+          else if (serverState.equalsIgnoreCase("suspended"))
           {
             serverState = "suspended";
           }
