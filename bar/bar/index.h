@@ -325,6 +325,22 @@ INLINE IndexTypes Index_getType(IndexId indexId)
 #endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
 
 /***********************************************************************\
+* Name   : Index_containsType
+* Purpose: check if id set contains index type
+* Input  : indexIds     - index ids
+*          indexIdCount - index id count
+*          indexType    - index type
+* Output : -
+* Return : true iff index ids contains type
+* Notes  : -
+\***********************************************************************/
+
+bool Index_containsType(const IndexId indexIds[],
+                        uint          indexIdCount,
+                        IndexTypes    indexType
+                       );
+
+/***********************************************************************\
 * Name   : Index_getDatabaseId
 * Purpose: get database id
 * Input  : indexId - index id
