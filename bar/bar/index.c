@@ -4920,6 +4920,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   assert((indexIdCount == 0) || (indexIds != NULL));
   assert(count != NULL);
 
+  // init variables
   if (count != NULL) (*count) = 0L;
   if (size != NULL) (*size) = 0LL;
 
@@ -4945,15 +4946,15 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
       {
         case INDEX_TYPE_UUID:
           if (i > 0) String_appendChar(uuidIdsString,',');
-          String_format(uuidIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
           break;
         case INDEX_TYPE_ENTITY:
           if (i > 0) String_appendChar(entityIdsString,',');
-          String_format(entityIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
           break;
         case INDEX_TYPE_STORAGE:
           if (i > 0) String_appendChar(storageIdsString,',');
-          String_format(storageIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
           break;
         default:
           // ignore other types
@@ -5093,15 +5094,15 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
       {
         case INDEX_TYPE_UUID:
           if (i > 0) String_appendChar(uuidIdsString,',');
-          String_format(uuidIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
           break;
         case INDEX_TYPE_ENTITY:
           if (i > 0) String_appendChar(entityIdsString,',');
-          String_format(entityIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
           break;
         case INDEX_TYPE_STORAGE:
           if (i > 0) String_appendChar(storageIdsString,',');
-          String_format(storageIdsString,"%d",Index_getDatabaseId(indexIds[i]));
+          String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
           break;
         default:
           // ignore other types
@@ -5662,6 +5663,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   assert((entryIdCount == 0) || (entryIds != NULL));
   assert(count != NULL);
 
+  // init variables
+  if (count != NULL) (*count) = 0L;
+  if (size != NULL) (*size) = 0LL;
+
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
@@ -5676,11 +5681,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   storageIdsString = String_new();
   for (i = 0; i < storageIdCount; i++)
   {
-    assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
+    assert(Index_getType(storageIds[i]) == INDEX_TYPE_STORAGE);
     if (i > 0) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%d",storageIds[i]);
+    String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
-
   fileIdsString      = String_new();
   imageIdsString     = String_new();
   directoryIdsString = String_new();
@@ -5693,23 +5697,23 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     {
       case INDEX_TYPE_FILE:
         if (!String_isEmpty(fileIdsString)) String_appendChar(fileIdsString,',');
-        String_format(fileIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
+        String_format(fileIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
         break;
       case INDEX_TYPE_IMAGE:
         if (!String_isEmpty(imageIdsString)) String_appendChar(imageIdsString,',');
-        String_format(imageIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
+        String_format(imageIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
         break;
       case INDEX_TYPE_DIRECTORY:
         if (!String_isEmpty(directoryIdsString)) String_appendChar(directoryIdsString,',');
-        String_format(directoryIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
+        String_format(directoryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
         break;
       case INDEX_TYPE_LINK:
         if (!String_isEmpty(linkIdsString)) String_appendChar(linkIdsString,',');
-        String_format(linkIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
+        String_format(linkIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
         break;
       case INDEX_TYPE_HARDLINK:
         if (!String_isEmpty(hardlinkIdsString)) String_appendChar(hardlinkIdsString,',');
-        String_format(hardlinkIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+        String_format(hardlinkIdsString,"%lld",INDEX_DATABASE_ID_(entryIds[i]));
         break;
       case INDEX_TYPE_SPECIAL:
         if (!String_isEmpty(specialIdsString)) String_appendChar(specialIdsString,',');
@@ -5720,9 +5724,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         break;
     }
   }
-
-  if (count != NULL) (*count) = 0L;
-  if (size != NULL) (*size) = 0LL;
 
   error  = ERROR_NONE;
   filter = String_new();
@@ -5747,7 +5748,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       }
       else
       {
-//Database_debugEnable(1);
+Database_debugEnable(1);
         filterAppend(filter,!String_isEmpty(pattern),"AND","files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S)",ftsString);
 //        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,files.name)",regexpString);
         filterAppend(filter,!String_isEmpty(storageIdsString),"AND","files.storageId IN (%S)",storageIdsString);
@@ -5760,7 +5761,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  ",
                                  String_cString(filter)
                                 );
-//Database_debugEnable(0);
+Database_debugEnable(0);
+exit(12);
       }
 if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
@@ -6098,9 +6100,9 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   storageIdsString = String_new();
   for (i = 0; i < storageIdCount; i++)
   {
-    assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
+    assert(Index_getType(storageIds[i]) == INDEX_TYPE_STORAGE);
     if (i > 0) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%d",storageIds[i]);
+    String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
 
   fileIdsString      = String_new();
@@ -6115,27 +6117,27 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     {
       case INDEX_TYPE_FILE:
         if (!String_isEmpty(fileIdsString)) String_appendChar(fileIdsString,',');
-        String_format(fileIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
+        String_format(fileIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
         break;
       case INDEX_TYPE_IMAGE:
         if (!String_isEmpty(imageIdsString)) String_appendChar(imageIdsString,',');
-        String_format(imageIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
+        String_format(imageIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
         break;
       case INDEX_TYPE_DIRECTORY:
         if (!String_isEmpty(directoryIdsString)) String_appendChar(directoryIdsString,',');
-        String_format(directoryIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
+        String_format(directoryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
         break;
       case INDEX_TYPE_LINK:
         if (!String_isEmpty(linkIdsString)) String_appendChar(linkIdsString,',');
-        String_format(linkIdsString,"%ld",Index_getDatabaseId(entryIds[i]));
+        String_format(linkIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
         break;
       case INDEX_TYPE_HARDLINK:
         if (!String_isEmpty(hardlinkIdsString)) String_appendChar(hardlinkIdsString,',');
-        String_format(hardlinkIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+        String_format(hardlinkIdsString,"%lld",INDEX_DATABASE_ID_(entryIds[i]));
         break;
       case INDEX_TYPE_SPECIAL:
         if (!String_isEmpty(specialIdsString)) String_appendChar(specialIdsString,',');
-        String_format(specialIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
+        String_format(specialIdsString,"%lld",INDEX_DATABASE_ID_(entryIds[i]));
         break;
       default:
         // ignore other types
@@ -6466,9 +6468,9 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   storageIdsString = String_new();
   for (i = 0; i < storageIdCount; i++)
   {
-    assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
+    assert(Index_getType(storageIds[i]) == INDEX_TYPE_STORAGE);
     if (i > 0) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%d",storageIds[i]);
+    String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -6476,7 +6478,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_FILE)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
-      String_format(entryIdsString,"%d",entryIds[i]);
+      String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
     }
   }
 
@@ -6626,9 +6628,9 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   storageIdsString = String_new();
   for (i = 0; i < storageIdCount; i++)
   {
-    assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
+    assert(Index_getType(storageIds[i]) == INDEX_TYPE_STORAGE);
     if (i > 0) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%d",storageIds[i]);
+    String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -6636,7 +6638,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_IMAGE)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
-      String_format(entryIdsString,"%d",entryIds[i]);
+      String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
     }
   }
 
@@ -6777,9 +6779,9 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   storageIdsString = String_new();
   for (i = 0; i < storageIdCount; i++)
   {
-    assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
+    assert(Index_getType(storageIds[i]) == INDEX_TYPE_STORAGE);
     if (i > 0) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%d",storageIds[i]);
+    String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -6787,7 +6789,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_DIRECTORY)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
-      String_format(entryIdsString,"%d",entryIds[i]);
+      String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
     }
   }
 
@@ -6930,9 +6932,9 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   storageIdsString = String_new();
   for (i = 0; i < storageIdCount; i++)
   {
-    assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
+    assert(Index_getType(storageIds[i]) == INDEX_TYPE_STORAGE);
     if (i > 0) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%d",storageIds[i]);
+    String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -6940,7 +6942,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_LINK)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
-      String_format(entryIdsString,"%d",entryIds[i]);
+      String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
     }
   }
   String_appendCString(entryIdsString,"))");
@@ -7085,9 +7087,9 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   storageIdsString = String_new();
   for (i = 0; i < storageIdCount; i++)
   {
-    assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
+    assert(Index_getType(storageIds[i]) == INDEX_TYPE_STORAGE);
     if (i > 0) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%d",storageIds[i]);
+    String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -7095,7 +7097,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_HARDLINK)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
-      String_format(entryIdsString,"%d",entryIds[i]);
+      String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
     }
   }
 
@@ -7246,16 +7248,16 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   entryIdsString = String_new();
   for (i = 0; i < storageIdCount; i++)
   {
-    assert(INDEX_TYPE_(storageIds[i]) == INDEX_TYPE_STORAGE);
+    assert(Index_getType(storageIds[i]) == INDEX_TYPE_STORAGE);
     if (i > 0) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%d",storageIds[i]);
+    String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
   for (i = 0; i < entryIdCount; i++)
   {
     if (Index_getType(entryIds[i]) == INDEX_TYPE_SPECIAL)
     {
       if (i > 0) String_appendChar(entryIdsString,',');
-      String_format(entryIdsString,"%d",entryIds[i]);
+      String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
     }
   }
 
@@ -8033,7 +8035,7 @@ fprintf(stderr,"%s, %d: try prune uuid %llu\n",__FILE__,__LINE__,uuidId);
     existsFlag = TRUE;
   }
 
-  // prune entity if empty
+  // prune uuid if empty
   if (!existsFlag)
   {
     error = Database_execute(&indexHandle->databaseHandle,
