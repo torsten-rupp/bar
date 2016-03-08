@@ -13289,18 +13289,19 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteFiles=yes|no");
     return;
   }
+
+  // init variables
   storageName = String_new();
-  StringMap_getString(argumentMap,"storageName",storageName,NULL);
-  entryName = String_new();
-  StringMap_getString(argumentMap,"entryName",entryName,NULL);
+  entryName   = String_new();
 
   // get storage/entry list
+  error = ERROR_NONE;
   StringList_init(&storageNameList);
   EntryList_init(&restoreEntryList);
   switch (type)
   {
     case ARCHIVES:
-      if (String_isEmpty(storageName))
+      if (error == ERROR_NONE)
       {
         error = Index_initListStorages(&indexQueryHandle,
                                        indexHandle,
@@ -13315,232 +13316,42 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
-        if (error != ERROR_NONE)
+        if (error == ERROR_NONE)
         {
-          String_delete(entryName);
-          String_delete(storageName);
-          StringList_done(&storageNameList);
-          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
-          return;
+          while (Index_getNextStorage(&indexQueryHandle,
+                                      NULL,  // uuidId
+                                      NULL,  // entityId
+                                      NULL,  // storageId
+                                      NULL,  // jobUUID
+                                      NULL,  // scheduleUUID
+                                      NULL,  // archiveType
+                                      storageName,
+                                      NULL,  // createdDateTime
+                                      NULL,  // entries
+                                      NULL,  // size
+                                      NULL,  // indexState,
+                                      NULL,  // indexMode,
+                                      NULL,  // lastCheckedDateTime,
+                                      NULL   // errorMessage
+                                     )
+                )
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          Index_doneList(&indexQueryHandle);
         }
-        while (Index_getNextStorage(&indexQueryHandle,
-                                    NULL,  // uuidId
-                                    NULL,  // entityId
-                                    NULL,  // storageId
-                                    NULL,  // jobUUID
-                                    NULL,  // scheduleUUID
-                                    NULL,  // archiveType
-                                    storageName,
-                                    NULL,  // createdDateTime
-                                    NULL,  // entries
-                                    NULL,  // size
-                                    NULL,  // indexState,
-                                    NULL,  // indexMode,
-                                    NULL,  // lastCheckedDateTime,
-                                    NULL   // errorMessage
-                                   )
-              )
-        {
-          StringList_append(&storageNameList,storageName);
-        }
-        Index_doneList(&indexQueryHandle);
-      }
-      else
-      {
-        StringList_append(&storageNameList,storageName);
       }
       break;
     case ENTRIES:
-      if (String_isEmpty(entryName))
+      if (error == ERROR_NONE)
       {
-        error = Index_initListFiles(&indexQueryHandle,
-                                    indexHandle,
-                                    NULL, // Array_cArray(clientInfo->storageIdArray),
-                                    0, // Array_length(clientInfo->storageIdArray),
-                                    Array_cArray(&clientInfo->entryIdArray),
-                                    Array_length(&clientInfo->entryIdArray),
-                                    NULL // pattern
-                                   );
-        if (error != ERROR_NONE)
+        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
+                               Array_cArray(&clientInfo->entryIdArray),
+                               INDEX_TYPE_FILE
+                              )
+           )
         {
-          String_delete(entryName);
-          String_delete(storageName);
-          StringList_done(&storageNameList);
-          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
-          return;
-        }
-        while (Index_getNextFile(&indexQueryHandle,
-                                    NULL, // indexId,
-                                    storageName, // storageName
-                                    NULL, // storageDateTime
-                                    entryName,
-                                    NULL, // size
-                                    NULL, // timeModified
-                                    NULL, // userId
-                                    NULL, // groupId
-                                    NULL, // permission
-                                    NULL, // fragmentOffset
-                                    NULL  // fragmentSize
-                                   )
-              )
-        {
-          if (!StringList_contain(&storageNameList,storageName))
-          {
-            StringList_append(&storageNameList,storageName);
-          }
-          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-        }
-        Index_doneList(&indexQueryHandle);
-
-        error = Index_initListImages(&indexQueryHandle,
-                                     indexHandle,
-                                     NULL, // Array_cArray(clientInfo->storageIdArray),
-                                     0, // Array_length(clientInfo->storageIdArray),
-                                     Array_cArray(&clientInfo->entryIdArray),
-                                     Array_length(&clientInfo->entryIdArray),
-                                     NULL // pattern
-                                    );
-        if (error != ERROR_NONE)
-        {
-          String_delete(entryName);
-          String_delete(storageName);
-          StringList_done(&storageNameList);
-          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
-          return;
-        }
-        while (Index_getNextImage(&indexQueryHandle,
-                                  NULL, // indexId,
-                                  storageName, // storageName
-                                  NULL, // storageDateTime
-                                  entryName,
-                                  NULL, // fileSystemType
-                                  NULL, // size
-                                  NULL, // blockOffset
-                                  NULL // blockCount
-                                 )
-              )
-        {
-          if (!StringList_contain(&storageNameList,storageName))
-          {
-            StringList_append(&storageNameList,storageName);
-          }
-          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-        }
-        Index_doneList(&indexQueryHandle);
-
-        error = Index_initListDirectories(&indexQueryHandle,
-                                          indexHandle,
-                                          NULL, // Array_cArray(clientInfo->storageIdArray),
-                                          0, // Array_length(clientInfo->storageIdArray),
-                                          Array_cArray(&clientInfo->entryIdArray),
-                                          Array_length(&clientInfo->entryIdArray),
-                                          NULL // pattern
-                                         );
-        if (error != ERROR_NONE)
-        {
-          String_delete(entryName);
-          String_delete(storageName);
-          StringList_done(&storageNameList);
-          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
-          return;
-        }
-        while (Index_getNextDirectory(&indexQueryHandle,
-                                      NULL, // indexId,
-                                      storageName, // storageName
-                                      NULL, // storageDateTime
-                                      entryName,
-                                      NULL, // timeModified
-                                      NULL, // userId
-                                      NULL, // groupId
-                                      NULL // permission
-                                     )
-              )
-        {
-          if (!StringList_contain(&storageNameList,storageName))
-          {
-            StringList_append(&storageNameList,storageName);
-          }
-          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-        }
-        Index_doneList(&indexQueryHandle);
-
-        error = Index_initListLinks(&indexQueryHandle,
-                                    indexHandle,
-                                    NULL, // Array_cArray(clientInfo->storageIdArray),
-                                    0, // Array_length(clientInfo->storageIdArray),
-                                    Array_cArray(&clientInfo->entryIdArray),
-                                    Array_length(&clientInfo->entryIdArray),
-                                    NULL // pattern
-                                   );
-        if (error != ERROR_NONE)
-        {
-          String_delete(entryName);
-          String_delete(storageName);
-          StringList_done(&storageNameList);
-          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
-          return;
-        }
-        while (Index_getNextLink(&indexQueryHandle,
-                                 NULL, // indexId,
-                                 storageName, // storageName
-                                 NULL, // storageDateTime
-                                 entryName,
-                                 NULL, // destinationName
-                                 NULL, // timeModified
-                                 NULL, // userId
-                                 NULL, // groupId
-                                 NULL // permission
-                                )
-              )
-        {
-          if (!StringList_contain(&storageNameList,storageName))
-          {
-            StringList_append(&storageNameList,storageName);
-          }
-          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-        }
-        Index_doneList(&indexQueryHandle);
-
-        error = Index_initListHardLinks(&indexQueryHandle,
-                                        indexHandle,
-                                        NULL, // Array_cArray(clientInfo->storageIdArray),
-                                        0, // Array_length(clientInfo->storageIdArray),
-                                        Array_cArray(&clientInfo->entryIdArray),
-                                        Array_length(&clientInfo->entryIdArray),
-                                        NULL // pattern
-                                       );
-        if (error != ERROR_NONE)
-        {
-          String_delete(entryName);
-          String_delete(storageName);
-          StringList_done(&storageNameList);
-          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
-          return;
-        }
-        while (Index_getNextHardLink(&indexQueryHandle,
-                                     NULL, // indexId,
-                                     storageName, // storageName
-                                     NULL, // storageDateTime
-                                     entryName,
-                                     NULL, // size
-                                     NULL, // timeModified
-                                     NULL, // userId
-                                     NULL, // groupId
-                                     NULL, // permission
-                                     NULL, // fragmentOffset
-                                     NULL  // fragmentSize
-                                    )
-              )
-        {
-          if (!StringList_contain(&storageNameList,storageName))
-          {
-            StringList_append(&storageNameList,storageName);
-          }
-          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-        }
-        Index_doneList(&indexQueryHandle);
-
-        error = Index_initListSpecial(&indexQueryHandle,
+          error = Index_initListFiles(&indexQueryHandle,
                                       indexHandle,
                                       NULL, // Array_cArray(clientInfo->storageIdArray),
                                       0, // Array_length(clientInfo->storageIdArray),
@@ -13548,37 +13359,243 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                       Array_length(&clientInfo->entryIdArray),
                                       NULL // pattern
                                      );
-        if (error != ERROR_NONE)
-        {
-          String_delete(entryName);
-          String_delete(storageName);
-          StringList_done(&storageNameList);
-          sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
-          return;
-        }
-        while (Index_getNextSpecial(&indexQueryHandle,
-                                    NULL, // indexId,
-                                    storageName, // storageName
-                                    NULL, // storageDateTime
-                                    entryName,
-                                    NULL, // timeModified
-                                    NULL, // userId
-                                    NULL, // groupId
-                                    NULL // permission
-                                   )
-              )
-        {
-          if (!StringList_contain(&storageNameList,storageName))
+          if (error == ERROR_NONE)
           {
-            StringList_append(&storageNameList,storageName);
+            while (Index_getNextFile(&indexQueryHandle,
+                                        NULL, // indexId,
+                                        storageName, // storageName
+                                        NULL, // storageDateTime
+                                        entryName,
+                                        NULL, // size
+                                        NULL, // timeModified
+                                        NULL, // userId
+                                        NULL, // groupId
+                                        NULL, // permission
+                                        NULL, // fragmentOffset
+                                        NULL  // fragmentSize
+                                       )
+                  )
+            {
+              if (!StringList_contain(&storageNameList,storageName))
+              {
+                StringList_append(&storageNameList,storageName);
+              }
+              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+            }
+            Index_doneList(&indexQueryHandle);
           }
-          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
         }
-        Index_doneList(&indexQueryHandle);
       }
-      else
+
+      if (error == ERROR_NONE)
       {
-        EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
+                               Array_cArray(&clientInfo->entryIdArray),
+                               INDEX_TYPE_IMAGE
+                              )
+           )
+        {
+          error = Index_initListImages(&indexQueryHandle,
+                                       indexHandle,
+                                       NULL, // Array_cArray(clientInfo->storageIdArray),
+                                       0, // Array_length(clientInfo->storageIdArray),
+                                       Array_cArray(&clientInfo->entryIdArray),
+                                       Array_length(&clientInfo->entryIdArray),
+                                       NULL // pattern
+                                      );
+          if (error == ERROR_NONE)
+          {
+            while (Index_getNextImage(&indexQueryHandle,
+                                      NULL, // indexId,
+                                      storageName, // storageName
+                                      NULL, // storageDateTime
+                                      entryName,
+                                      NULL, // fileSystemType
+                                      NULL, // size
+                                      NULL, // blockOffset
+                                      NULL // blockCount
+                                     )
+                  )
+            {
+              if (!StringList_contain(&storageNameList,storageName))
+              {
+                StringList_append(&storageNameList,storageName);
+              }
+              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+            }
+            Index_doneList(&indexQueryHandle);
+          }
+        }
+      }
+
+      if (error == ERROR_NONE)
+      {
+        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
+                               Array_cArray(&clientInfo->entryIdArray),
+                               INDEX_TYPE_DIRECTORY
+                              )
+           )
+        {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+          error = Index_initListDirectories(&indexQueryHandle,
+                                            indexHandle,
+                                            NULL, // Array_cArray(clientInfo->storageIdArray),
+                                            0, // Array_length(clientInfo->storageIdArray),
+                                            Array_cArray(&clientInfo->entryIdArray),
+                                            Array_length(&clientInfo->entryIdArray),
+                                            NULL // pattern
+                                           );
+          if (error == ERROR_NONE)
+          {
+            while (Index_getNextDirectory(&indexQueryHandle,
+                                          NULL, // indexId,
+                                          storageName, // storageName
+                                          NULL, // storageDateTime
+                                          entryName,
+                                          NULL, // timeModified
+                                          NULL, // userId
+                                          NULL, // groupId
+                                          NULL // permission
+                                         )
+                  )
+            {
+              if (!StringList_contain(&storageNameList,storageName))
+              {
+                StringList_append(&storageNameList,storageName);
+              }
+              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+            }
+            Index_doneList(&indexQueryHandle);
+          }
+        }
+      }
+
+      if (error == ERROR_NONE)
+      {
+        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
+                               Array_cArray(&clientInfo->entryIdArray),
+                               INDEX_TYPE_LINK
+                              )
+           )
+        {
+          error = Index_initListLinks(&indexQueryHandle,
+                                      indexHandle,
+                                      NULL, // Array_cArray(clientInfo->storageIdArray),
+                                      0, // Array_length(clientInfo->storageIdArray),
+                                      Array_cArray(&clientInfo->entryIdArray),
+                                      Array_length(&clientInfo->entryIdArray),
+                                      NULL // pattern
+                                     );
+          if (error == ERROR_NONE)
+          {
+            while (Index_getNextLink(&indexQueryHandle,
+                                     NULL, // indexId,
+                                     storageName, // storageName
+                                     NULL, // storageDateTime
+                                     entryName,
+                                     NULL, // destinationName
+                                     NULL, // timeModified
+                                     NULL, // userId
+                                     NULL, // groupId
+                                     NULL // permission
+                                    )
+                  )
+            {
+              if (!StringList_contain(&storageNameList,storageName))
+              {
+                StringList_append(&storageNameList,storageName);
+              }
+              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+            }
+            Index_doneList(&indexQueryHandle);
+          }
+        }
+      }
+
+      if (error == ERROR_NONE)
+      {
+        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
+                               Array_cArray(&clientInfo->entryIdArray),
+                               INDEX_TYPE_HARDLINK
+                              )
+           )
+        {
+          error = Index_initListHardLinks(&indexQueryHandle,
+                                          indexHandle,
+                                          NULL, // Array_cArray(clientInfo->storageIdArray),
+                                          0, // Array_length(clientInfo->storageIdArray),
+                                          Array_cArray(&clientInfo->entryIdArray),
+                                          Array_length(&clientInfo->entryIdArray),
+                                          NULL // pattern
+                                         );
+          if (error == ERROR_NONE)
+          {
+            while (Index_getNextHardLink(&indexQueryHandle,
+                                         NULL, // indexId,
+                                         storageName, // storageName
+                                         NULL, // storageDateTime
+                                         entryName,
+                                         NULL, // size
+                                         NULL, // timeModified
+                                         NULL, // userId
+                                         NULL, // groupId
+                                         NULL, // permission
+                                         NULL, // fragmentOffset
+                                         NULL  // fragmentSize
+                                        )
+                  )
+            {
+              if (!StringList_contain(&storageNameList,storageName))
+              {
+                StringList_append(&storageNameList,storageName);
+              }
+              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+            }
+            Index_doneList(&indexQueryHandle);
+          }
+        }
+      }
+
+      if (error == ERROR_NONE)
+      {
+        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
+                               Array_cArray(&clientInfo->entryIdArray),
+                               INDEX_TYPE_SPECIAL
+                              )
+           )
+        {
+          error = Index_initListSpecial(&indexQueryHandle,
+                                        indexHandle,
+                                        NULL, // Array_cArray(clientInfo->storageIdArray),
+                                        0, // Array_length(clientInfo->storageIdArray),
+                                        Array_cArray(&clientInfo->entryIdArray),
+                                        Array_length(&clientInfo->entryIdArray),
+                                        NULL // pattern
+                                       );
+          if (error == ERROR_NONE)
+          {
+            while (Index_getNextSpecial(&indexQueryHandle,
+                                        NULL, // indexId,
+                                        storageName, // storageName
+                                        NULL, // storageDateTime
+                                        entryName,
+                                        NULL, // timeModified
+                                        NULL, // userId
+                                        NULL, // groupId
+                                        NULL // permission
+                                       )
+                  )
+            {
+              if (!StringList_contain(&storageNameList,storageName))
+              {
+                StringList_append(&storageNameList,storageName);
+              }
+              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+            }
+            Index_doneList(&indexQueryHandle);
+          }
+        }
       }
       break;
     default:
@@ -13586,6 +13603,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
       break; /* not reached */
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    String_delete(storageName);
+    StringList_done(&storageNameList);
+    sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+    return;
   }
 
   // restore
