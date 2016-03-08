@@ -5762,7 +5762,6 @@ Database_debugEnable(1);
                                  String_cString(filter)
                                 );
 Database_debugEnable(0);
-exit(12);
       }
 if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
