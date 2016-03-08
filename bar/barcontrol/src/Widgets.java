@@ -1035,7 +1035,8 @@ class WidgetEvent
    */
   public void trigger()
   {
-    for (WidgetEventListener widgetEventListener : widgetEventListenerSet)
+    WidgetEventListener widgetEventListeners[] = widgetEventListenerSet.toArray(new WidgetEventListener[widgetEventListenerSet.size()]);
+    for (WidgetEventListener widgetEventListener : widgetEventListeners)
     {
       widgetEventListener.trigger();
     }
@@ -1101,17 +1102,24 @@ class WidgetEventListener
    */
   void trigger()
   {
-    if      (widget instanceof Control)
+    if (!widget.isDisposed())
     {
-      trigger((Control)widget);
-    }
-    else if (widget instanceof MenuItem)
-    {
-      trigger((MenuItem)widget);
+      if      (widget instanceof Control)
+      {
+        trigger((Control)widget);
+      }
+      else if (widget instanceof MenuItem)
+      {
+        trigger((MenuItem)widget);
+      }
+      else
+      {
+        trigger(widget);
+      }
     }
     else
     {
-      trigger(widget);
+      remove();
     }
   }
 }
