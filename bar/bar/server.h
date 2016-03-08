@@ -54,46 +54,6 @@ typedef struct
   SocketHandle socketHandle;
 } ServerInfo;
 
-// create status info data
-typedef struct
-{
-  ulong  doneEntries;                      // number of entries processed
-  uint64 doneBytes;                        // number of bytes processed
-  ulong  totalEntries;                     // total number of entries
-  uint64 totalBytes;                       // total bytes
-  bool   collectTotalSumDone;              // TRUE iff all file sums are collected
-  ulong  skippedEntries;                   // number of skipped enttries
-  uint64 skippedBytes;                     // sum of skipped bytes
-  ulong  errorEntries;                     // number of enttries with errors
-  uint64 errorBytes;                       // sum of byste in entries with errors
-  uint64 archiveBytes;                     // number of bytes in stored in archive
-  double compressionRatio;                 // compression ratio
-  String entryName;                        // current entry name
-  uint64 entryDoneBytes;                   // number of bytes processed of current entry
-  uint64 entryTotalBytes;                  // total number of bytes of current entry
-  String storageName;                      // current storage name
-  uint64 storageDoneBytes;                 // number of bytes processed of current archive
-  uint64 storageTotalBytes;                // total bytes of current archive
-  uint   volumeNumber;                     // current volume number
-  double volumeProgress;                   // current volume progress [0..100]
-} CreateStatusInfo;
-
-/***********************************************************************\
-* Name   : CreateStatusInfoFunction
-* Purpose: create status info call-back
-* Input  : userData         - user data
-*          error            - error code
-*          createStatusInfo - create status info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*CreateStatusInfoFunction)(void                   *userData,
-                                        Errors                 error,
-                                        const CreateStatusInfo *createStatusInfo
-                                       );
-
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/

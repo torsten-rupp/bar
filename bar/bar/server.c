@@ -138,6 +138,8 @@ typedef enum
   JOB_STATE_NONE,
   JOB_STATE_WAITING,
   JOB_STATE_RUNNING,
+  JOB_STATE_REQUEST_LOGIN_PASSWORD,
+  JOB_STATE_REQUEST_CRYPT_PASSWORD,
   JOB_STATE_REQUEST_VOLUME,
   JOB_STATE_DONE,
   JOB_STATE_ERROR,
@@ -611,10 +613,14 @@ LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 #define IS_JOB_ACTIVE(jobNode) (   (jobNode->state == JOB_STATE_WAITING) \
                                 || (jobNode->state == JOB_STATE_RUNNING) \
+                                || (jobNode->state == JOB_STATE_REQUEST_LOGIN_PASSWORD) \
+                                || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
                                 || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
                                )
 
 #define IS_JOB_RUNNING(jobNode) (   (jobNode->state == JOB_STATE_RUNNING) \
+                                 || (jobNode->state == JOB_STATE_REQUEST_LOGIN_PASSWORD) \
+                                 || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
                                  || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
                                 )
 
@@ -2907,13 +2913,17 @@ LOCAL Errors getCryptPassword(void        *userData,
                               bool        weakCheckFlag
                              )
 {
+  JobNode *jobNode = (JobNode*)userData;
+
+  assert(jobNode != NULL);
+
   UNUSED_VARIABLE(fileName);
   UNUSED_VARIABLE(validateFlag);
   UNUSED_VARIABLE(weakCheckFlag);
 
-  if (((JobNode*)userData)->cryptPassword != NULL)
+  if (jobNode->cryptPassword != NULL)
   {
-    Password_set(password,((JobNode*)userData)->cryptPassword);
+    Password_set(password,jobNode->cryptPassword);
     return ERROR_NONE;
   }
   else
@@ -3751,15 +3761,17 @@ LOCAL void remoteThreadCode(void)
     assert(stateText != NULL);
     assert(jobState != NULL);
 
-    if      (stringEqualsIgnoreCase(stateText,"-"             )) (*jobState) = JOB_STATE_NONE;
-    else if (stringEqualsIgnoreCase(stateText,"waiting"       )) (*jobState) = JOB_STATE_WAITING;
-    else if (stringEqualsIgnoreCase(stateText,"dry-run"       )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(stateText,"running"       )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(stateText,"request volume")) (*jobState) = JOB_STATE_REQUEST_VOLUME;
-    else if (stringEqualsIgnoreCase(stateText,"done"          )) (*jobState) = JOB_STATE_DONE;
-    else if (stringEqualsIgnoreCase(stateText,"ERROR"         )) (*jobState) = JOB_STATE_ERROR;
-    else if (stringEqualsIgnoreCase(stateText,"aborted"       )) (*jobState) = JOB_STATE_ABORTED;
-    else                                                         (*jobState) = JOB_STATE_NONE;
+    if      (stringEqualsIgnoreCase(stateText,"-"                     )) (*jobState) = JOB_STATE_NONE;
+    else if (stringEqualsIgnoreCase(stateText,"waiting"               )) (*jobState) = JOB_STATE_WAITING;
+    else if (stringEqualsIgnoreCase(stateText,"dry-run"               )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEqualsIgnoreCase(stateText,"running"               )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEqualsIgnoreCase(stateText,"request login password")) (*jobState) = JOB_STATE_REQUEST_LOGIN_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request crypt password")) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request volume"        )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
+    else if (stringEqualsIgnoreCase(stateText,"done"                  )) (*jobState) = JOB_STATE_DONE;
+    else if (stringEqualsIgnoreCase(stateText,"ERROR"                 )) (*jobState) = JOB_STATE_ERROR;
+    else if (stringEqualsIgnoreCase(stateText,"aborted"               )) (*jobState) = JOB_STATE_ABORTED;
+    else                                                                 (*jobState) = JOB_STATE_NONE;
 
     return TRUE;
   }
@@ -5687,13 +5699,14 @@ LOCAL bool checkPassword(const ClientInfo *clientInfo, const String encryptType,
 /***********************************************************************\
 * Name   : getJobStateText
 * Purpose: get text for job state
-* Input  : jobState - job state
+* Input  : jobState   - job state
+*          jobOptions - job options
 * Output : -
 * Return : text
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const char *getJobStateText(const JobOptions *jobOptions, JobStates jobState)
+LOCAL const char *getJobStateText(JobStates jobState, const JobOptions *jobOptions)
 {
   const char *stateText;
 
@@ -5710,6 +5723,12 @@ LOCAL const char *getJobStateText(const JobOptions *jobOptions, JobStates jobSta
       break;
     case JOB_STATE_RUNNING:
       stateText = (jobOptions->dryRunFlag) ? "dry_running" : "running";
+      break;
+    case JOB_STATE_REQUEST_LOGIN_PASSWORD:
+      stateText = "request_login_password";
+      break;
+    case JOB_STATE_REQUEST_CRYPT_PASSWORD:
+      stateText = "request_crypt_password";
       break;
     case JOB_STATE_REQUEST_VOLUME:
       stateText = "request_volume";
@@ -8364,7 +8383,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
                        jobNode->remoteHost.name,
                        jobNode->remoteHost.port,
                        jobNode->remoteHost.forceSSL,
-                       getJobStateText(&jobNode->jobOptions,jobNode->state),
+                       getJobStateText(jobNode->state,&jobNode->jobOptions),
                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
                                                   (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
                                                    || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL )
@@ -8459,7 +8478,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
     // format and send result
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
                      "state=%'s doneEntries=%lu doneBytes=%llu totalEntries=%lu totalBytes=%llu collectTotalSumDone=%y skippedEntries=%lu skippedBytes=%llu errorEntries=%lu errorBytes=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveBytes=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
-                     getJobStateText(&jobNode->jobOptions,jobNode->state),
+                     getJobStateText(jobNode->state,&jobNode->jobOptions),
                      jobNode->runningInfo.doneEntries,
                      jobNode->runningInfo.doneBytes,
                      jobNode->runningInfo.totalEntries,
@@ -13223,7 +13242,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   /***********************************************************************\
   * Name   : updateRestoreCommandStatus
   * Purpose: update restore job status
-  * Input  : jobNode           - job node
+  * Input  : userData          - user data
   *          error             - error code
   *          restoreStatusInfo - create status info data
   * Output : -
@@ -13231,11 +13250,13 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   * Notes  : -
   \***********************************************************************/
 
-  bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInfo,
+  bool updateRestoreCommandStatus(void                   *userData,
                                   Errors                  error,
                                   const RestoreStatusInfo *restoreStatusInfo
                                  )
   {
+    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
+
     assert(restoreCommandInfo != NULL);
     assert(restoreStatusInfo != NULL);
     assert(restoreStatusInfo->entryName != NULL);
@@ -13247,7 +13268,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                      restoreCommandInfo->id,
                      FALSE,
                      ERROR_NONE,
-                     "storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu",
+                     "status=running storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu",
                      restoreStatusInfo->storageName,
                      restoreStatusInfo->storageDoneBytes,
                      restoreStatusInfo->storageTotalBytes,
@@ -13612,6 +13633,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   }
 
   // restore
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
   error = Command_restore(&storageNameList,
@@ -13620,13 +13642,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                           NULL,  // deltaSourceList
                           &clientInfo->jobOptions,
                           CALLBACK(NULL,NULL),  // archiveGetCryptPasswordFunction
-                          CALLBACK((RestoreStatusInfoFunction)updateRestoreCommandStatus,&restoreCommandInfo),
+                          CALLBACK(updateRestoreCommandStatus,&restoreCommandInfo),
                           NULL,  // pauseFlag
 //TODO: callback
                           &restoreCommandInfo.clientInfo->abortFlag,
                           NULL  // logHandle
                          );
 restoreCommandInfo.clientInfo->abortFlag = FALSE;
+sleep(4);
   sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
   EntryList_done(&restoreEntryList);
   StringList_done(&storageNameList);
@@ -15496,6 +15519,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 *            newestEntriesOnly=yes|no
 *          Result:
 *            count=<n>
+*            size=<n [bytes]>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
