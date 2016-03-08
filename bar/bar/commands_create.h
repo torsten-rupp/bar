@@ -102,7 +102,7 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 *                                             ArchiveTypes (normal/full/
 *                                             incremental)
 *          archiveGetCryptPasswordFunction  - get password call back
-*                                              (can be NULL)
+*                                             (can be NULL)
 *          archiveGetCryptPasswordUserData  - user data for get password
 *                                             call back
 *          createStatusInfoFunction         - status info call back
