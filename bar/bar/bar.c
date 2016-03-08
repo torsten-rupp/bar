@@ -3830,11 +3830,13 @@ void doneLog(LogHandle *logHandle)
 {
   assert(logHandle != NULL);
   assert(logHandle->logFileName != NULL);
-  assert(logHandle->logFile != NULL);
 
-  fclose(logHandle->logFile);
-  File_delete(logHandle->logFileName,FALSE);
-  String_delete(logHandle->logFileName);
+  if (logHandle->logFile != NULL)
+  {
+    fclose(logHandle->logFile); logHandle->logFile = NULL;
+    File_delete(logHandle->logFileName,FALSE);
+    String_delete(logHandle->logFileName); logHandle->logFileName = NULL;
+  }
 }
 
 void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, va_list arguments)
@@ -3855,16 +3857,19 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 
         if (logHandle != NULL)
         {
-          // append to job log file
-          (void)fprintf(logHandle->logFile,"%s> ",String_cString(dateTime));
-          if (prefix != NULL)
+          // append to job log file (if possible)
+          if (logHandle->logFile != NULL)
           {
-            (void)fputs(prefix,logHandle->logFile);
-            (void)fprintf(logHandle->logFile,": ");
+            (void)fprintf(logHandle->logFile,"%s> ",String_cString(dateTime));
+            if (prefix != NULL)
+            {
+              (void)fputs(prefix,logHandle->logFile);
+              (void)fprintf(logHandle->logFile,": ");
+            }
+            va_copy(tmpArguments,arguments);
+            (void)vfprintf(logHandle->logFile,text,tmpArguments);
+            va_end(tmpArguments);
           }
-          va_copy(tmpArguments,arguments);
-          (void)vfprintf(logHandle->logFile,text,tmpArguments);
-          va_end(tmpArguments);
         }
 
         if (logFile != NULL)
@@ -4224,41 +4229,48 @@ UNUSED_VARIABLE(jobOptions);
       // init variables
       command = String_new();
 
-      // close job log file
-      fclose(logHandle->logFile);
-
-      // log post command for job log file
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",logHandle->logFileName,              TEXT_MACRO_PATTERN_STRING);
-      TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-      TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType),     TEXT_MACRO_PATTERN_STRING);
-      TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType),".");
-      TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
-      Misc_expandMacros(command,
-                        logPostCommand,
-                        EXPAND_MACRO_MODE_STRING,
-                        textMacros,SIZE_OF_ARRAY(textMacros),
-                        TRUE
-                       );
-      printInfo(2,"Log post process '%s'...\n",String_cString(command));
-
-      StringList_init(&stderrList);
-      error = Misc_executeCommand(logPostCommand,
-                                  textMacros,SIZE_OF_ARRAY(textMacros),
-                                  CALLBACK(NULL,NULL),
-                                  CALLBACK(executeIOlogPostProcess,&stderrList)
-                                 );
-      if (error != ERROR_NONE)
+      if (logHandle->logFile != NULL)
       {
-        printError("Cannot post-process log file (error: %s)\n",Error_getText(error));
-        STRINGLIST_ITERATE(&stderrList,stringNode,string)
+        // close job log file
+        fclose(logHandle->logFile);
+
+        // log post command for job log file
+        TEXT_MACRO_N_STRING (textMacros[0],"%file",logHandle->logFileName,              TEXT_MACRO_PATTERN_STRING);
+        TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%type",getArchiveTypeName(archiveType),     TEXT_MACRO_PATTERN_STRING);
+        TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   getArchiveTypeShortName(archiveType),".");
+        TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
+        Misc_expandMacros(command,
+                          logPostCommand,
+                          EXPAND_MACRO_MODE_STRING,
+                          textMacros,SIZE_OF_ARRAY(textMacros),
+                          TRUE
+                         );
+        printInfo(2,"Log post process '%s'...\n",String_cString(command));
+
+        StringList_init(&stderrList);
+        error = Misc_executeCommand(logPostCommand,
+                                    textMacros,SIZE_OF_ARRAY(textMacros),
+                                    CALLBACK(NULL,NULL),
+                                    CALLBACK(executeIOlogPostProcess,&stderrList)
+                                   );
+        if (error != ERROR_NONE)
         {
-          printError("  %s\n",String_cString(string));
+          printError("Cannot post-process log file (error: %s)\n",Error_getText(error));
+          STRINGLIST_ITERATE(&stderrList,stringNode,string)
+          {
+            printError("  %s\n",String_cString(string));
+          }
         }
+        StringList_done(&stderrList);
       }
-      StringList_done(&stderrList);
 
       // reset and reopen job log file
       logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
+      if (logHandle->logFile == NULL)
+      {
+        printWarning("Cannot re-open log file '%s' (error: %s)",String_cString(logHandle->logFileName),strerror(errno));
+      }
 
       // free resources
       String_delete(command);
