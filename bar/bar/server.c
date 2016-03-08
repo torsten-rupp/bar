@@ -429,15 +429,9 @@ bool abortFlag;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
 
+//TODO: single array?
   Array               storageIdArray;                      // ids of storage archives to list/restore
   Array               entryIdArray;                        // ids of entries to restore
-//TODO remove
-  Array               fileIdArray;                         // ids of file entries to restore
-  Array               imageIdArray;                        // ids of image entries to restore
-  Array               directoryIdArray;                    // ids of directory entries to restore
-  Array               linkIdArray;                         // ids of link entries to restore
-  Array               hardLinkIdArray;                     // ids of hardlink entries to restore
-  Array               specialIdArray;                      // ids of special entries to restore
 } ClientInfo;
 
 // client node
@@ -12906,7 +12900,6 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
-fprintf(stderr,"%s, %d: +++++++++++++++++++ %d\n",__FILE__,__LINE__,Array_length(&clientInfo->storageIdArray));
   error = Index_getStoragesInfo(indexHandle,
                                 Array_cArray(&clientInfo->storageIdArray),
                                 Array_length(&clientInfo->storageIdArray),
@@ -12922,120 +12915,6 @@ fprintf(stderr,"%s, %d: +++++++++++++++++++ %d\n",__FILE__,__LINE__,Array_length
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
-
-#if 0
-  IndexQueryHandle indexQueryHandle;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  IndexId          entityId;
-  IndexId          storageId;
-  // get job UUID, entity id, or storage id
-  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
-     )
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
-    return;
-  }
-
-
-  if (!String_isEmpty(jobUUID))
-  {
-//????
-    // add all storage ids with specified uuid
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entity id
-                                   jobUUID,
-                                   STORAGE_TYPE_ANY,
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
-                                   INDEX_STATE_SET_ALL,
-                                   NULL,  // pattern
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      return;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // entity id
-                                &storageId,
-                                NULL,  // jobUUID
-                                NULL,  // scheduleUUID
-                                NULL,  // archiveType
-                                NULL,  // storageName
-                                NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
-          )
-    {
-      Array_append(&clientInfo->storageIdArray,&storageId);
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-
-  if (entityId != INDEX_ID_NONE)
-  {
-    // add all storage ids with entity id
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   entityId,
-                                   NULL,  // jobUUID
-                                   STORAGE_TYPE_ANY,
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
-                                   INDEX_STATE_SET_ALL,
-                                   NULL,  // pattern
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      return;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // entityId
-                                &storageId,
-                                NULL,  // jobUUID
-                                NULL,  // scheduleUUID
-                                NULL,  // archiveType
-                                NULL,  // storageName
-                                NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
-          )
-    {
-      Array_append(&clientInfo->storageIdArray,&storageId);
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-
-  if (storageId != INDEX_ID_NONE)
-  {
-    // add to storage id array
-    Array_append(&clientInfo->storageIdArray,&storageId);
-  }
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-#endif
 }
 
 /***********************************************************************\
@@ -13059,12 +12938,6 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, uint id, const S
   UNUSED_VARIABLE(argumentMap);
 
   Array_clear(&clientInfo->entryIdArray);
-  Array_clear(&clientInfo->fileIdArray);
-  Array_clear(&clientInfo->imageIdArray);
-  Array_clear(&clientInfo->directoryIdArray);
-  Array_clear(&clientInfo->linkIdArray);
-  Array_clear(&clientInfo->hardLinkIdArray);
-  Array_clear(&clientInfo->specialIdArray);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13105,21 +12978,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
   }
 
   // add to id array
-#warning TODO: single array
   Array_append(&clientInfo->entryIdArray,&entryId);
-  switch (Index_getType(entryId))
-  {
-    case INDEX_TYPE_FILE     : Array_append(&clientInfo->fileIdArray,     &entryId); break;
-    case INDEX_TYPE_IMAGE    : Array_append(&clientInfo->imageIdArray,    &entryId); break;
-    case INDEX_TYPE_DIRECTORY: Array_append(&clientInfo->directoryIdArray,&entryId); break;
-    case INDEX_TYPE_LINK     : Array_append(&clientInfo->linkIdArray,     &entryId); break;
-    case INDEX_TYPE_HARDLINK : Array_append(&clientInfo->hardLinkIdArray, &entryId); break;
-    case INDEX_TYPE_SPECIAL  : Array_append(&clientInfo->specialIdArray,  &entryId); break;
-    default:
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"invalid index type %d",Index_getType(entryId));
-      return;
-      break; /* not reached */
-  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13160,21 +13019,7 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, uint id, const 
   }
 
   // add to id array
-#warning TODO: single array
   Array_remove(&clientInfo->entryIdArray,&entryId);
-  switch (Index_getType(entryId))
-  {
-    case INDEX_TYPE_FILE     : Array_remove(&clientInfo->fileIdArray,     &entryId); break;
-    case INDEX_TYPE_IMAGE    : Array_remove(&clientInfo->imageIdArray,    &entryId); break;
-    case INDEX_TYPE_DIRECTORY: Array_remove(&clientInfo->directoryIdArray,&entryId); break;
-    case INDEX_TYPE_LINK     : Array_remove(&clientInfo->linkIdArray,     &entryId); break;
-    case INDEX_TYPE_HARDLINK : Array_remove(&clientInfo->hardLinkIdArray, &entryId); break;
-    case INDEX_TYPE_SPECIAL  : Array_remove(&clientInfo->specialIdArray,  &entryId); break;
-    default:
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"invalid index type %d",Index_getType(entryId));
-      return;
-      break; /* not reached */
-  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13512,8 +13357,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                     indexHandle,
                                     NULL, // Array_cArray(clientInfo->storageIdArray),
                                     0, // Array_length(clientInfo->storageIdArray),
-                                    Array_cArray(&clientInfo->fileIdArray),
-                                    Array_length(&clientInfo->fileIdArray),
+                                    Array_cArray(&clientInfo->entryIdArray),
+                                    Array_length(&clientInfo->entryIdArray),
                                     NULL // pattern
                                    );
         if (error != ERROR_NONE)
@@ -13551,8 +13396,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                      indexHandle,
                                      NULL, // Array_cArray(clientInfo->storageIdArray),
                                      0, // Array_length(clientInfo->storageIdArray),
-                                     Array_cArray(&clientInfo->imageIdArray),
-                                     Array_length(&clientInfo->imageIdArray),
+                                     Array_cArray(&clientInfo->entryIdArray),
+                                     Array_length(&clientInfo->entryIdArray),
                                      NULL // pattern
                                     );
         if (error != ERROR_NONE)
@@ -13587,8 +13432,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                           indexHandle,
                                           NULL, // Array_cArray(clientInfo->storageIdArray),
                                           0, // Array_length(clientInfo->storageIdArray),
-                                          Array_cArray(&clientInfo->directoryIdArray),
-                                          Array_length(&clientInfo->directoryIdArray),
+                                          Array_cArray(&clientInfo->entryIdArray),
+                                          Array_length(&clientInfo->entryIdArray),
                                           NULL // pattern
                                          );
         if (error != ERROR_NONE)
@@ -13623,8 +13468,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                     indexHandle,
                                     NULL, // Array_cArray(clientInfo->storageIdArray),
                                     0, // Array_length(clientInfo->storageIdArray),
-                                    Array_cArray(&clientInfo->linkIdArray),
-                                    Array_length(&clientInfo->linkIdArray),
+                                    Array_cArray(&clientInfo->entryIdArray),
+                                    Array_length(&clientInfo->entryIdArray),
                                     NULL // pattern
                                    );
         if (error != ERROR_NONE)
@@ -13660,8 +13505,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                         indexHandle,
                                         NULL, // Array_cArray(clientInfo->storageIdArray),
                                         0, // Array_length(clientInfo->storageIdArray),
-                                        Array_cArray(&clientInfo->hardLinkIdArray),
-                                        Array_length(&clientInfo->hardLinkIdArray),
+                                        Array_cArray(&clientInfo->entryIdArray),
+                                        Array_length(&clientInfo->entryIdArray),
                                         NULL // pattern
                                        );
         if (error != ERROR_NONE)
@@ -13699,8 +13544,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                       indexHandle,
                                       NULL, // Array_cArray(clientInfo->storageIdArray),
                                       0, // Array_length(clientInfo->storageIdArray),
-                                      Array_cArray(&clientInfo->specialIdArray),
-                                      Array_length(&clientInfo->specialIdArray),
+                                      Array_cArray(&clientInfo->entryIdArray),
+                                      Array_length(&clientInfo->entryIdArray),
                                       NULL // pattern
                                      );
         if (error != ERROR_NONE)
@@ -17336,12 +17181,6 @@ clientInfo->abortFlag = FALSE;
   List_init(&clientInfo->directoryInfoList);
   Array_init(&clientInfo->storageIdArray,  sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   Array_init(&clientInfo->entryIdArray,    sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->fileIdArray,     sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->imageIdArray,    sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->directoryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->linkIdArray,     sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->hardLinkIdArray, sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->specialIdArray,  sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
 }
 
 /***********************************************************************\
@@ -17462,12 +17301,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
-  Array_done(&clientInfo->specialIdArray);
-  Array_done(&clientInfo->hardLinkIdArray);
-  Array_done(&clientInfo->linkIdArray);
-  Array_done(&clientInfo->directoryIdArray);
-  Array_done(&clientInfo->imageIdArray);
-  Array_done(&clientInfo->fileIdArray);
   Array_done(&clientInfo->entryIdArray);
   Array_done(&clientInfo->storageIdArray);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
