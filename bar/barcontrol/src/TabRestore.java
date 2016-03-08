@@ -7736,13 +7736,12 @@ boolean overwriteFiles = false;
             // set storage entries to restore
             setStorageList(indexIdSet);
 
+            // start restore
             long                errorCount    = 0;
             final RestoreStates prevState[]   = new RestoreStates[]{RestoreStates.NONE};
             final boolean       skipAllFlag[] = new boolean[]{false};
-            boolean             passwordFlag  = false;
 final String[] errorMessage = new String[1];
 int error;
-            // start restore
             error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
                                                                  directory,
                                                                  overwriteFiles
@@ -8537,23 +8536,12 @@ boolean overwriteFiles = false;
             // set entries to restore
             setEntryList(entryIdSet);
 
+            // start restore
             long                errorCount    = 0;
             final RestoreStates prevState[]   = new RestoreStates[]{RestoreStates.NONE};
             final boolean       skipAllFlag[] = new boolean[]{false};
-Dprintf.dprintf("");
-//              busyDialog.updateText(0,"%s",entryData.storageName);
-//              busyDialog.updateProgressBar(0,((double)n*100.0)/(double)entryData_.length);
-Dprintf.dprintf("");
-//              busyDialog.updateText(1,"%s",new File(directory,entryData.name).getPath());
-
-            boolean ftpPasswordFlag     = false;
-            boolean sshPasswordFlag     = false;
-            boolean webdavPasswordFlag  = false;
-            boolean decryptPasswordFlag = false;
 final String[] errorMessage = new String[1];
 int error;
-//TODO: restore with one command: send entry list before
-            // start restore
             error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S overwriteFiles=%y",
                                                                  directory,
                                                                  overwriteFiles
