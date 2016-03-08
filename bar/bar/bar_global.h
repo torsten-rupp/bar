@@ -517,6 +517,39 @@ struct JobOptions
   bool                         archiveFileModeOverwriteFlag;  // TRUE for overwrite existing archive files
 };
 
+// password types
+typedef enum
+{
+  PASSWORD_TYPE_FTP,
+  PASSWORD_TYPE_SSH,
+  PASSWORD_TYPE_WEBDAV,
+  PASSWORD_TYPE_CRYPT
+} PasswordTypes;
+
+/***********************************************************************\
+* Name   : GetPasswordFunction
+* Purpose: call-back to get password
+* Input  : password      - password variable
+*          passwordType  - password type
+*          fileName      - file name
+*          validateFlag  - TRUE to validate input, FALSE otherwise
+*          weakCheckFlag - TRUE for weak password checking, FALSE
+*                          otherwise (print warning if password seems to
+*                          be a weak password)
+*          userData      - user data
+* Output : password - crypt password
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*GetPasswordFunction)(Password      *password,
+                                     PasswordTypes passwordType,
+                                     ConstString   fileName,
+                                     bool          validateFlag,
+                                     bool          weakCheckFlag,
+                                     void          *userData
+                                    );
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
