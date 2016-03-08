@@ -1567,17 +1567,18 @@ LOCAL ScheduleNode *parseScheduleDateTime(const String date,
 /***********************************************************************\
 * Name   : storageRequestVolume
 * Purpose: request volume call-back
-* Input  : jobNode      - job node
+* Input  : userData     - user data: job node
 *          volumeNumber - volume number
 * Output : -
 * Return : request result; see StorageRequestResults
 * Notes  : -
 \***********************************************************************/
 
-LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
-                                                 uint    volumeNumber
+LOCAL StorageRequestResults storageRequestVolume(void *userData,
+                                                 uint volumeNumber
                                                 )
 {
+  JobNode               *jobNode = (JobNode*)userData;
   StorageRequestResults storageRequestResult;
   SemaphoreLock         semaphoreLock;
 
@@ -1591,10 +1592,11 @@ LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
     jobNode->requestedVolumeNumber = volumeNumber;
     String_format(String_clear(jobNode->runningInfo.message),"Please insert DVD #%d",volumeNumber);
 
-    // wait until volume is available or job is aborted
+    // set job state
     assert(jobNode->state == JOB_STATE_RUNNING);
     jobNode->state = JOB_STATE_REQUEST_VOLUME;
 
+    // wait until volume is available or job is aborted
     storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
     do
     {
@@ -1976,8 +1978,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                   NULL,  // scheduleTitle,
                                                   NULL,  // scheduleCustomText,
 //                                                      CALLBACK(getCryptPassword,jobNode),
-//                                                      CALLBACK((CreateStatusInfoFunction)updateCreateJobStatus,jobNode),
-                                                  CALLBACK((StorageRequestVolumeFunction)storageRequestVolume,jobNode)
+//                                                      CALLBACK(updateCreateJobStatus,jobNode),
+                                                  CALLBACK(storageRequestVolume,jobNode)
                                                  );
   }
 }
@@ -2899,8 +2901,8 @@ LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
 
 /***********************************************************************\
 * Name   : getCryptPassword
-* Purpose: get crypt password
-* Input  : userData      - job info
+* Purpose: get crypt password call-back
+* Input  : userData      - user data: job node
 *          password      - crypt password variable
 *          fileName      - file name
 *          validateFlag  - TRUE to validate input, FALSE otherwise
@@ -2941,7 +2943,7 @@ LOCAL Errors getCryptPassword(void        *userData,
 /***********************************************************************\
 * Name   : updateCreateJobStatus
 * Purpose: update create status
-* Input  : jobNode          - job node
+* Input  : userData         - user data: job node
 *          error            - error code
 *          createStatusInfo - create status info data
 * Output : -
@@ -2949,11 +2951,12 @@ LOCAL Errors getCryptPassword(void        *userData,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateCreateJobStatus(JobNode                *jobNode,
+LOCAL void updateCreateJobStatus(void                   *userData,
                                  Errors                 error,
                                  const CreateStatusInfo *createStatusInfo
                                 )
 {
+  JobNode       *jobNode = (JobNode*)userData;
   SemaphoreLock semaphoreLock;
   double        entriesPerSecondAverage,bytesPerSecondAverage,storageBytesPerSecondAverage;
   ulong         restFiles;
@@ -3351,8 +3354,8 @@ LOCAL void jobThreadCode(void)
 NULL,//                                                        scheduleTitle,
                                                         scheduleCustomText,
                                                         CALLBACK(getCryptPassword,jobNode),
-                                                        CALLBACK((CreateStatusInfoFunction)updateCreateJobStatus,jobNode),
-                                                        CALLBACK((StorageRequestVolumeFunction)storageRequestVolume,jobNode),
+                                                        CALLBACK(updateCreateJobStatus,jobNode),
+                                                        CALLBACK(storageRequestVolume,jobNode),
                                                         &pauseFlags.create,
                                                         &pauseFlags.storage,
 //TODO access jobNode?
@@ -13275,6 +13278,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     assert(restoreStatusInfo != NULL);
     assert(restoreStatusInfo->entryName != NULL);
     assert(restoreStatusInfo->storageName != NULL);
+#warning TODO remove
 static int n = 0;
 n++;
 
@@ -13677,6 +13681,29 @@ sleep(4);
   StringList_done(&storageNameList);
   String_delete(entryName);
   String_delete(storageName);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_restoreContinue
+* Purpose: continue restore archives/files
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_restoreContinue(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -16955,6 +16982,7 @@ SERVER_COMMANDS[] =
 //  { "RESTORE_LIST_CLEAR",          serverCommand_restoreListClear,         AUTHORIZATION_STATE_OK      },
 //  { "RESTORE_LIST_ADD",            serverCommand_restoreListAdd,           AUTHORIZATION_STATE_OK      },
   { "RESTORE",                     serverCommand_restore,                  AUTHORIZATION_STATE_OK      },
+  { "RESTORE_CONTINUE",            serverCommand_restoreContinue,          AUTHORIZATION_STATE_OK      },
 
   { "INDEX_UUID_LIST",             serverCommand_indexUUIDList,            AUTHORIZATION_STATE_OK      },
   { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_OK      },
