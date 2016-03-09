@@ -7762,6 +7762,8 @@ int error;
                                                    String        entryName         = valueMap.getString("entryName"                );
                                                    long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"           );
                                                    long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"          );
+                                                   final String  requestPassword   = valueMap.getString("requestPassword"          );
+                                                   final String  requestVolume     = valueMap.getString("requestVolume"            );
 
                                                    busyDialog.updateText(0,"%s",storageName);
                                                    busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
@@ -7782,18 +7784,84 @@ int error;
                                                        if (prevState[0] != RestoreStates.REQUEST_FTP_PASSWORD)
                                                        {
 Dprintf.dprintf("");
+                                                         // get ftp password
+                                                         display.syncExec(new Runnable()
+                                                         {
+                                                           @Override
+                                                           public void run()
+                                                           {
+                                                             String password = Dialogs.password(shell,
+                                                                                                BARControl.tr("FTP login password"),
+                                                                                                BARControl.tr("Please enter FTP login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Password")+":"
+                                                                                               );
+                                                             if (password != null)
+                                                             {
+                                                               BARServer.executeCommand(StringParser.format("FTP_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                                                            BARServer.getPasswordEncryptType(),
+                                                                                                            BARServer.encryptPassword(password)
+                                                                                                           ),
+                                                                                        0  // debugLevel
+                                                                                       );
+                                                             }
+                                                           }
+                                                         });
                                                        }
                                                        break;
                                                      case REQUEST_SSH_PASSWORD:
                                                        if (prevState[0] != RestoreStates.REQUEST_SSH_PASSWORD)
                                                        {
 Dprintf.dprintf("");
+                                                         // get ssh password
+                                                         display.syncExec(new Runnable()
+                                                         {
+                                                           @Override
+                                                           public void run()
+                                                           {
+                                                             String password = Dialogs.password(shell,
+                                                                                                BARControl.tr("SSH (TLS) login password"),
+                                                                                                BARControl.tr("Please enter SSH (TLS) login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Password")+":"
+                                                                                               );
+                                                             if (password != null)
+                                                             {
+                                                               BARServer.executeCommand(StringParser.format("SSH_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                                                            BARServer.getPasswordEncryptType(),
+                                                                                                            BARServer.encryptPassword(password)
+                                                                                                           ),
+                                                                                        0  // debugLevel
+                                                                                       );
+                                                             }
+                                                           }
+                                                         });
                                                        }
                                                        break;
                                                      case REQUEST_WEBDAV_PASSWORD:
                                                        if (prevState[0] != RestoreStates.REQUEST_WEBDAV_PASSWORD)
                                                        {
 Dprintf.dprintf("");
+                                                         // get webdav password
+                                                         display.syncExec(new Runnable()
+                                                         {
+                                                           @Override
+                                                           public void run()
+                                                           {
+                                                             String password = Dialogs.password(shell,
+                                                                                                BARControl.tr("Webdav login password"),
+                                                                                                BARControl.tr("Please enter Webdav login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Password")+":"
+                                                                                               );
+                                                             if (password != null)
+                                                             {
+                                                               BARServer.executeCommand(StringParser.format("WEBDAV_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                                                            BARServer.getPasswordEncryptType(),
+                                                                                                            BARServer.encryptPassword(password)
+                                                                                                           ),
+                                                                                        0  // debugLevel
+                                                                                       );
+                                                             }
+                                                           }
+                                                         });
                                                        }
                                                        break;
                                                      case REQUEST_CRYPT_PASSWORD:
@@ -7807,9 +7875,7 @@ Dprintf.dprintf("");
                                                            public void run()
                                                            {
                                                              String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("Decrypt password")//,
-//                                                                                                (String)null,
-//                                                                                                BARControl.tr("Password")+":"
+                                                                                                BARControl.tr("Decrypt password")
                                                                                                );
                                                              if (password != null)
                                                              {
@@ -8562,6 +8628,8 @@ int error;
                                                    String        entryName         = valueMap.getString("entryName"                );
                                                    long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"           );
                                                    long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"          );
+                                                   final String  requestPassword   = valueMap.getString("requestPassword"          );
+                                                   final String  requestVolume     = valueMap.getString("requestVolume"            );
 
                                                    busyDialog.updateText(0,"%s",storageName);
                                                    busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
@@ -8590,7 +8658,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("FTP login password"),
-                                           "xxx",//                                                         BARControl.tr("Please enter FTP login password for: {0}.",entryData.storageName),
+                                                                                                BARControl.tr("Please enter FTP login password for: {0}",requestPassword),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
@@ -8618,7 +8686,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("SSH (TLS) login password"),
-                                           "xxx",//                                                         BARControl.tr("Please enter SSH (TLS) login password for: {0}.",entryData.storageName),
+                                                                                                BARControl.tr("Please enter SSH (TLS) login password for: {0}",requestPassword),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
@@ -8646,7 +8714,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("Webdav login password"),
-                                           "xxx",//                                                         BARControl.tr("Please enter Webdav login password for: {0}.",entryData.storageName),
+                                                                                                BARControl.tr("Please enter Webdav login password for: {0}",requestPassword),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
@@ -8673,9 +8741,7 @@ Dprintf.dprintf("");
                                                            public void run()
                                                            {
                                                              String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("Decrypt password")//,
-//                                                                                                (String)null,
-//                                                                                                BARControl.tr("Password")+":"
+                                                                                                BARControl.tr("Decrypt password")
                                                                                                );
                                                              if (password != null)
                                                              {
