@@ -5438,11 +5438,11 @@ bool isServerAllocationPending(uint serverId)
   return pendingFlag;
 }
 
-Errors inputCryptPassword(void        *userData,
-                          Password    *password,
-                          ConstString fileName,
-                          bool        validateFlag,
-                          bool        weakCheckFlag
+Errors inputCryptPassword(Password   *password,
+                          const char *message,
+                          bool       validateFlag,
+                          bool       weakCheckFlag,
+                          void       *userData
                          )
 {
   Errors        error;
@@ -5467,9 +5467,9 @@ Errors inputCryptPassword(void        *userData,
 
           // input password
           title = String_new();
-          if ((fileName != NULL) && !String_isEmpty(fileName))
+          if ((message != NULL) && !stringIsEmpty(message))
           {
-            String_format(title,"Crypt password for '%S'",fileName);
+            String_format(title,"Crypt password for '%s'",message);
           }
           else
           {
@@ -5486,9 +5486,9 @@ Errors inputCryptPassword(void        *userData,
           if (validateFlag)
           {
             // verify input password
-            if ((fileName != NULL) && !String_isEmpty(fileName))
+            if ((message != NULL) && !stringIsEmpty(message))
             {
-              String_format(String_clear(title),"Verify password for '%S'",fileName);
+              String_format(String_clear(title),"Verify password for '%s'",message);
             }
             else
             {

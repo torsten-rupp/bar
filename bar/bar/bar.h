@@ -889,23 +889,23 @@ bool isServerAllocationPending(uint serverId);
 /***********************************************************************\
 * Name   : inputCryptPassword
 * Purpose: input crypt password
-* Input  : userData      - (not used)
-*          password      - crypt password variable
-*          fileName      - file name
+* Input  : password      - crypt password variable
+*          message       - message
 *          validateFlag  - TRUE to validate input, FALSE otherwise
 *          weakCheckFlag - TRUE for weak password checking, FALSE
 *                          otherwise (print warning if password seems to
 *                          be a weak password)
+*          userData      - (not used)
 * Output : password - crypt password
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors inputCryptPassword(void        *userData,
-                          Password    *password,
-                          ConstString fileName,
-                          bool        validateFlag,
-                          bool        weakCheckFlag
+Errors inputCryptPassword(Password   *password,
+                          const char *message,
+                          bool       validateFlag,
+                          bool       weakCheckFlag,
+                          void       *userData
                          );
 
 // ----------------------------------------------------------------------
