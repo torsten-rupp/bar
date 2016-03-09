@@ -67,6 +67,22 @@ typedef void(*RestoreStatusInfoFunction)(Errors                  error,
                                          void                    *userData
                                         );
 
+/***********************************************************************\
+* Name   : RestoreErrorFunction
+* Purpose: restore status info call-back
+* Input  : error             - error code
+*          restoreStatusInfo - restore status info
+*          userData          - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*RestoreErrorFunction)(Errors                  error,
+                                    const RestoreStatusInfo *restoreStatusInfo,
+                                    void                    *userData
+                                   );
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
