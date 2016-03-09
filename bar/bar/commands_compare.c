@@ -95,31 +95,31 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 /***********************************************************************\
 * Name   : compareArchiveContent
 * Purpose: compare archive content
-* Input  : storageSpecifier                 - storage specifier
-*          archiveName                      - archive name
-*          includeEntryList                 - include entry list
-*          excludePatternList               - exclude pattern list
-*          deltaSourceList                  - delta source list
-*          jobOptions                       - job options
-*          archiveGetCryptPasswordFunction  - get password call back
-*          archiveGetCryptPasswordUserData  - user data for get password
-*          fragmentList                     - fragment list
-*          logHandle                        - log handle (can be NULL)
+* Input  : storageSpecifier    - storage specifier
+*          archiveName         - archive name
+*          includeEntryList    - include entry list
+*          excludePatternList  - exclude pattern list
+*          deltaSourceList     - delta source list
+*          jobOptions          - job options
+*          getPasswordFunction - get password call back
+*          getPasswordUserData - user data for get password
+*          fragmentList        - fragment list
+*          logHandle           - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors compareArchiveContent(StorageSpecifier                *storageSpecifier,
-                                   ConstString                     archiveName,
-                                   const EntryList                 *includeEntryList,
-                                   const PatternList               *excludePatternList,
-                                   DeltaSourceList                 *deltaSourceList,
-                                   JobOptions                      *jobOptions,
-                                   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                                   void                            *archiveGetCryptPasswordUserData,
-                                   FragmentList                    *fragmentList,
-                                   LogHandle                       *logHandle
+LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
+                                   ConstString         archiveName,
+                                   const EntryList     *includeEntryList,
+                                   const PatternList   *excludePatternList,
+                                   DeltaSourceList     *deltaSourceList,
+                                   JobOptions          *jobOptions,
+                                   GetPasswordFunction getPasswordFunction,
+                                   void                *getPasswordUserData,
+                                   FragmentList        *fragmentList,
+                                   LogHandle           *logHandle
                                   )
 {
   byte              *archiveBuffer,*buffer;
@@ -176,8 +176,8 @@ LOCAL Errors compareArchiveContent(StorageSpecifier                *storageSpeci
                        archiveName,
                        deltaSourceList,
                        jobOptions,
-                       archiveGetCryptPasswordFunction,
-                       archiveGetCryptPasswordUserData,
+                       getPasswordFunction,
+                       getPasswordUserData,
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -1519,14 +1519,14 @@ LOCAL Errors compareArchiveContent(StorageSpecifier                *storageSpeci
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_compare(const StringList                *storageNameList,
-                       const EntryList                 *includeEntryList,
-                       const PatternList               *excludePatternList,
-                       DeltaSourceList                 *deltaSourceList,
-                       JobOptions                      *jobOptions,
-                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                       void                            *archiveGetCryptPasswordUserData,
-                       LogHandle                       *logHandle
+Errors Command_compare(const StringList    *storageNameList,
+                       const EntryList     *includeEntryList,
+                       const PatternList   *excludePatternList,
+                       DeltaSourceList     *deltaSourceList,
+                       JobOptions          *jobOptions,
+                       GetPasswordFunction getPasswordFunction,
+                       void                *getPasswordUserData,
+                       LogHandle           *logHandle
                       )
 {
   FragmentList               fragmentList;
@@ -1574,8 +1574,8 @@ Errors Command_compare(const StringList                *storageNameList,
                                     excludePatternList,
                                     deltaSourceList,
                                     jobOptions,
-                                    archiveGetCryptPasswordFunction,
-                                    archiveGetCryptPasswordUserData,
+                                    getPasswordFunction,
+                                    getPasswordUserData,
                                     &fragmentList,
                                     logHandle
                                    );
@@ -1619,8 +1619,8 @@ Errors Command_compare(const StringList                *storageNameList,
                                           excludePatternList,
                                           deltaSourceList,
                                           jobOptions,
-                                          archiveGetCryptPasswordFunction,
-                                          archiveGetCryptPasswordUserData,
+                                          getPasswordFunction,
+                                          getPasswordUserData,
                                           &fragmentList,
                                           logHandle
                                          );

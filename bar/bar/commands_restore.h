@@ -79,39 +79,38 @@ typedef void(*RestoreStatusInfoFunction)(void                    *userData,
 /***********************************************************************\
 * Name   : Command_restore
 * Purpose: restore archive content
-* Input  : storageNameList                  - list with storage names
-*          includeEntryList                 - include entry list
-*          excludePatternList               - exclude pattern list
-*          deltaSourceList                  - delta source list
-*          jobOptions                       - job options
-*          archiveGetCryptPasswordFunction  - get password call back
-*          archiveGetCryptPasswordUserData  - user data for get password
-*                                             call back
-*          restoreStatusInfoFunction        - status info call back
-*                                             function (can be NULL)
-*          restoreStatusInfoUserData        - user data for status info
-*                                             function
-*          pauseRestoreFlag                 - pause restore flag (can be NULL)
-*          requestedAbortFlag               - request abort flag (can be
-*                                             NULL)
-*          logHandle                        - log handle (can be NULL)
+* Input  : storageNameList           - list with storage names
+*          includeEntryList          - include entry list
+*          excludePatternList        - exclude pattern list
+*          deltaSourceList           - delta source list
+*          jobOptions                - job options
+*          getPasswordFunction       - get password call back
+*          getPasswordUserData       - user data for get password
+*                                      call back
+*          restoreStatusInfoFunction - status info call back
+*                                      function (can be NULL)
+*          restoreStatusInfoUserData - user data for status info
+*                                      function
+*          pauseRestoreFlag          - pause restore flag (can be NULL)
+*          requestedAbortFlag        - request abort flag (can be NULL)
+*          logHandle                 - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if all files restored, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_restore(const StringList                *storageNameList,
-                       const EntryList                 *includeEntryList,
-                       const PatternList               *excludePatternList,
-                       DeltaSourceList                 *deltaSourceList,
-                       JobOptions                      *jobOptions,
-                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                       void                            *archiveGetCryptPasswordUserData,
-                       RestoreStatusInfoFunction       restoreStatusInfoFunction,
-                       void                            *restoreStatusInfoUserData,
-                       bool                            *pauseRestoreFlag,
-                       bool                            *requestedAbortFlag,
-                       LogHandle                       *logHandle
+Errors Command_restore(const StringList          *storageNameList,
+                       const EntryList           *includeEntryList,
+                       const PatternList         *excludePatternList,
+                       DeltaSourceList           *deltaSourceList,
+                       JobOptions                *jobOptions,
+                       GetPasswordFunction       getPasswordFunction,
+                       void                      *getPasswordUserData,
+                       RestoreStatusInfoFunction restoreStatusInfoFunction,
+                       void                      *restoreStatusInfoUserData,
+                       bool                      *pauseRestoreFlag,
+                       bool                      *requestedAbortFlag,
+                       LogHandle                 *logHandle
                       );
 
 #ifdef __cplusplus

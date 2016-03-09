@@ -26,7 +26,7 @@
 #include "crypt.h"
 #include "storage.h"
 #include "server.h"
-#include "bar.h"
+#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -88,37 +88,38 @@ typedef void(*CreateStatusInfoFunction)(void                   *userData,
 /***********************************************************************\
 * Name   : Command_create
 * Purpose: create archive
-* Input  : jobUUID                          - unique job id to store or NULL
-*          scheduleUUID                     - unique schedule id to store or NULL
-*          storageName                      - storage name
-*          includeEntryList                 - include entry list
-*          excludePatternList               - exclude pattern list
-*          mountList                        - mount list or NULL
-*          compressExcludePatternList       - exclude compression pattern
-*                                             list
-*          deltaSourceList                  - delta soruce list
-*          jobOptions                       - job options
-*          archiveType                      - archive type; see
-*                                             ArchiveTypes (normal/full/
-*                                             incremental)
-*          archiveGetCryptPasswordFunction  - get password call back
-*                                             (can be NULL)
-*          archiveGetCryptPasswordUserData  - user data for get password
-*                                             call back
-*          createStatusInfoFunction         - status info call back
-*                                             function (can be NULL)
-*          createStatusInfoUserData         - user data for status info
-*                                             function
-*          storageRequestVolumeFunction     - request volume call back
-*                                             function (can be NULL)
-*          storageRequestVolumeUserData     - user data for request
-*                                             volume
-*          pauseCreateFlag                  - pause creation flag (can
-*                                             be NULL)
-*          pauseStorageFlag                 - pause storage flag (can
-*                                             be NULL)
-*          requestedAbortFlag               - request abort flag (can be
-*                                             NULL)
+* Input  : jobUUID                      - unique job id to store or NULL
+*          scheduleUUID                 - unique schedule id to store or
+*                                         NULL
+*          storageName                  - storage name
+*          includeEntryList             - include entry list
+*          excludePatternList           - exclude pattern list
+*          mountList                    - mount list or NULL
+*          compressExcludePatternList   - exclude compression pattern
+*                                         list
+*          deltaSourceList              - delta soruce list
+*          jobOptions                   - job options
+*          archiveType                  - archive type; see
+*                                         ArchiveTypes (normal/full/
+*                                         incremental)
+*          getPasswordFunction          - get password call back
+*                                         (can be NULL)
+*          getPasswordUserData          - user data for get password
+*                                         call back
+*          createStatusInfoFunction     - status info call back
+*                                         function (can be NULL)
+*          createStatusInfoUserData     - user data for status info
+*                                         function
+*          storageRequestVolumeFunction - request volume call back
+*                                         function (can be NULL)
+*          storageRequestVolumeUserData - user data for request
+*                                         volume
+*          pauseCreateFlag              - pause creation flag (can
+*                                         be NULL)
+*          pauseStorageFlag             - pause storage flag (can
+*                                         be NULL)
+*          requestedAbortFlag           - request abort flag (can be
+*                                         NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -136,8 +137,8 @@ Errors Command_create(ConstString                     jobUUID,
                       ArchiveTypes                    archiveType,
                       ConstString                     scheduleTitle,
                       ConstString                     scheduleCustomText,
-                      ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                      void                            *archiveGetCryptPasswordUserData,
+                      GetPasswordFunction             getPasswordFunction,
+                      void                            *getPasswordUserData,
                       CreateStatusInfoFunction        createStatusInfoFunction,
                       void                            *createStatusInfoUserData,
                       StorageRequestVolumeFunction    storageRequestVolumeFunction,
@@ -167,9 +168,9 @@ Errors Command_create(ConstString                     jobUUID,
 *          archiveType                      - archive type; see
 *                                             ArchiveTypes (normal/full/
 *                                             incremental)
-*          archiveGetCryptPasswordFunction  - get password call back
-*                                              (can be NULL)
-*          archiveGetCryptPasswordUserData  - user data for get password
+*          getPasswordFunction              - get password call back
+*                                             (can be NULL)
+*          getPasswordUserData              - user data for get password
 *                                             call back
 *          createStatusInfoFunction         - status info call back
 *                                             function (can be NULL)
@@ -203,8 +204,8 @@ Errors Command_createRemote(ServerInfo                      *serverInfo,
                             ArchiveTypes                    archiveType,
                             ConstString                     scheduleTitle,
                             ConstString                     scheduleCustomText,
-                            ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                            void                            *archiveGetCryptPasswordUserData,
+                            GetPasswordFunction             getPasswordFunction,
+                            void                            *getPasswordUserData,
                             CreateStatusInfoFunction        createStatusInfoFunction,
                             void                            *createStatusInfoUserData,
                             StorageRequestVolumeFunction    storageRequestVolumeFunction,

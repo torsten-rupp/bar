@@ -62,31 +62,31 @@
 /***********************************************************************\
 * Name   : testArchiveContent
 * Purpose: test archive content
-* Input  : storageSpecifier                 - storage specifier
-*          archiveName                      - archive name
-*          includeEntryList                 - include entry list
-*          excludePatternList               - exclude pattern list
-*          deltaSourceList                  - delta source list
-*          jobOptions                       - job options
-*          archiveGetCryptPasswordFunction  - get password call back
-*          archiveGetCryptPasswordUserData  - user data for get password
-*          fragmentList                     - fragment list
-*          logHandle                        - log handle (can be NULL)
+* Input  : storageSpecifier    - storage specifier
+*          archiveName         - archive name
+*          includeEntryList    - include entry list
+*          excludePatternList  - exclude pattern list
+*          deltaSourceList     - delta source list
+*          jobOptions          - job options
+*          getPasswordFunction - get password call back
+*          getPasswordUserData - user data for get password
+*          fragmentList        - fragment list
+*          logHandle           - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifier,
-                                ConstString                     archiveName,
-                                const EntryList                 *includeEntryList,
-                                const PatternList               *excludePatternList,
-                                DeltaSourceList                 *deltaSourceList,
-                                JobOptions                      *jobOptions,
-                                ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                                void                            *archiveGetCryptPasswordUserData,
-                                FragmentList                    *fragmentList,
-                                LogHandle                       *logHandle
+LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
+                                ConstString         archiveName,
+                                const EntryList     *includeEntryList,
+                                const PatternList   *excludePatternList,
+                                DeltaSourceList     *deltaSourceList,
+                                JobOptions          *jobOptions,
+                                GetPasswordFunction getPasswordFunction,
+                                void                *getPasswordUserData,
+                                FragmentList        *fragmentList,
+                                LogHandle           *logHandle
                                )
 {
   byte              *buffer;
@@ -136,8 +136,8 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
                        archiveName,
                        deltaSourceList,
                        jobOptions,
-                       archiveGetCryptPasswordFunction,
-                       archiveGetCryptPasswordUserData,
+                       getPasswordFunction,
+                       getPasswordUserData,
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -898,14 +898,14 @@ LOCAL Errors testArchiveContent(StorageSpecifier                *storageSpecifie
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_test(const StringList                *storageNameList,
-                    const EntryList                 *includeEntryList,
-                    const PatternList               *excludePatternList,
-                    DeltaSourceList                 *deltaSourceList,
-                    JobOptions                      *jobOptions,
-                    ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                    void                            *archiveGetCryptPasswordUserData,
-                    LogHandle                       *logHandle
+Errors Command_test(const StringList    *storageNameList,
+                    const EntryList     *includeEntryList,
+                    const PatternList   *excludePatternList,
+                    DeltaSourceList     *deltaSourceList,
+                    JobOptions          *jobOptions,
+                    GetPasswordFunction getPasswordFunction,
+                    void                *getPasswordUserData,
+                    LogHandle           *logHandle
                    )
 {
   FragmentList               fragmentList;
@@ -956,8 +956,8 @@ Errors Command_test(const StringList                *storageNameList,
                                    excludePatternList,
                                    deltaSourceList,
                                    jobOptions,
-                                   archiveGetCryptPasswordFunction,
-                                   archiveGetCryptPasswordUserData,
+                                   getPasswordFunction,
+                                   getPasswordUserData,
                                    &fragmentList,
                                    logHandle
                                   );
@@ -1002,8 +1002,8 @@ Errors Command_test(const StringList                *storageNameList,
                                        excludePatternList,
                                        deltaSourceList,
                                        jobOptions,
-                                       archiveGetCryptPasswordFunction,
-                                       archiveGetCryptPasswordUserData,
+                                       getPasswordFunction,
+                                       getPasswordUserData,
                                        &fragmentList,
                                        logHandle
                                       );

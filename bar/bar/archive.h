@@ -151,9 +151,9 @@ typedef uint64(*ArchiveGetSizeFunction)(void        *userData,
 
 typedef Errors(*ArchiveStoreFunction)(void        *userData,
                                       IndexHandle *indexHandle,
-                                     ConstString jobUUID,
-                                     ConstString scheduleUUID,
-                                     ArchiveTypes archiveType,
+                                      ConstString jobUUID,
+                                      ConstString scheduleUUID,
+                                      ArchiveTypes archiveType,
 //                                      IndexId     entityId,
                                       IndexId     storageId,
                                       int         partNumber,
@@ -161,100 +161,77 @@ typedef Errors(*ArchiveStoreFunction)(void        *userData,
                                       uint64      fileSize
                                      );
 
-/***********************************************************************\
-* Name   : ArchiveGetCryptPasswordFunction
-* Purpose: call back to get crypt password for archive file
-* Input  : userData      - user data
-*          password      - crypt password variable
-*          fileName      - file name
-*          validateFlag  - TRUE to validate input, FALSE otherwise
-*          weakCheckFlag - TRUE for weak password checking, FALSE
-*                          otherwise (print warning if password seems to
-*                          be a weak password)
-* Output : password - crypt password
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-typedef Errors(*ArchiveGetCryptPasswordFunction)(void        *userData,
-                                                 Password    *password,
-                                                 ConstString fileName,
-                                                 bool        validateFlag,
-                                                 bool        weakCheckFlag
-                                                );
-
-
 // archive info
 typedef struct
 {
-  DeltaSourceList                 *deltaSourceList;                    // list with delta sources
-  const JobOptions                *jobOptions;
-  ArchiveInitFunction             archiveInitFunction;                 // call back to initialize archive file
-  void                            *archiveInitUserData;                // user data for call back to initialize archive file
-  ArchiveDoneFunction             archiveDoneFunction;                 // call back to deinitialize archive file
-  void                            *archiveDoneUserData;                // user data for call back to deinitialize archive file
-  ArchiveGetSizeFunction          archiveGetSizeFunction;              // call back to get archive size
-  void                            *archiveGetSizeUserData;             // user data for call back to get archive size
-  ArchiveStoreFunction            archiveStoreFunction;                // call back to store data info archive file
-  void                            *archiveStoreUserData;               // user data for call back to store data info archive file
-  ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;     // call back to get crypt password
-  void                            *archiveGetCryptPasswordUserData;    // user data for call back to get crypt password
-  LogHandle                       *logHandle;                          // log handle
+  DeltaSourceList          *deltaSourceList;                           // list with delta sources
+  const JobOptions         *jobOptions;
+  ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
+  void                     *archiveInitUserData;                       // user data for call back to initialize archive file
+  ArchiveDoneFunction      archiveDoneFunction;                        // call back to deinitialize archive file
+  void                     *archiveDoneUserData;                       // user data for call back to deinitialize archive file
+  ArchiveGetSizeFunction   archiveGetSizeFunction;                     // call back to get archive size
+  void                     *archiveGetSizeUserData;                    // user data for call back to get archive size
+  ArchiveStoreFunction     archiveStoreFunction;                       // call back to store data info archive file
+  void                     *archiveStoreUserData;                      // user data for call back to store data info archive file
+  GetPasswordFunction      getPasswordFunction;                        // call back to get crypt password
+  void                     *getPasswordUserData;                       // user data for call back to get crypt password
+  LogHandle                *logHandle;                                 // log handle
 
-  Semaphore                       passwordLock;                        // input password lock
-  CryptTypes                      cryptType;                           // crypt type (symmetric/asymmetric; see CryptTypes)
-  Password                        *cryptPassword;                      // cryption password for encryption/decryption
-  bool                            cryptPasswordReadFlag;               // TRUE iff input callback for crypt password called
-  CryptKey                        cryptKey;                            // public/private key for encryption/decryption of random key used for asymmetric encryptio
-  void                            *cryptKeyData;                       // encrypted random key used for asymmetric encryption
-  uint                            cryptKeyDataLength;                  // length of encrypted random key
+  Semaphore                passwordLock;                               // input password lock
+  CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)
+  Password                 *cryptPassword;                             // cryption password for encryption/decryption
+  bool                     cryptPasswordReadFlag;                      // TRUE iff input callback for crypt password called
+  CryptKey                 cryptKey;                                   // public/private key for encryption/decryption of random key used for asymmetric encryptio
+  void                     *cryptKeyData;                              // encrypted random key used for asymmetric encryption
+  uint                     cryptKeyDataLength;                         // length of encrypted random key
 
-  uint                            blockLength;                         // block length for file entry/file data (depend on used crypt algorithm)
+  uint                     blockLength;                                // block length for file entry/file data (depend on used crypt algorithm)
 
-  ArchiveIOTypes                  ioType;                              // i/o type
+  ArchiveIOTypes           ioType;                                     // i/o type
   union
   {
     // local file
     struct
     {
-      String                      appendFileName;
-      String                      fileName;                            // file name
-      FileHandle                  fileHandle;                          // file handle
-      bool                        openFlag;                            // TRUE iff archive file is open
+      String               appendFileName;
+      String               fileName;                                   // file name
+      FileHandle           fileHandle;                                 // file handle
+      bool                 openFlag;                                   // TRUE iff archive file is open
     } file;
     // local or remote storage
     struct
     {
-      StorageSpecifier            storageSpecifier;                    // storage specifier structure
-      String                      storageFileName;                     // storage storage name
-      StorageHandle               *storageHandle;                      // storage handle
-      StorageArchiveHandle        storageArchiveHandle;
+      StorageSpecifier     storageSpecifier;                           // storage specifier structure
+      String               storageFileName;                            // storage storage name
+      StorageHandle        *storageHandle;                             // storage handle
+      StorageArchiveHandle storageArchiveHandle;
     } storage;
   };
-  String                          printableStorageName;                // printable storage name
-  Semaphore                       chunkIOLock;                         // chunk i/o functions lock
-  const ChunkIO                   *chunkIO;                            // chunk i/o functions
-  void                            *chunkIOUserData;                    // chunk i/o functions data
+  String                   printableStorageName;                       // printable storage name
+  Semaphore                chunkIOLock;                                // chunk i/o functions lock
+  const ChunkIO            *chunkIO;                                   // chunk i/o functions
+  void                     *chunkIOUserData;                           // chunk i/o functions data
 
-  IndexHandle                     *indexHandle;                        // index handle
-  String                          jobUUID;
-  String                          scheduleUUID;
-  ArchiveTypes                    archiveType;
-//  IndexId                         entityId;                            // index id of entity
-  IndexId                         storageId;                           // index id of storage
+  IndexHandle              *indexHandle;                               // index handle
+  String                   jobUUID;
+  String                   scheduleUUID;
+  ArchiveTypes             archiveType;
+//  IndexId                  entityId;                                   // index id of entity
+  IndexId                  storageId;                                  // index id of storage
 
-  uint64                          entries;                             // number of entries
-  uint64                          archiveFileSize;                     // size of current archive file part
-  uint                            partNumber;                          // current archive part number
+  uint64                   entries;                                    // number of entries
+  uint64                   archiveFileSize;                            // size of current archive file part
+  uint                     partNumber;                                 // current archive part number
 
-  Errors                          pendingError;                        // pending error or ERROR_NONE
-  bool                            nextChunkHeaderReadFlag;             // TRUE iff next chunk header read
-  ChunkHeader                     nextChunkHeader;                     // next chunk header
+  Errors                   pendingError;                               // pending error or ERROR_NONE
+  bool                     nextChunkHeaderReadFlag;                    // TRUE iff next chunk header read
+  ChunkHeader              nextChunkHeader;                            // next chunk header
 
   struct
   {
-    bool                          openFlag;                            // TRUE iff archive is open
-    uint64                        offset;                              // interrupt offset
+    bool                   openFlag;                                   // TRUE iff archive is open
+    uint64                 offset;                                     // interrupt offset
   } interrupt;
 } ArchiveInfo;
 
@@ -518,115 +495,108 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 /***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
-* Input  : archiveInfo                     - archive info data
-*          jobUUID                         - unique job id or NULL
-*          scheduleUUID                    - unique schedule id or NULL
-*          archiveType                     - archive type
-*          jobOptions                      - job option settings
-*          archiveInitFunction             - call back to initialize
-*                                            archive file
-*          archiveInitUserData             - user data for call back
-*          archiveDoneFunction             - call back to deinitialize
-*                                            archive file
-*          archiveDoneUserData             - user data for call back
-*          archiveStoreFunction            - call back to store archive
-*                                            file
-*          archiveStoreUserData            - user data for call back
-*          archiveGetCryptPasswordFunction - get password call back (can
-*                                            be NULL)
-*          archiveGetCryptPasswordData     - user data for get password
-*                                            call back
-*          logHandle                       - log handle (can be NULL)
+* Input  : archiveInfo          - archive info data
+*          jobUUID              - unique job id or NULL
+*          scheduleUUID         - unique schedule id or NULL
+*          archiveType          - archive type
+*          jobOptions           - job option settings
+*          archiveInitFunction  - call back to initialize archive file
+*          archiveInitUserData  - user data for call back
+*          archiveDoneFunction  - call back to deinitialize archive file
+*          archiveDoneUserData  - user data for call back
+*          archiveStoreFunction - call back to store archive file
+*          archiveStoreUserData - user data for call back
+*          getPasswordFunction  - get password call back (can be NULL)
+*          getPasswordData      - user data for get password call back
+*          logHandle            - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_create(ArchiveInfo                     *archiveInfo,
-                        DeltaSourceList                 *deltaSourceList,
-                        const JobOptions                *jobOptions,
-                        IndexHandle                     *indexHandle,
-                        ConstString                     jobUUID,
-                        ConstString                     scheduleUUID,
-                        ArchiveTypes                    archiveType,
-                        ArchiveInitFunction             archiveInitFunction,
-                        void                            *archiveInitUserData,
-                        ArchiveDoneFunction             archiveDoneFunction,
-                        void                            *archiveDoneUserData,
-                        ArchiveGetSizeFunction          archiveGetSizeFunction,
-                        void                            *archiveGetSizeUserData,
-                        ArchiveStoreFunction            archiveStoreFunction,
-                        void                            *archiveStoreUserData,
-                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                        void                            *archiveGetCryptPasswordUserData,
-                        LogHandle                       *logHandle
+  Errors Archive_create(ArchiveInfo            *archiveInfo,
+                        DeltaSourceList        *deltaSourceList,
+                        const JobOptions       *jobOptions,
+                        IndexHandle            *indexHandle,
+                        ConstString            jobUUID,
+                        ConstString            scheduleUUID,
+                        ArchiveTypes           archiveType,
+                        ArchiveInitFunction    archiveInitFunction,
+                        void                   *archiveInitUserData,
+                        ArchiveDoneFunction    archiveDoneFunction,
+                        void                   *archiveDoneUserData,
+                        ArchiveGetSizeFunction archiveGetSizeFunction,
+                        void                   *archiveGetSizeUserData,
+                        ArchiveStoreFunction   archiveStoreFunction,
+                        void                   *archiveStoreUserData,
+                        GetPasswordFunction    getPasswordFunction,
+                        void                   *getPasswordUserData,
+                        LogHandle              *logHandle
                        );
 #else /* not NDEBUG */
-  Errors __Archive_create(const char                      *__fileName__,
-                          ulong                           __lineNb__,
-                          ArchiveInfo                     *archiveInfo,
-                          DeltaSourceList                 *deltaSourceList,
-                          const JobOptions                *jobOptions,
-                          IndexHandle                     *indexHandle,
-                          ConstString                     jobUUID,
-                          ConstString                     scheduleUUID,
-                          ArchiveTypes                    archiveType,
-                          ArchiveInitFunction             archiveInitFunction,
-                          void                            *archiveInitUserData,
-                          ArchiveDoneFunction             archiveDoneFunction,
-                          void                            *archiveDoneUserData,
-                          ArchiveGetSizeFunction          archiveGetSizeFunction,
-                          void                            *archiveGetSizeUserData,
-                          ArchiveStoreFunction            archiveStoreFunction,
-                          void                            *archiveStoreUserData,
-                          ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                          void                            *archiveGetCryptPasswordUserData,
-                          LogHandle                       *logHandle
+  Errors __Archive_create(const char             *__fileName__,
+                          ulong                  __lineNb__,
+                          ArchiveInfo            *archiveInfo,
+                          DeltaSourceList        *deltaSourceList,
+                          const JobOptions       *jobOptions,
+                          IndexHandle            *indexHandle,
+                          ConstString            jobUUID,
+                          ConstString            scheduleUUID,
+                          ArchiveTypes           archiveType,
+                          ArchiveInitFunction    archiveInitFunction,
+                          void                   *archiveInitUserData,
+                          ArchiveDoneFunction    archiveDoneFunction,
+                          void                   *archiveDoneUserData,
+                          ArchiveGetSizeFunction archiveGetSizeFunction,
+                          void                   *archiveGetSizeUserData,
+                          ArchiveStoreFunction   archiveStoreFunction,
+                          void                   *archiveStoreUserData,
+                          GetPasswordFunction    getPasswordFunction,
+                          void                   *getPasswordUserData,
+                          LogHandle              *logHandle
                          );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_open
 * Purpose: open archive
-* Input  : archiveInfo                     - archive info data
-*          storageHandle                   - storage handle
-*          storageSpecifier                - storage specifier structure
-*          fileName                        - file name or NULL
-*          jobOptions                      - option settings
-*          archiveGetCryptPasswordFunction - get password call back (can
-*                                            be NULL)
-*          archiveGetCryptPasswordUserData - user data for get password
-*                                            call back
-*          logHandle                       - log handle (can be NULL)
+* Input  : archiveInfo         - archive info data
+*          storageHandle       - storage handle
+*          storageSpecifier    - storage specifier structure
+*          fileName            - file name or NULL
+*          jobOptions          - option settings
+*          getPasswordFunction - get password call back (can be NULL)
+*          getPasswordUserData - user data for get password call back
+*          logHandle           - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_open(ArchiveInfo                     *archiveInfo,
-                      StorageHandle                   *storageHandle,
-                      StorageSpecifier                *storageSpecifier,
-                      ConstString                     fileName,
-                      DeltaSourceList                 *deltaSourceList,
-                      const JobOptions                *jobOptions,
-                      ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                      void                            *archiveGetCryptPasswordUserData,
-                      LogHandle                       *logHandle
+  Errors Archive_open(ArchiveInfo         *archiveInfo,
+                      StorageHandle       *storageHandle,
+                      StorageSpecifier    *storageSpecifier,
+                      ConstString         fileName,
+                      DeltaSourceList     *deltaSourceList,
+                      const JobOptions    *jobOptions,
+                      GetPasswordFunction getPasswordFunction,
+                      void                *getPasswordUserData,
+                      LogHandle           *logHandle
                      );
 #else /* not NDEBUG */
-  Errors __Archive_open(const char                      *__fileName__,
-                        ulong                           __lineNb__,
-                        ArchiveInfo                     *archiveInfo,
-                        StorageHandle                   *storageHandle,
-                        StorageSpecifier                *storageSpecifier,
-                        ConstString                     fileName,
-                        DeltaSourceList                 *deltaSourceList,
-                        const JobOptions                *jobOptions,
-                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                        void                            *archiveGetCryptPasswordUserData,
-                        LogHandle                       *logHandle
+  Errors __Archive_open(const char          *__fileName__,
+                        ulong               __lineNb__,
+                        ArchiveInfo         *archiveInfo,
+                        StorageHandle       *storageHandle,
+                        StorageSpecifier    *storageSpecifier,
+                        ConstString         fileName,
+                        DeltaSourceList     *deltaSourceList,
+                        const JobOptions    *jobOptions,
+                        GetPasswordFunction getPasswordFunction,
+                        void                *getPasswordUserData,
+                        LogHandle           *logHandle
                        );
 #endif /* NDEBUG */
 
@@ -1428,7 +1398,7 @@ Errors Archive_remIndex(IndexHandle *indexHandle,
 Errors Archive_copy(ArchiveInfo                     *archiveInfo,
                     ConstString                     storageName,
                     const JobOptions                *jobOptions,
-                    ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
+                    GetPasswordFunction             archiveGetCryptPassword,
                     void                            *archiveGetCryptPasswordData,
                     ConstString                     newStorageName
                    );

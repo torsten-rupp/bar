@@ -46,25 +46,24 @@
 /***********************************************************************\
 * Name   : Command_list
 * Purpose: list content of archive(s)
-* Input  : storageNameList                  - list with storage names
-*          includeEntryList                 - include entry list
-*          excludePatternList               - exclude pattern list
-*          jobOptions                       - job options
-*          archiveGetCryptPasswordFunction  - get password call back
-*          archiveGetCryptPasswordUserData  - user data for get password
-*                                             call back
+* Input  : storageNameList     - list with storage names
+*          includeEntryList    - include entry list
+*          excludePatternList  - exclude pattern list
+*          jobOptions          - job options
+*          getPasswordFunction - get password call back
+*          getPasswordUserData - user data for get password call back
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_list(StringList                      *storageNameList,
-                    const EntryList                 *includeEntryList,
-                    const PatternList               *excludePatternList,
-                    JobOptions                      *jobOptions,
-                    ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                    void                            *archiveGetCryptPasswordUserData,
-                    LogHandle                       *logHandle
+Errors Command_list(StringList          *storageNameList,
+                    const EntryList     *includeEntryList,
+                    const PatternList   *excludePatternList,
+                    JobOptions          *jobOptions,
+                    GetPasswordFunction getPasswordFunction,
+                    void                *getPasswordUserData,
+                    LogHandle           *logHandle
                    );
 
 #ifdef __cplusplus

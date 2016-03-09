@@ -2902,30 +2902,30 @@ LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
 /***********************************************************************\
 * Name   : getCryptPassword
 * Purpose: get crypt password call-back
-* Input  : userData      - user data: job node
-*          password      - crypt password variable
-*          fileName      - file name
+* Input  : password      - crypt password variable
+*          message       - message
 *          validateFlag  - TRUE to validate input, FALSE otherwise
 *          weakCheckFlag - TRUE for weak password checking, FALSE
 *                          otherwise (print warning if password seems to
 *                          be a weak password)
+*          userData      - user data: job node
 * Output : password - crypt password
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getCryptPassword(void        *userData,
-                              Password    *password,
-                              ConstString fileName,
-                              bool        validateFlag,
-                              bool        weakCheckFlag
+LOCAL Errors getCryptPassword(Password   *password,
+                              const char *message,
+                              bool       validateFlag,
+                              bool       weakCheckFlag,
+                              void       *userData
                              )
 {
   JobNode *jobNode = (JobNode*)userData;
 
   assert(jobNode != NULL);
 
-  UNUSED_VARIABLE(fileName);
+  UNUSED_VARIABLE(message);
   UNUSED_VARIABLE(validateFlag);
   UNUSED_VARIABLE(weakCheckFlag);
 
@@ -3404,7 +3404,7 @@ NULL,//                                                        scheduleTitle,
                                                          &deltaSourceList,
                                                          &jobOptions,
                                                          CALLBACK(getCryptPassword,jobNode),
-                                                         CALLBACK((RestoreStatusInfoFunction)updateRestoreJobStatus,jobNode),
+                                                         CALLBACK(updateRestoreJobStatus,jobNode),
                                                          &pauseFlags.restore,
                                                          &jobNode->requestedAbortFlag,
                                                          &logHandle
@@ -13663,7 +13663,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                           NULL,  // excludePatternList
                           NULL,  // deltaSourceList
                           &clientInfo->jobOptions,
-                          CALLBACK(NULL,NULL),  // archiveGetCryptPasswordFunction
+                          CALLBACK(NULL,NULL),  // getPasswordFunction
                           CALLBACK(updateRestoreCommandStatus,&restoreCommandInfo),
                           NULL,  // pauseFlag
 //TODO: callback

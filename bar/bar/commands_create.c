@@ -46,6 +46,8 @@
 #include "storage.h"
 #include "database.h"
 #include "continuous.h"
+#include "bar_global.h"
+#include "bar.h"
 
 #include "commands_create.h"
 
@@ -6160,8 +6162,8 @@ Errors Command_create(ConstString                     jobUUID,
                       ArchiveTypes                    archiveType,
                       ConstString                     scheduleTitle,
                       ConstString                     scheduleCustomText,
-                      ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                      void                            *archiveGetCryptPasswordUserData,
+                      GetPasswordFunction             getPasswordFunction,
+                      void                            *getPasswordUserData,
                       CreateStatusInfoFunction        createStatusInfoFunction,
                       void                            *createStatusInfoUserData,
                       StorageRequestVolumeFunction    storageRequestVolumeFunction,
@@ -6388,7 +6390,7 @@ Errors Command_create(ConstString                     jobUUID,
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
                          CALLBACK(getArchiveSize,&createInfo),
                          CALLBACK(storeArchiveFile,&createInfo),
-                         CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
+                         CALLBACK(getPasswordFunction,getPasswordUserData),
                          logHandle
                         );
   if (error != ERROR_NONE)

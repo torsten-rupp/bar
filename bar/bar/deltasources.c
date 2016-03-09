@@ -137,35 +137,33 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 /***********************************************************************\
 * Name   : restoreFile
 * Purpose: restore file from archive
-* Input  : archiveName                      - archive file name
-*          name                             - name of entry to restore
-*          deltaSourceList                  - delta source list
-*          jobOptions                       - job options
-*          destinationFileName              - destination file name
-*          fragmentNode                     - fragment node (can be NULL)
-*          archiveGetCryptPasswordFunction  - get password call back
-*          archiveGetCryptPasswordUserData  - user data for get password
-*                                             call back
-*          pauseFlag                        - pause flag (can be NULL)
-*          requestedAbortFlag               - request abort flag (can be
-*                                             NULL)
-*          logHandle                        - log handle (can be NULL)
+* Input  : archiveName         - archive file name
+*          name                - name of entry to restore
+*          deltaSourceList     - delta source list
+*          jobOptions          - job options
+*          destinationFileName - destination file name
+*          fragmentNode        - fragment node (can be NULL)
+*          getPasswordFunction - get password call back
+*          getPasswordUserData - user data for get password call back
+*          pauseFlag           - pause flag (can be NULL)
+*          requestedAbortFlag  - request abort flag (can be NULL)
+*          logHandle           - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if file restored, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
-                         ConstString                     name,
-                         DeltaSourceList                 *deltaSourceList,
-                         const JobOptions                *jobOptions,
-                         ConstString                     destinationFileName,
-                         FragmentNode                    *fragmentNode,
-                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                         void                            *archiveGetCryptPasswordUserData,
-                         bool                            *pauseFlag,
-                         bool                            *requestedAbortFlag,
-                         LogHandle                       *logHandle
+LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
+                         ConstString         name,
+                         DeltaSourceList     *deltaSourceList,
+                         const JobOptions    *jobOptions,
+                         ConstString         destinationFileName,
+                         FragmentNode        *fragmentNode,
+                         GetPasswordFunction getPasswordFunction,
+                         void                *getPasswordUserData,
+                         bool                *pauseFlag,
+                         bool                *requestedAbortFlag,
+                         LogHandle           *logHandle
                         )
 {
   bool              restoredFlag;
@@ -218,7 +216,7 @@ LOCAL Errors restoreFile(StorageSpecifier                *storageSpecifier,
                        NULL,  // archive name
                        deltaSourceList,
                        jobOptions,
-                       CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
+                       CALLBACK(getPasswordFunction,getPasswordUserData),
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -825,7 +823,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                       tmpFileName,
                                       &fragmentNode,
                                       inputCryptPassword,
-                                      NULL,  // archiveGetCryptPasswordUserData
+                                      NULL,  // getPasswordFunction
                                       NULL,  // pauseFlag
                                       NULL,  // requestedAbortFlag,
                                       NULL   // logHandle
@@ -921,7 +919,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                         tmpFileName,
                                         &fragmentNode,
                                         inputCryptPassword,
-                                        NULL,  // archiveGetCryptPasswordUserData
+                                        NULL,  // getPasswordFunction
                                         NULL,  // pauseFlag
                                         NULL,  // requestedAbortFlag
                                         NULL   // logHandle
@@ -1001,7 +999,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               tmpFileName,
                               NULL,  // fragmentNode
                               inputCryptPassword,
-                              NULL,  // archiveGetCryptPasswordUserData
+                              NULL,  // getPasswordFunction
                               NULL,  // pauseFlag
                               NULL,  // requestedAbortFlag
                               NULL   // logHandle
@@ -1070,7 +1068,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               tmpFileName,
                               NULL,  // fragmentNode
                               inputCryptPassword,
-                              NULL,  // archiveGetCryptPasswordUserData
+                              NULL,  // getPasswordFunction
                               NULL,  // pauseFlag
                               NULL,  // requestedAbortFlag
                               NULL   // logHandle

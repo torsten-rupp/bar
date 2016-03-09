@@ -215,39 +215,39 @@ LOCAL void updateStatusInfo(RestoreInfo *restoreInfo, bool forceUpdate)
 /***********************************************************************\
 * Name   : restoreArchiveContent
 * Purpose: restore archive content
-* Input  : storageSpecifier                 - storage specifier
-*          archiveName                      - archive name
-*          includeEntryList                 - include entry list
-*          excludePatternList               - exclude pattern list
-*          deltaSourceList                  - delta source list
-*          jobOptions                       - job options
-*          archiveGetCryptPasswordFunction  - get password call back
-*          archiveGetCryptPasswordUserData  - user data for get password
-*          pauseRestoreFlag                 - pause restore flag (can be
-*                                             NULL)
-*          requestedAbortFlag               - request abort flag (can be
-*                                             NULL)
-*          fragmentList                     - fragment list
-*          restoreInfo                      - restore info
-*          logHandle                        - log handle (can be NULL)
+* Input  : storageSpecifier    - storage specifier
+*          archiveName         - archive name
+*          includeEntryList    - include entry list
+*          excludePatternList  - exclude pattern list
+*          deltaSourceList     - delta source list
+*          jobOptions          - job options
+*          getPasswordFunction - get password call back
+*          getPasswordUserData - user data for get password
+*          pauseRestoreFlag    - pause restore flag (can be
+*                                NULL)
+*          requestedAbortFlag  - request abort flag (can be
+*                                NULL)
+*          fragmentList        - fragment list
+*          restoreInfo         - restore info
+*          logHandle           - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpecifier,
-                                   ConstString                     archiveName,
-                                   const EntryList                 *includeEntryList,
-                                   const PatternList               *excludePatternList,
-                                   DeltaSourceList                 *deltaSourceList,
-                                   JobOptions                      *jobOptions,
-                                   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                                   void                            *archiveGetCryptPasswordUserData,
-                                   bool                            *pauseRestoreFlag,
-                                   bool                            *requestedAbortFlag,
-                                   FragmentList                    *fragmentList,
-                                   RestoreInfo                     *restoreInfo,
-                                   LogHandle                       *logHandle
+LOCAL Errors restoreArchiveContent(StorageSpecifier    *storageSpecifier,
+                                   ConstString         archiveName,
+                                   const EntryList     *includeEntryList,
+                                   const PatternList   *excludePatternList,
+                                   DeltaSourceList     *deltaSourceList,
+                                   JobOptions          *jobOptions,
+                                   GetPasswordFunction getPasswordFunction,
+                                   void                *getPasswordUserData,
+                                   bool                *pauseRestoreFlag,
+                                   bool                *requestedAbortFlag,
+                                   FragmentList        *fragmentList,
+                                   RestoreInfo         *restoreInfo,
+                                   LogHandle           *logHandle
                                   )
 {
   AutoFreeList      autoFreeList;
@@ -302,8 +302,8 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
                        archiveName,
                        deltaSourceList,
                        jobOptions,
-                       archiveGetCryptPasswordFunction,
-                       archiveGetCryptPasswordUserData,
+                       getPasswordFunction,
+                       getPasswordUserData,
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -2229,18 +2229,18 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier                *storageSpeci
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_restore(const StringList                *storageNameList,
-                       const EntryList                 *includeEntryList,
-                       const PatternList               *excludePatternList,
-                       DeltaSourceList                 *deltaSourceList,
-                       JobOptions                      *jobOptions,
-                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
-                       void                            *archiveGetCryptPasswordUserData,
-                       RestoreStatusInfoFunction       restoreStatusInfoFunction,
-                       void                            *restoreStatusInfoUserData,
-                       bool                            *pauseRestoreFlag,
-                       bool                            *requestedAbortFlag,
-                       LogHandle                       *logHandle
+Errors Command_restore(const StringList          *storageNameList,
+                       const EntryList           *includeEntryList,
+                       const PatternList         *excludePatternList,
+                       DeltaSourceList           *deltaSourceList,
+                       JobOptions                *jobOptions,
+                       GetPasswordFunction       getPasswordFunction,
+                       void                      *getPasswordUserData,
+                       RestoreStatusInfoFunction restoreStatusInfoFunction,
+                       void                      *restoreStatusInfoUserData,
+                       bool                      *pauseRestoreFlag,
+                       bool                      *requestedAbortFlag,
+                       LogHandle                 *logHandle
                       )
 {
   RestoreInfo                restoreInfo;
@@ -2309,8 +2309,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                     excludePatternList,
                                     deltaSourceList,
                                     jobOptions,
-                                    archiveGetCryptPasswordFunction,
-                                    archiveGetCryptPasswordUserData,
+                                    getPasswordFunction,
+                                    getPasswordUserData,
                                     pauseRestoreFlag,
                                     requestedAbortFlag,
                                     &fragmentList,
@@ -2359,8 +2359,8 @@ Errors Command_restore(const StringList                *storageNameList,
                                           excludePatternList,
                                           deltaSourceList,
                                           jobOptions,
-                                          archiveGetCryptPasswordFunction,
-                                          archiveGetCryptPasswordUserData,
+                                          getPasswordFunction,
+                                          getPasswordUserData,
                                           pauseRestoreFlag,
                                           requestedAbortFlag,
                                           &fragmentList,
