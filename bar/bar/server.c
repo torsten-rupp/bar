@@ -8440,7 +8440,6 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
 *            jobUUID=<uuid>
 *          Result:
 *            state=<state>
-*            message=<text>
 *            doneEntries=<entries>
 *            doneBytes=<bytes>
 *            totalEntries=< entries>
@@ -8463,6 +8462,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
 *            volumeNumber=<number>
 *            volumeProgress=<progress>
 *            requestedVolumeNumber=<number>
+*            message=<text>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -8494,7 +8494,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
 
     // format and send result
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                     "state=%'s doneEntries=%lu doneBytes=%llu totalEntries=%lu totalBytes=%llu collectTotalSumDone=%y skippedEntries=%lu skippedBytes=%llu errorEntries=%lu errorBytes=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveBytes=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
+                    "state=%'s doneEntries=%lu doneBytes=%llu totalEntries=%lu totalBytes=%llu collectTotalSumDone=%y skippedEntries=%lu skippedBytes=%llu errorEntries=%lu errorBytes=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveBytes=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
                      getJobStateText(jobNode->state,&jobNode->jobOptions),
                      jobNode->runningInfo.doneEntries,
                      jobNode->runningInfo.doneBytes,
@@ -11661,12 +11661,14 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
     String_delete(encryptType);
     return;
   }
+
+  // add to list
   Archive_appendDecryptPassword(&password);
-  Password_done(&password);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
+  Password_done(&password);
   String_delete(encryptedPassword);
   String_delete(encryptType);
 }
@@ -13257,20 +13259,20 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   }
 
   /***********************************************************************\
-  * Name   : updateRestoreCommandStatus
-  * Purpose: update restore job status
-  * Input  : userData          - user data
-  *          error             - error code
-  *          restoreStatusInfo - create status info data
+  * Name   : updateRestoreStatusInfo
+  * Purpose: update restore status info
+  * Input  : error             - error code
+  *          restoreStatusInfo - create status info data,
+  *          userData          - user data
   * Output : -
   * Return : TRUE to continue, FALSE to abort
   * Notes  : -
   \***********************************************************************/
 
-  bool updateRestoreCommandStatus(void                   *userData,
-                                  Errors                  error,
-                                  const RestoreStatusInfo *restoreStatusInfo
-                                 )
+  bool updateRestoreStatusInfo(Errors                  error,
+                               const RestoreStatusInfo *restoreStatusInfo,
+                               void                   *userData
+                              )
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
 
@@ -13288,20 +13290,70 @@ n++;
                      restoreCommandInfo->id,
                      FALSE,
                      ERROR_NONE,
-                     "state=%s storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu requestPassword=%'s requestVolume=%'s",
+                     "state=%s storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu requestPasswordType=%'s requestPasswordText=%'s requestVolume=%'s",
 //                     "running"
-(n >=1) ? "request_ftp_password":"running",
+//(n >=1) ? "request_ftp_password":"running",
+(restoreStatusInfo->requestPasswordText != NULL) ? "request_crypt_password":"running",
                      restoreStatusInfo->storageName,
                      restoreStatusInfo->storageDoneBytes,
                      restoreStatusInfo->storageTotalBytes,
                      restoreStatusInfo->entryName,
                      restoreStatusInfo->entryDoneBytes,
                      restoreStatusInfo->entryTotalBytes,
-"abc@host",//                     restoreStatusInfo->requestPassword,
-""//                     restoreStatusInfo->requestVolume
+"FTP",//                     restoreStatusInfo->requestPasswordType,
+                     restoreStatusInfo->requestPasswordText,
+                     restoreStatusInfo->requestVolume
                     );
 
     return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
+  }
+
+  /***********************************************************************\
+  * Name   : getPassword
+  * Purpose: get password
+  * Input  : error             - error code
+  *          restoreStatusInfo - create status info data,
+  *          userData          - user data
+  * Output : -
+  * Return : TRUE to continue, FALSE to abort
+  * Notes  : -
+  \***********************************************************************/
+
+  Errors getPassword(Password      *password,
+                     PasswordTypes passwordType,
+                     const char    *text,
+                     bool          validateFlag,
+                     bool          weakCheckFlag,
+                     void          *userData
+                    )
+  {
+    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
+
+    assert(restoreCommandInfo != NULL);
+
+//    UNUSED_VARIABLE(error);
+
+    sendClientResult(restoreCommandInfo->clientInfo,
+                     restoreCommandInfo->id,
+                     FALSE,
+                     ERROR_NONE,
+                     "state=request_crypt_password requestPasswordType=%'s requestPasswordText=%'s",
+"FTP",//                     restoreStatusInfo->requestPasswordType,
+                     text
+                    );
+
+    // wait for password
+    Archive_waitDecryptPassword(password,60*1000);
+
+    // signal password done
+    sendClientResult(restoreCommandInfo->clientInfo,
+                     restoreCommandInfo->id,
+                     FALSE,
+                     ERROR_NONE,
+                     "state=none"
+                    );
+
+    return ERROR_NONE;
   }
 
   Types              type;
@@ -13665,8 +13717,8 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                           NULL,  // excludePatternList
                           NULL,  // deltaSourceList
                           &clientInfo->jobOptions,
-                          CALLBACK(NULL,NULL),  // getPasswordFunction
-                          CALLBACK(updateRestoreCommandStatus,&restoreCommandInfo),
+                          CALLBACK(getPassword,&restoreCommandInfo),
+                          CALLBACK(updateRestoreStatusInfo,&restoreCommandInfo),
                           NULL,  // pauseFlag
 //TODO: callback
                           &restoreCommandInfo.clientInfo->abortFlag,
