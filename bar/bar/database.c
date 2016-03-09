@@ -2043,7 +2043,6 @@ Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *nam
   // format SQL command string
   sqlString = String_format(String_new(),"SAVEPOINT %s;",name);
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // start transaction (create savepoint)
   sqliteResult = sqlite3_exec(databaseHandle->handle,
@@ -2075,7 +2074,6 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   // format SQL command string
   sqlString = String_format(String_new(),"RELEASE %s;",name);
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // end transaction (release savepoint)
   sqliteResult = sqlite3_exec(databaseHandle->handle,
@@ -2107,7 +2105,6 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
   // format SQL command string
   sqlString = String_format(String_new(),"ROLLBACK TO %s;",name);
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // rollback transaction (rollback savepoint)
   sqliteResult = sqlite3_exec(databaseHandle->handle,
