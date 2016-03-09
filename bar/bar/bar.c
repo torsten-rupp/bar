@@ -5438,11 +5438,12 @@ bool isServerAllocationPending(uint serverId)
   return pendingFlag;
 }
 
-Errors inputCryptPassword(Password   *password,
-                          const char *message,
-                          bool       validateFlag,
-                          bool       weakCheckFlag,
-                          void       *userData
+Errors inputCryptPassword(Password      *password,
+                          PasswordTypes passwordType,
+                          const char    *text,
+                          bool          validateFlag,
+                          bool          weakCheckFlag,
+                          void          *userData
                          )
 {
   Errors        error;
@@ -5467,9 +5468,9 @@ Errors inputCryptPassword(Password   *password,
 
           // input password
           title = String_new();
-          if ((message != NULL) && !stringIsEmpty(message))
+          if ((text != NULL) && !stringIsEmpty(text))
           {
-            String_format(title,"Crypt password for '%s'",message);
+            String_format(title,"Crypt password for '%s'",text);
           }
           else
           {
@@ -5486,9 +5487,9 @@ Errors inputCryptPassword(Password   *password,
           if (validateFlag)
           {
             // verify input password
-            if ((message != NULL) && !stringIsEmpty(message))
+            if ((text != NULL) && !stringIsEmpty(text))
             {
-              String_format(String_clear(title),"Verify password for '%s'",message);
+              String_format(String_clear(title),"Verify password for '%s'",text);
             }
             else
             {
@@ -7410,7 +7411,13 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 
         // input crypt password for private key encryption
         Password_init(&cryptPassword);
-        error = inputCryptPassword(NULL,&cryptPassword,privateKeyFileName,TRUE,FALSE);
+        error = inputCryptPassword(&cryptPassword,
+                                   PASSWORD_TYPE_CRYPT,
+                                   String_cString(privateKeyFileName),
+                                   TRUE,  // validateFlag
+                                   FALSE, // weakCheckFlag
+                                   NULL  // userData
+                                  );
         if (error != ERROR_NONE)
         {
           printError("No password given for private key!\n");

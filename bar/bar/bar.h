@@ -890,7 +890,8 @@ bool isServerAllocationPending(uint serverId);
 * Name   : inputCryptPassword
 * Purpose: input crypt password
 * Input  : password      - crypt password variable
-*          message       - message
+*          passwordType  - password type; see PASSWORD_TYPE_...
+*          text          - text
 *          validateFlag  - TRUE to validate input, FALSE otherwise
 *          weakCheckFlag - TRUE for weak password checking, FALSE
 *                          otherwise (print warning if password seems to
@@ -901,11 +902,12 @@ bool isServerAllocationPending(uint serverId);
 * Notes  : -
 \***********************************************************************/
 
-Errors inputCryptPassword(Password   *password,
-                          const char *message,
-                          bool       validateFlag,
-                          bool       weakCheckFlag,
-                          void       *userData
+Errors inputCryptPassword(Password      *password,
+                          PasswordTypes passwordType,
+                          const char    *text,
+                          bool          validateFlag,
+                          bool          weakCheckFlag,
+                          void          *userData
                          );
 
 // ----------------------------------------------------------------------
