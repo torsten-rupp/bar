@@ -3085,6 +3085,17 @@ Dprintf.dprintf("");
     ERROR
   }*/
 
+  /** password types
+   */
+  enum PasswordTypes
+  {
+    NONE,
+    FTP,
+    SSH,
+    WEBDAV,
+    CRYPT;
+  };
+
   /** entry data
    */
   class EntryData extends IndexData
@@ -7755,15 +7766,16 @@ int error;
                                                  // parse and update progresss
                                                  try
                                                  {
-                                                   RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class);
-                                                   String        storageName       = valueMap.getString("storageName"              );
-                                                   long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes"         );
-                                                   long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes"        );
-                                                   String        entryName         = valueMap.getString("entryName"                );
-                                                   long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"           );
-                                                   long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"          );
-                                                   final String  requestPassword   = valueMap.getString("requestPassword"          );
-                                                   final String  requestVolume     = valueMap.getString("requestVolume"            );
+                                                   RestoreStates       state               = valueMap.getEnum  ("state",RestoreStates.class,RestoreStates.NONE);
+                                                   String              storageName         = valueMap.getString("storageName","");
+                                                   long                storageDoneBytes    = valueMap.getLong  ("storageDoneBytes",0L);
+                                                   long                storageTotalBytes   = valueMap.getLong  ("storageTotalBytes",0L);
+                                                   String              entryName           = valueMap.getString("entryName","");
+                                                   long                entryDoneBytes      = valueMap.getLong  ("entryDoneBytes",0L);
+                                                   long                entryTotalBytes     = valueMap.getLong  ("entryTotalBytes",0L);
+                                                   final String        requestPasswordText = valueMap.getString("requestPasswordText","");
+                                                   final PasswordTypes requestPasswordType = valueMap.getEnum  ("requestPasswordType",PasswordTypes.class,PasswordTypes.NONE);
+                                                   final String        requestVolume       = valueMap.getString("requestVolume","");
 
                                                    busyDialog.updateText(0,"%s",storageName);
                                                    busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
@@ -7792,7 +7804,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("FTP login password"),
-                                                                                                BARControl.tr("Please enter FTP login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Please enter FTP login password for: {0}",requestPasswordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
@@ -7820,7 +7832,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("SSH (TLS) login password"),
-                                                                                                BARControl.tr("Please enter SSH (TLS) login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Please enter SSH (TLS) login password for: {0}",requestPasswordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
@@ -7848,7 +7860,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("Webdav login password"),
-                                                                                                BARControl.tr("Please enter Webdav login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Please enter Webdav login password for: {0}",requestPasswordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
@@ -8621,15 +8633,16 @@ int error;
                                                  // parse and update progress
                                                  try
                                                  {
-                                                   RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class);
-                                                   String        storageName       = valueMap.getString("storageName"              );
-                                                   long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes"         );
-                                                   long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes"        );
-                                                   String        entryName         = valueMap.getString("entryName"                );
-                                                   long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes"           );
-                                                   long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes"          );
-                                                   final String  requestPassword   = valueMap.getString("requestPassword"          );
-                                                   final String  requestVolume     = valueMap.getString("requestVolume"            );
+                                                   RestoreStates       state               = valueMap.getEnum  ("state",RestoreStates.class,RestoreStates.NONE);
+                                                   String              storageName         = valueMap.getString("storageName","");
+                                                   long                storageDoneBytes    = valueMap.getLong  ("storageDoneBytes",0L);
+                                                   long                storageTotalBytes   = valueMap.getLong  ("storageTotalBytes",0L);
+                                                   String              entryName           = valueMap.getString("entryName","");
+                                                   long                entryDoneBytes      = valueMap.getLong  ("entryDoneBytes",0L);
+                                                   long                entryTotalBytes     = valueMap.getLong  ("entryTotalBytes",0L);
+                                                   final String        requestPasswordText = valueMap.getString("requestPasswordText","");
+                                                   final PasswordTypes requestPasswordType = valueMap.getEnum  ("requestPasswordType",PasswordTypes.class,PasswordTypes.NONE);
+                                                   final String        requestVolume       = valueMap.getString("requestVolume","");
 
                                                    busyDialog.updateText(0,"%s",storageName);
                                                    busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
@@ -8658,7 +8671,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("FTP login password"),
-                                                                                                BARControl.tr("Please enter FTP login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Please enter FTP login password for: {0}",requestPasswordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
@@ -8686,7 +8699,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("SSH (TLS) login password"),
-                                                                                                BARControl.tr("Please enter SSH (TLS) login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Please enter SSH (TLS) login password for: {0}",requestPasswordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
@@ -8714,7 +8727,7 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("Webdav login password"),
-                                                                                                BARControl.tr("Please enter Webdav login password for: {0}",requestPassword),
+                                                                                                BARControl.tr("Please enter Webdav login password for: {0}",requestPasswordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
