@@ -13288,7 +13288,7 @@ n++;
                      restoreCommandInfo->id,
                      FALSE,
                      ERROR_NONE,
-                     "state=%s storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu",
+                     "state=%s storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu requestPassword=%'s requestVolume=%'s",
 //                     "running"
 (n >=1) ? "request_ftp_password":"running",
                      restoreStatusInfo->storageName,
@@ -13296,7 +13296,9 @@ n++;
                      restoreStatusInfo->storageTotalBytes,
                      restoreStatusInfo->entryName,
                      restoreStatusInfo->entryDoneBytes,
-                     restoreStatusInfo->entryTotalBytes
+                     restoreStatusInfo->entryTotalBytes,
+"abc@host",//                     restoreStatusInfo->requestPassword,
+""//                     restoreStatusInfo->requestVolume
                     );
 
     return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
