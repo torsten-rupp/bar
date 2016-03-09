@@ -46,6 +46,8 @@ typedef struct
   String entryName;                        // current entry name
   uint64 entryDoneBytes;                   // number of bytes processed of current entry
   uint64 entryTotalBytes;                  // total number of bytes of current entry
+  const char *requestPasswordMessage;
+  const char *requestVolumeMessage;
 } RestoreStatusInfo;
 
 /***********************************************************************\
