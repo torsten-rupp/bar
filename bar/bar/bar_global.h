@@ -86,6 +86,7 @@ typedef enum
   )
 #define DATE_ANY -1
 #define TIME_ANY -1
+/***********************************************************************\
 
 // directory strip
 #define DIRECTORY_STRIP_ANY -1
@@ -94,9 +95,10 @@ typedef enum
 // password mode
 typedef enum
 {
+  PASSWORD_MODE_NONE,                   // no more passwords
   PASSWORD_MODE_DEFAULT,                // use global password
-  PASSWORD_MODE_ASK,                    // ask for password
-  PASSWORD_MODE_CONFIG                  // use password from config
+  PASSWORD_MODE_CONFIG,                 // use password from config
+  PASSWORD_MODE_ASK                     // ask for password
 } PasswordModes;
 
 // server connection priority
