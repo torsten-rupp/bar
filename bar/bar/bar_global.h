@@ -531,7 +531,7 @@ typedef enum
 * Purpose: call-back to get password
 * Input  : password      - password variable
 *          passwordType  - password type
-*          message       - message
+*          text          - text (file name, host name, etc.)
 *          validateFlag  - TRUE to validate input, FALSE otherwise
 *          weakCheckFlag - TRUE for weak password checking, FALSE
 *                          otherwise (print warning if password seems to
@@ -543,8 +543,8 @@ typedef enum
 \***********************************************************************/
 
 typedef Errors(*GetPasswordFunction)(Password      *password,
-//                                     PasswordTypes passwordType,
-                                     const char    *message,
+                                     PasswordTypes passwordType,
+                                     const char    *text,
                                      bool          validateFlag,
                                      bool          weakCheckFlag,
                                      void          *userData
