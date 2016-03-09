@@ -34,36 +34,37 @@
 /* status info data */
 typedef struct
 {
-  String storageName;                      // current storage name
-  uint64 storageDoneBytes;                 // number of bytes processed of current archive
-  uint64 storageTotalBytes;                // total bytes of current archive
-  ulong  doneEntries;                      // number of entries processed
-  uint64 doneBytes;                        // number of bytes processed
-  ulong  skippedEntries;                   // number of skipped entries
-  uint64 skippedBytes;                     // sum of skipped bytes
-  ulong  errorEntries;                     // number of entries with errors
-  uint64 errorBytes;                       // sum of byste in entries with errors
-  String entryName;                        // current entry name
-  uint64 entryDoneBytes;                   // number of bytes processed of current entry
-  uint64 entryTotalBytes;                  // total number of bytes of current entry
-  const char *requestPasswordMessage;
-  const char *requestVolumeMessage;
+  String     storageName;                  // current storage name
+  uint64     storageDoneBytes;             // number of bytes processed of current archive
+  uint64     storageTotalBytes;            // total bytes of current archive
+  ulong      doneEntries;                  // number of entries processed
+  uint64     doneBytes;                    // number of bytes processed
+  ulong      skippedEntries;               // number of skipped entries
+  uint64     skippedBytes;                 // sum of skipped bytes
+  ulong      errorEntries;                 // number of entries with errors
+  uint64     errorBytes;                   // sum of byste in entries with errors
+  String     entryName;                    // current entry name
+  uint64     entryDoneBytes;               // number of bytes processed of current entry
+  uint64     entryTotalBytes;              // total number of bytes of current entry
+  const char *requestPasswordType;         // request password type or NULL
+  const char *requestPasswordText;         // request password host name or NULL
+  const char *requestVolume;               // request volume or NULL
 } RestoreStatusInfo;
 
 /***********************************************************************\
 * Name   : RestoreStatusInfoFunction
 * Purpose: restore status info call-back
-* Input  : userData          - user data
-*          error             - error code
+* Input  : error             - error code
 *          restoreStatusInfo - restore status info
+*          userData          - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*RestoreStatusInfoFunction)(void                    *userData,
-                                         Errors                  error,
-                                         const RestoreStatusInfo *restoreStatusInfo
+typedef void(*RestoreStatusInfoFunction)(Errors                  error,
+                                         const RestoreStatusInfo *restoreStatusInfo,
+                                         void                    *userData
                                         );
 
 /***************************** Variables *******************************/
