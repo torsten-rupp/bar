@@ -110,8 +110,8 @@ typedef struct PasswordNode
 typedef struct
 {
   LIST_HEADER(PasswordNode);
-
-  Semaphore lock;
+  Semaphore          lock;
+  const PasswordNode *newPasswordNode;
 } PasswordList;
 
 // password handle
@@ -213,6 +213,7 @@ LOCAL Errors getCryptPassword(Password            *password,
         if (!archiveInfo->cryptPasswordReadFlag && (getPasswordFunction != NULL))
         {
           error = getPasswordFunction(password,
+                                      PASSWORD_TYPE_CRYPT,
                                       (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
                                         ? String_cString(Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL))
                                         : NULL,
@@ -239,6 +240,7 @@ LOCAL Errors getCryptPassword(Password            *password,
         if (!archiveInfo->cryptPasswordReadFlag && (getPasswordFunction != NULL))
         {
           error = getPasswordFunction(password,
+                                      PASSWORD_TYPE_CRYPT,
                                       (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
                                         ? String_cString(Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL))
                                         : NULL,
@@ -270,6 +272,7 @@ LOCAL Errors getCryptPassword(Password            *password,
         if (!archiveInfo->cryptPasswordReadFlag && (getPasswordFunction != NULL))
         {
           error = getPasswordFunction(password,
+                                      PASSWORD_TYPE_CRYPT,
                                       (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
                                         ? String_cString(Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL))
                                         : NULL,
@@ -361,6 +364,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
         // input password
         Password_init(&newPassword);
         error = passwordHandle->getPasswordFunction(&newPassword,
+                                                    PASSWORD_TYPE_CRYPT,
                                                     (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
                                                       ? String_cString(Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL))
                                                       : NULL,
@@ -2953,6 +2957,7 @@ Errors Archive_initAll(void)
   // initialize variables
   Semaphore_init(&decryptPasswordList.lock);
   List_init(&decryptPasswordList);
+  decryptPasswordList.newPasswordNode = NULL;
 
   return ERROR_NONE;
 }
@@ -3054,10 +3059,31 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
       List_append(&decryptPasswordList,passwordNode);
     }
+
+    // set reference to new password
+    decryptPasswordList.newPasswordNode = passwordNode;
   }
   assert(passwordNode != NULL);
 
   return passwordNode->password;
+}
+
+bool Archive_waitDecryptPassword(Password *password, long timeout)
+{
+  SemaphoreLock semaphoreLock;
+  bool          modified;
+
+  Password_clear(password);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    modified = Semaphore_waitModified(&decryptPasswordList.lock,timeout);
+    if (decryptPasswordList.newPasswordNode != NULL)
+    {
+      Password_set(password,decryptPasswordList.newPasswordNode->password);
+    }
+  }
+
+  return modified;
 }
 
 #ifdef NDEBUG

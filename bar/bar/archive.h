@@ -493,6 +493,18 @@ void Archive_clearDecryptPasswords(void);
 const Password *Archive_appendDecryptPassword(const Password *password);
 
 /***********************************************************************\
+* Name   : Archive_waitDecryptPassword
+* Purpose: wait for new decrypt password in list
+* Input  : password - new decrypt password
+*          timeout  - timeout [ms]
+* Output : -
+* Return : TRUE if new password in list
+* Notes  : -
+\***********************************************************************/
+
+bool Archive_waitDecryptPassword(Password *password, long timeout);
+
+/***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
 * Input  : archiveInfo          - archive info data
