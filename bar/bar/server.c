@@ -13271,7 +13271,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 
   bool updateRestoreStatusInfo(Errors                  error,
                                const RestoreStatusInfo *restoreStatusInfo,
-                               void                   *userData
+                               void                    *userData
                               )
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
@@ -13315,7 +13315,7 @@ n++;
   *          restoreStatusInfo - create status info data,
   *          userData          - user data
   * Output : -
-  * Return : TRUE to continue, FALSE to abort
+  * Return : ERROR_NONE or error code
   * Notes  : -
   \***********************************************************************/
 
@@ -13331,7 +13331,8 @@ n++;
 
     assert(restoreCommandInfo != NULL);
 
-//    UNUSED_VARIABLE(error);
+    UNUSED_VARIABLE(validateFlag);
+    UNUSED_VARIABLE(weakCheckFlag);
 
     sendClientResult(restoreCommandInfo->clientInfo,
                      restoreCommandInfo->id,
