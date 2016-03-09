@@ -5157,7 +5157,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
 #endif
 
-Database_debugEnable(1);
+//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
@@ -5186,7 +5186,7 @@ Database_debugEnable(1);
                            offset,
                            limit
                           );
-Database_debugEnable(0);
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -5748,7 +5748,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       }
       else
       {
-Database_debugEnable(1);
+//Database_debugEnable(1);
         filterAppend(filter,!String_isEmpty(pattern),"AND","files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S)",ftsString);
 //        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,files.name)",regexpString);
         filterAppend(filter,!String_isEmpty(storageIdsString),"AND","files.storageId IN (%S)",storageIdsString);
@@ -5761,7 +5761,7 @@ Database_debugEnable(1);
                                  ",
                                  String_cString(filter)
                                 );
-Database_debugEnable(0);
+//Database_debugEnable(0);
       }
 if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
@@ -6797,7 +6797,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 //  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,directories.name)",regexpString);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","directories.storageId IN (%S)",storageIdsString);
   filterAppend(filter,!String_isEmpty(entryIdsString),"AND","directories.id IN (%S)",entryIdsString);
-Database_debugEnable(1);
+//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT directories.id, \
@@ -6814,7 +6814,7 @@ Database_debugEnable(1);
                            ",
                            String_cString(filter)
                           );
-Database_debugEnable(0);
+//Database_debugEnable(0);
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
