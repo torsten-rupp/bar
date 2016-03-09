@@ -302,7 +302,7 @@ bool Password_equals(const Password *password0, const Password *password1);
 * Purpose: input password from stdin (without echo characters)
 * Input  : password - password
 *          message  - message text
-*          mode     - input modes; see PASSWORD_INPUT_MODE_*
+*          modes    - input mode set; see PASSWORD_INPUT_MODE_*
 * Output : -
 * Return : TRUE if password read, FALSE otherwise
 * Notes  : -
@@ -317,15 +317,15 @@ bool Password_input(Password   *password,
 * Name   : Password_inputVerify
 * Purpose: verify input of password
 * Input  : password - password to verify
-*          title    - title text
-*          mode     - input modes; see PASSWORD_INPUT_MODE_*
+*          message  - message text
+*          modes    - input mode set; see PASSWORD_INPUT_MODE_*
 * Output : -
 * Return : TRUE if passwords equal, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Password_inputVerify(const Password *password,
-                          const char     *title,
+                          const char     *message,
                           uint           modes
                          );
 
