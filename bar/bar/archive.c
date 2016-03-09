@@ -123,7 +123,6 @@ typedef struct
   const PasswordNode  *passwordNode;                     // next password node to use
   GetPasswordFunction getPasswordFunction;               // password input callback
   void                *getPasswordUserData;
-  bool                inputFlag;                         // TRUE if input callback was called
 } PasswordHandle;
 
 /***************************** Variables *******************************/
@@ -288,6 +287,9 @@ LOCAL Errors getCryptPassword(Password            *password,
         }
       }
       break;
+    case PASSWORD_MODE_NONE:
+      error = ERROR_NO_CRYPT_PASSWORD;
+      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -316,17 +318,15 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 {
   bool           semaphoreLock;
   const Password *password;
-  bool           doneFlag;
   Password       newPassword;
   Errors         error;
 
   assert(passwordHandle != NULL);
 
   password = NULL;
-  doneFlag = FALSE;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    while ((password == NULL) && !doneFlag)
+    while ((password == NULL) && (passwordHandle->passwordMode != PASSWORD_MODE_NONE))
     {
       if      (passwordHandle->passwordNode != NULL)
       {
@@ -357,7 +357,6 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
         passwordHandle->passwordMode = PASSWORD_MODE_ASK;
       }
       else if (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
-               && !passwordHandle->inputFlag
                && (passwordHandle->getPasswordFunction != NULL)
               )
       {
@@ -379,18 +378,12 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 
           // free resources
           Password_done(&newPassword);
-
-          // next password mode is: none
-          passwordHandle->inputFlag = TRUE;
         }
         else
         {
-          doneFlag = TRUE;
+          // next password mode is: none
+          passwordHandle->passwordMode = PASSWORD_MODE_NONE;
         }
-      }
-      else
-      {
-        doneFlag = TRUE;
       }
     }
   }
@@ -427,7 +420,6 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
   passwordHandle->passwordNode        = decryptPasswordList.head;
   passwordHandle->getPasswordFunction = getPasswordFunction;
   passwordHandle->getPasswordUserData = getPasswordUserData;
-  passwordHandle->inputFlag           = FALSE;
 
   return getNextDecryptPassword(passwordHandle);
 }
@@ -6306,7 +6298,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
 
-    if (error == ERROR_INVALID_CRYPT_PASSWORD)
+    if (error != ERROR_NONE)
     {
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
@@ -6326,7 +6318,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   }
-  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
+  while ((error != ERROR_NONE) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -6815,7 +6807,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
 
-    if (error == ERROR_INVALID_CRYPT_PASSWORD)
+    if (error != ERROR_NONE)
     {
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
@@ -6835,7 +6827,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   }
-  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
+  while ((error != ERROR_NONE) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -7228,7 +7220,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
 
-    if (error == ERROR_INVALID_CRYPT_PASSWORD)
+    if (error != ERROR_NONE)
     {
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
@@ -7248,7 +7240,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   }
-  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
+  while ((error != ERROR_NONE) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -7611,7 +7603,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
 
-    if (error == ERROR_INVALID_CRYPT_PASSWORD)
+    if (error != ERROR_NONE)
     {
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
@@ -7631,7 +7623,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   }
-  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
+  while ((error != ERROR_NONE) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -8203,7 +8195,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
 
-    if (error == ERROR_INVALID_CRYPT_PASSWORD)
+    if (error != ERROR_NONE)
     {
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
@@ -8223,7 +8215,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   }
-  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
+  while ((error != ERROR_NONE) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -8620,7 +8612,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
 
-    if (error == ERROR_INVALID_CRYPT_PASSWORD)
+    if (error != ERROR_NONE)
     {
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
@@ -8640,7 +8632,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       }
     }
   }
-  while ((error == ERROR_INVALID_CRYPT_PASSWORD) && (password != NULL));
+  while ((error != ERROR_NONE) && (password != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
