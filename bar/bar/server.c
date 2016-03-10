@@ -398,6 +398,13 @@ typedef struct
   AuthorizationStates   authorizationState;
   AuthorizationFailNode *authorizationFailNode;
 
+  struct
+  {
+    Semaphore             lock;
+    uint                  id;
+    StringMap             resultMap;
+  } action;
+
   uint                  abortCommandId;                    // command id to abort
 bool abortFlag;
 
@@ -5384,6 +5391,7 @@ typedef enum
 #define RESULT_VALUE_END() \
   0
 
+#warning remove?
 LOCAL void sendClientResult2(ClientInfo *clientInfo, uint id, bool completeFlag, uint errorCode, ...)
 {
   locale_t locale;
@@ -5443,6 +5451,32 @@ const char *name;
   sendClient(clientInfo,result);
 
   String_delete(result);
+}
+
+Errors clientAction(ClientInfo *clientInfo, uint id, const char *format, ...)
+{
+  locale_t locale;
+  String   result;
+  va_list  arguments;
+
+  // send action
+  result = String_new();
+  locale = uselocale(POSIXLocale);
+  {
+    String_format(result,"%d 0 0 ",id);
+    va_start(arguments,format);
+    String_vformat(result,format,arguments);
+    va_end(arguments);
+    String_appendChar(result,'\n');
+  }
+  uselocale(locale);
+  sendClient(clientInfo,result);
+  String_delete(result);
+
+  sendClient(clientInfo,result);
+
+  // wait for result or timeout
+//???
 }
 
 /***********************************************************************\
@@ -6178,6 +6212,55 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, uint id, const StringMap a
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not in debug mode");
   }
+}
+
+/***********************************************************************\
+* Name   : serverCommand_quit
+* Purpose: quit server
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  uint           actionId;
+  SemaphoreLock  semaphoreLock;
+  uint           stringMapIterator;
+  const char     *name;
+  StringMapTypes type;
+  StringMapValue value;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  if (!StringMap_getUInt(argumentMap,"actionId",&actionId,0))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected actionId=<id>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    clientInfo->action.id = actionId;
+    STRINGMAP_ITERATE(argumentMap,stringMapIterator,name,type,value)
+    {
+      if (!stringEquals(name,"actionId"))
+      {
+        StringMap_putValue(clientInfo->action.resultMap,name,type,&value);
+      }
+    }
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"ok");
 }
 
 /***********************************************************************\
@@ -16943,6 +17026,7 @@ SERVER_COMMANDS[] =
   { "AUTHORIZE",                   serverCommand_authorize,                AUTHORIZATION_STATE_WAITING },
   { "VERSION",                     serverCommand_version,                  AUTHORIZATION_STATE_OK      },
   { "QUIT",                        serverCommand_quit,                     AUTHORIZATION_STATE_OK      },
+  { "ACTION_RESULT",               serverCommand_actionResult,             AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_GET",           serverCommand_serverOptionGet,          AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_SET",           serverCommand_serverOptionSet,          AUTHORIZATION_STATE_OK      },
   { "SERVER_OPTION_FLUSH",         serverCommand_serverOptionFlush,        AUTHORIZATION_STATE_OK      },
