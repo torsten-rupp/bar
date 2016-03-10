@@ -400,9 +400,10 @@ typedef struct
 
   struct
   {
-    Semaphore             lock;
-    uint                  id;
-    StringMap             resultMap;
+    Semaphore           lock;
+    uint                id;
+    Errors              error;
+    StringMap           resultMap;
   } action;
 
   uint                  abortCommandId;                    // command id to abort
@@ -612,6 +613,7 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                // TRUE iff pause
 LOCAL uint64                pauseEndTimestamp;
+LOCAL uint                  actionId;
 LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
@@ -5415,7 +5417,7 @@ const char *name;
 
   locale = uselocale(POSIXLocale);
   {
-    String_format(result,"%d %d %d ",id,completeFlag ? 1 : 0,Error_getCode(errorCode));
+    String_format(result,"%u %d %d ",id,completeFlag ? 1 : 0,Error_getCode(errorCode));
     va_start(arguments,errorCode);
 //    String_vformat(result,format,arguments);
     do
@@ -5453,17 +5455,23 @@ const char *name;
   String_delete(result);
 }
 
-Errors clientAction(ClientInfo *clientInfo, uint id, const char *format, ...)
+LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, long timeout, const char *format, ...)
 {
-  locale_t locale;
-  String   result;
-  va_list  arguments;
+  uint          actionId;
+  locale_t      locale;
+  String        result;
+  va_list       arguments;
+  SemaphoreLock semaphoreLock;
+  Errors        error;
+
+  // get new action id
+  actionId = Misc_getId();
 
   // send action
   result = String_new();
   locale = uselocale(POSIXLocale);
   {
-    String_format(result,"%d 0 0 ",id);
+    String_format(result,"%u 0 0 actionId=%u ",id,actionId);
     va_start(arguments,format);
     String_vformat(result,format,arguments);
     va_end(arguments);
@@ -5477,6 +5485,17 @@ Errors clientAction(ClientInfo *clientInfo, uint id, const char *format, ...)
 
   // wait for result or timeout
 //???
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ)
+  {
+    while (actionId != &clientInfo->action.id)
+    {
+      Semaphore_waitModified(&clientInfo->action.lock,timeout);
+    }
+    error = clientInfo->action.error;
+    StringMap_move(resultMap,clientInfo->action.resultMap);
+  }
+
+  return error;
 }
 
 /***********************************************************************\
@@ -17402,17 +17421,24 @@ LOCAL void initClient(ClientInfo *clientInfo)
   clientInfo->type                  = CLIENT_TYPE_NONE;
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
+  clientInfo->action.id             = 0;
+  clientInfo->action.resultMap      = StringMap_new();
+  if (clientInfo->action.resultMap == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
   clientInfo->abortCommandId        = 0;
 clientInfo->abortFlag = FALSE;
 
+  Semaphore_init(&clientInfo->action.lock);
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   PatternList_init(&clientInfo->compressExcludePatternList);
   DeltaSourceList_init(&clientInfo->deltaSourceList);
   initJobOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
-  Array_init(&clientInfo->storageIdArray,  sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->entryIdArray,    sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->storageIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
 }
 
 /***********************************************************************\
@@ -17541,6 +17567,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   PatternList_done(&clientInfo->compressExcludePatternList);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
+  Semaphore_done(&clientInfo->action.lock);
+  StringMap_delete(clientInfo->action.resultMap);
 }
 
 /***********************************************************************\
