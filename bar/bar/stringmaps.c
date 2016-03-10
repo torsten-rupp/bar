@@ -220,7 +220,6 @@ LOCAL void removeStringMapEntry(StringMapEntry *stringMapEntry)
     case STRINGMAP_TYPE_DOUBLE:
     case STRINGMAP_TYPE_BOOL:
     case STRINGMAP_TYPE_CHAR:
-    case STRINGMAP_TYPE_DATA:
       break;
     case STRINGMAP_TYPE_CSTRING:
       free(stringMapEntry->value.data.s);
@@ -228,6 +227,13 @@ LOCAL void removeStringMapEntry(StringMapEntry *stringMapEntry)
     case STRINGMAP_TYPE_STRING:
       String_delete(stringMapEntry->value.data.string);
       break;
+    case STRINGMAP_TYPE_DATA:
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
   }
   free(stringMapEntry->name);
   stringMapEntry->name = NULL;
@@ -456,6 +462,16 @@ const char *StringMap_indexName(const StringMap stringMap, uint index)
 
   stringMapEntry = StringMap_index(stringMap,index);
   return (stringMapEntry != NULL) ? stringMapEntry->name : NULL;
+}
+
+StringMapTypes StringMap_indexType(const StringMap stringMap, uint index)
+{
+  const StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+
+  stringMapEntry = StringMap_index(stringMap,index);
+  return (stringMapEntry != NULL) ? stringMapEntry->type : STRINGMAP_TYPE_NONE;
 }
 
 StringMapValue StringMap_indexValue(const StringMap stringMap, uint index)
@@ -827,6 +843,50 @@ void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap s
   {
     stringMapEntry->type       = STRINGMAP_TYPE_DATA;
     stringMapEntry->value.text = stringMapFormatFunction(data,stringMapFormatUserData);
+  }
+}
+
+#ifdef NDEBUG
+void StringMap_putValue(StringMap stringMap, const char *name, StringMapTypes type, const StringMapValue *value)
+#else /* not NDEBUG */
+void __StringMap_putValue(const char *__fileName__, ulong __lineNb__,StringMap stringMap, const char *name, StringMapTypes type, const StringMapValue *value)
+#endif /* NDEBUG */
+{
+  StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(value != NULL);
+
+  #ifdef NDEBUG
+    stringMapEntry = addStringMapEntry(stringMap,name);
+  #else /* not NDEBUG */
+    stringMapEntry = addStringMapEntry(__fileName__,__lineNb__,stringMap,name);
+  #endif /* NDEBUG */
+
+  if (stringMapEntry != NULL)
+  {
+    stringMapEntry->type = type;
+    stringMapEntry->value.text = String_duplicate(value->text);
+    switch (type)
+    {
+      case STRINGMAP_TYPE_NONE:    break;
+      case STRINGMAP_TYPE_INT:     stringMapEntry->value.data.i      = value->data.i; break;
+      case STRINGMAP_TYPE_INT64:   stringMapEntry->value.data.l      = value->data.l; break;
+      case STRINGMAP_TYPE_UINT:    stringMapEntry->value.data.ui     = value->data.ui; break;
+      case STRINGMAP_TYPE_UINT64:  stringMapEntry->value.data.ul     = value->data.ul; break;
+      case STRINGMAP_TYPE_DOUBLE:  stringMapEntry->value.data.d      = value->data.d; break;
+      case STRINGMAP_TYPE_BOOL:    stringMapEntry->value.data.b      = value->data.b; break;
+      case STRINGMAP_TYPE_CHAR:    stringMapEntry->value.data.c      = value->data.c; break;
+      case STRINGMAP_TYPE_CSTRING: stringMapEntry->value.data.s      = strdup(value->data.s); break;
+      case STRINGMAP_TYPE_STRING:  stringMapEntry->value.data.string = String_duplicate(value->data.string); break;
+      case STRINGMAP_TYPE_DATA:    stringMapEntry->value.data.p      = value->data.p; break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
   }
 }
 

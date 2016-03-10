@@ -118,8 +118,10 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
   #define StringMap_putCString(...)     __StringMap_putCString(__FILE__,__LINE__,__VA_ARGS__)
   #define StringMap_putString(...)      __StringMap_putString(__FILE__,__LINE__,__VA_ARGS__)
   #define StringMap_putData(...)        __StringMap_putData(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringMap_putValue(...)       __StringMap_putValue(__FILE__,__LINE__,__VA_ARGS__)
   #define StringMap_remove(...)         __StringMap_remove(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
+
 
 /***********************************************************************\
 * Name   : STRINGMAP_ITERATE
@@ -132,21 +134,23 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            int iteratorVariable;
-*            const char *name;
-*            void       *value;
+*            uint           iteratorVariable;
+*            const char     *name;
+*            StringMapTypes type;
+*            StringMapValue value;
 *
-*            STRINGLIST_ITERATE(stringMap,iteratorVariable,name,value)
+*            STRINGLIST_ITERATE(stringMap,iteratorVariable,name,type,value)
 *            {
 *              ... = name
+*              ... = type
 *              ... = value.i
 *            }
 \***********************************************************************/
 
-#define STRINGMAP_ITERATE(stringMap,iteratorVariable,name_,value_) \
-  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
+#define STRINGMAP_ITERATE(stringMap,iteratorVariable,name_,type_,value_) \
+  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), type_ = StringMap_indexType(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
        (iteratorVariable) < StringMap_count(stringMap); \
-       (iteratorVariable)++, name_ = StringMap_indexName(stringMap,iteratorVariable), value_ = StringMap_indexValue(stringMap,iteratorVariable) \
+       (iteratorVariable)++, name_ = StringMap_indexName(stringMap,iteratorVariable), type_ = StringMap_indexType(stringMap,iteratorVariable), value_ = StringMap_indexValue(stringMap,iteratorVariable) \
       )
 
 /***********************************************************************\
@@ -161,21 +165,23 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            int iteratorVariable;
-*            const char *name;
-*            void       *value;
+*            uint           iteratorVariable;
+*            const char     *name;
+*            StringMapTypes type;
+*            StringMapValue value;
 *
-*            STRINGMAP_ITERATEX(stringMap,iteratorVariable,name,value,TRUE)
+*            STRINGMAP_ITERATEX(stringMap,iteratorVariable,name,type,value,TRUE)
 *            {
 *              ... = name
+*              ... = type
 *              ... = value.i
 *            }
 \***********************************************************************/
 
-#define STRINGMAP_ITERATEX(stringMap,iteratorVariable,name_,value_,condition) \
-  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
+#define STRINGMAP_ITERATEX(stringMap,iteratorVariable,name_,type_,value_,condition) \
+  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), type_ = StringMap_indexType(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
        ((iteratorVariable) < StringMap_count(stringMap)) && (condition); \
-       (iteratorVariable)++, name_ = StringMap_indexName(stringMap,iteratorVariable), value_ = StringMap_indexValue(stringMap,iteratorVariable) \
+       (iteratorVariable)++, name_ = StringMap_indexName(stringMap,iteratorVariable), type_ = StringMap_indexType(stringMap,iteratorVariable), value_ = StringMap_indexValue(stringMap,iteratorVariable) \
       )
 
 /***************************** Forwards ********************************/
@@ -317,6 +323,18 @@ const StringMapEntry *StringMap_index(const StringMap stringMap, uint index);
 const char *StringMap_indexName(const StringMap stringMap, uint index);
 
 /***********************************************************************\
+* Name   : StringMap_indexType
+* Purpose: get string map entry type
+* Input  : stringMap - string map
+*          index     - index
+* Output : -
+* Return : type
+* Notes  : -
+\***********************************************************************/
+
+StringMapTypes StringMap_indexType(const StringMap stringMap, uint index);
+
+/***********************************************************************\
 * Name   : StringMap_indexValue
 * Purpose: get string map value
 * Input  : stringMap - string map
@@ -367,9 +385,9 @@ void __StringMap_put(const char *__fileName__, ulong __lineNb__, StringMap strin
 /***********************************************************************\
 * Name   : StringMap_put*
 * Purpose: put data into map
-* Input  : stringMap - string map
-*          name      - name
-*          data      - data
+* Input  : stringMap  - string map
+*          name       - name
+*          data/value - data/value
 * Output : -
 * Return : -
 * Notes  : -
@@ -388,6 +406,7 @@ void StringMap_putChar(StringMap stringMap, const char *name, char data);
 void StringMap_putCString(StringMap stringMap, const char *name, const char *data);
 void StringMap_putString(StringMap stringMap, const char *name, ConstString data);
 void StringMap_putData(StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData);
+void StringMap_putValue(StringMap stringMap, const char *name, StringMapTypes type, const StringMapValue *data);
 #else /* not NDEBUG */
 void __StringMap_putInt(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int data);
 void __StringMap_putLong(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, long data);
@@ -401,6 +420,7 @@ void __StringMap_putChar(const char *__fileName__, ulong __lineNb__, StringMap s
 void __StringMap_putCString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, const char *data);
 void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ConstString data);
 void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData);
+void __StringMap_putValue(const char *__fileName__, ulong __lineNb__,StringMap stringMap, const char *name, StringMapTypes type, const StringMapValue *data);
 #endif /* NDEBUG */
 
 /***********************************************************************\
