@@ -86,7 +86,6 @@ typedef enum
   )
 #define DATE_ANY -1
 #define TIME_ANY -1
-/***********************************************************************\
 
 // directory strip
 #define DIRECTORY_STRIP_ANY -1
@@ -105,7 +104,7 @@ typedef enum
 typedef enum
 {
   SERVER_CONNECTION_PRIORITY_LOW,
-  SERVER_CONNECTION_PRIORITY_HIGH,
+  SERVER_CONNECTION_PRIORITY_HIGH
 } ServerConnectionPriorities;
 
 // archive file modes
