@@ -3085,6 +3085,13 @@ Dprintf.dprintf("");
     ERROR
   }*/
 
+  enum Actions
+  {
+    NONE,
+    REQUEST_PASSWORD,
+    REQUEST_VOLUME
+  };
+
   /** password types
    */
   enum PasswordTypes
@@ -7773,6 +7780,7 @@ int error;
                                                    String              entryName           = valueMap.getString("entryName","");
                                                    long                entryDoneBytes      = valueMap.getLong  ("entryDoneBytes",0L);
                                                    long                entryTotalBytes     = valueMap.getLong  ("entryTotalBytes",0L);
+                                                   Actions             action              = valueMap.getEnum  ("state",Actions.class,Actions.NONE);
                                                    final String        requestPasswordText = valueMap.getString("requestPasswordText","");
                                                    final PasswordTypes requestPasswordType = valueMap.getEnum  ("requestPasswordType",PasswordTypes.class,PasswordTypes.NONE);
                                                    final String        requestVolume       = valueMap.getString("requestVolume","");
