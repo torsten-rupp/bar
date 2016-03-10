@@ -30,6 +30,7 @@
 #include "stringmaps.h"
 
 /****************** Conditional compilation switches *******************/
+#define HALT_ON_INSUFFICIENT_MEMORY
 
 /***************************** Constants *******************************/
 #define STRINGMAP_START_SIZE 32   // string map start size
@@ -38,12 +39,6 @@
 const StringMapValue STRINGMAP_VALUE_NONE = {NULL,{0}};
 
 /***************************** Datatypes *******************************/
-
-struct __StringMap
-{
-  uint           size;
-  StringMapEntry *stringMapEntries;
-};
 
 /***************************** Variables *******************************/
 
@@ -105,9 +100,9 @@ LOCAL uint calculateHash(const char *name)
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL StringMapEntry *addStringMapEntry(struct __StringMap *stringMap, const char *name)
+LOCAL StringMapEntry *addStringMapEntry(StringMap stringMap, const char *name)
 #else /* not NDEBUG */
-LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb__, struct __StringMap *stringMap, const char *name)
+LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name)
 #endif /* NDEBUG */
 {
   uint           hashIndex;
@@ -249,7 +244,7 @@ LOCAL void removeStringMapEntry(StringMapEntry *stringMapEntry)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL StringMapEntry *findStringMapEntry(const struct __StringMap *stringMap, const char *name)
+LOCAL StringMapEntry *findStringMapEntry(const StringMap stringMap, const char *name)
 {
   uint i;
   uint n;
@@ -274,26 +269,36 @@ LOCAL StringMapEntry *findStringMapEntry(const struct __StringMap *stringMap, co
 #ifdef NDEBUG
 StringMap StringMap_new(void)
 #else /* not NDEBUG */
-StringMap __StringMap_new(const char *__fileName__, ulong __lineNb__)
+StringMap __StringMap_new(const char *__fileName__,
+                          ulong      __lineNb__
+                         )
 #endif /* NDEBUG */
 {
-  struct __StringMap *stringMap;
-  uint               i;
+  uint      i;
+  StringMap stringMap;
 
   // allocate string map
-  stringMap = (struct __StringMap *)malloc(sizeof(struct __StringMap));
+  stringMap = (StringMap)malloc(sizeof(struct __StringMap));
   if (stringMap == NULL)
   {
-    return NULL;
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return NULL;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
 
-  // init entries
+  // init
   stringMap->size             = STRINGMAP_START_SIZE;
   stringMap->stringMapEntries = malloc(sizeof(StringMapEntry)*STRINGMAP_START_SIZE);
-  if (stringMap == NULL)
+  if (stringMap->stringMapEntries == NULL)
   {
     free(stringMap);
-    return NULL;
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return FALSE;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
   for (i = 0; i < STRINGMAP_START_SIZE; i++)
   {
@@ -308,21 +313,21 @@ StringMap __StringMap_new(const char *__fileName__, ulong __lineNb__)
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(stringMap,sizeof(struct __StringMap));
+    DEBUG_ADD_RESOURCE_TRACE(stringMap,sizeof(StringMap));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap,sizeof(struct __StringMap));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap,sizeof(StringMap));
   #endif /* NDEBUG */
 
   return stringMap;
 }
 
 #ifdef NDEBUG
-StringMap StringMap_duplicate(const StringMap stringMap)
+StringMap stringMap_duplicate(const StringMap stringMap)
 #else /* not NDEBUG */
 StringMap __StringMap_duplicate(const char *__fileName__, ulong __lineNb__, const StringMap stringMap)
 #endif /* NDEBUG */
 {
-  struct __StringMap *newStringMap;
+  StringMap newStringMap;
 
   assert(stringMap != NULL);
 
@@ -346,7 +351,33 @@ void StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
   uint i;
 
   assert(stringMap != NULL);
+  assert(stringMap->stringMapEntries != NULL);
   assert(fromStringMap != NULL);
+  assert(fromStringMap->stringMapEntries != NULL);
+
+  stringMap->size = fromStringMap->size;
+  for (i = 0; i < stringMap->size; i++)
+  {
+    if (fromStringMap->stringMapEntries[i].name != NULL)
+    {
+      stringMap->stringMapEntries[i].name  = strdup(fromStringMap->stringMapEntries[i].name);
+      stringMap->stringMapEntries[i].value = fromStringMap->stringMapEntries[i].value;
+    }
+    else
+    {
+      stringMap->stringMapEntries[i].name = NULL;
+    }
+  }
+}
+
+void StringMap_move(StringMap stringMap, StringMap fromStringMap)
+{
+  uint i;
+
+  assert(stringMap != NULL);
+  assert(stringMap->stringMapEntries != NULL);
+  assert(fromStringMap != NULL);
+  assert(fromStringMap->stringMapEntries != NULL);
 
   stringMap->size = fromStringMap->size;
   for (i = 0; i < stringMap->size; i++)
@@ -372,6 +403,7 @@ void __StringMap_delete(const char *__fileName__, ulong __lineNb__, StringMap st
   uint i;
 
   assert(stringMap != NULL);
+  assert(stringMap->stringMapEntries != NULL);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(stringMap,sizeof(struct __StringMap));
@@ -395,6 +427,7 @@ StringMap StringMap_clear(StringMap stringMap)
   uint i;
 
   assert(stringMap != NULL);
+  assert(stringMap->stringMapEntries != NULL);
 
   for (i = 0; i < stringMap->size; i++)
   {
@@ -414,6 +447,7 @@ uint StringMap_count(const StringMap stringMap)
   uint i;
 
   assert(stringMap != NULL);
+  assert(stringMap->stringMapEntries != NULL);
 
   count = 0L;
   for (i = 0; i < stringMap->size; i++)
@@ -433,6 +467,7 @@ const StringMapEntry *StringMap_index(const StringMap stringMap, uint index)
   uint           i;
 
   assert(stringMap != NULL);
+  assert(stringMap->stringMapEntries != NULL);
 
   stringMapEntry = NULL;
   for (i = 0; i < stringMap->size; i++)
@@ -1512,6 +1547,7 @@ void* const *StringMap_valueArray(const StringMap stringMap)
   uint n,i;
 
   assert(stringMap != NULL);
+  assert(stringMap->stringMapEntries != NULL);
 
   count = StringMap_count(stringMap);
 
@@ -1548,6 +1584,7 @@ void StringMap_debugDump(FILE *handle, const StringMap stringMap)
   uint i;
 
   assert(stringMap != NULL);
+  assert(stringMap->stringMapEntries != NULL);
 
   for (i = 0; i < stringMap->size; i++)
   {

@@ -89,6 +89,12 @@ typedef struct
 // string map
 typedef struct __StringMap* StringMap;
 
+struct __StringMap
+{
+  uint           size;
+  StringMapEntry *stringMapEntries;
+};
+
 // format/convert value
 typedef String(*StringMapFormatFunction)(void *value, void *userData);
 typedef bool(*StringMapParseFunction)(ConstString string, void *data, void *userData);
@@ -219,7 +225,7 @@ StringMap __StringMap_new(const char *__fileName__,
 \***********************************************************************/
 
 #ifdef NDEBUG
-StringMap StringMap_duplicate(const StringMap stringMap);
+StringMap stringMap_duplicate(const StringMap stringMap);
 #else /* not NDEBUG */
 StringMap __StringMap_duplicate(const char      *__fileName__,
                                 ulong           __lineNb__,
@@ -229,7 +235,7 @@ StringMap __StringMap_duplicate(const char      *__fileName__,
 
 /***********************************************************************\
 * Name   : StringMap_copy
-* Purpose: copy sting list
+* Purpose: copy string list
 * Input  : stringMap     - string map
 *          fromStringMap - string map to copy (strings will be copied!)
 * Output : -
@@ -238,6 +244,18 @@ StringMap __StringMap_duplicate(const char      *__fileName__,
 \***********************************************************************/
 
 void StringMap_copy(StringMap stringMap, const StringMap fromStringMap);
+
+/***********************************************************************\
+* Name   : StringMap_move
+* Purpose: move string list
+* Input  : stringMap     - string map
+*          fromStringMap - string map to copy (strings will be copied!)
+* Output : -
+* Return : string map or NULL on insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+void StringMap_move(StringMap stringMap, StringMap fromStringMap);
 
 /***********************************************************************\
 * Name   : StringMap_delete
