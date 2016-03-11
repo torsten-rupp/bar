@@ -5481,15 +5481,15 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
   sendClient(clientInfo,result);
   String_delete(result);
 
-  sendClient(clientInfo,result);
-
   // wait for result or timeout
-//???
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     while (actionId != &clientInfo->action.id)
     {
-      Semaphore_waitModified(&clientInfo->action.lock,timeout);
+      if (!Semaphore_waitModified(&clientInfo->action.lock,timeout))
+      {
+        return ERROR_NETWORK_TIMEOUT;
+      }
     }
     error = clientInfo->action.error;
     StringMap_move(resultMap,clientInfo->action.resultMap);
@@ -13430,31 +13430,57 @@ n++;
                     )
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
+    StringMap          resultMap;
+    Errors             error;
+    String             encryptType;
+    String             encryptedPassword;
 
+    assert(password != NULL);
     assert(restoreCommandInfo != NULL);
 
     UNUSED_VARIABLE(validateFlag);
     UNUSED_VARIABLE(weakCheckFlag);
 
-    sendClientResult(restoreCommandInfo->clientInfo,
-                     restoreCommandInfo->id,
-                     FALSE,
-                     ERROR_NONE,
-                     "state=request_crypt_password requestPasswordType=%'s requestPasswordText=%'s",
+    // init variables
+    resultMap = StringMap_new();
+
+    // request password
+    error = clientAction(restoreCommandInfo->clientInfo,
+                         restoreCommandInfo->id,
+                         resultMap,
+                         60*1000,
+                         "command=request_password requestPasswordType=%'s requestPasswordText=%'s",
 "FTP",//                     restoreStatusInfo->requestPasswordType,
-                     text
-                    );
+                         text
+                        );
+    if (error != ERROR_NONE)
+    {
+      StringMap_delete(resultMap);
+      return error;
+    }
 
-    // wait for password
-    Archive_waitDecryptPassword(password,60*1000);
+    // parse result
+    encryptType = String_new();
+    if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
+    {
+      StringMap_delete(resultMap);
+      return ERROR_EXPECTED_PARAMETER;
+    }
+    encryptedPassword = String_new();
+    if (!StringMap_getString(resultMap,"encryptedPassword",encryptedPassword,NULL))
+    {
+      String_delete(encryptedPassword);
+      StringMap_delete(resultMap);
+      return ERROR_EXPECTED_PARAMETER;
+    }
 
-    // signal password done
-    sendClientResult(restoreCommandInfo->clientInfo,
-                     restoreCommandInfo->id,
-                     FALSE,
-                     ERROR_NONE,
-                     "state=none"
-                    );
+    // decrypt password
+    if (!decryptPassword(password,clientInfo,encryptType,encryptedPassword))
+    {
+      String_delete(encryptedPassword);
+      StringMap_delete(resultMap);
+      return ERROR_INVALID_CRYPT_PASSWORD;
+    }
 
     return ERROR_NONE;
   }
