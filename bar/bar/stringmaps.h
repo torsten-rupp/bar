@@ -92,7 +92,7 @@ typedef struct __StringMap* StringMap;
 struct __StringMap
 {
   uint           size;
-  StringMapEntry *stringMapEntries;
+  StringMapEntry *entries;
 };
 
 // format/convert value
@@ -185,7 +185,7 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 \***********************************************************************/
 
 #define STRINGMAP_ITERATEX(stringMap,iteratorVariable,name_,type_,value_,condition) \
-  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), type_ = StringMap_indexType(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
+  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), type_ = SstringMap_indexType(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
        ((iteratorVariable) < StringMap_count(stringMap)) && (condition); \
        (iteratorVariable)++, name_ = StringMap_indexName(stringMap,iteratorVariable), type_ = StringMap_indexType(stringMap,iteratorVariable), value_ = StringMap_indexValue(stringMap,iteratorVariable) \
       )
@@ -243,7 +243,7 @@ StringMap __StringMap_duplicate(const char      *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
-void StringMap_copy(StringMap stringMap, const StringMap fromStringMap);
+StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap);
 
 /***********************************************************************\
 * Name   : StringMap_move
@@ -255,7 +255,7 @@ void StringMap_copy(StringMap stringMap, const StringMap fromStringMap);
 * Notes  : -
 \***********************************************************************/
 
-void StringMap_move(StringMap stringMap, StringMap fromStringMap);
+StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap);
 
 /***********************************************************************\
 * Name   : StringMap_delete
