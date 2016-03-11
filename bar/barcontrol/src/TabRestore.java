@@ -191,7 +191,7 @@ public class TabRestore
   {
     NONE,
     OK,
-    ANY
+    ANY;
   };
 
   /** index state set
@@ -543,7 +543,7 @@ public class TabRestore
       NAME,
       SIZE,
       CREATED_DATETIME,
-      STATE
+      STATE;
     }
 
     protected SortModes sortMode;
@@ -3063,10 +3063,6 @@ Dprintf.dprintf("");
     WAITING,
     RUNNING,
     DRY_RUNNING,
-    REQUEST_FTP_PASSWORD,
-    REQUEST_SSH_PASSWORD,
-    REQUEST_WEBDAV_PASSWORD,
-    REQUEST_CRYPT_PASSWORD,
     REQUEST_VOLUME,
     DONE,
     ERROR,
@@ -3085,11 +3081,13 @@ Dprintf.dprintf("");
     ERROR
   }*/
 
+  /** actions
+   */
   enum Actions
   {
     NONE,
     REQUEST_PASSWORD,
-    REQUEST_VOLUME
+    REQUEST_VOLUME;
   };
 
   /** password types
@@ -7755,9 +7753,8 @@ boolean overwriteFiles = false;
             setStorageList(indexIdSet);
 
             // start restore
-            long                errorCount    = 0;
-            final RestoreStates prevState[]   = new RestoreStates[]{RestoreStates.NONE};
-            final boolean       skipAllFlag[] = new boolean[]{false};
+            long          errorCount    = 0;
+            final boolean skipAllFlag[] = new boolean[]{false};
 final String[] errorMessage = new String[1];
 int error;
             error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
@@ -7773,38 +7770,17 @@ int error;
                                                  // parse and update progresss
                                                  try
                                                  {
-                                                   RestoreStates       state               = valueMap.getEnum  ("state",RestoreStates.class,RestoreStates.NONE);
-                                                   String              storageName         = valueMap.getString("storageName","");
-                                                   long                storageDoneBytes    = valueMap.getLong  ("storageDoneBytes",0L);
-                                                   long                storageTotalBytes   = valueMap.getLong  ("storageTotalBytes",0L);
-                                                   String              entryName           = valueMap.getString("entryName","");
-                                                   long                entryDoneBytes      = valueMap.getLong  ("entryDoneBytes",0L);
-                                                   long                entryTotalBytes     = valueMap.getLong  ("entryTotalBytes",0L);
-                                                   Actions             action              = valueMap.getEnum  ("state",Actions.class,Actions.NONE);
-                                                   final String        requestPasswordText = valueMap.getString("requestPasswordText","");
-                                                   final PasswordTypes requestPasswordType = valueMap.getEnum  ("requestPasswordType",PasswordTypes.class,PasswordTypes.NONE);
-                                                   final String        requestVolume       = valueMap.getString("requestVolume","");
-
-                                                   busyDialog.updateText(0,"%s",storageName);
-                                                   busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                                                   busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
-                                                   busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-
-                                                   switch (state)
+                                                   if (valueMap.containsKey("action"))
                                                    {
-                                                     case NONE:
-                                                     case WAITING:
-                                                     case RUNNING:
-                                                     case DRY_RUNNING:
-                                                     case DONE:
-                                                     case ERROR:
-                                                     case ABORTED:
-                                                       break;
-                                                     case REQUEST_FTP_PASSWORD:
-                                                       if (prevState[0] != RestoreStates.REQUEST_FTP_PASSWORD)
-                                                       {
-Dprintf.dprintf("");
-                                                         // get ftp password
+                                                     Actions             action       = valueMap.getEnum  ("action",Actions.class,Actions.NONE);
+                                                     final String        passwordText = valueMap.getString("passwordText","");
+                                                     final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+                                                     final String        volume       = valueMap.getString("volume","");
+
+                                                     switch (action)
+                                                     {
+                                                       case REQUEST_PASSWORD:
+                                                         // get password
                                                          display.syncExec(new Runnable()
                                                          {
                                                            @Override
@@ -7812,113 +7788,49 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("FTP login password"),
-                                                                                                BARControl.tr("Please enter FTP login password for: {0}",requestPasswordText),
+                                                                                                BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
                                                              {
-                                                               BARServer.executeCommand(StringParser.format("FTP_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                               BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                            Errors.NONE,
                                                                                                             BARServer.getPasswordEncryptType(),
                                                                                                             BARServer.encryptPassword(password)
                                                                                                            ),
                                                                                         0  // debugLevel
                                                                                        );
                                                              }
-                                                           }
-                                                         });
-                                                       }
-                                                       break;
-                                                     case REQUEST_SSH_PASSWORD:
-                                                       if (prevState[0] != RestoreStates.REQUEST_SSH_PASSWORD)
-                                                       {
-Dprintf.dprintf("");
-                                                         // get ssh password
-                                                         display.syncExec(new Runnable()
-                                                         {
-                                                           @Override
-                                                           public void run()
-                                                           {
-                                                             String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("SSH (TLS) login password"),
-                                                                                                BARControl.tr("Please enter SSH (TLS) login password for: {0}",requestPasswordText),
-                                                                                                BARControl.tr("Password")+":"
-                                                                                               );
-                                                             if (password != null)
+                                                             else
                                                              {
-                                                               BARServer.executeCommand(StringParser.format("SSH_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                                                            BARServer.getPasswordEncryptType(),
-                                                                                                            BARServer.encryptPassword(password)
+                                                               BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                            Errors.NO_PASSWORD
                                                                                                            ),
                                                                                         0  // debugLevel
                                                                                        );
                                                              }
                                                            }
                                                          });
-                                                       }
-                                                       break;
-                                                     case REQUEST_WEBDAV_PASSWORD:
-                                                       if (prevState[0] != RestoreStates.REQUEST_WEBDAV_PASSWORD)
-                                                       {
+                                                       case REQUEST_VOLUME:
 Dprintf.dprintf("");
-                                                         // get webdav password
-                                                         display.syncExec(new Runnable()
-                                                         {
-                                                           @Override
-                                                           public void run()
-                                                           {
-                                                             String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("Webdav login password"),
-                                                                                                BARControl.tr("Please enter Webdav login password for: {0}",requestPasswordText),
-                                                                                                BARControl.tr("Password")+":"
-                                                                                               );
-                                                             if (password != null)
-                                                             {
-                                                               BARServer.executeCommand(StringParser.format("WEBDAV_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                                                            BARServer.getPasswordEncryptType(),
-                                                                                                            BARServer.encryptPassword(password)
-                                                                                                           ),
-                                                                                        0  // debugLevel
-                                                                                       );
-                                                             }
-                                                           }
-                                                         });
-                                                       }
-                                                       break;
-                                                     case REQUEST_CRYPT_PASSWORD:
-                                                       if (prevState[0] != RestoreStates.REQUEST_CRYPT_PASSWORD)
-                                                       {
-Dprintf.dprintf("");
-                                                         // get crypt password
-                                                         display.syncExec(new Runnable()
-                                                         {
-                                                           @Override
-                                                           public void run()
-                                                           {
-                                                             String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("Decrypt password")
-                                                                                               );
-                                                             if (password != null)
-                                                             {
-                                                               BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
-                                                                                                            BARServer.getPasswordEncryptType(),
-                                                                                                            BARServer.encryptPassword(password)
-                                                                                                           ),
-                                                                                        0  // debugLevel
-                                                                                       );
-                                                             }
-                                                           }
-                                                         });
-                                                       }
-                                                       break;
-                                                     case REQUEST_VOLUME:
-                                                       if (prevState[0] != RestoreStates.REQUEST_VOLUME)
-                                                       {
-Dprintf.dprintf("");
-                                                       }
-                                                       break;
+                                                         break;
+                                                     }
                                                    }
+                                                   else
+                                                   {
+                                                     RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class);
+                                                     String        storageName       = valueMap.getString("storageName");
+                                                     long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes");
+                                                     long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
+                                                     String        entryName         = valueMap.getString("entryName");
+                                                     long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes");
+                                                     long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes");
 
-                                                   prevState[0] = state;
+                                                     busyDialog.updateText(0,"%s",storageName);
+                                                     busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                                                     busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
+                                                     busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                                                   }
                                                  }
                                                  catch (IllegalArgumentException exception)
                                                  {
@@ -8623,9 +8535,8 @@ boolean overwriteFiles = false;
             setEntryList(entryIdSet);
 
             // start restore
-            long                errorCount    = 0;
-            final RestoreStates prevState[]   = new RestoreStates[]{RestoreStates.NONE};
-            final boolean       skipAllFlag[] = new boolean[]{false};
+            long          errorCount    = 0;
+            final boolean skipAllFlag[] = new boolean[]{false};
 final String[] errorMessage = new String[1];
 int error;
             error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S overwriteFiles=%y",
@@ -8641,36 +8552,16 @@ int error;
                                                  // parse and update progress
                                                  try
                                                  {
-                                                   RestoreStates       state               = valueMap.getEnum  ("state",RestoreStates.class,RestoreStates.NONE);
-                                                   String              storageName         = valueMap.getString("storageName","");
-                                                   long                storageDoneBytes    = valueMap.getLong  ("storageDoneBytes",0L);
-                                                   long                storageTotalBytes   = valueMap.getLong  ("storageTotalBytes",0L);
-                                                   String              entryName           = valueMap.getString("entryName","");
-                                                   long                entryDoneBytes      = valueMap.getLong  ("entryDoneBytes",0L);
-                                                   long                entryTotalBytes     = valueMap.getLong  ("entryTotalBytes",0L);
-                                                   final String        requestPasswordText = valueMap.getString("requestPasswordText","");
-                                                   final PasswordTypes requestPasswordType = valueMap.getEnum  ("requestPasswordType",PasswordTypes.class,PasswordTypes.NONE);
-                                                   final String        requestVolume       = valueMap.getString("requestVolume","");
-
-                                                   busyDialog.updateText(0,"%s",storageName);
-                                                   busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                                                   busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
-                                                   busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-
-                                                   switch (state)
+                                                   if (valueMap.containsKey("action"))
                                                    {
-                                                     case NONE:
-                                                     case WAITING:
-                                                     case RUNNING:
-                                                     case DRY_RUNNING:
-                                                     case DONE:
-                                                     case ERROR:
-                                                     case ABORTED:
-                                                       break;
-                                                     case REQUEST_FTP_PASSWORD:
-                                                       if (prevState[0] != RestoreStates.REQUEST_FTP_PASSWORD)
-                                                       {
-Dprintf.dprintf("");
+                                                     Actions             action       = valueMap.getEnum  ("action",Actions.class,Actions.NONE);
+                                                     final String        passwordText = valueMap.getString("passwordText","");
+                                                     final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+                                                     final String        volume       = valueMap.getString("volume","");
+
+                                                     switch (action)
+                                                     {
+                                                       case REQUEST_PASSWORD:
                                                          // get ftp password
                                                          display.syncExec(new Runnable()
                                                          {
@@ -8679,12 +8570,12 @@ Dprintf.dprintf("");
                                                            {
                                                              String password = Dialogs.password(shell,
                                                                                                 BARControl.tr("FTP login password"),
-                                                                                                BARControl.tr("Please enter FTP login password for: {0}",requestPasswordText),
+                                                                                                BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
                                                              {
-                                                               BARServer.executeCommand(StringParser.format("FTP_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                               BARServer.executeCommand(StringParser.format("ACTION_RESULT encryptType=%s encryptedPassword=%S",
                                                                                                             BARServer.getPasswordEncryptType(),
                                                                                                             BARServer.encryptPassword(password)
                                                                                                            ),
@@ -8693,99 +8584,26 @@ Dprintf.dprintf("");
                                                              }
                                                            }
                                                          });
-                                                       }
-                                                       break;
-                                                     case REQUEST_SSH_PASSWORD:
-                                                       if (prevState[0] != RestoreStates.REQUEST_SSH_PASSWORD)
-                                                       {
+                                                       case REQUEST_VOLUME:
 Dprintf.dprintf("");
-                                                         // get ssh password
-                                                         display.syncExec(new Runnable()
-                                                         {
-                                                           @Override
-                                                           public void run()
-                                                           {
-                                                             String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("SSH (TLS) login password"),
-                                                                                                BARControl.tr("Please enter SSH (TLS) login password for: {0}",requestPasswordText),
-                                                                                                BARControl.tr("Password")+":"
-                                                                                               );
-                                                             if (password != null)
-                                                             {
-                                                               BARServer.executeCommand(StringParser.format("SSH_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                                                            BARServer.getPasswordEncryptType(),
-                                                                                                            BARServer.encryptPassword(password)
-                                                                                                           ),
-                                                                                        0  // debugLevel
-                                                                                       );
-                                                             }
-                                                           }
-                                                         });
-                                                       }
-                                                       break;
-                                                     case REQUEST_WEBDAV_PASSWORD:
-                                                       if (prevState[0] != RestoreStates.REQUEST_WEBDAV_PASSWORD)
-                                                       {
-Dprintf.dprintf("");
-                                                         // get webdav password
-                                                         display.syncExec(new Runnable()
-                                                         {
-                                                           @Override
-                                                           public void run()
-                                                           {
-                                                             String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("Webdav login password"),
-                                                                                                BARControl.tr("Please enter Webdav login password for: {0}",requestPasswordText),
-                                                                                                BARControl.tr("Password")+":"
-                                                                                               );
-                                                             if (password != null)
-                                                             {
-                                                               BARServer.executeCommand(StringParser.format("WEBDAV_PASSWORD encryptType=%s encryptedPassword=%S",
-                                                                                                            BARServer.getPasswordEncryptType(),
-                                                                                                            BARServer.encryptPassword(password)
-                                                                                                           ),
-                                                                                        0  // debugLevel
-                                                                                       );
-                                                             }
-                                                           }
-                                                         });
-                                                       }
-                                                       break;
-                                                     case REQUEST_CRYPT_PASSWORD:
-                                                       if (prevState[0] != RestoreStates.REQUEST_CRYPT_PASSWORD)
-                                                       {
-Dprintf.dprintf("");
-                                                         // get crypt password
-                                                         display.syncExec(new Runnable()
-                                                         {
-                                                           @Override
-                                                           public void run()
-                                                           {
-                                                             String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("Decrypt password")
-                                                                                               );
-                                                             if (password != null)
-                                                             {
-                                                               BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
-                                                                                                            BARServer.getPasswordEncryptType(),
-                                                                                                            BARServer.encryptPassword(password)
-                                                                                                           ),
-                                                                                        0  // debugLevel
-                                                                                       );
-                                                             }
-                                                           }
-                                                         });
-                                                       }
-                                                       break;
-                                                     case REQUEST_VOLUME:
-                                                       if (prevState[0] != RestoreStates.REQUEST_VOLUME)
-                                                       {
-Dprintf.dprintf("");
-                                                       }
-                                                       break;
+                                                         break;
+                                                     }
                                                    }
+                                                   else
+                                                   {
+                                                     RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class,RestoreStates.NONE);
+                                                     String        storageName       = valueMap.getString("storageName","");
+                                                     long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes",0L);
+                                                     long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes",0L);
+                                                     String        entryName         = valueMap.getString("entryName","");
+                                                     long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes",0L);
+                                                     long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes",0L);
 
-                                                   prevState[0] = state;
+                                                     busyDialog.updateText(0,"%s",storageName);
+                                                     busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                                                     busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
+                                                     busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                                                   }
                                                  }
                                                  catch (IllegalArgumentException exception)
                                                  {
