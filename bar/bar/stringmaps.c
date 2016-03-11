@@ -313,9 +313,9 @@ StringMap __StringMap_new(const char *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(stringMap,sizeof(StringMap));
+    DEBUG_ADD_RESOURCE_TRACE(stringMap,sizeof(struct __StringMap));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap,sizeof(StringMap));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap,sizeof(struct __StringMap));
   #endif /* NDEBUG */
 
   return stringMap;
@@ -341,7 +341,11 @@ StringMap __StringMap_duplicate(const char *__fileName__, ulong __lineNb__, cons
     return NULL;
   }
 
-  StringMap_copy(newStringMap,stringMap);
+  if (StringMap_copy(newStringMap,stringMap) == NULL)
+  {
+    StringMap_delete(newStringMap);
+    return NULL;
+  }
 
   return newStringMap;
 }
