@@ -1155,6 +1155,8 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier    *storageSpecifier,
           // read directory
           directoryName = String_new();
           File_initExtendedAttributes(&fileExtendedAttributeList);
+          AUTOFREE_ADD(&autoFreeList,directoryName,{ String_delete(directoryName); });
+          AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
           error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                              &archiveInfo,
                                              NULL,  // cryptAlgorithm
@@ -1169,12 +1171,10 @@ LOCAL Errors restoreArchiveContent(StorageSpecifier    *storageSpecifier,
                        Storage_getPrintableNameCString(storageSpecifier,archiveName),
                        Error_getText(error)
                       );
-            String_delete(directoryName);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint1,TRUE);
             if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
             break;
           }
-          AUTOFREE_ADD(&autoFreeList,directoryName,{ String_delete(directoryName); });
-          AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
           AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ (void)Archive_closeEntry(&archiveEntryInfo); });
 
           if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
