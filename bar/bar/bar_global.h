@@ -100,6 +100,15 @@ typedef enum
   PASSWORD_MODE_ASK                     // ask for password
 } PasswordModes;
 
+// password types
+typedef enum
+{
+  PASSWORD_TYPE_CRYPT,
+  PASSWORD_TYPE_FTP,
+  PASSWORD_TYPE_SSH,
+  PASSWORD_TYPE_WEBDAV
+} PasswordTypes;
+
 // server connection priority
 typedef enum
 {
@@ -517,15 +526,6 @@ struct JobOptions
   // shortcuts
   bool                         archiveFileModeOverwriteFlag;  // TRUE for overwrite existing archive files
 };
-
-// password types
-typedef enum
-{
-  PASSWORD_TYPE_FTP,
-  PASSWORD_TYPE_SSH,
-  PASSWORD_TYPE_WEBDAV,
-  PASSWORD_TYPE_CRYPT
-} PasswordTypes;
 
 /***********************************************************************\
 * Name   : GetPasswordFunction
