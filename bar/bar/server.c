@@ -401,7 +401,6 @@ typedef struct
   struct
   {
     Semaphore           lock;
-    uint                id;
     Errors              error;
     StringMap           resultMap;
   } action;
@@ -5455,45 +5454,49 @@ const char *name;
   String_delete(result);
 }
 
-LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, long timeout, const char *format, ...)
+LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, const char *actionCommand, long timeout, const char *format, ...)
 {
-  uint          actionId;
   locale_t      locale;
   String        result;
   va_list       arguments;
   SemaphoreLock semaphoreLock;
   Errors        error;
 
-  // get new action id
-  actionId = Misc_getId();
-
-  // send action
-  result = String_new();
-  locale = uselocale(POSIXLocale);
-  {
-    String_format(result,"%u 0 0 actionId=%u ",id,actionId);
-    va_start(arguments,format);
-    String_vformat(result,format,arguments);
-    va_end(arguments);
-    String_appendChar(result,'\n');
-  }
-  uselocale(locale);
-  sendClient(clientInfo,result);
-  String_delete(result);
-
-  // wait for result or timeout
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
-    while (actionId != &clientInfo->action.id)
+    // clear action
+    clientInfo->action.error = ERROR_UNKNOWN;
+
+    // send action
+    result = String_new();
+    locale = uselocale(POSIXLocale);
     {
+      String_format(result,"%u 0 0 action=%s ",id,actionCommand);
+      va_start(arguments,format);
+      String_vformat(result,format,arguments);
+      va_end(arguments);
+      String_appendChar(result,'\n');
+    }
+    uselocale(locale);
+    sendClient(clientInfo,result);
+    String_delete(result);
+
+fprintf(stderr,"%s, %d: wait for result or timeou\n",__FILE__,__LINE__);
+    // wait for result or timeout
+    while (clientInfo->action.error == ERROR_UNKNOWN)
+    {
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,clientInfo->action.error);
       if (!Semaphore_waitModified(&clientInfo->action.lock,timeout))
       {
         return ERROR_NETWORK_TIMEOUT;
       }
     }
+
+    // get action result
     error = clientInfo->action.error;
     StringMap_move(resultMap,clientInfo->action.resultMap);
   }
+fprintf(stderr,"%s, %d: accto %d %d\n",__FILE__,__LINE__,error,StringMap_count(resultMap));
 
   return error;
 }
@@ -6243,6 +6246,8 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, uint id, const StringMap a
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            error=<n>
+*            ...
 *          Result:
 \***********************************************************************/
 
@@ -6261,18 +6266,12 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, uint id, const Str
 
   UNUSED_VARIABLE(argumentMap);
 
-  if (!StringMap_getUInt(argumentMap,"actionId",&actionId,0))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected actionId=<id>");
-    return;
-  }
-
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    clientInfo->action.id = actionId;
+    StringMap_getUInt(argumentMap,"error",&clientInfo->action.error,ERROR_UNKNOWN);
     STRINGMAP_ITERATE(argumentMap,stringMapIterator,name,type,value)
     {
-      if (!stringEquals(name,"actionId"))
+      if (!stringEquals(name,"error"))
       {
         StringMap_putValue(clientInfo->action.resultMap,name,type,&value);
       }
@@ -13382,9 +13381,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     assert(restoreStatusInfo != NULL);
     assert(restoreStatusInfo->entryName != NULL);
     assert(restoreStatusInfo->storageName != NULL);
-#warning TODO remove
-static int n = 0;
-n++;
 
     UNUSED_VARIABLE(error);
 
@@ -13392,19 +13388,14 @@ n++;
                      restoreCommandInfo->id,
                      FALSE,
                      ERROR_NONE,
-                     "state=%s storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu requestPasswordType=%'s requestPasswordText=%'s requestVolume=%'s",
-//                     "running"
-//(n >=1) ? "request_ftp_password":"running",
-(restoreStatusInfo->requestPasswordText != NULL) ? "request_crypt_password":"running",
+                     "state=%s storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu",
+                     "running",
                      restoreStatusInfo->storageName,
                      restoreStatusInfo->storageDoneBytes,
                      restoreStatusInfo->storageTotalBytes,
                      restoreStatusInfo->entryName,
                      restoreStatusInfo->entryDoneBytes,
-                     restoreStatusInfo->entryTotalBytes,
-"FTP",//                     restoreStatusInfo->requestPasswordType,
-                     restoreStatusInfo->requestPasswordText,
-                     restoreStatusInfo->requestVolume
+                     restoreStatusInfo->entryTotalBytes
                     );
 
     return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
@@ -13448,9 +13439,10 @@ n++;
     error = clientAction(restoreCommandInfo->clientInfo,
                          restoreCommandInfo->id,
                          resultMap,
+                         "REQUEST_PASSWORD",
                          60*1000,
-                         "command=request_password requestPasswordType=%'s requestPasswordText=%'s",
-"FTP",//                     restoreStatusInfo->requestPasswordType,
+                         "passwordType=%'s passwordText=%'s",
+                         getPasswordTypeName(passwordType),
                          text
                         );
     if (error != ERROR_NONE)
@@ -13479,7 +13471,7 @@ n++;
     {
       String_delete(encryptedPassword);
       StringMap_delete(resultMap);
-      return ERROR_INVALID_CRYPT_PASSWORD;
+      return ERROR_INVALID_PASSWORD;
     }
 
     return ERROR_NONE;
@@ -17447,7 +17439,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   clientInfo->type                  = CLIENT_TYPE_NONE;
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
-  clientInfo->action.id             = 0;
+  clientInfo->action.error          = ERROR_NONE;
   clientInfo->action.resultMap      = StringMap_new();
   if (clientInfo->action.resultMap == NULL)
   {
