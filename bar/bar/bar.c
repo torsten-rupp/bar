@@ -3590,6 +3590,27 @@ const char *getArchiveTypeShortName(ArchiveTypes archiveType)
   return text;
 }
 
+const char *getPasswordTypeName(PasswordTypes passwordType)
+{
+  const char *text;
+
+  text = NULL;
+  switch (passwordType)
+  {
+    case PASSWORD_TYPE_CRYPT:  text = "crypt";  break;
+    case PASSWORD_TYPE_FTP:    text = "FTP";    break;
+    case PASSWORD_TYPE_SSH:    text = "SSH";    break;
+    case PASSWORD_TYPE_WEBDAV: text = "webDAV"; break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return text;
+}
+
 bool isPrintInfo(uint verboseLevel)
 {
   return !globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel);

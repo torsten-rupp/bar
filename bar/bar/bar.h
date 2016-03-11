@@ -187,6 +187,17 @@ const char *getArchiveTypeName(ArchiveTypes archiveType);
 
 const char *getArchiveTypeShortName(ArchiveTypes archiveType);
 
+/***********************************************************************\
+* Name   : getPasswordTypeName
+* Purpose: get password type name
+* Input  : passwordType - password type
+* Output : -
+* Return : name
+* Notes  : -
+\***********************************************************************/
+
+const char *getPasswordTypeName(PasswordTypes passwordType);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
