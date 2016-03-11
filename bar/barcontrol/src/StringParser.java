@@ -16,6 +16,7 @@ import java.lang.String;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -367,6 +368,7 @@ class ValueMap extends HashMap<String,Object>
   }
 
   /** get enum value
+   * Note: if T implements EnumParse use method parse() to convert string into enum value
    * @param name name
    * @param defaultValue default value
    * @return enum value
@@ -381,6 +383,30 @@ class ValueMap extends HashMap<String,Object>
       {
         String value = (String)object;
 
+        // use parse method (if available)
+        if (EnumParser.class.isAssignableFrom(type))
+        {
+          try
+          {
+            Method parseEnum = EnumParser.class.getDeclaredMethod("parse",String.class);
+            T enumValue0 = type.getEnumConstants()[0];
+            return (T)parseEnum.invoke(enumValue0,value);
+          }
+          catch (IllegalAccessException exception)
+          {
+            // ignored
+          }
+          catch (InvocationTargetException exception)
+          {
+            // ignored
+          }
+          catch (NoSuchMethodException exception)
+          {
+            // ignored
+          }
+        }
+
+        // compare enum value names
         Enum[] enumConstants = (Enum[])type.getEnumConstants();
         int n;
         try
@@ -455,6 +481,17 @@ class ValueMap extends HashMap<String,Object>
 
     return buffer.toString();
   }
+}
+
+/** enum parser interface
+ */
+interface EnumParser<T>
+{
+  /** parse string into enum value
+   * @param string string
+   * @return enum value
+   */
+  public T parse(String string);
 }
 
 /** scanf-like string parser
