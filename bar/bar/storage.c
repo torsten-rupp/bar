@@ -990,7 +990,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                          // ftp://<host name>/<file name>
        )
     {
-      String_sub(string,storageName,6,nextIndex);
+      String_sub(string,storageName,6,nextIndex-6);
       String_trimRight(string,"/");
       if (!Storage_parseFTPSpecifier(string,
                                      storageSpecifier->hostName,
@@ -1021,7 +1021,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // ssh://<host name>/<file name>
        )
     {
-      String_sub(string,storageName,6,nextIndex);
+      String_sub(string,storageName,6,nextIndex-6);
       String_trimRight(string,"/");
       if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
@@ -1051,7 +1051,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // scp://<host name>/<file name>
        )
     {
-      String_sub(string,storageName,6,nextIndex);
+      String_sub(string,storageName,6,nextIndex-6);
       String_trimRight(string,"/");
       if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
@@ -1081,7 +1081,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
         || String_matchCString(storageName,7,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // sftp://<host name>/<file name>
        )
     {
-      String_sub(string,storageName,7,nextIndex);
+      String_sub(string,storageName,7,nextIndex-7);
       String_trimRight(string,"/");
       if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
@@ -1110,7 +1110,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
         || String_matchCString(storageName,9,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
        )
     {
-      String_sub(string,storageName,9,nextIndex);
+      String_sub(string,storageName,9,nextIndex-9);
+fprintf(stderr,"%s, %d: s=%s s2=%s n=%ld \n",__FILE__,__LINE__,String_cString(string),String_cString(storageName),nextIndex);
       String_trimRight(string,"/");
       if (!Storage_parseWebDAVSpecifier(string,
                                         storageSpecifier->hostName,
@@ -1137,7 +1138,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     if (String_matchCString(storageName,5,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
     {
       // cd://<device name>:<file name>
-      String_sub(string,storageName,5,nextIndex);
+      String_sub(string,storageName,5,nextIndex-5);
       String_trimRight(string,"/");
       if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
@@ -1163,7 +1164,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     if (String_matchCString(storageName,6,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
     {
       // dvd://<device name>:<file name>
-      String_sub(string,storageName,6,nextIndex);
+      String_sub(string,storageName,6,nextIndex-6);
       String_trimRight(string,"/");
       if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
@@ -1189,7 +1190,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     if (String_matchCString(storageName,5,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
     {
       // bd://<device name>:<file name>
-      String_sub(string,storageName,5,nextIndex);
+      String_sub(string,storageName,5,nextIndex-5);
       String_trimRight(string,"/");
       if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
@@ -1215,7 +1216,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     if (String_matchCString(storageName,9,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
     {
       // device://<device name>:<file name>
-      String_sub(string,storageName,9,nextIndex);
+      String_sub(string,storageName,9,nextIndex-9);
       String_trimRight(string,"/");
       if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
