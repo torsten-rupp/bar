@@ -4739,8 +4739,8 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
 {
   assert(server != NULL);
 
-  server->name                                = (name != NULL) ? String_duplicate(name) : String_new();
-  server->type                                = serverType;
+  server->name                    = (name != NULL) ? String_duplicate(name) : String_new();
+  server->type                    = serverType;
   switch (serverType)
   {
     case SERVER_TYPE_NONE:
@@ -4770,8 +4770,10 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
         break; // not reached
     #endif /* NDEBUG */
   }
-  server->maxConnectionCount                  = 0;
-  server->maxStorageSize                      = 0;
+  server->maxConnectionCount      = 0;
+  server->maxStorageSize          = 0;
+  server->writePostProcessCommand = String_new();
+  server->writePreProcessCommand  = String_new();
 }
 
 void doneServer(Server *server)
@@ -7372,7 +7374,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &deltaSourceList,
                                     &jobOptions,
                                     CALLBACK(inputCryptPassword,NULL),
-                                    CALLBACK(NULL,NULL),  // restoreStatusInfoUserData callback
+                                    CALLBACK(NULL,NULL),  // restoreStatusInfo callback
+                                    CALLBACK(NULL,NULL),  // restoreError callback
                                     NULL,  // pauseRestoreFlag
                                     NULL,  // requestedAbortFlag,
                                     NULL  // logHandle
