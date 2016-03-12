@@ -2036,8 +2036,9 @@ LOCAL bool matchString(ConstString  string,
                        long         *nextIndex
                       )
 {
-  regex_t regex;
-  bool    matchFlag;
+  regex_t    regex;
+  regmatch_t subMatches[1];
+  bool       matchFlag;
 
   assert(string != NULL);
   assert(string->data != NULL);
@@ -2054,11 +2055,21 @@ LOCAL bool matchString(ConstString  string,
     // match
     matchFlag = (regexec(&regex,
                          &string->data[index],
-                         0,  // subMatchCount
-                         NULL,  // subMatches
-                         0
+                         1,  // subMatchCount
+                         subMatches,
+                         0  // eflags
                         ) == 0
                 );
+
+    // get next index
+    if (matchFlag)
+    {
+      if (nextIndex != NULL)
+      {
+        assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
+        (*nextIndex) = index+subMatches[0].rm_eo-subMatches[0].rm_so;
+      }
+    }
 
     // free resources
     regfree(&regex);
@@ -2140,16 +2151,17 @@ LOCAL bool vmatchString(ConstString  string,
                          &string->data[index],
                          subMatchCount,
                          subMatches,
-                         0
+                         0  // eflags
                         ) == 0
                 );
 
-    // get sub-matches
+    // get next index, sub-matches
     if (matchFlag)
     {
       if (nextIndex != NULL)
       {
-        (*nextIndex) = subMatches[0].rm_eo-subMatches[0].rm_so;
+        assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
+        (*nextIndex) = index+subMatches[0].rm_eo-subMatches[0].rm_so;
       }
 
       if (matchedString != NULL)
@@ -2166,6 +2178,7 @@ LOCAL bool vmatchString(ConstString  string,
         {
           if (subMatches[z].rm_so != -1)
           {
+            assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
             String_setBuffer(matchedSubString,&string->data[subMatches[z].rm_so],subMatches[z].rm_eo-subMatches[z].rm_so);
           }
         }
