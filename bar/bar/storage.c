@@ -1111,7 +1111,6 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
        )
     {
       String_sub(string,storageName,9,nextIndex-9);
-fprintf(stderr,"%s, %d: s=%s s2=%s n=%ld \n",__FILE__,__LINE__,String_cString(string),String_cString(storageName),nextIndex);
       String_trimRight(string,"/");
       if (!Storage_parseWebDAVSpecifier(string,
                                         storageSpecifier->hostName,
