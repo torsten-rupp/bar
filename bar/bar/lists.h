@@ -97,7 +97,7 @@ typedef bool(*ListNodeEqualsFunction)(const void *node, void *userData);
 * Input  : node1,node2 - nodes to compare
 *          userData - user data
 * Output : -
-* Return : -
+* Return : -1/0/-1 iff </=/>
 * Notes  : -
 \***********************************************************************/
 
@@ -791,9 +791,9 @@ void *List_findFirst(const void             *list,
 /***********************************************************************\
 * Name   : List_findNext
 * Purpose: find next node in list
-* Input  : list                    - list
+* Input  : list                   - list
 *          listFindMode           - list find mode
-*          node                    - previous found node
+*          node                   - previous found node
 *          listNodeEqualsFunction - equals function
 *          listNodeEqualsUserData - user data for equals function
 * Output : -
@@ -811,9 +811,9 @@ void *List_findNext(const void             *list,
 /***********************************************************************\
 * Name   : List_sort
 * Purpose: sort list
-* Input  : list                - list
+* Input  : list                    - list
 *          listNodeCompareFunction - compare function
-*          listNodeCmpUserData - user data for compare function
+*          listNodeCompareUserData - user data for compare function
 * Output : -
 * Return : -
 * Notes  : use temporary O(n) memory
