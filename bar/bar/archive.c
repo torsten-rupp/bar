@@ -3422,7 +3422,7 @@ fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityI
   DEBUG_TESTCODE("Archive_open3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (chunkHeader.id != CHUNK_ID_BAR)
   {
-    if (jobOptions->stopOnErrorFlag)
+    if (!jobOptions->noStopOnErrorFlag)
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NOT_AN_ARCHIVE_FILE;
@@ -11225,7 +11225,7 @@ archiveInfo->archiveInitUserData              = NULL;
               String_delete(destinationFileName);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag)
+              if (!jobOptions->noStopOnErrorFlag)
               {
                 restoreInfo.failError = error;
               }
@@ -11269,7 +11269,7 @@ archiveInfo->archiveInitUserData              = NULL;
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
-              if (jobOptions->stopOnErrorFlag)
+              if (!jobOptions->noStopOnErrorFlag)
               {
                 restoreInfo.failError = error;
               }
@@ -11410,7 +11410,7 @@ archiveInfo->archiveInitUserData              = NULL;
                 String_delete(destinationDeviceName);
                 (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   restoreInfo.failError = error;
                 }
@@ -11428,7 +11428,7 @@ archiveInfo->archiveInitUserData              = NULL;
                 String_delete(destinationDeviceName);
                 (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   restoreInfo.failError = error;
                 }
@@ -11472,7 +11472,7 @@ archiveInfo->archiveInitUserData              = NULL;
                              String_cString(destinationDeviceName),
                              Error_getText(error)
                             );
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
@@ -11624,7 +11624,7 @@ archiveInfo->archiveInitUserData              = NULL;
                 String_delete(destinationFileName);
                 (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   restoreInfo.failError = error;
                 }
@@ -11640,7 +11640,7 @@ archiveInfo->archiveInitUserData              = NULL;
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set directory info of '%s' (error: %s)\n",
@@ -11650,7 +11650,7 @@ archiveInfo->archiveInitUserData              = NULL;
                   String_delete(destinationFileName);
                   (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(directoryName);
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
@@ -11784,7 +11784,7 @@ archiveInfo->archiveInitUserData              = NULL;
                                      );
                 if (error != ERROR_NONE)
                 {
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     printInfo(2,"FAIL!\n");
                     printError("Cannot set owner ship of directory '%s' (error: %s)\n",
@@ -11821,7 +11821,7 @@ archiveInfo->archiveInitUserData              = NULL;
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               String_delete(linkName);
-              if (jobOptions->stopOnErrorFlag)
+              if (!jobOptions->noStopOnErrorFlag)
               {
                 restoreInfo.failError = ERRORX(FILE_EXISTS_,0,String_cString(destinationFileName));
               }
@@ -11846,7 +11846,7 @@ archiveInfo->archiveInitUserData              = NULL;
                 (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   restoreInfo.failError = error;
                 }
@@ -11862,7 +11862,7 @@ archiveInfo->archiveInitUserData              = NULL;
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set file info of '%s' (error: %s)\n",
@@ -11873,7 +11873,7 @@ archiveInfo->archiveInitUserData              = NULL;
                   (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
                   String_delete(linkName);
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
@@ -12008,7 +12008,7 @@ archiveInfo->archiveInitUserData              = NULL;
                                Error_getText(error)
                               );
                     String_delete(parentDirectoryName);
-                    if (jobOptions->stopOnErrorFlag)
+                    if (!jobOptions->noStopOnErrorFlag)
                     {
                       restoreInfo.failError = error;
                       break;
@@ -12026,7 +12026,7 @@ archiveInfo->archiveInitUserData              = NULL;
                                        );
                   if (error != ERROR_NONE)
                   {
-                    if (jobOptions->stopOnErrorFlag)
+                    if (!jobOptions->noStopOnErrorFlag)
                     {
                       printInfo(2,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
@@ -12087,7 +12087,7 @@ archiveInfo->archiveInitUserData              = NULL;
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
-                    if (jobOptions->stopOnErrorFlag)
+                    if (!jobOptions->noStopOnErrorFlag)
                     {
                       restoreInfo.failError = error;
                       break;
@@ -12108,7 +12108,7 @@ archiveInfo->archiveInitUserData              = NULL;
                                Error_getText(error)
                               );
                     File_close(&fileHandle);
-                    if (jobOptions->stopOnErrorFlag)
+                    if (!jobOptions->noStopOnErrorFlag)
                     {
                       restoreInfo.failError = error;
                       break;
@@ -12156,7 +12156,7 @@ archiveInfo->archiveInitUserData              = NULL;
                                  String_cString(destinationFileName),
                                  Error_getText(error)
                                 );
-                      if (jobOptions->stopOnErrorFlag)
+                      if (!jobOptions->noStopOnErrorFlag)
                       {
                         restoreInfo.failError = error;
                       }
@@ -12210,7 +12210,7 @@ archiveInfo->archiveInitUserData              = NULL;
                   error = File_setFileInfo(destinationFileName,&fileInfo);
                   if (error != ERROR_NONE)
                   {
-                    if (jobOptions->stopOnErrorFlag)
+                    if (!jobOptions->noStopOnErrorFlag)
                     {
                       printInfo(2,"FAIL!\n");
                       printError("Cannot set file info of '%s' (error: %s)\n",
@@ -12267,7 +12267,7 @@ archiveInfo->archiveInitUserData              = NULL;
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
-                    if (jobOptions->stopOnErrorFlag)
+                    if (!jobOptions->noStopOnErrorFlag)
                     {
                       restoreInfo.failError = error;
                       break;
@@ -12404,7 +12404,7 @@ archiveInfo->archiveInitUserData              = NULL;
                                      );
                 if (error != ERROR_NONE)
                 {
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     printInfo(2,"FAIL!\n");
                     printError("Cannot set owner ship of directory '%s' (error: %s)\n",
@@ -12440,7 +12440,7 @@ archiveInfo->archiveInitUserData              = NULL;
               String_delete(destinationFileName);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag)
+              if (!jobOptions->noStopOnErrorFlag)
               {
                 restoreInfo.failError = ERRORX(FILE_EXISTS_,0,String_cString(destinationFileName));
               }
@@ -12467,7 +12467,7 @@ archiveInfo->archiveInitUserData              = NULL;
                 String_delete(destinationFileName);
                 (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   restoreInfo.failError = error;
                 }
@@ -12483,7 +12483,7 @@ archiveInfo->archiveInitUserData              = NULL;
               error = File_setFileInfo(destinationFileName,&fileInfo);
               if (error != ERROR_NONE)
               {
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot set file info of '%s' (error: %s)\n",
@@ -12493,7 +12493,7 @@ archiveInfo->archiveInitUserData              = NULL;
                   String_delete(destinationFileName);
                   (void)Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
