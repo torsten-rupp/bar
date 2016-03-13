@@ -26,8 +26,11 @@
   * added configuration options include-file-command,
     include-image-command, exclude-command
   * add job option comment: free text comment
+  * added code-coverage analysis to build process
   * improved database access
   * moved database file /usr/lib/bar -> /var/lib/bar
+  * change option: --stop-on-error -> --no-stop-on-error,
+    --stop-on-error is now deprecated
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store
