@@ -451,6 +451,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
      )
   {
     String_set(restoreInfo->statusInfo.entryName,fileName);
+fprintf(stderr,"%s, %d: restoreInfo->statusInfo.entryName=%s\n",__FILE__,__LINE__,String_cString(restoreInfo->statusInfo.entryName));
     restoreInfo->statusInfo.entryDoneBytes  = 0LL;
     restoreInfo->statusInfo.entryTotalBytes = fragmentSize;
     updateStatusInfo(restoreInfo,TRUE);
@@ -2435,6 +2436,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
     restoreInfo->statusInfo.storageDoneBytes = Archive_tell(&archiveInfo);
     updateStatusInfo(restoreInfo,TRUE);
 
+    // restore entry
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
@@ -2497,7 +2499,17 @@ LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
         #endif /* NDEBUG */
         break; /* not reached */
     }
-    if (failError == ERROR_NONE) failError = error;
+    if (error != ERROR_NONE)
+    {
+      if (error != ERROR_NO_CRYPT_PASSWORD)
+      {
+        error = handleError(restoreInfo,error);
+      }
+      if (error != ERROR_NONE)
+      {
+        if (failError == ERROR_NONE) failError = error;
+      }
+    }
 
     // update storage status
     restoreInfo->statusInfo.storageDoneBytes = Archive_tell(&archiveInfo);
