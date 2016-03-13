@@ -397,6 +397,7 @@ typedef struct
   CryptKey              publicKey,secretKey;
   AuthorizationStates   authorizationState;
   AuthorizationFailNode *authorizationFailNode;
+  bool                  quitFlag;
 
   struct
   {
@@ -428,7 +429,6 @@ bool abortFlag;
       Semaphore    writeLock;                              // write synchronization lock
       Thread       threads[MAX_NETWORK_CLIENT_THREADS];    // command processing threads
       MsgQueue     commandMsgQueue;                        // commands send by client
-      bool         quitFlag;                               // TRUE if threads should terminate
     } network;
   };
 
@@ -5294,26 +5294,26 @@ LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
     fprintf(stderr,"DEBUG: result=%s",String_cString(data));
   #endif /* SERVER_DEBUG */
 
-  switch (clientInfo->type)
+  if (!clientInfo->quitFlag)
   {
-    case CLIENT_TYPE_BATCH:
-      (void)File_write(clientInfo->file.fileHandle,String_cString(data),String_length(data));
-      (void)File_flush(clientInfo->file.fileHandle);
-      break;
-    case CLIENT_TYPE_NETWORK:
-      if (!clientInfo->network.quitFlag)
-      {
+    switch (clientInfo->type)
+    {
+      case CLIENT_TYPE_BATCH:
+        (void)File_write(clientInfo->file.fileHandle,String_cString(data),String_length(data));
+        (void)File_flush(clientInfo->file.fileHandle);
+        break;
+      case CLIENT_TYPE_NETWORK:
         SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
           (void)Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
         }
-      }
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
   }
 }
 
@@ -5355,108 +5355,19 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
 }
 
 /***********************************************************************\
-* Name   : sendClientResult
-* Purpose: send result to client
-* Input  : clientInfo   - client info
-*          id           - command id
-*          completeFlag - TRUE if command is completed, FALSE otherwise
-*          errorCode    - error code
-*          format       - format string
-*          ...          - optional arguments
-* Output : -
-* Return : -
+* Name   : clientAction
+* Purpose: execute client action
+* Input  : clientInfo    - client info
+*          id            - command id
+*          resultMap     - result map variable
+*          actionCommand - action command
+*          timeout       - timeout or SEMAPHORE_WAIT_FOREVER
+*          format        - arguments format string
+*          ...           - optional arguments
+* Output : resultMap - results
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
-
-typedef enum
-{
-  RESULT_VALUE_NONE,
-  RESULT_VALUE_INT,
-  RESULT_VALUE_LONG,
-  RESULT_VALUE_CSTRING
-} ResultValueTypes;
-
-#define RESULT_VALUE(type,name,value) \
-  RESULT_VALUE_ ## type,name,value
-
-#define RESULT_VALUE_INT(name,value) \
-  1,name,value
-#define RESULT_VALUE_LONG(name,value) \
-  2,name,value
-#define RESULT_VALUE_UINT(name,value) \
-  name,value
-#define RESULT_VALUE_ULONG(name,value) \
-  name,value
-#define RESULT_VALUE_DOUBLE(name,value) \
-  name,value
-#define RESULT_VALUE_STRING(name,value) \
-  name,value
-#define RESULT_VALUE_CSTRING(name,value) \
-  name,value
-#define RESULT_VALUE_END() \
-  0
-
-#warning remove?
-LOCAL void sendClientResult2(ClientInfo *clientInfo, uint id, bool completeFlag, uint errorCode, ...)
-{
-  locale_t locale;
-  String   result;
-  va_list  arguments;
-ResultValueTypes resultValueType;
-const char *name;
-  union
-  {
-    int i;
-    long l;
-    uint ui;
-    ulong ul;
-    double d;
-    const char *s;
-    ConstString string;
-  } value;
-
-
-  result = String_new();
-
-  locale = uselocale(POSIXLocale);
-  {
-    String_format(result,"%u %d %d ",id,completeFlag ? 1 : 0,Error_getCode(errorCode));
-    va_start(arguments,errorCode);
-//    String_vformat(result,format,arguments);
-    do
-    {
-      resultValueType = va_arg(arguments,ResultValueTypes);
-      switch (resultValueType)
-      {
-        case RESULT_VALUE_NONE:
-          break;
-        case RESULT_VALUE_INT:
-          name = va_arg(arguments,const char*);
-          value.i = va_arg(arguments,int);
-          String_format(result,name,value.i);
-          break;
-        case RESULT_VALUE_LONG:
-          name = va_arg(arguments,const char*);
-          value.l = va_arg(arguments,long);
-          String_format(result,name,value.l);
-          break;
-        case RESULT_VALUE_CSTRING:
-          name = va_arg(arguments,const char*);
-          value.s = va_arg(arguments,const char*);
-          String_format(result,name,value.s);
-          break;
-      }
-    }
-    while (resultValueType != RESULT_VALUE_NONE);
-    va_end(arguments);
-    String_appendChar(result,'\n');
-  }
-  uselocale(locale);
-
-  sendClient(clientInfo,result);
-
-  String_delete(result);
-}
 
 LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, const char *actionCommand, long timeout, const char *format, ...)
 {
@@ -5488,18 +5399,20 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
     sendClient(clientInfo,result);
     String_delete(result);
 
-fprintf(stderr,"%s, %d: wait for result or timeou\n",__FILE__,__LINE__);
-    // wait for result, timeout, or disconnect
-    while (clientInfo->action.error == ERROR_UNKNOWN)
+    // wait for result, timeout, or quit
+    while ((clientInfo->action.error == ERROR_UNKNOWN) && !clientInfo->quitFlag)
     {
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,clientInfo->action.error);
       if (!Semaphore_waitModified(&clientInfo->action.lock,timeout))
       {
         Semaphore_unlock(&clientInfo->action.lock);
         return ERROR_NETWORK_TIMEOUT;
       }
     }
-fprintf(stderr,"%s, %d: wadfa d\n",__FILE__,__LINE__);
+    if (clientInfo->quitFlag)
+    {
+      Semaphore_unlock(&clientInfo->action.lock);
+      return ERROR_ABORTED;
+    }
 
     // get action result
     error = clientInfo->action.error;
@@ -5538,7 +5451,7 @@ LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
     case CLIENT_TYPE_BATCH:
       break;
     case CLIENT_TYPE_NETWORK:
-      if (clientInfo->network.quitFlag) abortedFlag = TRUE;
+      if (clientInfo->quitFlag) abortedFlag = TRUE;
       break;
     default:
       #ifndef NDEBUG
@@ -8646,16 +8559,6 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
                      jobNode->requestedVolumeNumber,
                      jobNode->runningInfo.message
                     );
-
-#if 0
-    sendClientResult2(clientInfo,id,TRUE,ERROR_NONE,
-//                      doneEntries=%lu doneBytes=%llu totalEntries=%lu totalBytes=%llu collectTotalSumDone=%y skippedEntries=%lu skippedBytes=%llu errorEntries=%lu errorBytes=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveBytes=%llu compressionRatio=%lf entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
-                      RESULT_VALUE(INT, "state=%'s",      getJobStateText(&jobNode->jobOptions,jobNode->state)),
-                      RESULT_VALUE(LONG,"doneEntries=%lu",jobNode->runningInfo.doneEntries),
-                      RESULT_VALUE(LONG,"doneBytes=%llu", jobNode->runningInfo.doneBytes),
-                      RESULT_VALUE_END()
-                    );
-#endif
   }
 }
 
@@ -16215,31 +16118,29 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
     return foundIndexNode;
   }
 
-  String            entryPatternString;
-  bool              indexTypeAny;
-  IndexTypes        indexType;
-  bool              newestEntriesOnly;
-  uint64            offset;
-  uint64            limit;
-  uint              entryCount;
-  IndexList         indexList;
-  IndexNode         *indexNode;
-  String            regexpString;
-  String            storageName;
-  uint64            storageDateTime;
-  String            name;
-  String            destinationName;
-  FileSystemTypes   fileSystemType;
-  Errors            error;
-  IndexQueryHandle  indexQueryHandle;
-  IndexId           indexId;
-  uint64            size;
-  uint64            timeModified;
-  uint              userId,groupId;
-  uint              permission;
-  uint64            fragmentOrBlockOffset,fragmentOrBlockSize;
-#warning remove
-uint64 t[100];
+  String           entryPatternString;
+  bool             indexTypeAny;
+  IndexTypes       indexType;
+  bool             newestEntriesOnly;
+  uint64           offset;
+  uint64           limit;
+  uint             entryCount;
+  IndexList        indexList;
+  IndexNode        *indexNode;
+  String           regexpString;
+  String           storageName;
+  uint64           storageDateTime;
+  String           name;
+  String           destinationName;
+  FileSystemTypes  fileSystemType;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          indexId;
+  uint64           size;
+  uint64           timeModified;
+  uint             userId,groupId;
+  uint             permission;
+  uint64           fragmentOrBlockOffset,fragmentOrBlockSize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -17358,7 +17259,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   assert(clientInfo != NULL);
 
   result = String_new();
-  while (   !clientInfo->network.quitFlag
+  while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
         )
   {
@@ -17497,6 +17398,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   clientInfo->type                  = CLIENT_TYPE_NONE;
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
+  clientInfo->quitFlag              = FALSE;
   clientInfo->action.error          = ERROR_NONE;
   clientInfo->action.resultMap      = StringMap_new();
   if (clientInfo->action.resultMap == NULL)
@@ -17565,7 +17467,6 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   clientInfo->network.name         = String_duplicate(name);
   clientInfo->network.port         = port;
   clientInfo->network.socketHandle = socketHandle;
-  clientInfo->network.quitFlag     = FALSE;
 
   if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
   {
@@ -17600,6 +17501,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 
   assert(clientInfo != NULL);
 
+  clientInfo->quitFlag = TRUE;
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_NONE:
@@ -17607,8 +17509,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     case CLIENT_TYPE_BATCH:
       break;
     case CLIENT_TYPE_NETWORK:
-      // stop client thread
-      clientInfo->network.quitFlag = TRUE;
+      // stop client threads
+      Semaphore_setEnd(&clientInfo->action.lock);
       MsgQueue_setEndOfMsg(&clientInfo->network.commandMsgQueue);
       for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
       {
