@@ -27,24 +27,61 @@
 
 /***************************** Datatypes *******************************/
 
-// delete array element function
-typedef void(*ArrayElementFreeFunction)(void *data, void *userData);
+// delete array data element function
+/***********************************************************************\
+* Name   : ArrayFreeFunction
+* Purpose: free array data element
+* Input  : data     - array data element
+*          userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
-// element comparison, iteration functions
-typedef int(*ArrayElementCompareFunction)(void *userData, void *data1, void *data2);
-typedef char(*ArrayElementIterateFunction)(void *userData, void *data);
+typedef void(*ArrayFreeFunction)(void *data, void *userData);
+
+/***********************************************************************\
+* Name   : ArrayCompareFunction
+* Purpose: compare array data elements function
+* Input  : data1,data2 - array data elements to compare
+*          userData - user data
+* Output : -
+* Return : -1/0/-1 iff </=/>
+* Notes  : -
+\***********************************************************************/
+
+typedef int(*ArrayCompareFunction)(const void *data1, const void *data2, void *userData);
+
+/***********************************************************************\
+* Name   : ArrayIterateFunction
+* Purpose: iterator array data elements function
+* Input  : data     - array data element
+*          userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*ArrayIterateFunction)(void *data, void *userData);
+
+// array find modes
+typedef enum
+{
+  ARRAY_FIND_FORWARD,
+  ARRAY_FIND_BACKWARD
+} ArrayFindModes;
 
 // array handle
 typedef struct
 {
-  ulong                       elementSize;  // size of element
-  ulong                       length;       // current length of array
-  ulong                       maxLength;    // current maximal length of array
-  ArrayElementFreeFunction    arrayElementFreeFunction;
-  void                        *arrayElementFreeUserData;
-  ArrayElementCompareFunction arrayElementCompareFunction;
-  void                        *arrayElementCompareUserData;
-  byte                        *data;        // array data
+  ulong                elementSize;  // size of element
+  ulong                length;       // current length of array
+  ulong                maxLength;    // current maximal length of array
+  ArrayFreeFunction    arrayFreeFunction;
+  void                 *arrayFreeUserData;
+  ArrayCompareFunction arrayCompareFunction;
+  void                 *arrayCompareUserData;
+  byte                 *data;        // array data
 } Array;
 
 /***************************** Variables *******************************/
@@ -63,7 +100,7 @@ typedef struct
 *          variable - iteration variable
 * Output : -
 * Return : -
-* Notes  : variable will contain all elements in array
+* Notes  : variable will contain all data elements in array
 *          usage:
 *            ARRAY_ITERATE(array,variable)
 *            {
@@ -85,7 +122,7 @@ typedef struct
 *          condition - additional condition
 * Output : -
 * Return : -
-* Notes  : variable will contain all elements in array
+* Notes  : variable will contain all data elements in array
 *          usage:
 *            ARRAY_ITERATEX(array,variable,TRUE)
 *            {
@@ -110,38 +147,38 @@ typedef struct
 /***********************************************************************\
 * Name   : Array_init
 * Purpose: init array
-* Input  : array                       - array variable
-*          elementSize                 - element size (in bytes)
-*          length                      - start length of array
-*          arrayElementFreeFunction    - free element function or NULL
-*          arrayElementFreeUserData    - free function user data
-*          arrayElementCompareFunction - compare element function or
+* Input  : array                - array variable
+*          elementSize          - element size (in bytes)
+*          length               - start length of array
+*          arrayFreeFunction    - free element function or NULL
+*          arrayFreeUserData    - free function user data
+*          arrayCompareFunction - compare element function or
 *                                        NULL
-*          arrayElementCompareUserData - compare function user data
+*          arrayCompareUserData - compare function user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void Array_init(Array                       *array,
-                ulong                       elementSize,
-                ulong                       length,
-                ArrayElementFreeFunction    arrayElementFreeFunction,
-                void                        *arrayElementFreeUserData,
-                ArrayElementCompareFunction arrayElementCompareFunction,
-                void                        *arrayElementCompareUserData
+void Array_init(Array                *array,
+                ulong                elementSize,
+                ulong                length,
+                ArrayFreeFunction    arrayFreeFunction,
+                void                 *arrayFreeUserData,
+                ArrayCompareFunction arrayCompareFunction,
+                void                 *arrayCompareUserData
                );
 #else /* not NDEBUG */
-void __Array_init(const char                  *__fileName__,
-                  ulong                       __lineNb__,
-                  Array                       *array,
-                  ulong                       elementSize,
-                  ulong                       length,
-                  ArrayElementFreeFunction    arrayElementFreeFunction,
-                  void                        *arrayElementFreeUserData,
-                  ArrayElementCompareFunction arrayElementCompareFunction,
-                  void                        *arrayElementCompareUserData
+void __Array_init(const char           *__fileName__,
+                  ulong                __lineNb__,
+                  Array                *array,
+                  ulong                elementSize,
+                  ulong                length,
+                  ArrayFreeFunction    arrayFreeFunction,
+                  void                 *arrayFreeUserData,
+                  ArrayCompareFunction arrayCompareFunction,
+                  void                 *arrayCompareUserData
                  );
 #endif /* NDEBUG */
 
@@ -159,35 +196,34 @@ void Array_done(Array *array);
 /***********************************************************************\
 * Name   : Array_new
 * Purpose: create new array
-* Input  : elementSize                 - element size (in bytes)
-*          length                      - start length of array
-*          arrayElementFreeFunction    - free element function or NULL
-*          arrayElementFreeUserData    - free function user data
-*          arrayElementCompareFunction - compare element function or
-*                                        NULL
-*          arrayElementCompareUserData - compare function user data
+* Input  : elementSize          - data element size (in bytes)
+*          length               - start length of array
+*          arrayFreeFunction    - free data element function or NULL
+*          arrayFreeUserData    - free function user data
+*          arrayCompareFunction - compare data element function or NULL
+*          arrayCompareUserData - compare function user data
 * Output : -
 * Return : array or NULL
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-Array *Array_new(ulong                       elementSize,
-                 ulong                       length,
-                 ArrayElementFreeFunction    arrayElementFreeFunction,
-                 void                        *arrayElementFreeUserData,
-                 ArrayElementCompareFunction arrayElementCompareFunction,
-                 void                        *arrayElementCompareUserData
+Array *Array_new(ulong                elementSize,
+                 ulong                length,
+                 ArrayFreeFunction    arrayFreeFunction,
+                 void                 *arrayFreeUserData,
+                 ArrayCompareFunction arrayCompareFunction,
+                 void                 *arrayCompareUserData
                 );
 #else /* not NDEBUG */
-Array *__Array_new(const char                  *__fileName__,
-                   ulong                       __lineNb__,
-                   ulong                       elementSize,
-                   ulong                       length,
-                   ArrayElementFreeFunction    arrayElementFreeFunction,
-                   void                        *arrayElementFreeUserData,
-                   ArrayElementCompareFunction arrayElementCompareFunction,
-                   void                        *arrayElementCompareUserData
+Array *__Array_new(const char           *__fileName__,
+                   ulong                __lineNb__,
+                   ulong                elementSize,
+                   ulong                length,
+                   ArrayFreeFunction    arrayFreeFunction,
+                   void                 *arrayFreeUserData,
+                   ArrayCompareFunction arrayCompareFunction,
+                   void                 *arrayCompareUserData
                   );
 #endif /* NDEBUG */
 
@@ -218,7 +254,7 @@ void Array_clear(Array *array);
 * Purpose: get array length
 * Input  : array - array
 * Output : -
-* Return : number of elements in array
+* Return : number of data elements in array
 * Notes  : -
 \***********************************************************************/
 
@@ -249,12 +285,12 @@ INLINE bool Array_isEmpty(const Array *array)
 
 /***********************************************************************\
 * Name   : Array_put
-* Purpose: put element into array
+* Purpose: put data element into array
 * Input  : array - array
-*          index - index of element
+*          index - index of data element
 *          data  - data
 * Output : -
-* Return : TRUE if element stored in array, FALSE otherwise
+* Return : TRUE if data element stored in array, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -262,26 +298,27 @@ bool Array_put(Array *array, ulong index, const void *data);
 
 /***********************************************************************\
 * Name   : Array_get
-* Purpose: get element from array
+* Purpose: get data element from array
 * Input  : array - array
-*          index - index of element
+*          index - index of data element
 *          data  - variable for data (can be NULL)
 * Output : data
 * Return : -
 * Notes  : if no data variable is supplied (NULL) a pointer to the
-*          data element in the array is returned
+*          data data element in the array is returned
 \***********************************************************************/
 
 void *Array_get(const Array *array, ulong index, void *data);
 
 /***********************************************************************\
 * Name   : Array_insert
-* Purpose: insert element into array
+* Purpose: insert data element into array
 * Input  : array     - array
-*          nextIndex - index of next element or ARRAY_BEGIN/ARRAY_END
-*          data      - element data
+*          nextIndex - index of next data element or
+*                      ARRAY_BEGIN/ARRAY_END
+*          data      - data element data
 * Output : -
-* Return : TRUE if element inserted, FALSE otherweise
+* Return : TRUE if data element inserted, FALSE otherweise
 * Notes  : -
 \***********************************************************************/
 
@@ -289,11 +326,11 @@ bool Array_insert(Array *array, long nextIndex, const void *data);
 
 /***********************************************************************\
 * Name   : Array_append
-* Purpose: append element to array
+* Purpose: append data element to array
 * Input  : array - array
-*          data  - element data
+*          data  - data element
 * Output : -
-* Return : TRUE if element appended, FALSE otherweise
+* Return : TRUE if data element appended, FALSE otherweise
 * Notes  : -
 \***********************************************************************/
 
@@ -301,15 +338,108 @@ bool Array_append(Array *array, const void *data);
 
 /***********************************************************************\
 * Name   : Array_remove
-* Purpose: remove element from array
+* Purpose: remove data element from array
 * Input  : array - array
-*          index - index of element to remove
+*          index - index of data element to remove
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void Array_remove(Array *array, ulong index);
+
+/***********************************************************************\
+* Name   : Array_removeAll
+* Purpose: remove all specific data elements from array
+* Input  : array                - array
+*          data                 - data element
+*          arrayCompareFunction - compare function or NULL for memcmp
+*          arrayCompareUserData - user data for compare function
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Array_removeAll(Array                *array,
+                     const void           *data,
+                     ArrayCompareFunction arrayCompareFunction,
+                     void                 *arrayCompareUserData
+                    );
+
+/***********************************************************************\
+* Name   : Array_contains
+* Purpose: check if array contain data element
+* Input  : array                - array
+*          data                 - data element
+*          arrayCompareFunction - compare function or NULL for memcmp
+*          arrayCompareUserData - user data for compare function
+* Output : -
+* Return : TRUE if array contain data element, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Array_contains(const Array          *array,
+                    const void           *data,
+                    ArrayCompareFunction arrayCompareFunction,
+                    void                 *arrayCompareUserData
+                   );
+
+/***********************************************************************\
+* Name   : Array_findFirst
+* Purpose: find data element in array
+* Input  : array                - array
+*          arrayFindMode        - array find mode
+*          arrayCompareFunction - compare function or NULL for memcmp
+*          arrayCompareUserData - user data for compare function
+* Output : -
+* Return : index or -1 if not found
+* Notes  : -
+\***********************************************************************/
+
+long Array_findFirst(const Array          *array,
+                     ArrayFindModes       arrayFindMode,
+                     void                 *data,
+                     ArrayCompareFunction arrayCompareFunction,
+                     void                 *arrayCompareUserData
+                    );
+
+/***********************************************************************\
+* Name   : Array_findNext
+* Purpose: find next data element in array
+* Input  : array                - array
+*          arrayFindMode        - array find mode
+*          data                 - data element
+*          index                - previous index
+*          arrayCompareFunction - compare function or NULL for memcmp
+*          arrayCompareUserData - user data for compare function
+* Output : -
+* Return : index or -1 if not found
+* Notes  : -
+\***********************************************************************/
+
+long Array_findNext(const Array          *array,
+                    ArrayFindModes       arrayFindMode,
+                    void                 *data,
+                    ulong                index,
+                    ArrayCompareFunction arrayCompareFunction,
+                    void                 *arrayCompareUserData
+                   );
+
+/***********************************************************************\
+* Name   : Array_sort
+* Purpose: sort array
+* Input  : array                - array
+*          arrayCompareFunction - compare function or NULL for memcmp
+*          arrayCompareUserData - user data for compare function
+* Output : -
+* Return : -
+* Notes  : use temporary O(n) memory
+\***********************************************************************/
+
+void Array_sort(Array                *array,
+                ArrayCompareFunction arrayCompareFunction,
+                void                 *arrayCompareUserData
+               );
 
 /***********************************************************************\
 * Name   : Array_toCArray

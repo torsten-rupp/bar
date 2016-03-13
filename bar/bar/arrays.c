@@ -88,24 +88,24 @@ LOCAL void debugArrayInit(void)
 // ----------------------------------------------------------------------
 
 #ifdef NDEBUG
-void Array_init(Array                       *array,
-                ulong                       elementSize,
-                ulong                       length,
-                ArrayElementFreeFunction    arrayElementFreeFunction,
-                void                        *arrayElementFreeUserData,
-                ArrayElementCompareFunction arrayElementCompareFunction,
-                void                        *arrayElementCompareUserData
+void Array_init(Array                *array,
+                ulong                elementSize,
+                ulong                length,
+                ArrayFreeFunction    arrayFreeFunction,
+                void                 *arrayFreeUserData,
+                ArrayCompareFunction arrayCompareFunction,
+                void                 *arrayCompareUserData
                )
 #else /* not NDEBUG */
-void __Array_init(const char                  *__fileName__,
-                  ulong                       __lineNb__,
-                  Array                       *array,
-                  ulong                       elementSize,
-                  ulong                       length,
-                  ArrayElementFreeFunction    arrayElementFreeFunction,
-                  void                        *arrayElementFreeUserData,
-                  ArrayElementCompareFunction arrayElementCompareFunction,
-                  void                        *arrayElementCompareUserData
+void __Array_init(const char           *__fileName__,
+                  ulong                __lineNb__,
+                  Array                *array,
+                  ulong                elementSize,
+                  ulong                length,
+                  ArrayFreeFunction    arrayFreeFunction,
+                  void                 *arrayFreeUserData,
+                  ArrayCompareFunction arrayCompareFunction,
+                  void                 *arrayCompareUserData
                  )
 #endif /* NDEBUG */
 {
@@ -128,13 +128,13 @@ void __Array_init(const char                  *__fileName__,
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
 
-  array->elementSize                 = elementSize;
-  array->length                      = 0;
-  array->maxLength                   = length;
-  array->arrayElementFreeFunction    = arrayElementFreeFunction;
-  array->arrayElementFreeUserData    = arrayElementFreeUserData;
-  array->arrayElementCompareFunction = arrayElementCompareFunction;
-  array->arrayElementCompareUserData = arrayElementCompareUserData;
+  array->elementSize          = elementSize;
+  array->length               = 0;
+  array->maxLength            = length;
+  array->arrayFreeFunction    = arrayFreeFunction;
+  array->arrayFreeUserData    = arrayFreeUserData;
+  array->arrayCompareFunction = arrayCompareFunction;
+  array->arrayCompareUserData = arrayCompareUserData;
 
   #ifndef NDEBUG
     pthread_once(&debugArrayInitFlag,debugArrayInit);
@@ -166,11 +166,11 @@ void Array_done(Array *array)
   assert(array != NULL);
   assert(array->data != NULL);
 
-  if (array->arrayElementFreeFunction != NULL)
+  if (array->arrayFreeFunction != NULL)
   {
     for (z = 0; z < array->length; z++)
     {
-      array->arrayElementFreeFunction(array->data+z*array->elementSize,array->arrayElementFreeUserData);
+      array->arrayFreeFunction(array->data+z*array->elementSize,array->arrayFreeUserData);
     }
   }
 
@@ -209,22 +209,22 @@ void Array_done(Array *array)
 }
 
 #ifdef NDEBUG
-Array *Array_new(ulong                       elementSize,
-                 ulong                       length,
-                 ArrayElementFreeFunction    arrayElementFreeFunction,
-                 void                        *arrayElementFreeUserData,
-                 ArrayElementCompareFunction arrayElementCompareFunction,
-                 void                        *arrayElementCompareUserData
+Array *Array_new(ulong                elementSize,
+                 ulong                length,
+                 ArrayFreeFunction    arrayFreeFunction,
+                 void                 *arrayFreeUserData,
+                 ArrayCompareFunction arrayCompareFunction,
+                 void                 *arrayCompareUserData
                 )
 #else /* not NDEBUG */
-Array *__Array_new(const char                  *__fileName__,
-                   ulong                       __lineNb__,
-                   ulong                       elementSize,
-                   ulong                       length,
-                   ArrayElementFreeFunction    arrayElementFreeFunction,
-                   void                        *arrayElementFreeUserData,
-                   ArrayElementCompareFunction arrayElementCompareFunction,
-                   void                        *arrayElementCompareUserData
+Array *__Array_new(const char           *__fileName__,
+                   ulong                __lineNb__,
+                   ulong                elementSize,
+                   ulong                length,
+                   ArrayFreeFunction    arrayFreeFunction,
+                   void                 *arrayFreeUserData,
+                   ArrayCompareFunction arrayCompareFunction,
+                   void                 *arrayCompareUserData
                   )
 #endif /* NDEBUG */
 {
@@ -243,9 +243,9 @@ Array *__Array_new(const char                  *__fileName__,
   }
 
   #ifdef NDEBUG
-    Array_init(array,elementSize,length,arrayElementFreeFunction,arrayElementFreeUserData,arrayElementCompareFunction,arrayElementCompareUserData);
+    Array_init(array,elementSize,length,arrayFreeFunction,arrayFreeUserData,arrayCompareFunction,arrayCompareUserData);
   #else /* not NDEBUG */
-    __Array_init(__fileName__,__lineNb__,array,elementSize,length,arrayElementFreeFunction,arrayElementFreeUserData,arrayElementCompareFunction,arrayElementCompareUserData);
+    __Array_init(__fileName__,__lineNb__,array,elementSize,length,arrayFreeFunction,arrayFreeUserData,arrayCompareFunction,arrayCompareUserData);
   #endif /* NDEBUG */
 
   return array;
@@ -268,11 +268,11 @@ void Array_clear(Array *array)
   {
     assert(array->data != NULL);
 
-    if (array->arrayElementFreeFunction != NULL)
+    if (array->arrayFreeFunction != NULL)
     {
       for (z = 0; z < array->length; z++)
       {
-        array->arrayElementFreeFunction(array->data+z*array->elementSize,array->arrayElementFreeUserData);
+        array->arrayFreeFunction(array->data+z*array->elementSize,array->arrayFreeUserData);
       }
     }
     array->length = 0;
@@ -496,9 +496,9 @@ void Array_remove(Array *array, ulong index)
     if (index < array->length)
     {
       // free element
-      if (array->arrayElementFreeFunction != NULL)
+      if (array->arrayFreeFunction != NULL)
       {
-        array->arrayElementFreeFunction(array->data+index*array->elementSize,array->arrayElementFreeUserData);
+        array->arrayFreeFunction(array->data+index*array->elementSize,array->arrayFreeUserData);
       }
 
       // remove element
@@ -512,6 +512,155 @@ void Array_remove(Array *array, ulong index)
       array->length--;
     }
   }
+}
+
+void Array_removeAll(Array                *array,
+                     const void           *data,
+                     ArrayCompareFunction arrayCompareFunction,
+                     void                 *arrayCompareUserData
+                    )
+{
+  ulong index;
+
+  index = 0;
+  if (arrayCompareFunction != NULL)
+  {
+    while (index < array->length)
+    {
+      if (arrayCompareFunction(&array->data[index],data,arrayCompareUserData) == 0)
+      {
+        Array_remove(array,index);
+      }
+      else
+      {
+        index++;
+      }
+    }
+  }
+  else
+  {
+    while (index < array->length)
+    {
+      if (memcmp(&array->data[index],data,array->elementSize) == 0)
+      {
+        Array_remove(array,index);
+      }
+      else
+      {
+        index++;
+      }
+    }
+  }
+}
+
+bool Array_contains(const Array          *array,
+                    const void           *data,
+                    ArrayCompareFunction arrayCompareFunction,
+                    void                 *arrayCompareUserData
+                   )
+{
+  ulong index;
+
+  if (arrayCompareFunction != NULL)
+  {
+    for (index = 0; index < array->length; index++)
+    {
+      if (arrayCompareFunction(&array->data[index],data,arrayCompareUserData) == 0)
+      {
+        return TRUE;
+      }
+    }
+  }
+  else
+  {
+    for (index = 0; index < array->length; index++)
+    {
+      if (memcmp(&array->data[index],data,array->elementSize) == 0)
+      {
+        return TRUE;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+long Array_findFirst(const Array          *array,
+                     ArrayFindModes       arrayFindMode,
+                     void                 *data,
+                     ArrayCompareFunction arrayCompareFunction,
+                     void                 *arrayCompareUserData
+                    )
+{
+  ulong index;
+
+  index = 0;
+  if (arrayCompareFunction != NULL)
+  {
+    while (index < array->length)
+    {
+      if (arrayCompareFunction(&array->data[index],data,arrayCompareUserData) == 0)
+      {
+        return (long)index;
+      }
+      index++;
+    }
+  }
+  else
+  {
+    while (index < array->length)
+    {
+      if (memcmp(&array->data[index],data,array->elementSize) == 0)
+      {
+        return (long)index;
+      }
+      index++;
+    }
+  }
+
+  return -1;
+}
+
+long Array_findNext(const Array          *array,
+                    ArrayFindModes       arrayFindMode,
+                    void                 *data,
+                    ulong                index,
+                    ArrayCompareFunction arrayCompareFunction,
+                    void                 *arrayCompareUserData
+                   )
+{
+  if (arrayCompareFunction != NULL)
+  {
+    while (index < array->length)
+    {
+      if (arrayCompareFunction(&array->data[index],data,arrayCompareUserData) == 0)
+      {
+        return (long)index;
+      }
+      index++;
+    }
+  }
+  else
+  {
+    while (index < array->length)
+    {
+      if (memcmp(&array->data[index],data,array->elementSize) == 0)
+      {
+        return (long)index;
+      }
+      index++;
+    }
+  }
+
+  return -1;
+}
+
+void Array_sort(Array                *array,
+                ArrayCompareFunction arrayCompareFunction,
+                void                 *arrayCompareUserData
+               )
+{
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 }
 
 #ifndef NDEBUG
