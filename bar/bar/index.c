@@ -2805,7 +2805,6 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
 
   // open directory
   pathName = File_getFilePathName(String_new(),absoluteFileName);
-fprintf(stderr,"%s, %d: File_openDirectoryList %s \n",__FILE__,__LINE__,String_cString(pathName));
   error = File_openDirectoryList(&directoryListHandle,pathName);
   if (error != ERROR_NONE)
   {
