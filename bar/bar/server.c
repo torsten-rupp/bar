@@ -5489,15 +5489,17 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
     String_delete(result);
 
 fprintf(stderr,"%s, %d: wait for result or timeou\n",__FILE__,__LINE__);
-    // wait for result or timeout
+    // wait for result, timeout, or disconnect
     while (clientInfo->action.error == ERROR_UNKNOWN)
     {
 fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,clientInfo->action.error);
       if (!Semaphore_waitModified(&clientInfo->action.lock,timeout))
       {
+        Semaphore_unlock(&clientInfo->action.lock);
         return ERROR_NETWORK_TIMEOUT;
       }
     }
+fprintf(stderr,"%s, %d: wadfa d\n",__FILE__,__LINE__);
 
     // get action result
     error = clientInfo->action.error;
@@ -13524,10 +13526,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                          NULL,  // resultMap
                          "CONFIRM",
                          60*1000,
-                         "error=%d errorText=%'s storage=%'S",
+                         "error=%d errorText=%'s storage=%'S entry=%'S",
                          error,
                          Error_getText(error),
-                         restoreStatusInfo->storageName
+                         restoreStatusInfo->storageName,
+                         restoreStatusInfo->entryName
                         );
 
     return error;
