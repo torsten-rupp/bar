@@ -612,7 +612,6 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                // TRUE iff pause
 LOCAL uint64                pauseEndTimestamp;
-LOCAL uint                  actionId;
 LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
@@ -1986,7 +1985,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                   NULL,  // scheduleTitle,
                                                   NULL,  // scheduleCustomText,
 //                                                      CALLBACK(getCryptPassword,jobNode),
-//                                                      CALLBACK(updateCreateJobStatus,jobNode),
+//                                                      CALLBACK(updateCreateStatusInfo,jobNode),
                                                   CALLBACK(storageRequestVolume,jobNode)
                                                  );
   }
@@ -2382,7 +2381,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
   StringList        jobLinesList;
   String            line;
   Errors            error;
-  uint              i;
+  int               i;
   StringNode        *nextStringNode;
   ScheduleNode      *scheduleNode;
   ConfigValueFormat configValueFormat;
@@ -2911,29 +2910,33 @@ LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
 * Name   : getCryptPassword
 * Purpose: get crypt password call-back
 * Input  : password      - crypt password variable
-*          message       - message
-*          validateFlag  - TRUE to validate input, FALSE otherwise
+*          passwordType  - password type (not used)
+*          text          - text (not used)
+*          validateFlag  - TRUE to validate input, FALSE otherwise (not
+*                          used)
 *          weakCheckFlag - TRUE for weak password checking, FALSE
 *                          otherwise (print warning if password seems to
-*                          be a weak password)
+*                          be a weak password) (not used)
 *          userData      - user data: job node
 * Output : password - crypt password
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getCryptPassword(Password   *password,
-                              const char *message,
-                              bool       validateFlag,
-                              bool       weakCheckFlag,
-                              void       *userData
+LOCAL Errors getCryptPassword(Password      *password,
+                              PasswordTypes passwordType,
+                              const char    *text,
+                              bool          validateFlag,
+                              bool          weakCheckFlag,
+                              void          *userData
                              )
 {
   JobNode *jobNode = (JobNode*)userData;
 
   assert(jobNode != NULL);
 
-  UNUSED_VARIABLE(message);
+  UNUSED_VARIABLE(passwordType);
+  UNUSED_VARIABLE(text);
   UNUSED_VARIABLE(validateFlag);
   UNUSED_VARIABLE(weakCheckFlag);
 
@@ -2949,20 +2952,20 @@ LOCAL Errors getCryptPassword(Password   *password,
 }
 
 /***********************************************************************\
-* Name   : updateCreateJobStatus
-* Purpose: update create status
-* Input  : userData         - user data: job node
-*          error            - error code
+* Name   : updateCreateStatusInfo
+* Purpose: update create status info
+* Input  : error            - error code
 *          createStatusInfo - create status info data
+*          userData         - user data: job node
 * Output : -
 * Return :
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateCreateJobStatus(void                   *userData,
-                                 Errors                 error,
-                                 const CreateStatusInfo *createStatusInfo
-                                )
+LOCAL void updateCreateStatusInfo(Errors                 error,
+                                  const CreateStatusInfo *createStatusInfo,
+                                  void                   *userData
+                                 )
 {
   JobNode       *jobNode = (JobNode*)userData;
   SemaphoreLock semaphoreLock;
@@ -3036,21 +3039,20 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 }
 
 /***********************************************************************\
-* Name   : updateRestoreJobStatus
-* Purpose: update restore job status
-* Input  : jobNode           - job node
-*          error             - error code
-*          restoreStatusInfo - create status info data
+* Name   : updateRestoreStatusInfo
+* Purpose: update restore status info
+* Input  : restoreStatusInfo - create status info data
+*          userData          - user data: job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateRestoreJobStatus(JobNode                 *jobNode,
-                                  Errors                  error,
-                                  const RestoreStatusInfo *restoreStatusInfo
-                                 )
+LOCAL void updateRestoreStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
+                                   void                    *userData
+                                  )
 {
+  JobNode       *jobNode = (JobNode*)userData;
   SemaphoreLock semaphoreLock;
 //NYI:  double        entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
 
@@ -3075,7 +3077,8 @@ jobNode->runningInfo.totalBytes,
 entriesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
-    jobNode->runningInfo.error                 = error;
+//TODO
+//    jobNode->runningInfo.error                 = error;
     jobNode->runningInfo.doneEntries           = restoreStatusInfo->doneEntries;
     jobNode->runningInfo.doneBytes             = restoreStatusInfo->doneBytes;
     jobNode->runningInfo.skippedEntries        = restoreStatusInfo->skippedEntries;
@@ -3362,7 +3365,7 @@ LOCAL void jobThreadCode(void)
 NULL,//                                                        scheduleTitle,
                                                         scheduleCustomText,
                                                         CALLBACK(getCryptPassword,jobNode),
-                                                        CALLBACK(updateCreateJobStatus,jobNode),
+                                                        CALLBACK(updateCreateStatusInfo,jobNode),
                                                         CALLBACK(storageRequestVolume,jobNode),
                                                         &pauseFlags.create,
                                                         &pauseFlags.storage,
@@ -3412,7 +3415,8 @@ NULL,//                                                        scheduleTitle,
                                                          &deltaSourceList,
                                                          &jobOptions,
                                                          CALLBACK(getCryptPassword,jobNode),
-                                                         CALLBACK(updateRestoreJobStatus,jobNode),
+                                                         CALLBACK(updateRestoreStatusInfo,jobNode),
+                                                         CALLBACK(NULL,NULL),  // restoreError
                                                          &pauseFlags.restore,
                                                          &jobNode->requestedAbortFlag,
                                                          &logHandle
@@ -5462,6 +5466,9 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
   SemaphoreLock semaphoreLock;
   Errors        error;
 
+  assert(clientInfo != NULL);
+  assert(actionCommand != NULL);
+
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // clear action
@@ -5494,9 +5501,15 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,clientInfo->action.error);
 
     // get action result
     error = clientInfo->action.error;
-    StringMap_move(resultMap,clientInfo->action.resultMap);
+    if (resultMap != NULL)
+    {
+      StringMap_move(resultMap,clientInfo->action.resultMap);
+    }
+    else
+    {
+      StringMap_clear(clientInfo->action.resultMap);
+    }
   }
-fprintf(stderr,"%s, %d: accto %d %d\n",__FILE__,__LINE__,error,StringMap_count(resultMap));
 
   return error;
 }
@@ -6044,9 +6057,9 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            errorCode=<n>
+*            error=<n>
 *          Result:
-*            error=<text>
+*            errorText=<text>
 \***********************************************************************/
 
 LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -6058,7 +6071,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
   assert(argumentMap != NULL);
 
   // get error code
-  if (!StringMap_getUInt64(argumentMap,"errorCode",&n,0))
+  if (!StringMap_getUInt64(argumentMap,"error",&n,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorCode=<n>");
     return;
@@ -6067,7 +6080,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
 
   // format result
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                   "error=%'s",
+                   "errorText=%'s",
                    Error_getText(error)
                   );
 }
@@ -6253,9 +6266,9 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, uint id, const StringMap a
 
 LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  uint           actionId;
   SemaphoreLock  semaphoreLock;
   uint           stringMapIterator;
+  uint64         n;
   const char     *name;
   StringMapTypes type;
   StringMapValue value;
@@ -6268,7 +6281,11 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, uint id, const Str
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    StringMap_getUInt(argumentMap,"error",&clientInfo->action.error,ERROR_UNKNOWN);
+    // get error
+    StringMap_getUInt64(argumentMap,"error",&n,ERROR_UNKNOWN);
+    clientInfo->action.error = (Errors)n;
+
+    // get arguments
     STRINGMAP_ITERATE(argumentMap,stringMapIterator,name,type,value)
     {
       if (!stringEquals(name,"error"))
@@ -6700,6 +6717,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
   // init storage server settings
   switch (serverType)
   {
+    case SERVER_TYPE_NONE:
+      break;
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
@@ -6928,6 +6947,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
     String_set(serverNode->server.name,name);
     switch (serverType)
     {
+      case SERVER_TYPE_NONE:
+        break;
       case SERVER_TYPE_FILE:
         break;
       case SERVER_TYPE_FTP:
@@ -8233,7 +8254,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
   String            name;
   SemaphoreLock     semaphoreLock;
   const JobNode     *jobNode;
-  uint              i;
+  int               i;
   String            s;
   ConfigValueFormat configValueFormat;
 
@@ -8399,7 +8420,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
   String        name;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
-  uint          i;
+  int           i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12948,7 +12969,7 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
                                    )
               )
         {
-          Array_remove(&clientInfo->storageIdArray,&storageId);
+          Array_removeAll(&clientInfo->storageIdArray,&storageId,CALLBACK(NULL,NULL));
         }
         Index_doneList(&indexQueryHandle2);
       }
@@ -12992,12 +13013,12 @@ fprintf(stderr,"%s, %d: ---- entityI=%llu\n",__FILE__,__LINE__,entityId);
                                  )
             )
       {
-        Array_remove(&clientInfo->storageIdArray,&storageId);
+        Array_removeAll(&clientInfo->storageIdArray,&storageId,CALLBACK(NULL,NULL));
       }
       Index_doneList(&indexQueryHandle);
       break;
     case INDEX_TYPE_STORAGE:
-      Array_remove(&clientInfo->storageIdArray,&indexId);
+      Array_removeAll(&clientInfo->storageIdArray,&indexId,CALLBACK(NULL,NULL));
       break;
     default:
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"invalid index type %d",Index_getType(indexId));
@@ -13158,7 +13179,7 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, uint id, const 
   }
 
   // add to id array
-  Array_remove(&clientInfo->entryIdArray,&entryId);
+  Array_removeAll(&clientInfo->entryIdArray,&entryId,CALLBACK(NULL,NULL));
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13194,7 +13215,6 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const St
     return;
   }
 
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Array_length(&clientInfo->entryIdArray));
   error = Index_getEntriesInfo(indexHandle,
                                NULL,  // storageIds
                                0,  // storageIdCount
@@ -13362,16 +13382,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   /***********************************************************************\
   * Name   : updateRestoreStatusInfo
   * Purpose: update restore status info
-  * Input  : error             - error code
-  *          restoreStatusInfo - create status info data,
+  * Input  : restoreStatusInfo - create status info data,
   *          userData          - user data
   * Output : -
   * Return : TRUE to continue, FALSE to abort
   * Notes  : -
   \***********************************************************************/
 
-  bool updateRestoreStatusInfo(Errors                  error,
-                               const RestoreStatusInfo *restoreStatusInfo,
+  bool updateRestoreStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
                                void                    *userData
                               )
   {
@@ -13381,8 +13399,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     assert(restoreStatusInfo != NULL);
     assert(restoreStatusInfo->entryName != NULL);
     assert(restoreStatusInfo->storageName != NULL);
-
-    UNUSED_VARIABLE(error);
 
     sendClientResult(restoreCommandInfo->clientInfo,
                      restoreCommandInfo->id,
@@ -13404,9 +13420,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   /***********************************************************************\
   * Name   : getPassword
   * Purpose: get password
-  * Input  : error             - error code
-  *          restoreStatusInfo - create status info data,
-  *          userData          - user data
+  * Input  : password      - password variable
+  *          passwordType  - password type
+  *          text          - text (file name, host name, etc.)
+  *          validateFlag  - TRUE to validate input, FALSE otherwise
+  *          weakCheckFlag - TRUE for weak password checking, FALSE
+  *                          otherwise (print warning if password seems to
+  *                          be a weak password)
+  *          userData      - user data
   * Output : -
   * Return : ERROR_NONE or error code
   * Notes  : -
@@ -13453,7 +13474,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 
     // parse result
     encryptType = String_new();
-    if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
+    if (!StringMap_getString(resultMap,"encryptType",encryptType,NULL))
     {
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
@@ -13475,6 +13496,41 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     }
 
     return ERROR_NONE;
+  }
+
+  /***********************************************************************\
+  * Name   : handleRestoreError
+  * Purpose: handle restore error
+  * Input  : error             - error code
+  *          restoreStatusInfo - create status info data,
+  *          userData          - user data
+  * Output : -
+  * Return : ERROR_NONE or error code
+  * Notes  : -
+  \***********************************************************************/
+
+  Errors handleRestoreError(Errors                  error,
+                            const RestoreStatusInfo *restoreStatusInfo,
+                            void                    *userData
+                           )
+  {
+    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
+
+    assert(restoreCommandInfo != NULL);
+
+    // request password
+    error = clientAction(restoreCommandInfo->clientInfo,
+                         restoreCommandInfo->id,
+                         NULL,  // resultMap
+                         "CONFIRM",
+                         60*1000,
+                         "error=%d errorText=%'s storage=%'S",
+                         error,
+                         Error_getText(error),
+                         restoreStatusInfo->storageName
+                        );
+
+    return error;
   }
 
   Types              type;
@@ -13830,7 +13886,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   }
 
   // restore
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n",__FILE__,__LINE__,List_count(&storageNameList));
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
   error = Command_restore(&storageNameList,
@@ -13840,6 +13896,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                           &clientInfo->jobOptions,
                           CALLBACK(getPassword,&restoreCommandInfo),
                           CALLBACK(updateRestoreStatusInfo,&restoreCommandInfo),
+                          CALLBACK(handleRestoreError,&restoreCommandInfo),
                           NULL,  // pauseFlag
 //TODO: callback
                           &restoreCommandInfo.clientInfo->abortFlag,
@@ -16177,9 +16234,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
   uint64            timeModified;
   uint              userId,groupId;
   uint              permission;
-  uint64            fragmentOffset,fragmentSize;
   uint64            fragmentOrBlockOffset,fragmentOrBlockSize;
-  uint64            blockOffset,blockCount;
 #warning remove
 uint64 t[100];
 
