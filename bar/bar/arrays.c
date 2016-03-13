@@ -527,7 +527,7 @@ void Array_removeAll(Array                *array,
   {
     while (index < array->length)
     {
-      if (arrayCompareFunction(&array->data[index],data,arrayCompareUserData) == 0)
+      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
       {
         Array_remove(array,index);
       }
@@ -541,7 +541,7 @@ void Array_removeAll(Array                *array,
   {
     while (index < array->length)
     {
-      if (memcmp(&array->data[index],data,array->elementSize) == 0)
+      if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
       {
         Array_remove(array,index);
       }
@@ -565,7 +565,7 @@ bool Array_contains(const Array          *array,
   {
     for (index = 0; index < array->length; index++)
     {
-      if (arrayCompareFunction(&array->data[index],data,arrayCompareUserData) == 0)
+      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
       {
         return TRUE;
       }
@@ -575,7 +575,7 @@ bool Array_contains(const Array          *array,
   {
     for (index = 0; index < array->length; index++)
     {
-      if (memcmp(&array->data[index],data,array->elementSize) == 0)
+      if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
       {
         return TRUE;
       }
@@ -599,7 +599,7 @@ long Array_findFirst(const Array          *array,
   {
     while (index < array->length)
     {
-      if (arrayCompareFunction(&array->data[index],data,arrayCompareUserData) == 0)
+      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
       {
         return (long)index;
       }
@@ -610,7 +610,7 @@ long Array_findFirst(const Array          *array,
   {
     while (index < array->length)
     {
-      if (memcmp(&array->data[index],data,array->elementSize) == 0)
+      if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
       {
         return (long)index;
       }
@@ -633,7 +633,7 @@ long Array_findNext(const Array          *array,
   {
     while (index < array->length)
     {
-      if (arrayCompareFunction(&array->data[index],data,arrayCompareUserData) == 0)
+      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
       {
         return (long)index;
       }
@@ -644,7 +644,7 @@ long Array_findNext(const Array          *array,
   {
     while (index < array->length)
     {
-      if (memcmp(&array->data[index],data,array->elementSize) == 0)
+      if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
       {
         return (long)index;
       }
