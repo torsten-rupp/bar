@@ -271,6 +271,8 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 #ifndef WERROR
 LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 #endif
+//TODO: remove
+LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
 (
@@ -689,7 +691,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,jobOptions.dryRunFlag,                                                                                  "do dry-run (skip storage/restore, incremental data, index database)"      ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,2,jobOptions.noStorageFlag,                                                                               "do not store archives (skip storage, index database)"                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,2,jobOptions.noBAROnMediumFlag,                                                                           "do not store a copy of BAR on medium"                                     ),
-  CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,2,jobOptions.stopOnErrorFlag,                                                                             "immediately stop on error"                                                ),
+  CMD_OPTION_BOOLEAN      ("no-stop-on-error",             0,  1,2,jobOptions.noStopOnErrorFlag,                                                                           "do not immediately stop on error"                                         ),
 
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,1,globalOptions.noDefaultConfigFlag,                                                                      "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,1,globalOptions.quietFlag,                                                                                "suppress any output"                                                      ),
@@ -701,6 +703,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                                                                               "output this help"                                                         ),
   CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                                                                              "output help to extended options"                                          ),
   CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                                                                       "output help to internal options"                                          ),
+
+  CMD_OPTION_DEPRECATED   ("stop-on-error",                0,  1,2,&jobOptions.noStopOnErrorFlag,                   cmdOptionParseDeprecatedStopOnError,NULL,              "no-stop-on-error"),
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -2622,6 +2626,37 @@ LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, c
 #endif
 
 /***********************************************************************\
+* Name   : cmdOptionParseDeprecatedStopOnError
+* Purpose: command line option call back for deprecated option
+*          stop-on-error
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+//TODO: remove
+LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(bool*)variable) = !(   (stringEqualsIgnoreCase(value,"1") == 0)
+                         || (stringEqualsIgnoreCase(value,"true") == 0)
+                         || (stringEqualsIgnoreCase(value,"on") == 0)
+                         || (stringEqualsIgnoreCase(value,"yes") == 0)
+                        );
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : configValueParseConfigFile
 * Purpose: command line option call back for parsing configuration file
 * Input  : -
@@ -4342,7 +4377,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->dryRunFlag                      = FALSE;
   jobOptions->noStorageFlag                   = FALSE;
   jobOptions->noBAROnMediumFlag               = FALSE;
-  jobOptions->stopOnErrorFlag                 = FALSE;
+  jobOptions->noStopOnErrorFlag               = FALSE;
 }
 
 void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
@@ -7556,7 +7591,7 @@ exit(1);
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
                        1,
-                       stderr,"ERROR: "
+                       stderr,"ERROR: ","Warning: "
                       )
      )
   {
@@ -7635,7 +7670,7 @@ exit(1);
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
                        CMD_PRIORITY_ANY,
-                       stderr,"ERROR: "
+                       stderr,"ERROR: ","Warning: "
                       )
      )
   {
@@ -7766,7 +7801,7 @@ int main(int argc, const char *argv[])
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
                        0,
-                       stderr,"ERROR: "
+                       stderr,"ERROR: ","Warning: "
                       )
      )
   {

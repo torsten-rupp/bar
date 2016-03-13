@@ -68,9 +68,9 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*CreateStatusInfoFunction)(void                   *userData,
-                                        Errors                 error,
-                                        const CreateStatusInfo *createStatusInfo
+typedef void(*CreateStatusInfoFunction)(Errors                 error,
+                                        const CreateStatusInfo *createStatusInfo,
+                                        void                   *userData
                                        );
 
 /***************************** Variables *******************************/

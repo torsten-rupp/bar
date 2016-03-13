@@ -129,8 +129,8 @@ typedef struct
 
   Errors                      failError;                          // failure error
 
-  CreateStatusInfoFunction    statusInfoFunction;                 // status info call back
-  void                        *statusInfoUserData;                // user data for status info call back
+  CreateStatusInfoFunction    createStatusInfoFunction;           // status info call back
+  void                        *createStatusInfoUserData;          // user data for status info call back
   CreateStatusInfo            statusInfo;                         // status info
   Semaphore                   statusInfoLock;                     // status info lock
   Semaphore                   statusInfoNameLock;                 // status info name lock
@@ -343,8 +343,8 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->storageThreadExitFlag          = FALSE;
   StringList_init(&createInfo->storageFileList);
   createInfo->failError                      = ERROR_NONE;
-  createInfo->statusInfoFunction             = createStatusInfoFunction;
-  createInfo->statusInfoUserData             = createStatusInfoUserData;
+  createInfo->createStatusInfoFunction       = createStatusInfoFunction;
+  createInfo->createStatusInfoUserData       = createStatusInfoUserData;
   initStatusInfo(&createInfo->statusInfo);
 
   if (   (archiveType == ARCHIVE_TYPE_FULL)
@@ -892,15 +892,15 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 
   assert(createInfo != NULL);
 
-  if (createInfo->statusInfoFunction != NULL)
+  if (createInfo->createStatusInfoFunction != NULL)
   {
     timestamp = Misc_getTimestamp();
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*MISC_US_PER_MS)))
     {
-      createInfo->statusInfoFunction(createInfo->statusInfoUserData,
-                                     createInfo->failError,
-                                     &createInfo->statusInfo
-                                    );
+      createInfo->createStatusInfoFunction(createInfo->failError,
+                                           &createInfo->statusInfo,
+                                           createInfo->createStatusInfoUserData
+                                          );
       lastTimestamp = timestamp;
     }
   }

@@ -273,7 +273,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               printError("File '%s' not found!\n",String_cString(fileName));
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
               break;
             }
             if (File_getType(fileName) != FILE_TYPE_FILE)
@@ -282,7 +282,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               printError("'%s' is not a file!\n",String_cString(fileName));
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
               break;
             }
 
@@ -313,7 +313,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                         );
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = error;
+              if (!jobOptions->noStopOnErrorFlag) failError = error;
               continue;
             }
             DEBUG_TESTCODE("Command_compare101") { (void)File_close(&fileHandle); String_delete(fileName); Archive_closeEntry(&archiveEntryInfo); failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -330,7 +330,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               File_close(&fileHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
               continue;
             }
 
@@ -346,7 +346,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               File_close(&fileHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = error;
+              if (!jobOptions->noStopOnErrorFlag) failError = error;
               continue;
             }
             DEBUG_TESTCODE("Command_compare102") { (void)File_close(&fileHandle); String_delete(fileName); Archive_closeEntry(&archiveEntryInfo); failError = DEBUG_TESTCODE_ERROR(); continue; }
@@ -382,7 +382,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                            String_cString(fileName),
                            Error_getText(error)
                           );
-                if (jobOptions->stopOnErrorFlag) failError = error;
+                if (!jobOptions->noStopOnErrorFlag) failError = error;
                 break;
               }
               DEBUG_TESTCODE("Command_compare104") { failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -527,7 +527,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                        BUFFER_SIZE
                       );
             String_delete(deviceName);
-            if (jobOptions->stopOnErrorFlag) failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
+            if (!jobOptions->noStopOnErrorFlag) failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
             break;
           }
           DEBUG_TESTCODE("Command_compare201") { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -546,7 +546,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               printError("Device '%s' not found!\n",String_cString(deviceName));
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(deviceName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
               break;
             }
 
@@ -580,7 +580,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                            String_cString(deviceName),
                            Error_getText(error)
                           );
-                if (jobOptions->stopOnErrorFlag) failError = error;
+                if (!jobOptions->noStopOnErrorFlag) failError = error;
               }
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(deviceName);
@@ -599,7 +599,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                         );
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(deviceName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
               continue;
             }
             assert(deviceInfo.blockSize > 0);
@@ -615,7 +615,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                         );
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(deviceName);
-              if (jobOptions->stopOnErrorFlag) failError = error;
+              if (!jobOptions->noStopOnErrorFlag) failError = error;
               continue;
             }
             DEBUG_TESTCODE("Command_compare203") { Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -632,7 +632,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               Device_close(&deviceHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(deviceName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
               continue;
             }
 
@@ -658,7 +658,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               Device_close(&deviceHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(deviceName);
-              if (jobOptions->stopOnErrorFlag) failError = error;
+              if (!jobOptions->noStopOnErrorFlag) failError = error;
               continue;
             }
             DEBUG_TESTCODE("Command_compare204") { Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -698,7 +698,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                              String_cString(deviceName),
                              Error_getText(error)
                             );
-                  if (jobOptions->stopOnErrorFlag) failError = error;
+                  if (!jobOptions->noStopOnErrorFlag) failError = error;
                   break;
                 }
                 DEBUG_TESTCODE("Command_compare206") { failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -712,7 +712,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                              String_cString(deviceName),
                              Error_getText(error)
                             );
-                  if (jobOptions->stopOnErrorFlag) failError = error;
+                  if (!jobOptions->noStopOnErrorFlag) failError = error;
                   break;
                 }
                 DEBUG_TESTCODE("Command_compare207") { failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -854,7 +854,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               printError("Directory '%s' does not exists!\n",String_cString(directoryName));
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(directoryName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
               break;
             }
             if (File_getType(directoryName) != FILE_TYPE_DIRECTORY)
@@ -865,7 +865,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                         );
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(directoryName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
               break;
             }
 
@@ -964,7 +964,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               String_delete(linkName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
               break;
             }
             if (File_getType(linkName) != FILE_TYPE_LINK)
@@ -976,7 +976,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               String_delete(linkName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
               break;
             }
 
@@ -993,7 +993,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               String_delete(linkName);
-              if (jobOptions->stopOnErrorFlag) failError = error;
+              if (!jobOptions->noStopOnErrorFlag) failError = error;
               break;
             }
             DEBUG_TESTCODE("Command_compare401") { String_delete(localFileName); Archive_closeEntry(&archiveEntryInfo); String_delete(linkName); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -1008,7 +1008,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               String_delete(linkName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
               break;
             }
             String_delete(localFileName);
@@ -1119,7 +1119,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               {
                 printInfo(1,"FAIL!\n");
                 printError("File '%s' not found!\n",String_cString(fileName));
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   failError = ERROR_FILE_NOT_FOUND_;
                   break;
@@ -1133,7 +1133,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               {
                 printInfo(1,"FAIL!\n");
                 printError("'%s' is not a hard link!\n",String_cString(fileName));
-                if (jobOptions->stopOnErrorFlag)
+                if (!jobOptions->noStopOnErrorFlag)
                 {
                   failError = ERROR_WRONG_ENTRY_TYPE;
                   break;
@@ -1172,7 +1172,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                              String_cString(fileName),
                              Error_getText(error)
                             );
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     failError = error;
                     break;
@@ -1194,7 +1194,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                              File_getSize(&fileHandle)
                             );
                   File_close(&fileHandle);
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     failError = ERROR_ENTRIES_DIFFER;
                     break;
@@ -1215,7 +1215,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                              Error_getText(error)
                             );
                   File_close(&fileHandle);
-                  if (jobOptions->stopOnErrorFlag)
+                  if (!jobOptions->noStopOnErrorFlag)
                   {
                     failError = error;
                     break;
@@ -1258,7 +1258,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                                String_cString(fileName),
                                Error_getText(error)
                               );
-                    if (jobOptions->stopOnErrorFlag) failError = error;
+                    if (!jobOptions->noStopOnErrorFlag) failError = error;
                     break;
                   }
                   DEBUG_TESTCODE("Command_compare504") { failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -1275,7 +1275,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                                String_cString(fileName),
                                fragmentOffset+length+(uint64)diffIndex
                               );
-                    if (jobOptions->stopOnErrorFlag) failError = error;
+                    if (!jobOptions->noStopOnErrorFlag) failError = error;
                     break;
                   }
 
@@ -1399,7 +1399,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                         );
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
               break;
             }
             if (File_getType(fileName) != FILE_TYPE_SPECIAL)
@@ -1410,7 +1410,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                         );
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
+              if (!jobOptions->noStopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
               break;
             }
 
@@ -1424,7 +1424,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                         );
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = error;
+              if (!jobOptions->noStopOnErrorFlag) failError = error;
               break;
             }
             DEBUG_TESTCODE("Command_compare601") { Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
@@ -1435,7 +1435,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                         );
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              if (jobOptions->stopOnErrorFlag) failError = error;
+              if (!jobOptions->noStopOnErrorFlag) failError = error;
               break;
             }
             if (   (fileInfo.specialType == FILE_SPECIAL_TYPE_CHARACTER_DEVICE)
@@ -1449,7 +1449,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                           );
                 (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag) failError = error;
+                if (!jobOptions->noStopOnErrorFlag) failError = error;
                 break;
               }
               if (fileInfo.minor != localFileInfo.minor)
@@ -1459,7 +1459,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                           );
                 (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag) failError = error;
+                if (!jobOptions->noStopOnErrorFlag) failError = error;
                 break;
               }
             }
