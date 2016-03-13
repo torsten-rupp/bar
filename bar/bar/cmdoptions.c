@@ -311,10 +311,13 @@ LOCAL const CommandLineOptionSet *findSetByValue(const CommandLineOptionSet *set
 /***********************************************************************\
 * Name   : getIntegerOption
 * Purpose: get integer option value
-* Input  : value             - value variable
-*          string            - string
-*          name              - option name
-*          units             - units array or NULL
+* Input  : value         - value variable
+*          string        - string
+*          name          - option name
+*          units         - units array or NULL
+*          outputHandle  - output handle
+*          errorPrefix   - error prefix or NULL
+*          warningPrefix - warning prefix or NULL
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -324,8 +327,9 @@ LOCAL bool getIntegerOption(int                   *value,
                             const char            *string,
                             const char            *name,
                             const CommandLineUnit *units,
-                            FILE                  *errorOutputHandle,
-                            const char            *errorPrefix
+                            FILE                  *outputHandle,
+                            const char            *errorPrefix,
+                            const char            *warningPrefix
                            )
 {
   uint                  i,j;
@@ -335,6 +339,8 @@ LOCAL bool getIntegerOption(int                   *value,
 
   assert(value != NULL);
   assert(string != NULL);
+
+  UNUSED_VARIABLE(warningPrefix);
 
   // split number, unit
   i = strlen(string);
@@ -351,9 +357,9 @@ LOCAL bool getIntegerOption(int                   *value,
   }
   if (number[0] == '\0')
   {
-    if (errorOutputHandle != NULL)
+    if (outputHandle != NULL)
     {
-      fprintf(errorOutputHandle,
+      fprintf(outputHandle,
               "%sValue '%s' for option '%s' is not a number!\n",
               (errorPrefix != NULL) ? errorPrefix : "",
               string,
@@ -371,18 +377,18 @@ LOCAL bool getIntegerOption(int                   *value,
       unit = findUnit(units,unitName);
       if (unit == NULL)
       {
-        if (errorOutputHandle != NULL)
+        if (outputHandle != NULL)
         {
-          fprintf(errorOutputHandle,
+          fprintf(outputHandle,
                   "%sInvalid unit in integer value '%s'! Valid units:",
                   (errorPrefix != NULL) ? errorPrefix : "",
                   string
                  );
           ITERATE_UNITS(unit,units)
           {
-            fprintf(errorOutputHandle," %s",unit->name);
+            fprintf(outputHandle," %s",unit->name);
           }
-          fprintf(errorOutputHandle,".\n");
+          fprintf(outputHandle,".\n");
         }
         return FALSE;
       }
@@ -390,9 +396,9 @@ LOCAL bool getIntegerOption(int                   *value,
     }
     else
     {
-      if (errorOutputHandle != NULL)
+      if (outputHandle != NULL)
       {
-        fprintf(errorOutputHandle,
+        fprintf(outputHandle,
                 "%sUnexpected unit '%s' in value '%s'!\n",
                 (errorPrefix != NULL) ? errorPrefix : "",
                 unitName,
@@ -416,10 +422,13 @@ LOCAL bool getIntegerOption(int                   *value,
 /***********************************************************************\
 * Name   : getInteger64Option
 * Purpose: get integer64 option value
-* Input  : value             - value variable
-*          string            - string
-*          name              - option name
-*          units             - units array or NULL
+* Input  : value         - value variable
+*          string        - string
+*          name          - option name
+*          units         - units array or NULL
+*          eutputHandle  - output handle
+*          errorPrefix   - error prefix or NULL
+*          warningPrefix - warning prefix or NULL
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -429,8 +438,9 @@ LOCAL bool getInteger64Option(int64                 *value,
                               const char            *string,
                               const char            *name,
                               const CommandLineUnit *units,
-                              FILE                  *errorOutputHandle,
-                              const char            *errorPrefix
+                              FILE                  *outputHandle,
+                              const char            *errorPrefix,
+                              const char            *warningPrefix
                              )
 {
   uint                  i,j;
@@ -440,6 +450,8 @@ LOCAL bool getInteger64Option(int64                 *value,
 
   assert(value != NULL);
   assert(string != NULL);
+
+  UNUSED_VARIABLE(warningPrefix);
 
   // split number, unit
   i = strlen(string);
@@ -456,9 +468,9 @@ LOCAL bool getInteger64Option(int64                 *value,
   }
   if (number[0] == '\0')
   {
-    if (errorOutputHandle != NULL)
+    if (outputHandle != NULL)
     {
-      fprintf(errorOutputHandle,
+      fprintf(outputHandle,
               "%sValue '%s' for option '%s' is not a number!\n",
               (errorPrefix != NULL) ? errorPrefix : "",
               string,
@@ -476,18 +488,18 @@ LOCAL bool getInteger64Option(int64                 *value,
       unit = findUnit(units,unitName);
       if (unit == NULL)
       {
-        if (errorOutputHandle != NULL)
+        if (outputHandle != NULL)
         {
-          fprintf(errorOutputHandle,
+          fprintf(outputHandle,
                   "%sInvalid unit in integer value '%s'! Valid units:",
                   (errorPrefix != NULL) ? errorPrefix : "",
                   string
                  );
           ITERATE_UNITS(unit,units)
           {
-            fprintf(errorOutputHandle," %s",unit->name);
+            fprintf(outputHandle," %s",unit->name);
           }
-          fprintf(errorOutputHandle,".\n");
+          fprintf(outputHandle,".\n");
         }
         return FALSE;
       }
@@ -495,9 +507,9 @@ LOCAL bool getInteger64Option(int64                 *value,
     }
     else
     {
-      if (errorOutputHandle != NULL)
+      if (outputHandle != NULL)
       {
-        fprintf(errorOutputHandle,
+        fprintf(outputHandle,
                 "%sUnexpected unit '%s' in value '%s'!\n",
                 (errorPrefix != NULL) ? errorPrefix : "",
                 unitName,
@@ -524,8 +536,9 @@ LOCAL bool getInteger64Option(int64                 *value,
 * Input  : commandLineOption - command line option
 *          option            - option name
 *          value             - option value or NULL
-*          errorOutputHandle - error output handle or NULL
+*          outputHandle      - error output handle or NULL
 *          errorPrefix       - error prefix or NULL
+*          warningPrefix     - warning prefix or NULL
 * Output : -
 * Return : TRUE if option processed without error, FALSE otherwise
 * Notes  : -
@@ -534,8 +547,9 @@ LOCAL bool getInteger64Option(int64                 *value,
 LOCAL bool processOption(const CommandLineOption *commandLineOption,
                          const char              *option,
                          const char              *value,
-                         FILE                    *errorOutputHandle,
-                         const char              *errorPrefix
+                         FILE                    *outputHandle,
+                         const char              *errorPrefix,
+                         const char              *warningPrefix
                         )
 {
   char errorMessage[256];
@@ -554,8 +568,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                               value,
                               option,
                               commandLineOption->integerOption.units,
-                              errorOutputHandle,
-                              errorPrefix
+                              outputHandle,
+                              errorPrefix,
+                              warningPrefix
                              )
            )
         {
@@ -567,7 +582,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             || ((*commandLineOption->variable.i) > commandLineOption->integerOption.max)
            )
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
+          if (outputHandle != NULL) fprintf(outputHandle,
                                                  "%sValue '%s' out of range %d..%d for option '%s'!\n",
                                                  (errorPrefix != NULL) ? errorPrefix : "",
                                                  value,
@@ -588,8 +603,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                                 value,
                                 option,
                                 commandLineOption->integer64Option.units,
-                                errorOutputHandle,
-                                errorPrefix
+                                outputHandle,
+                                errorPrefix,
+                                warningPrefix
                                )
            )
         {
@@ -601,7 +617,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             || ((*commandLineOption->variable.l) > commandLineOption->integer64Option.max)
            )
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
+          if (outputHandle != NULL) fprintf(outputHandle,
                                                  "%sValue '%s' out of range %lld..%lld for option '%s'!\n",
                                                  (errorPrefix != NULL) ? errorPrefix : "",
                                                  value,
@@ -637,9 +653,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         }
         if (number[0] == '\0')
         {
-          if (errorOutputHandle != NULL)
+          if (outputHandle != NULL)
           {
-            fprintf(errorOutputHandle,
+            fprintf(outputHandle,
                     "%sValue '%s' for option '%s' is not a number!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
                     value,
@@ -657,18 +673,18 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             unit = findUnit(commandLineOption->doubleOption.units,unitName);
             if (unit == NULL)
             {
-              if (errorOutputHandle != NULL)
+              if (outputHandle != NULL)
               {
-                fprintf(errorOutputHandle,
+                fprintf(outputHandle,
                         "%sInvalid unit in float value '%s'! Valid units:",
                         (errorPrefix != NULL)?errorPrefix:"",
                         value
                        );
                 ITERATE_UNITS(unit,commandLineOption->integerOption.units)
                 {
-                  fprintf(errorOutputHandle," %s",unit->name);
+                  fprintf(outputHandle," %s",unit->name);
                 }
-                fprintf(errorOutputHandle,".\n");
+                fprintf(outputHandle,".\n");
               }
               return FALSE;
             }
@@ -676,9 +692,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           }
           else
           {
-            if (errorOutputHandle != NULL)
+            if (outputHandle != NULL)
             {
-              fprintf(errorOutputHandle,
+              fprintf(outputHandle,
                       "%sUnexpected unit '%s' in value '%s'!\n",
                       (errorPrefix != NULL)?errorPrefix:"",
                       unitName,
@@ -698,7 +714,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             || ((*commandLineOption->variable.d) > commandLineOption->doubleOption.max)
            )
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
+          if (outputHandle != NULL) fprintf(outputHandle,
                                                  "%sValue '%s' out of range %lf..%lf for float option '%s'!\n",
                                                  (errorPrefix != NULL)?errorPrefix:"",
                                                  value,
@@ -713,27 +729,27 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
     case CMD_OPTION_TYPE_BOOLEAN:
       assert(commandLineOption->variable.b != NULL);
       if      (   (value == NULL)
-               || (strcmp(value,"1") == 0)
-               || (strcasecmp(value,"true") == 0)
-               || (strcasecmp(value,"on") == 0)
-               || (strcasecmp(value,"yes") == 0)
+               || stringEquals(value,"1")
+               || stringEqualsIgnoreCase(value,"true")
+               || stringEqualsIgnoreCase(value,"on")
+               || stringEqualsIgnoreCase(value,"yes")
               )
       {
         (*commandLineOption->variable.b) = TRUE;
       }
-      else if (   (strcmp(value,"0") == 0)
-               || (strcasecmp(value,"false") == 0)
-               || (strcasecmp(value,"off") == 0)
-               || (strcasecmp(value,"no") == 0)
+      else if (   stringEquals(value,"0")
+               || stringEqualsIgnoreCase(value,"false")
+               || stringEqualsIgnoreCase(value,"off")
+               || stringEqualsIgnoreCase(value,"no")
               )
       {
         (*commandLineOption->variable.b) = FALSE;
       }
       else
       {
-        if (errorOutputHandle != NULL)
+        if (outputHandle != NULL)
         {
-          fprintf(errorOutputHandle,
+          fprintf(outputHandle,
                   "%sInvalid value '%s' for boolean option '%s'!\n",
                   (errorPrefix != NULL)?errorPrefix:"",
                   value,
@@ -756,9 +772,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         select = findSelect(commandLineOption->selectOption.selects,value);
         if (select == NULL)
         {
-          if (errorOutputHandle != NULL)
+          if (outputHandle != NULL)
           {
-            fprintf(errorOutputHandle,
+            fprintf(outputHandle,
                     "%sUnknown value '%s' for option '%s'!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
                     value,
@@ -799,9 +815,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             set = findSet(commandLineOption->setOption.sets,setName);
             if (set == NULL)
             {
-              if (errorOutputHandle != NULL)
+              if (outputHandle != NULL)
               {
-                fprintf(errorOutputHandle,
+                fprintf(outputHandle,
                         "%sUnknown value '%s' for option '%s'!\n",
                         (errorPrefix != NULL)?errorPrefix:"",
                         setName,
@@ -869,12 +885,12 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                                                         )
          )
       {
-        if (errorOutputHandle != NULL)
+        if (outputHandle != NULL)
         {
           errorMessage[sizeof(errorMessage)-1] = '\0';
           if (strlen(errorMessage) > 0)
           {
-            fprintf(errorOutputHandle,
+            fprintf(outputHandle,
                     "%sInvalid value '%s' for option '%s' (error: %s)!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
                     value,
@@ -884,8 +900,66 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           }
           else
           {
-            fprintf(errorOutputHandle,
+            fprintf(outputHandle,
                     "%sInvalid value '%s' for option '%s'!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    value,
+                    option
+                   );
+          }
+        }
+        return FALSE;
+      }
+      break;
+    case CMD_OPTION_TYPE_DEPRECATED:
+      errorMessage[0] = '\0';
+      if (outputHandle != NULL)
+      {
+        if (commandLineOption->deprecatedOption.newOptionName != NULL)
+        {
+          fprintf(outputHandle,
+                  "%sOption '%s' is deprecated. Please use '%s' instead.\n",
+                  (warningPrefix != NULL)?warningPrefix:"",
+                  option,
+                  commandLineOption->deprecatedOption.newOptionName
+                 );
+        }
+        else
+        {
+          fprintf(outputHandle,
+                  "%sOption '%s' is deprecated.\n",
+                  (warningPrefix != NULL)?warningPrefix:"",
+                  option
+                 );
+        }
+      }
+      if (!commandLineOption->deprecatedOption.parseDeprecated(commandLineOption->deprecatedOption.userData,
+                                                               commandLineOption->variable.special,
+                                                               option,
+                                                               value,
+                                                               commandLineOption->defaultValue.special,
+                                                               errorMessage,
+                                                               sizeof(errorMessage)
+                                                              )
+         )
+      {
+        if (outputHandle != NULL)
+        {
+          errorMessage[sizeof(errorMessage)-1] = '\0';
+          if (strlen(errorMessage) > 0)
+          {
+            fprintf(outputHandle,
+                    "%sInvalid value '%s' for deprecated option '%s' (error: %s)!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    value,
+                    option,
+                    errorMessage
+                   );
+          }
+          else
+          {
+            fprintf(outputHandle,
+                    "%sInvalid value '%s' for deprecated option '%s'!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
                     value,
                     option
@@ -960,7 +1034,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
       {
         if (i != j)
         {
-          if (strcmp(commandLineOptions[i].name,commandLineOptions[j].name) == 0)
+          if (stringEquals(commandLineOptions[i].name,commandLineOptions[j].name))
           {
             HALT_INTERNAL_ERROR("duplicate name '%s' in command line options %d and %d",commandLineOptions[i].name,i,j);
           }
@@ -1044,6 +1118,9 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
       case CMD_OPTION_TYPE_SPECIAL:
         commandLineOptions[i].defaultValue.special = commandLineOptions[i].variable.special;
         break;
+      case CMD_OPTION_TYPE_DEPRECATED:
+        commandLineOptions[i].defaultValue.deprecated = commandLineOptions[i].variable.deprecated;
+        break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1120,6 +1197,8 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
         break;
       case CMD_OPTION_TYPE_SPECIAL:
         break;
+      case CMD_OPTION_TYPE_DEPRECATED:
+        break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1134,8 +1213,9 @@ bool CmdOption_parse(const char              *argv[],
                      const CommandLineOption commandLineOptions[],
                      uint                    commandLineOptionCount,
                      int                     commandPriority,
-                     FILE                    *errorOutputHandle,
-                     const char              *errorPrefix
+                     FILE                    *outputHandle,
+                     const char              *errorPrefix,
+                     const char              *warningPrefix
                     )
 {
   uint       z;
@@ -1179,11 +1259,11 @@ bool CmdOption_parse(const char              *argv[],
     z = 1;
     while (z < (uint)(*argc))
     {
-      if      (!endOfOptionsFlag && (strcmp(argv[z],"--") == 0))
+      if      (!endOfOptionsFlag && stringEquals(argv[z],"--"))
       {
         endOfOptionsFlag = TRUE;
       }
-      else if (!endOfOptionsFlag && (strncmp(argv[z],"--",2) == 0))
+      else if (!endOfOptionsFlag && stringStartsWith(argv[z],"--"))
       {
         // get name
         s = strchr(argv[z]+2,'=');
@@ -1200,7 +1280,7 @@ bool CmdOption_parse(const char              *argv[],
 
         // find option
         i = 0;
-        while ((i < commandLineOptionCount) && (strcmp(commandLineOptions[i].name,name) != 0))
+        while ((i < commandLineOptionCount) && !stringEquals(commandLineOptions[i].name,name))
         {
           i++;
         }
@@ -1208,14 +1288,15 @@ bool CmdOption_parse(const char              *argv[],
         {
           // get option value
           value = NULL;
-          if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER  )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64)
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE   )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT   )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SET      )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_CSTRING  )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING   )
-                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL  )
+          if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER   )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64 )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE    )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT    )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SET       )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_CSTRING   )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING    )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL   )
+                   || (commandLineOptions[i].type == CMD_OPTION_TYPE_DEPRECATED)
                   )
           {
             if (s != NULL)
@@ -1228,9 +1309,9 @@ bool CmdOption_parse(const char              *argv[],
             {
               if ((z+1) >= (uint)(*argc))
               {
-                if (errorOutputHandle != NULL)
+                if (outputHandle != NULL)
                 {
-                  fprintf(errorOutputHandle,
+                  fprintf(outputHandle,
                           "%sNo value given for option '--%s'!\n",
                           (errorPrefix != NULL)?errorPrefix:"",
                           name
@@ -1256,7 +1337,7 @@ bool CmdOption_parse(const char              *argv[],
           {
             // process option
             snprintf(option,sizeof(option),"--%s",name);
-            if (!processOption(&commandLineOptions[i],option,value,errorOutputHandle,errorPrefix))
+            if (!processOption(&commandLineOptions[i],option,value,outputHandle,errorPrefix,warningPrefix))
             {
               return FALSE;
             }
@@ -1264,9 +1345,9 @@ bool CmdOption_parse(const char              *argv[],
         }
         else
         {
-          if (errorOutputHandle != NULL)
+          if (outputHandle != NULL)
           {
-            fprintf(errorOutputHandle,
+            fprintf(outputHandle,
                     "%sUnknown option '--%s'!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
                     name
@@ -1294,22 +1375,23 @@ bool CmdOption_parse(const char              *argv[],
           if (i < commandLineOptionCount)
           {
             // find optional value for option
-            if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER  )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64)
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE   )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT   )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SET      )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_CSTRING  )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING   )
-                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL  )
+            if      (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER   )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_INTEGER64 )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_DOUBLE    )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SELECT    )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SET       )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_CSTRING   )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_STRING    )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_SPECIAL   )
+                     || (commandLineOptions[i].type == CMD_OPTION_TYPE_DEPRECATED)
                     )
             {
               // next argument is option value
               if ((z+1) >= (uint)(*argc))
               {
-                if (errorOutputHandle != NULL)
+                if (outputHandle != NULL)
                 {
-                  fprintf(errorOutputHandle,
+                  fprintf(outputHandle,
                           "%sNo value given for option '-%s'!\n",
                           (errorPrefix != NULL)?errorPrefix:"",
                           name
@@ -1329,7 +1411,7 @@ bool CmdOption_parse(const char              *argv[],
             {
               // process option
               snprintf(option,sizeof(option),"-%s",name);
-              if (!processOption(&commandLineOptions[i],option,value,errorOutputHandle,errorPrefix))
+              if (!processOption(&commandLineOptions[i],option,value,outputHandle,errorPrefix,warningPrefix))
               {
                 return FALSE;
               }
@@ -1340,9 +1422,9 @@ bool CmdOption_parse(const char              *argv[],
           }
           else
           {
-            if (errorOutputHandle != NULL)
+            if (outputHandle != NULL)
             {
-              fprintf(errorOutputHandle,
+              fprintf(outputHandle,
                       "%sUnknown option '-%s'!\n",
                       (errorPrefix != NULL)?errorPrefix:"",
                       name
@@ -1383,7 +1465,7 @@ const CommandLineOption *CmdOption_find(const char              *name,
   assert(commandLineOptions != NULL);
 
   i = 0;
-  while ((i < commandLineOptionCount) && (strcmp(commandLineOptions[i].name,name) != 0))
+  while ((i < commandLineOptionCount) && !stringEquals(commandLineOptions[i].name,name))
   {
     i++;
   }
@@ -1398,7 +1480,7 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
   assert(commandLineOption != NULL);
 
 
-  return processOption(commandLineOption,commandLineOption->name,value,NULL,NULL);
+  return processOption(commandLineOption,commandLineOption->name,value,NULL,NULL,NULL);
 }
 
 bool CmdOption_getIntegerOption(int                   *value,
@@ -1407,7 +1489,7 @@ bool CmdOption_getIntegerOption(int                   *value,
                                 const CommandLineUnit *units
                                )
 {
-  return getIntegerOption(value,string,option,units,NULL,NULL);
+  return getIntegerOption(value,string,option,units,NULL,NULL,NULL);
 }
 
 bool CmdOption_getInteger64Option(int64                 *value,
@@ -1416,7 +1498,7 @@ bool CmdOption_getInteger64Option(int64                 *value,
                                   const CommandLineUnit *units
                                  )
 {
-  return getInteger64Option(value,string,option,units,NULL,NULL);
+  return getInteger64Option(value,string,option,units,NULL,NULL,NULL);
 }
 
 const char *CmdOption_selectToString(const CommandLineOptionSelect selects[],
@@ -1556,6 +1638,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           }
           n += 1; // >
           break;
+        case CMD_OPTION_TYPE_DEPRECATED:
+          break;
         #ifndef NDEBUG
           default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1665,6 +1749,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             strncat(name,"...",sizeof(name)-strlen(name));
           }
           strncat(name,">",sizeof(name)-strlen(name));
+          break;
+        case CMD_OPTION_TYPE_DEPRECATED:
           break;
         #ifndef NDEBUG
           default:
@@ -1883,6 +1969,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           break;
         case CMD_OPTION_TYPE_SPECIAL:
           break;
+        case CMD_OPTION_TYPE_DEPRECATED:
+          break;
         #ifndef NDEBUG
           default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1948,6 +2036,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_STRING:
           break;
         case CMD_OPTION_TYPE_SPECIAL:
+          break;
+        case CMD_OPTION_TYPE_DEPRECATED:
           break;
         #ifndef NDEBUG
           default:
