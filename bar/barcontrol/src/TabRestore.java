@@ -2865,7 +2865,6 @@ Dprintf.dprintf("");
                                }
                               );
       if (isUpdateTriggered()) return;
-Dprintf.dprintf("");
 
       // remove not existing UUID menus
       display.syncExec(new Runnable()
@@ -2882,7 +2881,6 @@ Dprintf.dprintf("");
           }
         }
       });
-Dprintf.dprintf("");
 
       // get entity menu items
       display.syncExec(new Runnable()
@@ -2905,7 +2903,6 @@ Dprintf.dprintf("");
         }
       });
       if (isUpdateTriggered()) return;
-Dprintf.dprintf("");
 
       // update entity menu items
       for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
@@ -3002,7 +2999,6 @@ Dprintf.dprintf("");
                                 );
         if (isUpdateTriggered()) return;
       }
-Dprintf.dprintf("");
 
       // remove not existing entity menu items
       display.syncExec(new Runnable()
@@ -3018,7 +3014,6 @@ Dprintf.dprintf("");
           }
         }
       });
-Dprintf.dprintf("");
     }
   }
 
@@ -3087,7 +3082,8 @@ Dprintf.dprintf("");
   {
     NONE,
     REQUEST_PASSWORD,
-    REQUEST_VOLUME;
+    REQUEST_VOLUME,
+    CONFIRM;
   };
 
   /** password types
@@ -7472,6 +7468,22 @@ assert storagePattern != null;
    */
   private void restoreArchives(IndexIdSet indexIdSet)
   {
+    /** dialog data
+     */
+    class Data
+    {
+      String  restoreToDirectory;
+      boolean overwriteEntries;
+
+      Data()
+      {
+        this.restoreToDirectory = null;
+        this.overwriteEntries   = false;
+      }
+    };
+
+    final Data data = new Data();
+
     Label      label;
     Composite  composite,subComposite;
     Button     button;
@@ -7619,6 +7631,10 @@ assert storagePattern != null;
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
+
+          data.restoreToDirectory = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
+          data.overwriteEntries   = widgetOverwriteEntries.getSelection();
+
           Dialogs.close(dialog,true);
         }
       });
@@ -7710,29 +7726,29 @@ assert storagePattern != null;
     };
 
 Dprintf.dprintf("");
-String directory = "/tmp/x";
-boolean overwriteFiles = false;
+data.restoreToDirectory = "/tmp/x";
 
     // run dialog
     if ((Boolean)Dialogs.run(dialog,false))
     {
       final BusyDialog busyDialog = new BusyDialog(shell,
-                                                   !directory.isEmpty() ? BARControl.tr("Restore archives to: {0}",directory) : BARControl.tr("Restore archives"),
+                                                   (data.restoreToDirectory != null) ? BARControl.tr("Restore archives to: {0}",data.restoreToDirectory) : BARControl.tr("Restore archives"),
                                                    500,
                                                    300,
                                                    null,
-                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST
+                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE,
+                                                   250  // max. lines
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries:"));
 
-      new BackgroundTask(busyDialog,new Object[]{indexIdSet,directory,overwriteFiles})
+      new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.overwriteEntries})
       {
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
-          final IndexIdSet indexIdSet     = (IndexIdSet)((Object[])userData)[0];
-          final String     directory      = (String    )((Object[])userData)[1];
-          final boolean    overwriteFiles = (Boolean   )((Object[])userData)[2];
+          final IndexIdSet indexIdSet         = (IndexIdSet)((Object[])userData)[0];
+          final String     restoreToDirectory = (String    )((Object[])userData)[1];
+          final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[2];
 
           int errorCode;
 
@@ -7753,13 +7769,13 @@ boolean overwriteFiles = false;
             setStorageList(indexIdSet);
 
             // start restore
-            long          errorCount    = 0;
+            final long    errorCount[]  = new long[]{0};
             final boolean skipAllFlag[] = new boolean[]{false};
 final String[] errorMessage = new String[1];
 int error;
             error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
-                                                                 directory,
-                                                                 overwriteFiles
+                                                                 restoreToDirectory,
+                                                                 overwriteEntries
                                                                 ),
                                              0,  // debugLevel
                                              errorMessage,
@@ -7772,10 +7788,14 @@ int error;
                                                  {
                                                    if (valueMap.containsKey("action"))
                                                    {
-                                                     Actions             action       = valueMap.getEnum  ("action",Actions.class,Actions.NONE);
+                                                     Actions             action       = valueMap.getEnum  ("action",Actions.class);
                                                      final String        passwordText = valueMap.getString("passwordText","");
                                                      final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
                                                      final String        volume       = valueMap.getString("volume","");
+                                                     final int           error        = valueMap.getInt   ("error",Errors.NONE);
+                                                     final String        errorText    = valueMap.getString("errorText","");
+                                                     final String        storage      = valueMap.getString("storage","");
+                                                     final String        entry        = valueMap.getString("entry","");
 
                                                      switch (action)
                                                      {
@@ -7787,7 +7807,7 @@ int error;
                                                            public void run()
                                                            {
                                                              String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("FTP login password"),
+                                                                                                BARControl.tr("{0} login password",passwordType),
                                                                                                 BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
@@ -7811,8 +7831,52 @@ int error;
                                                              }
                                                            }
                                                          });
+                                                         break;
                                                        case REQUEST_VOLUME:
 Dprintf.dprintf("");
+                                                         break;
+                                                       case CONFIRM:
+                                                         busyDialog.updateList(!entry.isEmpty() ? entry : storage);
+                                                         errorCount[0]++;
+
+                                                         final int resultError[] = new int[]{error};
+                                                         if (!skipAllFlag[0])
+                                                         {
+                                                           display.syncExec(new Runnable()
+                                                           {
+                                                             @Override
+                                                             public void run()
+                                                             {
+                                                               switch (Dialogs.select(shell,
+                                                                                      BARControl.tr("Confirmation"),
+                                                                                      BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
+                                                                                                    !entry.isEmpty() ? entry : storage,
+                                                                                                    errorText
+                                                                                                   ),
+                                                                                      new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                                                                      0
+                                                                                     )
+                                                                      )
+                                                               {
+                                                                 case 0:
+                                                                   resultError[0] = Errors.NONE;
+                                                                   break;
+                                                                 case 1:
+                                                                   resultError[0] = Errors.NONE;
+                                                                   skipAllFlag[0] = true;
+                                                                   break;
+                                                                 case 2:
+                                                                   abort();
+                                                                   break;
+                                                               }
+                                                             }
+                                                           });
+                                                         }
+                                                         BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                      resultError[0]
+                                                                                                     ),
+                                                                                  0  // debugLevel
+                                                                                 );
                                                          break;
                                                      }
                                                    }
@@ -7828,7 +7892,7 @@ Dprintf.dprintf("");
 
                                                      busyDialog.updateText(0,"%s",storageName);
                                                      busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                                                     busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
+                                                     busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
                                                      busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
                                                    }
                                                  }
@@ -7851,50 +7915,10 @@ Dprintf.dprintf("");
                                                }
                                              }
                                             );
-
-            // abort command if requested
-            if (!busyDialog.isAborted())
-            {
-              if (error != Errors.NONE)
-              {
-Dprintf.dprintf("");
-//                busyDialog.updateList(errorMessage[0]);
-                errorCount++;
-
-                if (!skipAllFlag[0])
-                {
-                  display.syncExec(new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-                      switch (Dialogs.select(shell,
-                                             BARControl.tr("Confirmation"),
-                                             BARControl.tr("Cannot restore archive:\n\n {0}",
-                                                           errorMessage[0]
-                                                          ),
-                                             new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                             0
-                                            )
-                             )
-                      {
-                        case 0:
-                          break;
-                        case 1:
-                          skipAllFlag[0] = true;
-                          break;
-                        case 2:
-                          busyDialog.abort();
-                          break;
-                      }
-                    }
-                  });
-                };
-              }
-            }
+Dprintf.dprintf("error=%d",error);
 
             // close/done busy dialog, restore cursor
-            if (errorCount == 0)
+            if (errorCount[0] == 0)
             {
               busyDialog.close();
             }
@@ -8254,6 +8278,22 @@ Dprintf.dprintf("");
    */
   private void restoreEntries(IndexIdSet entryIdSet)
   {
+    /** dialog data
+     */
+    class Data
+    {
+      String  restoreToDirectory;
+      boolean overwriteEntries;
+
+      Data()
+      {
+        this.restoreToDirectory = null;
+        this.overwriteEntries   = false;
+      }
+    };
+
+    final Data data = new Data();
+
     Label      label;
     Composite  composite,subComposite;
     Button     button;
@@ -8402,6 +8442,10 @@ Dprintf.dprintf("");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
+
+          data.restoreToDirectory = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
+          data.overwriteEntries   = widgetOverwriteEntries.getSelection();
+
           Dialogs.close(dialog,true);
         }
       });
@@ -8493,28 +8537,27 @@ Dprintf.dprintf("");
     };
 
 //TODO
-String directory = "/tmp/x";
-boolean overwriteFiles = false;
+data.restoreToDirectory = "/tmp/x";
     // run dialog
     if ((Boolean)Dialogs.run(dialog,false))
     {
       final BusyDialog busyDialog = new BusyDialog(shell,
-                                                   !directory.isEmpty() ? BARControl.tr("Restore entries to: {0}",directory) : BARControl.tr("Restore entries"),
+                                                   (data.restoreToDirectory != null) ? BARControl.tr("Restore entries to: {0}",data.restoreToDirectory) : BARControl.tr("Restore entries"),
                                                    500,
                                                    300,
                                                    null,
-                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST
+                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries:"));
 
-      new BackgroundTask(busyDialog,new Object[]{entryIdSet,directory,overwriteFiles})
+      new BackgroundTask(busyDialog,new Object[]{entryIdSet,data.restoreToDirectory,data.overwriteEntries})
       {
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
-          final IndexIdSet entryIdSet     = (IndexIdSet)((Object[])userData)[0];
-          final String     directory      = (String    )((Object[])userData)[1];
-          final boolean    overwriteFiles = (Boolean   )((Object[])userData)[2];
+          final IndexIdSet entryIdSet         = (IndexIdSet)((Object[])userData)[0];
+          final String     restoreToDirectory = (String    )((Object[])userData)[1];
+          final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[2];
 
           int errorCode;
 
@@ -8535,13 +8578,13 @@ boolean overwriteFiles = false;
             setEntryList(entryIdSet);
 
             // start restore
-            long          errorCount    = 0;
+            final long    errorCount[]  = new long[]{0};
             final boolean skipAllFlag[] = new boolean[]{false};
 final String[] errorMessage = new String[1];
 int error;
             error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S overwriteFiles=%y",
-                                                                 directory,
-                                                                 overwriteFiles
+                                                                 restoreToDirectory,
+                                                                 overwriteEntries
                                                                 ),
                                              0,  // debugLevel
                                              errorMessage,
@@ -8554,54 +8597,111 @@ int error;
                                                  {
                                                    if (valueMap.containsKey("action"))
                                                    {
-                                                     Actions             action       = valueMap.getEnum  ("action",Actions.class,Actions.NONE);
+                                                     Actions             action       = valueMap.getEnum  ("action",Actions.class);
                                                      final String        passwordText = valueMap.getString("passwordText","");
                                                      final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
                                                      final String        volume       = valueMap.getString("volume","");
+                                                     final int           error        = valueMap.getInt   ("error",Errors.NONE);
+                                                     final String        errorText    = valueMap.getString("errorText","");
+                                                     final String        storage      = valueMap.getString("storage","");
+                                                     final String        entry        = valueMap.getString("entry","");
 
                                                      switch (action)
                                                      {
                                                        case REQUEST_PASSWORD:
-                                                         // get ftp password
+                                                         // get password
                                                          display.syncExec(new Runnable()
                                                          {
                                                            @Override
                                                            public void run()
                                                            {
                                                              String password = Dialogs.password(shell,
-                                                                                                BARControl.tr("FTP login password"),
+                                                                                                BARControl.tr("{0} login password",passwordType),
                                                                                                 BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
                                                                                                 BARControl.tr("Password")+":"
                                                                                                );
                                                              if (password != null)
                                                              {
-                                                               BARServer.executeCommand(StringParser.format("ACTION_RESULT encryptType=%s encryptedPassword=%S",
+                                                               BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                            Errors.NONE,
                                                                                                             BARServer.getPasswordEncryptType(),
                                                                                                             BARServer.encryptPassword(password)
                                                                                                            ),
                                                                                         0  // debugLevel
                                                                                        );
                                                              }
+                                                             else
+                                                             {
+                                                               BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                            Errors.NO_PASSWORD
+                                                                                                           ),
+                                                                                        0  // debugLevel
+                                                                                       );
+                                                             }
                                                            }
                                                          });
+                                                         break;
                                                        case REQUEST_VOLUME:
 Dprintf.dprintf("");
+                                                         break;
+                                                       case CONFIRM:
+                                                         busyDialog.updateList(!entry.isEmpty() ? entry : storage);
+                                                         errorCount[0]++;
+
+                                                         final int resultError[] = new int[]{error};
+                                                         if (!skipAllFlag[0])
+                                                         {
+                                                           display.syncExec(new Runnable()
+                                                           {
+                                                             @Override
+                                                             public void run()
+                                                             {
+                                                               switch (Dialogs.select(shell,
+                                                                                      BARControl.tr("Confirmation"),
+                                                                                      BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
+                                                                                                    !entry.isEmpty() ? entry : storage,
+                                                                                                    errorText
+                                                                                                   ),
+                                                                                      new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                                                                      0
+                                                                                     )
+                                                                      )
+                                                               {
+                                                                 case 0:
+                                                                   resultError[0] = Errors.NONE;
+                                                                   break;
+                                                                 case 1:
+                                                                   resultError[0] = Errors.NONE;
+                                                                   skipAllFlag[0] = true;
+                                                                   break;
+                                                                 case 2:
+                                                                   abort();
+                                                                   break;
+                                                               }
+                                                             }
+                                                           });
+                                                         }
+                                                         BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                      resultError[0]
+                                                                                                     ),
+                                                                                  0  // debugLevel
+                                                                                 );
                                                          break;
                                                      }
                                                    }
                                                    else
                                                    {
-                                                     RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class,RestoreStates.NONE);
-                                                     String        storageName       = valueMap.getString("storageName","");
-                                                     long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes",0L);
-                                                     long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes",0L);
-                                                     String        entryName         = valueMap.getString("entryName","");
-                                                     long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes",0L);
-                                                     long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes",0L);
+                                                     RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class);
+                                                     String        storageName       = valueMap.getString("storageName");
+                                                     long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes");
+                                                     long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
+                                                     String        entryName         = valueMap.getString("entryName");
+                                                     long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes");
+                                                     long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes");
 
                                                      busyDialog.updateText(0,"%s",storageName);
                                                      busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                                                     busyDialog.updateText(1,"%s",new File(directory,entryName).getPath());
+                                                     busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
                                                      busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
                                                    }
                                                  }
@@ -8625,52 +8725,8 @@ Dprintf.dprintf("");
                                              }
                                             );
 
-            // abort command if requested
-            if (!busyDialog.isAborted())
-            {
-              if (error != Errors.NONE)
-              {
-Dprintf.dprintf("");
-//                  busyDialog.updateList(entryData.name);
-                errorCount++;
-
-                if (!skipAllFlag[0])
-                {
-                  display.syncExec(new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-Dprintf.dprintf("");
-                      switch (Dialogs.select(shell,
-                                             BARControl.tr("Confirmation"),
-                                             BARControl.tr("Cannot restore entry\n\n''{0}''\n\nfrom archive\n\n''{1}''\n\n(error: {2})",
-"xxx",//                                                             entryData.name,
-"xxx",//                                                             entryData.storageName,
-                                                           errorMessage[0]
-                                                          ),
-                                             new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                             0
-                                            )
-                             )
-                      {
-                        case 0:
-                          break;
-                        case 1:
-                          skipAllFlag[0] = true;
-                          break;
-                        case 2:
-                          busyDialog.abort();
-                          break;
-                      }
-                    }
-                  });
-                }
-              }
-            }
-
             // close/done busy dialog, restore cursor
-            if (errorCount == 0)
+            if (errorCount[0] == 0)
             {
               busyDialog.close();
             }
