@@ -2890,8 +2890,6 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   String_delete(absoluteFileName);
 
   // single clean-ups
-#warning remove
-#if 0
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -2923,7 +2921,6 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
       sleepTime += 10;
     }
   }
-#endif
 }
 
 /***********************************************************************\
@@ -4681,6 +4678,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert((uuidId == INDEX_ID_ANY) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -4852,6 +4850,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   IndexId             storageId;
 
   assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5067,6 +5066,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  assert((uuidId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_UUID));
   assert((entityId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
 
   // check init error
@@ -6143,7 +6143,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-  filesFilter = String_newCString("1");
+  filesFilter = String_new();
   if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
   {
     filterAppend(filesFilter,!String_isEmpty(pattern),"AND","files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S)",ftsString);
@@ -6153,10 +6153,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
   else
   {
-    String_format(filesFilter,"0");
+    String_setCString(filesFilter,"0");
   }
 
-  imagesFilter = String_newCString("1");
+  imagesFilter = String_new();
   if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
   {
     filterAppend(imagesFilter,!String_isEmpty(pattern),"AND","images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S)",ftsString);
@@ -6166,10 +6166,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
   else
   {
-    String_format(imagesFilter,"0");
+    String_setCString(imagesFilter,"0");
   }
 
-  directoriesFilter = String_newCString("1");
+  directoriesFilter = String_new();
   if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
   {
     filterAppend(directoriesFilter,!String_isEmpty(pattern),"AND","directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S)",ftsString);
@@ -6179,10 +6179,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
   else
   {
-    String_format(directoriesFilter,"0");
+    String_setCString(directoriesFilter,"0");
   }
 
-  linksFilter = String_newCString("1");
+  linksFilter = String_new();
   if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
   {
     filterAppend(linksFilter,!String_isEmpty(pattern),"AND","links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S)",ftsString);
@@ -6192,10 +6192,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
   else
   {
-    String_format(linksFilter,"0");
+    String_setCString(linksFilter,"0");
   }
 
-  hardlinksFilter = String_newCString("1");
+  hardlinksFilter = String_new();
   if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
   {
     filterAppend(hardlinksFilter,!String_isEmpty(pattern),"AND","hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S)",ftsString);
@@ -6205,10 +6205,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
   else
   {
-    String_format(hardlinksFilter,"0");
+    String_setCString(hardlinksFilter,"0");
   }
 
-  specialFilter = String_newCString("1");
+  specialFilter = String_new();
   if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
   {
     filterAppend(specialFilter,!String_isEmpty(pattern),"AND","special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S)",ftsString);
@@ -6218,7 +6218,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
   else
   {
-    String_format(specialFilter,"0");
+    String_setCString(specialFilter,"0");
   }
 
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
