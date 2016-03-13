@@ -46,6 +46,7 @@ typedef struct
   String     entryName;                    // current entry name
   uint64     entryDoneBytes;               // number of bytes processed of current entry
   uint64     entryTotalBytes;              // total number of bytes of current entry
+//TODO remove
   const char *requestPasswordType;         // request password type or NULL
   const char *requestPasswordText;         // request password host name or NULL
   const char *requestVolume;               // request volume or NULL
@@ -54,18 +55,16 @@ typedef struct
 /***********************************************************************\
 * Name   : RestoreStatusInfoFunction
 * Purpose: restore status info call-back
-* Input  : error             - error code
-*          restoreStatusInfo - restore status info
+* Input  : restoreStatusInfo - restore status info
 *          userData          - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*RestoreStatusInfoFunction)(Errors                  error,
-                                         const RestoreStatusInfo *restoreStatusInfo,
-                                         void                    *userData
-                                        );
+typedef void(*RestoreUpdateStatusInfoFunction)(const RestoreStatusInfo *restoreStatusInfo,
+                                               void                    *userData
+                                              );
 
 /***********************************************************************\
 * Name   : RestoreErrorFunction
@@ -74,14 +73,14 @@ typedef void(*RestoreStatusInfoFunction)(Errors                  error,
 *          restoreStatusInfo - restore status info
 *          userData          - user data
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*RestoreErrorFunction)(Errors                  error,
-                                    const RestoreStatusInfo *restoreStatusInfo,
-                                    void                    *userData
-                                   );
+typedef Errors(*RestoreHandleErrorFunction)(Errors                  error,
+                                            const RestoreStatusInfo *restoreStatusInfo,
+                                            void                    *userData
+                                           );
 
 /***************************** Variables *******************************/
 
@@ -98,38 +97,43 @@ typedef void(*RestoreErrorFunction)(Errors                  error,
 /***********************************************************************\
 * Name   : Command_restore
 * Purpose: restore archive content
-* Input  : storageNameList           - list with storage names
-*          includeEntryList          - include entry list
-*          excludePatternList        - exclude pattern list
-*          deltaSourceList           - delta source list
-*          jobOptions                - job options
-*          getPasswordFunction       - get password call back
-*          getPasswordUserData       - user data for get password
-*                                      call back
-*          restoreStatusInfoFunction - status info call back
-*                                      function (can be NULL)
-*          restoreStatusInfoUserData - user data for status info
-*                                      function
-*          pauseRestoreFlag          - pause restore flag (can be NULL)
-*          requestedAbortFlag        - request abort flag (can be NULL)
-*          logHandle                 - log handle (can be NULL)
+* Input  : storageNameList          - list with storage names
+*          includeEntryList         - include entry list
+*          excludePatternList       - exclude pattern list
+*          deltaSourceList          - delta source list
+*          jobOptions               - job options
+*          getPasswordFunction      - get password call back (can be
+*                                     NULL)
+*          getPasswordUserData      - user data for get password call
+*                                     back
+*          updateStatusInfoFunction - status info call back
+*                                     function (can be NULL)
+*          updateStatusInfoUserData - user data for status info
+*                                     function
+*          handleErrorFunction      - error call back (can be NULL)
+*          handleErrorUserData      - user data for error call back
+*          pauseRestoreFlag         - pause restore flag (can be NULL)
+*          requestedAbortFlag       - request abort flag (can be NULL)
+*          logHandle                - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if all files restored, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_restore(const StringList          *storageNameList,
-                       const EntryList           *includeEntryList,
-                       const PatternList         *excludePatternList,
-                       DeltaSourceList           *deltaSourceList,
-                       JobOptions                *jobOptions,
-                       GetPasswordFunction       getPasswordFunction,
-                       void                      *getPasswordUserData,
-                       RestoreStatusInfoFunction restoreStatusInfoFunction,
-                       void                      *restoreStatusInfoUserData,
-                       bool                      *pauseRestoreFlag,
-                       bool                      *requestedAbortFlag,
-                       LogHandle                 *logHandle
+Errors Command_restore(const StringList                *storageNameList,
+                       const EntryList                 *includeEntryList,
+                       const PatternList               *excludePatternList,
+                       DeltaSourceList                 *deltaSourceList,
+                       JobOptions                      *jobOptions,
+                       GetPasswordFunction             getPasswordFunction,
+                       void                            *getPasswordUserData,
+                       RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
+                       void                            *updateStatusInfoUserData,
+                       RestoreHandleErrorFunction      handleErrorFunction,
+                       void                            *handleErrorUserData,
+                       bool                            *pauseRestoreFlag,
+                       bool                            *requestedAbortFlag,
+                       LogHandle                       *logHandle
                       );
 
 #ifdef __cplusplus
