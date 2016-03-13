@@ -836,7 +836,6 @@ class BusyDialog
   }
 
   /** add to busy dialog list
-   * @param i index 0|1
    * @param format format string
    * @param args optional arguments
    * @return true if closed, false otherwise
