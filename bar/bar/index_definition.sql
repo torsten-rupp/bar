@@ -85,7 +85,6 @@ CREATE TRIGGER entityInsert AFTER INSERT ON entities
       (jobUUID) VALUES (NEW.jobUUID);
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   +1,
-//          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
 
@@ -135,7 +134,6 @@ CREATE TRIGGER entityUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEn
   BEGIN
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   -1,
-//          totalEntitySize    =totalEntitySize    -OLD.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
 
@@ -157,7 +155,6 @@ CREATE TRIGGER entityUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEn
       WHERE uuids.jobUUID=OLD.jobUUID;
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   +1,
-//          totalEntitySize    =totalEntitySize    +NEW.totalStorageSize,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
           lastErrorMessage   =(SELECT entities.lastErrorMessage FROM entities WHERE entities.jobUUID=NEW.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
 
@@ -328,9 +325,14 @@ CREATE TABLE IF NOT EXISTS files(
   fragmentOffset  INTEGER,
   fragmentSize    INTEGER,
 
+  // updated by triggers
+  newestFlag      INTEGER DEFAULT 0,
+
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
-CREATE INDEX IF NOT EXISTS filesIndex ON files (storageId,name);
+CREATE INDEX IF NOT EXISTS filesIndex1 ON files (storageId,name);
+CREATE INDEX IF NOT EXISTS filesIndex2 ON files (name,timeLastChanged);
+CREATE INDEX IF NOT EXISTS filesIndex3 ON files (newestFlag);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_files USING FTS4(
@@ -343,18 +345,28 @@ CREATE VIRTUAL TABLE FTS_files USING FTS4(
 // insert/delete/update triggeres
 CREATE TRIGGER filesInsert AFTER INSERT ON files
   BEGIN
+    // update count/size in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size,
           totalFileCount =totalFileCount +1,
           totalFileSize  =totalFileSize  +NEW.size
       WHERE storage.id=NEW.storageId;
+    // update count/size in parent directories
     UPDATE directories
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size
       WHERE     directories.storageId=NEW.storageId
             AND directories.name=DIRNAME(NEW.name);
+    // update FTS
     INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
+    // update newest-flag
+    UPDATE files
+      SET newestFlag=0;
+//      WHERE name=NEW.name AND newestFlag=1;
+//    UPDATE files
+//      SET newestFlag=1
+//      WHERE id=(SELECT id FROM files WHERE name=NEW.name ORDER BY timeLastChanged DESC LIMIT 0,1);
   END;
 CREATE TRIGGER filesDelete BEFORE DELETE ON files
   BEGIN
@@ -370,6 +382,13 @@ CREATE TRIGGER filesDelete BEFORE DELETE ON files
       WHERE     directories.storageId=OLD.storageId
             AND directories.name=DIRNAME(OLD.name);
     DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
+    // update newest-flag
+//    UPDATE files
+//      SET newestFlag=0
+//      WHERE name=NEW.name AND newestFlag=1;
+//    UPDATE files
+//      SET newestFlag=1
+//      WHERE id=(SELECT id FROM files WHERE name=NEW.name ORDER BY timeLastChanged DESC LIMIT 0,1);
   END;
 CREATE TRIGGER filesUpdateStorageSize AFTER UPDATE OF storageId,size ON files
   BEGIN
@@ -401,6 +420,15 @@ CREATE TRIGGER filesUpdateName AFTER UPDATE OF name ON files
     DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
     INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
   END;
+//CREATE TRIGGER filesUpdateTimeLastChanged AFTER UPDATE OF timeLastChanged ON files
+//  BEGIN
+//    UPDATE files
+//      SET newestFlag=0
+//      WHERE name=NEW.name AND newestFlag=1;
+//    UPDATE files
+//      SET newestFlag=1
+//      WHERE id=(SELECT id FROM files WHERE name=NEW.name ORDER BY timeLastChanged DESC LIMIT 0,1);
+//  END;
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS images(
@@ -412,6 +440,9 @@ CREATE TABLE IF NOT EXISTS images(
   blockSize       INTEGER,
   blockOffset     INTEGER,
   blockCount      INTEGER,
+
+  // updated by triggers
+  newestFlag      INTEGER DEFAULT 0,
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
@@ -482,6 +513,8 @@ CREATE TABLE IF NOT EXISTS directories(
   // updated by triggers
   totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
   totalEntrySize      INTEGER DEFAULT 0,  // total size of entries [bytes]
+
+  newestFlag          INTEGER DEFAULT 0,
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
@@ -555,6 +588,9 @@ CREATE TABLE IF NOT EXISTS links(
   groupId         INTEGER,
   permission      INTEGER,
 
+  // updated by triggers
+  newestFlag      INTEGER DEFAULT 0,
+
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 CREATE INDEX IF NOT EXISTS linksIndex ON links (storageId,name);
@@ -615,6 +651,9 @@ CREATE TABLE IF NOT EXISTS hardlinks(
   permission      INTEGER,
   fragmentOffset  INTEGER,
   fragmentSize    INTEGER,
+
+  // updated by triggers
+  newestFlag      INTEGER DEFAULT 0,
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
@@ -704,6 +743,9 @@ CREATE TABLE IF NOT EXISTS special(
   permission      INTEGER,
   major           INTEGER,
   minor           INTEGER,
+
+  // updated by triggers
+  newestFlag      INTEGER DEFAULT 0,
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
