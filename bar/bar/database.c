@@ -1198,6 +1198,7 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
 
 uint64 t0 = Misc_getTimestamp();
 ulong xxx=0;
+int a,b,r;
 
   // get table columns
   error = getTableColumnList(&fromColumnList,fromDatabaseHandle,tableName);
@@ -1277,6 +1278,7 @@ ulong xxx=0;
     Errors error;
 
 #if 1
+fprintf(stderr,"%s, %d: Database_beginTransaction\n",__FILE__,__LINE__);
     error = Database_beginTransaction(toDatabaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
@@ -1395,10 +1397,11 @@ xxx++;
       // call pre-copy callback (if defined)
       if (preCopyTableFunction != NULL)
       {
-        BLOCK_DO(DATABASE_UNLOCK(toDatabaseHandle),
-                 DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName),
+        BLOCK_DOX(error,
+                  DATABASE_UNLOCK(toDatabaseHandle),
+                  DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName),
         {
-          error = preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
+          return preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
         });
         if (error != ERROR_NONE)
         {
@@ -1524,10 +1527,11 @@ xxx++;
       // call post-copy callback (if defined)
       if (postCopyTableFunction != NULL)
       {
-        BLOCK_DO(DATABASE_UNLOCK(toDatabaseHandle),
-                 DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName),
+        BLOCK_DOX(error,
+                  DATABASE_UNLOCK(toDatabaseHandle),
+                  DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName),
         {
-          error = postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
+          return postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
         });
         if (error != ERROR_NONE)
         {
@@ -1540,9 +1544,12 @@ xxx++;
     }
 
 #if 1
+fprintf(stderr,"%s, %d: Database_endTransaction\n",__FILE__,__LINE__);
     error = Database_endTransaction(toDatabaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
+//      sqlite3_finalize(toHandle);
+      sqlite3_finalize(fromHandle);
       return error;
     }
 #endif
@@ -1560,6 +1567,10 @@ fprintf(stderr,"%s, %d: %s %llums xxx=%lu %lfms/trans\n",__FILE__,__LINE__,table
 
     return ERROR_NONE;
   });
+
+fprintf(stderr,"%s, %d: -------------------------- do check\n",__FILE__,__LINE__);
+sqlite3_wal_checkpoint_v2(toDatabaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
+fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(toDatabaseHandle->handle));
 
   // free resources
   String_delete(sqlInsertString);
@@ -2091,6 +2102,11 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   // free resources
   String_delete(sqlString);
 
+//  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
+//int a,b;
+//int r=  sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
+//fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(databaseHandle->handle));
+
   return ERROR_NONE;
 }
 
@@ -2121,6 +2137,11 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
 
   // free resources
   String_delete(sqlString);
+
+//  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
+int a,b;
+  sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
+fprintf(stderr,"%s, %d: checkpoint %d %d\n",__FILE__,__LINE__,a,b);
 
   return ERROR_NONE;
 }
