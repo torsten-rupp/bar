@@ -362,11 +362,11 @@ CREATE TRIGGER filesInsert AFTER INSERT ON files
     INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
     // update newest-flag
     UPDATE files
-      SET newestFlag=0;
-//      WHERE name=NEW.name AND newestFlag=1;
-//    UPDATE files
-//      SET newestFlag=1
-//      WHERE id=(SELECT id FROM files WHERE name=NEW.name ORDER BY timeLastChanged DESC LIMIT 0,1);
+      SET newestFlag=0
+      WHERE name=NEW.name AND newestFlag=1;
+    UPDATE files
+      SET newestFlag=1
+      WHERE id=(SELECT id FROM files WHERE name=NEW.name ORDER BY timeLastChanged DESC LIMIT 0,1);
   END;
 CREATE TRIGGER filesDelete BEFORE DELETE ON files
   BEGIN
