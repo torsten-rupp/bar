@@ -334,6 +334,17 @@ CREATE INDEX IF NOT EXISTS filesIndex1 ON files (storageId,name);
 CREATE INDEX IF NOT EXISTS filesIndex2 ON files (name,timeLastChanged);
 CREATE INDEX IF NOT EXISTS filesIndex3 ON files (newestFlag);
 
+// newest files
+CREATE TABLE IF NOT EXISTS filesNewest(
+  id              INTEGER PRIMARY KEY,
+  name            TEXT UNIQUE NOT NULL,
+  timeLastChanged INTEGER DEFAULT 0,
+  fileId          INTEGER DEFAULT 0,
+
+  FOREIGN KEY(fileId) REFERENCES files(id)
+);
+CREATE INDEX IF NOT EXISTS filesNewestIndex1 ON filesNewest (name,timeLastChanged);
+
 // full-text-search
 CREATE VIRTUAL TABLE FTS_files USING FTS4(
   fileId,
@@ -343,7 +354,7 @@ CREATE VIRTUAL TABLE FTS_files USING FTS4(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER filesInsert AFTER INSERT ON files
+CREATE TRIGGER afterFileInsert AFTER INSERT ON files
   BEGIN
     // update count/size in storage
     UPDATE storage
@@ -352,74 +363,96 @@ CREATE TRIGGER filesInsert AFTER INSERT ON files
           totalFileCount =totalFileCount +1,
           totalFileSize  =totalFileSize  +NEW.size
       WHERE storage.id=NEW.storageId;
+
     // update count/size in parent directories
     UPDATE directories
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size
       WHERE     directories.storageId=NEW.storageId
             AND directories.name=DIRNAME(NEW.name);
+
+    // update newest files info
+    INSERT OR IGNORE INTO filesNewest
+      (name) VALUES (NEW.name);
+    UPDATE filesNewest
+      SET timeLastChanged=NEW.timeLastChanged,
+          fileId=NEW.id
+      WHERE     name=NEW.name
+            AND timeLastChanged<NEW.timeLastChanged;
+
     // update FTS
-    INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
-    // update newest-flag
-    UPDATE files
-      SET newestFlag=0
-      WHERE name=NEW.name AND newestFlag=1;
-    UPDATE files
-      SET newestFlag=1
-      WHERE id=(SELECT id FROM files WHERE name=NEW.name ORDER BY timeLastChanged DESC LIMIT 0,1);
+    INSERT INTO FTS_files
+      VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER filesDelete BEFORE DELETE ON files
+CREATE TRIGGER beforeFileDelete BEFORE DELETE ON files
   BEGIN
+    // update count/size in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size,
           totalFileCount =totalFileCount -1,
           totalFileSize  =totalFileSize  -OLD.size
       WHERE storage.id=OLD.storageId;
+
+    // update count/size in parent directories
     UPDATE directories
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size
       WHERE     directories.storageId=OLD.storageId
             AND directories.name=DIRNAME(OLD.name);
+
+    // update newest files info
+    DELETE FROM filesNewest
+      WHERE name=OLD.name;
+
+    // update FTS
     DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
-    // update newest-flag
-//    UPDATE files
-//      SET newestFlag=0
-//      WHERE name=NEW.name AND newestFlag=1;
-//    UPDATE files
-//      SET newestFlag=1
-//      WHERE id=(SELECT id FROM files WHERE name=NEW.name ORDER BY timeLastChanged DESC LIMIT 0,1);
   END;
-CREATE TRIGGER filesUpdateStorageSize AFTER UPDATE OF storageId,size ON files
+
+CREATE TRIGGER afterFileDelete AFTER DELETE ON files
   BEGIN
+    INSERT INTO filesNewest (name,timeLastChanged,fileId)
+      SELECT name,MAX(timeLastChanged),id FROM files WHERE name=OLD.name;
+  END;
+
+CREATE TRIGGER afterFileUpdateStorageSize AFTER UPDATE OF storageId,size ON files
+  BEGIN
+    // update count/size in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size,
           totalFileCount =totalFileCount -1,
           totalFileSize  =totalFileSize  -OLD.size
       WHERE storage.id=OLD.storageId;
+
+    // update count/size in parent directories
     UPDATE directories
       SET totalEntryCount=totalEntryCount-1,
           totalEntrySize =totalEntrySize -OLD.size
       WHERE     directories.storageId=OLD.storageId
             AND directories.name=DIRNAME(OLD.name);
+
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size,
           totalFileCount =totalFileCount +1,
           totalFileSize  =totalFileSize  +NEW.size
       WHERE storage.id=NEW.storageId;
+
+    // update count/size in parent directories
     UPDATE directories
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.size
       WHERE     directories.storageId=NEW.storageId
             AND directories.name=DIRNAME(NEW.name);
   END;
-CREATE TRIGGER filesUpdateName AFTER UPDATE OF name ON files
+
+CREATE TRIGGER afterFileUpdateName AFTER UPDATE OF name ON files
   BEGIN
     DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
     INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
   END;
+
 //CREATE TRIGGER filesUpdateTimeLastChanged AFTER UPDATE OF timeLastChanged ON files
 //  BEGIN
 //    UPDATE files
