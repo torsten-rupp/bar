@@ -39,15 +39,25 @@ while ($line=<STDIN>)
   $line =~ s/\/\/.*$//g;
   if ($line =~ /^\s*$/) { next; }
 
+  # get type of statement
+  my $statementType;
+  if    ($line =~ /^\s*CREATE\s+TABLE/  ) { $statementType="table"; }
+  elsif ($line =~ /^\s*CREATE\s+INDEX/  ) { $statementType="index"; }
+  elsif ($line =~ /^\s*CREATE\s+TRIGGER/) { $statementType="trigger"; }
+  else                                    { $statementType=""; }
+
   if ($commentFlag)
   {
     if ($line =~ /\*\/\s*(.*)/)
     {
+      # end comment
       $commentFlag=0;
 
       if ($1 ne "")
       {
+        # replace macros
         $1 =~ s/\$version/$version/g;
+        $1 =~ s/"/\\"/g;
 
         $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$1\\\n";
         if ($databaseTableDefinitionName ne "")
@@ -61,11 +71,11 @@ while ($line=<STDIN>)
   {
     if    ($line =~ /(.*)\s*\/\*/)
     {
-      $commentFlag=1;
-
       if ($1 ne "")
       {
+        # replace macros
         $1 =~ s/\$version/$version/g;
+        $1 =~ s/"/\\"/g;
 
         $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$1\\\n";
         if ($databaseTableDefinitionName ne "")
@@ -73,18 +83,24 @@ while ($line=<STDIN>)
           $databaseTableDefinition=$databaseTableDefinition."$1\\\n";
         }
       }
+
+      # start comment
+      $commentFlag=1;
     }
     elsif ($line =~ /^\s*\#.*/)
     {
+      # comment
     }
     elsif ($line =~ /\s*VERSION\s*=\s*(\d+)\s*;\s*$/)
     {
+      # VERSION=...
       $version=$1;
 
       print "#define INDEX_VERSION ".$version."\n\n";
     }
     elsif ($line =~ /\s*CREATE\s+TABLE\s+.*?(\S+)\s*\(/)
     {
+      # replace macros
       $line =~ s/\$version/$version/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
@@ -93,6 +109,7 @@ while ($line=<STDIN>)
     }
     elsif ($line =~ /\);/)
     {
+      # replace macros
       $line =~ s/\$version/$version/g;
       $line =~ s/"/\\"/g;
 
@@ -111,6 +128,7 @@ while ($line=<STDIN>)
     }
     else
     {
+      # replace macros
       $line =~ s/\$version/$version/g;
       $line =~ s/"/\\"/g;
 
