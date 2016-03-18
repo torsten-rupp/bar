@@ -41,7 +41,7 @@
 
 /***************************** Constants *******************************/
 #if 1
-#define DEBUG_WARNING_LOCK_TIME  500ULL    // DEBUG only: warning lock time [ms]
+#define DEBUG_WARNING_LOCK_TIME  2ULL*1000ULL    // DEBUG only: warning lock time [ms]
 #define DEBUG_MAX_LOCK_TIME     60ULL*1000ULL    // DEBUG only: max. lock time [ms]
 #else
 #define DEBUG_WARNING_LOCK_TIME MAX_UINT64
@@ -143,7 +143,7 @@ typedef union
     } \
     while (0)
 #else /* NDEBUG */
-  #define DATABASE_LOCK(databaseHandle,text_) \
+  #define DATABASE_LOCK(databaseHandle,format,...) \
     do \
     { \
       assert(databaseHandle != NULL); \
@@ -754,6 +754,8 @@ LOCAL void freeColumnNode(DatabaseColumnNode *columnNode, void *userData)
   {
     case DATABASE_TYPE_PRIMARY_KEY:
       break;
+    case DATABASE_TYPE_FOREIGN_KEY:
+      break;
     case DATABASE_TYPE_INT64:
       break;
     case DATABASE_TYPE_DOUBLE:
@@ -767,11 +769,11 @@ LOCAL void freeColumnNode(DatabaseColumnNode *columnNode, void *userData)
 //TODO: blob
       HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; // not reached
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; // not reached
   }
   free(columnNode->name);
 }
@@ -946,11 +948,11 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
     case DATABASE_TYPE_BLOB:
       string = "BLOB";
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; // not reached
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; // not reached
   }
 
   return string;
@@ -1169,6 +1171,7 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
 Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
                           DatabaseHandle            *toDatabaseHandle,
                           const char                *tableName,
+                          bool                      transactionFlag,
                           DatabaseCopyTableFunction preCopyTableFunction,
                           void                      *preCopyTableUserData,
                           DatabaseCopyTableFunction postCopyTableFunction,
@@ -1278,11 +1281,13 @@ int a,b,r;
     Errors error;
 
 #if 1
-fprintf(stderr,"%s, %d: Database_beginTransaction\n",__FILE__,__LINE__);
-    error = Database_beginTransaction(toDatabaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
+    if (transactionFlag)
     {
-      return error;
+      error = Database_beginTransaction(toDatabaseHandle,TRANSACTION_NAME);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
     }
 #endif
 
@@ -1295,7 +1300,10 @@ fprintf(stderr,"%s, %d: Database_beginTransaction\n",__FILE__,__LINE__);
                                      );
     if (sqliteResult != SQLITE_OK)
     {
-      (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+      if (transactionFlag)
+      {
+        (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+      }
       return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle));
     }
 
@@ -1310,7 +1318,10 @@ fprintf(stderr,"%s, %d: Database_beginTransaction\n",__FILE__,__LINE__);
     if (sqliteResult != SQLITE_OK)
     {
       sqlite3_finalize(fromHandle);
-      (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+      if (transactionFlag)
+      {
+        (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+      }
       return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
     }
 #endif
@@ -1385,11 +1396,11 @@ xxx++;
           case DATABASE_TYPE_BLOB:
             HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             break;
-          #ifndef NDEBUG
-            default:
+          default:
+            #ifndef NDEBUG
               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; // not reached
-          #endif /* NDEBUG */
+            #endif /* NDEBUG */
+            break; // not reached
         }
         n++;
       }
@@ -1407,7 +1418,10 @@ xxx++;
         {
 //          sqlite3_finalize(toHandle);
           sqlite3_finalize(fromHandle);
-          (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+          if (transactionFlag)
+          {
+            (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+          }
           return error;
         }
 
@@ -1449,7 +1463,10 @@ xxx++;
       if (sqliteResult != SQLITE_OK)
       {
         sqlite3_finalize(fromHandle);
-        (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+        if (transactionFlag)
+        {
+          (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+        }
         return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
       }
 
@@ -1481,11 +1498,11 @@ xxx++;
             case DATABASE_TYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break; // not reached
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break; // not reached
           }
           n++;
         }
@@ -1496,7 +1513,10 @@ xxx++;
       {
         sqlite3_finalize(toHandle);
         sqlite3_finalize(fromHandle);
-        (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+        if (transactionFlag)
+        {
+          (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+        }
         return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
       }
       lastRowId = (uint64)sqlite3_last_insert_rowid(toDatabaseHandle->handle);
@@ -1513,11 +1533,11 @@ xxx++;
           case DATABASE_TYPE_TEXT:
           case DATABASE_TYPE_BLOB:
             break;
-          #ifndef NDEBUG
-            default:
+          default:
+            #ifndef NDEBUG
               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; // not reached
-          #endif /* NDEBUG */
+            #endif /* NDEBUG */
+            break; // not reached
         }
       }
 
@@ -1537,20 +1557,25 @@ xxx++;
         {
 //          sqlite3_finalize(toHandle);
           sqlite3_finalize(fromHandle);
-          (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+          if (transactionFlag)
+          {
+            (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+          }
           return error;
         }
       }
     }
 
 #if 1
-fprintf(stderr,"%s, %d: Database_endTransaction\n",__FILE__,__LINE__);
-    error = Database_endTransaction(toDatabaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
+    if (transactionFlag)
     {
-//      sqlite3_finalize(toHandle);
-      sqlite3_finalize(fromHandle);
-      return error;
+      error = Database_endTransaction(toDatabaseHandle,TRANSACTION_NAME);
+      if (error != ERROR_NONE)
+      {
+//        sqlite3_finalize(toHandle);
+        sqlite3_finalize(fromHandle);
+        return error;
+      }
     }
 #endif
 
@@ -1561,16 +1586,16 @@ fprintf(stderr,"%s, %d: Database_endTransaction\n",__FILE__,__LINE__);
 //if (xxx > 5000)
 {
 uint64 t1 = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: %s %llums xxx=%lu %lfms/trans\n",__FILE__,__LINE__,tableName,(t1-t0)/1000,xxx,(double)(t1-t0)/((double)xxx*1000));
+fprintf(stderr,"%s, %d: tableName=%s %llums xxx=%lu -> %lfms/trans\n",__FILE__,__LINE__,tableName,(t1-t0)/1000,xxx,(double)(t1-t0)/((double)xxx*1000));
 //exit(12);
 }
 
     return ERROR_NONE;
   });
 
-fprintf(stderr,"%s, %d: -------------------------- do check\n",__FILE__,__LINE__);
-sqlite3_wal_checkpoint_v2(toDatabaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
-fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(toDatabaseHandle->handle));
+//fprintf(stderr,"%s, %d: -------------------------- do check\n",__FILE__,__LINE__);
+//sqlite3_wal_checkpoint_v2(toDatabaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
+//fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(toDatabaseHandle->handle));
 
   // free resources
   String_delete(sqlInsertString);
@@ -1819,11 +1844,11 @@ Errors Database_addColumn(DatabaseHandle *databaseHandle,
     case DATABASE_TYPE_BLOB:
       columnTypeString = "BLOB";
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; // not reached
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; // not reached
   }
 
   // execute SQL command
@@ -1955,11 +1980,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
             case DATABASE_TYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break; // not reached
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break; // not reached
           }
           n++;
         }
@@ -2102,7 +2127,7 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   // free resources
   String_delete(sqlString);
 
-//  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
+  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
 //int a,b;
 //int r=  sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
 //fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(databaseHandle->handle));
