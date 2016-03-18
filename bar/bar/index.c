@@ -233,6 +233,57 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
     return error;
   }
 
+#warning remove
+#if 0
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+String fileName = String_newCString("a");
+Errors e = Index_addFile(indexHandle,
+              INDEX_ID_(INDEX_TYPE_STORAGE,0),//storageId,
+              fileName,
+              1234,//size,
+              0,//timeLastAccess,
+              0,//timeModified,
+              1,//timeLastChanged,
+              0,//userId,
+              0,//groupId,
+              0,//permission,
+              0,//fragmentOffset,
+              1234//fragmentSize
+             );
+fprintf(stderr,"%s, %d: e = %s\n",__FILE__,__LINE__,Error_getText(e));
+e = Index_addFile(indexHandle,
+              INDEX_ID_(INDEX_TYPE_STORAGE,0),//storageId,
+              fileName,
+              1234,//size,
+              0,//timeLastAccess,
+              0,//timeModified,
+              2,//timeLastChanged,
+              0,//userId,
+              0,//groupId,
+              0,//permission,
+              0,//fragmentOffset,
+              1234//fragmentSize
+             );
+fprintf(stderr,"%s, %d: e = %s\n",__FILE__,__LINE__,Error_getText(e));
+e = Index_addFile(indexHandle,
+              INDEX_ID_(INDEX_TYPE_STORAGE,0),//storageId,
+              fileName,
+              1234,//size,
+              0,//timeLastAccess,
+              0,//timeModified,
+              3,//timeLastChanged,
+              0,//userId,
+              0,//groupId,
+              0,//permission,
+              0,//fragmentOffset,
+              1234//fragmentSize
+             );
+fprintf(stderr,"%s, %d: e = %s\n",__FILE__,__LINE__,Error_getText(e));
+Database_close(&indexHandle->databaseHandle);
+exit(1);
+#endif
+
   // enable foreign key constrains
   Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
@@ -354,6 +405,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
+                             FALSE,
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -390,6 +442,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -409,6 +462,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -428,6 +482,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -447,6 +502,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -466,6 +522,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -516,6 +573,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
+                             FALSE,
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -552,6 +610,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -571,6 +630,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -590,6 +650,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -609,6 +670,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -628,6 +690,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -647,6 +710,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -705,6 +769,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
+                             FALSE,
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -741,6 +806,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -760,6 +826,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -779,6 +846,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -798,6 +866,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -817,6 +886,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -836,6 +906,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -980,6 +1051,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
   error = ERROR_NONE;
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // fix possible broken ids
   fixBrokenIds(oldIndexHandle,"storage");
   fixBrokenIds(oldIndexHandle,"files");
@@ -993,6 +1065,7 @@ uint64 tx;
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "entities",
+                             FALSE,
                              // pre: transfer entity
                              CALLBACK(NULL,NULL),
                              // post: transfer storages
@@ -1002,6 +1075,7 @@ uint64 tx;
                                IndexId fromEntityId;
                                IndexId toEntityId;
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                UNUSED_VARIABLE(userData);
 
                                fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
@@ -1011,12 +1085,14 @@ uint64 tx;
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
+                                                          FALSE,
                                                           // pre: transfer storage
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             UNUSED_VARIABLE(fromColumnList);
                                                             UNUSED_VARIABLE(userData);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                             (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
@@ -1044,6 +1120,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "directories",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1072,6 +1149,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "files",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1101,6 +1179,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "images",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1123,6 +1202,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "links",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1145,6 +1225,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "hardlinks",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1167,6 +1248,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "special",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1203,6 +1285,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
+                             FALSE,
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -1271,6 +1354,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1290,6 +1374,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1309,6 +1394,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1328,6 +1414,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1347,6 +1434,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1366,6 +1454,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1419,6 +1508,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "entities",
+                             FALSE,
                              // pre: transfer entity
                              CALLBACK(NULL,NULL),
                              // post: transfer storage
@@ -1438,6 +1528,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
+                                                          FALSE,
                                                           // pre: transfer storage
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
@@ -1469,6 +1560,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "directories",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1488,6 +1580,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "files",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1508,6 +1601,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "images",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1527,6 +1621,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "links",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1546,6 +1641,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "hardlinks",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1565,6 +1661,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "special",
+                                                                                         TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1597,6 +1694,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
+                             FALSE,
                              // pre: transfer storage and create entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -1664,6 +1762,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1683,6 +1782,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1702,6 +1802,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1721,6 +1822,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1740,6 +1842,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1759,6 +1862,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
+                                                            TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -6563,7 +6667,7 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
- if (indexId != NULL)  (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_FILE,databaseId);
 
   return TRUE;
 }
@@ -6714,7 +6818,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_IMAGE,databaseId);
 
   return TRUE;
 }
@@ -6867,7 +6971,7 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_DIRECTORY,databaseId);
 
   return TRUE;
 }
@@ -7022,7 +7126,7 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_LINK,databaseId);
 
   return TRUE;
 }
@@ -7182,7 +7286,7 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_HARDLINK,databaseId);
 
   return TRUE;
 }
@@ -7333,7 +7437,7 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_ENTITY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_SPECIAL,databaseId);
 
   return TRUE;
 }
