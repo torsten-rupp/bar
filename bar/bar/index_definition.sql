@@ -76,10 +76,10 @@ CREATE TABLE IF NOT EXISTS entities(
 //  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (0,'','',0,0,0,0);
-CREATE INDEX IF NOT EXISTS entitiesIndex ON entities (jobUUID,created,type,lastCreated);
+CREATE INDEX ON entities (jobUUID,created,type,lastCreated);
 
 // insert/delete/update triggeres
-CREATE TRIGGER entityInsert AFTER INSERT ON entities
+CREATE TRIGGER AFTER INSERT ON entities
   BEGIN
     INSERT OR IGNORE INTO uuids
       (jobUUID) VALUES (NEW.jobUUID);
@@ -105,7 +105,7 @@ CREATE TRIGGER entityInsert AFTER INSERT ON entities
           totalSpecialCount  =totalSpecialCount  +NEW.totalSpecialCount
       WHERE uuids.jobUUID=NEW.jobUUID;
   END;
-CREATE TRIGGER entityDelete BEFORE DELETE ON entities
+CREATE TRIGGER BEFORE DELETE ON entities
   BEGIN
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   -1,
@@ -130,7 +130,7 @@ CREATE TRIGGER entityDelete BEFORE DELETE ON entities
           totalSpecialCount  =totalSpecialCount  -OLD.totalSpecialCount
       WHERE uuids.jobUUID=OLD.jobUUID;
   END;
-CREATE TRIGGER entityUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEntrySize ON entities
+CREATE TRIGGER AFTER UPDATE OF entityId,totalEntryCount,totalEntrySize ON entities
   BEGIN
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   -1,
@@ -191,9 +191,13 @@ CREATE TABLE IF NOT EXISTS storage(
   // updated by triggers
   totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
   totalEntrySize      INTEGER DEFAULT 0,  // total size of entries [bytes]
+  totalEntryCountNewest     INTEGER DEFAULT 0,  // total number of entries
+  totalEntrySizeNewest      INTEGER DEFAULT 0,  // total size of entries [bytes]
 
   totalFileCount      INTEGER DEFAULT 0,  // total number of file entries
   totalFileSize       INTEGER DEFAULT 0,  // total size of file entries [bytes]
+  totalFileCountNewest      INTEGER DEFAULT 0,  // total number of file entries
+  totalFileSizeNewest       INTEGER DEFAULT 0,  // total size of file entries [bytes]
   totalImageCount     INTEGER DEFAULT 0,  // total number of image entries
   totalImageSize      INTEGER DEFAULT 0,  // total size of image entries [bytes]
   totalDirectoryCount INTEGER DEFAULT 0,  // total number of directory entries
@@ -205,7 +209,7 @@ CREATE TABLE IF NOT EXISTS storage(
   // Note: no foreign key entityId: storage may be created temporary before an entity
   // FOREIGN KEY(entityId) REFERENCES entities(id)
 );
-CREATE INDEX IF NOT EXISTS storagesIndex ON storage (entityId,name,created,state);
+CREATE INDEX ON storage (entityId,name,created,state);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_storage USING FTS4(
@@ -217,7 +221,7 @@ CREATE VIRTUAL TABLE FTS_storage USING FTS4(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER storageInsert AFTER INSERT ON storage
+CREATE TRIGGER AFTER INSERT ON storage
   BEGIN
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  +1,
@@ -240,7 +244,7 @@ CREATE TRIGGER storageInsert AFTER INSERT ON storage
       WHERE entities.id=NEW.entityId;
     INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER storageDelete BEFORE DELETE ON storage
+CREATE TRIGGER BEFORE DELETE ON storage
   BEGIN
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  -1,
@@ -263,7 +267,7 @@ CREATE TRIGGER storageDelete BEFORE DELETE ON storage
       WHERE entities.id=OLD.entityId;
     DELETE FROM FTS_storage WHERE storageId MATCH OLD.id;
   END;
-CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalEntrySize ON storage
+CREATE TRIGGER AFTER UPDATE OF entityId,totalEntryCount,totalEntrySize ON storage
   BEGIN
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  -1,
@@ -304,7 +308,7 @@ CREATE TRIGGER storageUpdateSize AFTER UPDATE OF entityId,totalEntryCount,totalE
           totalSpecialCount  =totalSpecialCount  +NEW.totalSpecialCount
       WHERE entities.id=NEW.entityId;
   END;
-CREATE TRIGGER storageUpdateName AFTER UPDATE OF name ON storage
+CREATE TRIGGER AFTER UPDATE OF name ON storage
   BEGIN
     DELETE FROM FTS_storage WHERE storageId MATCH OLD.id;
     INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
@@ -326,24 +330,23 @@ CREATE TABLE IF NOT EXISTS files(
   fragmentSize    INTEGER,
 
   // updated by triggers
-  newestFlag      INTEGER DEFAULT 0,
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
-CREATE INDEX IF NOT EXISTS filesIndex1 ON files (storageId,name);
-CREATE INDEX IF NOT EXISTS filesIndex2 ON files (name,timeLastChanged);
-CREATE INDEX IF NOT EXISTS filesIndex3 ON files (newestFlag);
+CREATE INDEX ON files (storageId,name);
+CREATE INDEX ON files (name,timeLastChanged);
 
 // newest files
 CREATE TABLE IF NOT EXISTS filesNewest(
   id              INTEGER PRIMARY KEY,
   name            TEXT UNIQUE NOT NULL,
+  size            INTEGER DEFAULT 0,
   timeLastChanged INTEGER DEFAULT 0,
   fileId          INTEGER DEFAULT 0,
 
   FOREIGN KEY(fileId) REFERENCES files(id)
 );
-CREATE INDEX IF NOT EXISTS filesNewestIndex1 ON filesNewest (name,timeLastChanged);
+CREATE INDEX ON filesNewest (name,timeLastChanged);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_files USING FTS4(
@@ -354,7 +357,7 @@ CREATE VIRTUAL TABLE FTS_files USING FTS4(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER afterFileInsert AFTER INSERT ON files
+CREATE TRIGGER AFTER INSERT ON files
   BEGIN
     // update count/size in storage
     UPDATE storage
@@ -376,6 +379,7 @@ CREATE TRIGGER afterFileInsert AFTER INSERT ON files
       (name) VALUES (NEW.name);
     UPDATE filesNewest
       SET timeLastChanged=NEW.timeLastChanged,
+          size=NEW.size,
           fileId=NEW.id
       WHERE     name=NEW.name
             AND timeLastChanged<NEW.timeLastChanged;
@@ -384,7 +388,8 @@ CREATE TRIGGER afterFileInsert AFTER INSERT ON files
     INSERT INTO FTS_files
       VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER beforeFileDelete BEFORE DELETE ON files
+
+CREATE TRIGGER BEFORE DELETE ON files
   BEGIN
     // update count/size in storage
     UPDATE storage
@@ -409,13 +414,13 @@ CREATE TRIGGER beforeFileDelete BEFORE DELETE ON files
     DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
   END;
 
-CREATE TRIGGER afterFileDelete AFTER DELETE ON files
+CREATE TRIGGER AFTER DELETE ON files
   BEGIN
-    INSERT INTO filesNewest (name,timeLastChanged,fileId)
-      SELECT name,MAX(timeLastChanged),id FROM files WHERE name=OLD.name;
+    INSERT INTO filesNewest (name,timeLastChanged,size,fileId)
+      SELECT name,MAX(timeLastChanged),size,id FROM files WHERE name=OLD.name;
   END;
 
-CREATE TRIGGER afterFileUpdateStorageSize AFTER UPDATE OF storageId,size ON files
+CREATE TRIGGER AFTER UPDATE OF storageId,size ON files
   BEGIN
     // update count/size in storage
     UPDATE storage
@@ -446,22 +451,52 @@ CREATE TRIGGER afterFileUpdateStorageSize AFTER UPDATE OF storageId,size ON file
       WHERE     directories.storageId=NEW.storageId
             AND directories.name=DIRNAME(NEW.name);
   END;
-
-CREATE TRIGGER afterFileUpdateName AFTER UPDATE OF name ON files
+CREATE TRIGGER AFTER UPDATE OF name ON files
   BEGIN
     DELETE FROM FTS_files WHERE fileId MATCH OLD.id;
     INSERT INTO FTS_files VALUES (NEW.id,NEW.name);
   END;
+CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON files
+  BEGIN
+    // update newest files info
+    UPDATE filesNewest
+      SET timeLastChanged=NEW.timeLastChanged,
+          fileId=NEW.id
+      WHERE     name=NEW.name
+            AND timeLastChanged<NEW.timeLastChanged;
+  END;
 
-//CREATE TRIGGER filesUpdateTimeLastChanged AFTER UPDATE OF timeLastChanged ON files
-//  BEGIN
-//    UPDATE files
-//      SET newestFlag=0
-//      WHERE name=NEW.name AND newestFlag=1;
-//    UPDATE files
-//      SET newestFlag=1
-//      WHERE id=(SELECT id FROM files WHERE name=NEW.name ORDER BY timeLastChanged DESC LIMIT 0,1);
-//  END;
+CREATE TRIGGER AFTER UPDATE ON filesNewest
+  BEGIN
+    // update count/size in storage
+    UPDATE storage
+      SET totalEntryCountNewest=totalEntryCountNewest-1,
+          totalEntrySizeNewest =totalEntrySizeNewest -OLD.size,
+          totalFileCountNewest =totalFileCountNewest -1,
+          totalFileSizeNewest  =totalFileSizeNewest  -OLD.size
+      WHERE storage.id=(SELECT storageId FROM files WHERE id=OLD.fileId);
+
+    // update count/size in parent directories
+//    UPDATE directories
+//      SET totalEntryCountNewest=totalEntryCountNewest-1,
+//          totalEntrySizeNewest =totalEntrySizeNewest -OLD.size
+//      WHERE     directories.storageId=OLD.storageId
+//            AND directories.name=DIRNAME(OLD.name);
+
+    UPDATE storage
+      SET totalEntryCountNewest=totalEntryCountNewest+1,
+          totalEntrySizeNewest =totalEntrySizeNewest +NEW.size,
+          totalFileCountNewest =totalFileCountNewest +1,
+          totalFileSizeNewest  =totalFileSizeNewest  +NEW.size
+      WHERE storage.id=(SELECT storageId FROM files WHERE id=OLD.fileId);
+
+    // update count/size in parent directories
+//    UPDATE directories
+//      SET totalEntryCountNewest=totalEntryCountNewest+1,
+//          totalEntrySizeNewest =totalEntrySizeNewest +NEW.size
+//      WHERE     directories.storageId=NEW.storageId
+//            AND directories.name=DIRNAME(NEW.name);
+  END;
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS images(
@@ -479,7 +514,7 @@ CREATE TABLE IF NOT EXISTS images(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
-CREATE INDEX IF NOT EXISTS imagesIndex ON images (storageId,name);
+CREATE INDEX ON images (storageId,name);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_images USING FTS4(
@@ -490,7 +525,7 @@ CREATE VIRTUAL TABLE FTS_images USING FTS4(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER imagesInsert AFTER INSERT ON images
+CREATE TRIGGER AFTER INSERT ON images
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
@@ -500,7 +535,7 @@ CREATE TRIGGER imagesInsert AFTER INSERT ON images
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_images VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER imagesDelete BEFORE DELETE ON images
+CREATE TRIGGER BEFORE DELETE ON images
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -510,7 +545,7 @@ CREATE TRIGGER imagesDelete BEFORE DELETE ON images
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_images WHERE imageId MATCH OLD.id;
   END;
-CREATE TRIGGER imagesUpdateStorageSize AFTER UPDATE OF storageId,size ON images
+CREATE TRIGGER AFTER UPDATE OF storageId,size ON images
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -525,7 +560,7 @@ CREATE TRIGGER imagesUpdateStorageSize AFTER UPDATE OF storageId,size ON images
           totalImageSize =totalImageSize +NEW.size
       WHERE storage.id=NEW.storageId;
   END;
-CREATE TRIGGER imagesUpdateName AFTER UPDATE OF name ON images
+CREATE TRIGGER AFTER UPDATE OF name ON images
   BEGIN
     DELETE FROM FTS_images WHERE imageId MATCH OLD.id;
     INSERT INTO FTS_images VALUES (NEW.id,NEW.name);
@@ -551,7 +586,7 @@ CREATE TABLE IF NOT EXISTS directories(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
-CREATE INDEX IF NOT EXISTS directoriesIndex ON directories (storageId,name);
+CREATE INDEX ON directories (storageId,name);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_directories USING FTS4(
@@ -562,7 +597,7 @@ CREATE VIRTUAL TABLE FTS_directories USING FTS4(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER directoriesInsert AFTER INSERT ON directories
+CREATE TRIGGER AFTER INSERT ON directories
   BEGIN
     UPDATE storage
       SET totalEntryCount    =totalEntryCount    +1,
@@ -570,7 +605,7 @@ CREATE TRIGGER directoriesInsert AFTER INSERT ON directories
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_directories VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER directoriesDelete BEFORE DELETE ON directories
+CREATE TRIGGER BEFORE DELETE ON directories
   BEGIN
     UPDATE storage
       SET totalEntryCount    =totalEntryCount    -1,
@@ -578,7 +613,7 @@ CREATE TRIGGER directoriesDelete BEFORE DELETE ON directories
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_directories WHERE directoryId MATCH OLD.id;
   END;
-CREATE TRIGGER directoriesUpdate AFTER UPDATE OF storageId ON directories
+CREATE TRIGGER AFTER UPDATE OF storageId ON directories
   BEGIN
     UPDATE storage
       SET totalEntryCount    =totalEntryCount    -1,
@@ -589,7 +624,7 @@ CREATE TRIGGER directoriesUpdate AFTER UPDATE OF storageId ON directories
           totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
   END;
-CREATE TRIGGER directoriesUpdateEntryCountSize AFTER UPDATE OF totalEntryCount,totalEntrySize ON directories
+CREATE TRIGGER AFTER UPDATE OF totalEntryCount,totalEntrySize ON directories
   BEGIN
     UPDATE directories
       SET totalEntryCount=totalEntryCount-OLD.totalEntryCount,
@@ -602,7 +637,7 @@ CREATE TRIGGER directoriesUpdateEntryCountSize AFTER UPDATE OF totalEntryCount,t
       WHERE     directories.storageId=NEW.storageId
             AND directories.name=DIRNAME(NEW.name);
   END;
-CREATE TRIGGER directoriesUpdateName AFTER UPDATE OF name ON directories
+CREATE TRIGGER AFTER UPDATE OF name ON directories
   BEGIN
     DELETE FROM FTS_directories WHERE directoryId MATCH OLD.id;
     INSERT INTO FTS_directories VALUES (NEW.id,NEW.name);
@@ -626,7 +661,7 @@ CREATE TABLE IF NOT EXISTS links(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
-CREATE INDEX IF NOT EXISTS linksIndex ON links (storageId,name);
+CREATE INDEX ON links (storageId,name);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_links USING FTS4(
@@ -637,7 +672,7 @@ CREATE VIRTUAL TABLE FTS_links USING FTS4(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER linksInsert AFTER INSERT ON links
+CREATE TRIGGER AFTER INSERT ON links
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
@@ -645,7 +680,7 @@ CREATE TRIGGER linksInsert AFTER INSERT ON links
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_links VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER linksDelete BEFORE DELETE ON links
+CREATE TRIGGER BEFORE DELETE ON links
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -653,7 +688,7 @@ CREATE TRIGGER linksDelete BEFORE DELETE ON links
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_links WHERE linkId MATCH OLD.id;
   END;
-CREATE TRIGGER linsUpdateStorage AFTER UPDATE OF storageId ON links
+CREATE TRIGGER AFTER UPDATE OF storageId ON links
   BEGIN
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -664,7 +699,7 @@ CREATE TRIGGER linsUpdateStorage AFTER UPDATE OF storageId ON links
           totalLinkCount =totalLinkCount +1
       WHERE storage.id=NEW.storageId;
   END;
-CREATE TRIGGER linksUpdateName AFTER UPDATE OF name ON links
+CREATE TRIGGER AFTER UPDATE OF name ON links
   BEGIN
     DELETE FROM FTS_links WHERE linkId MATCH OLD.id;
     INSERT INTO FTS_links VALUES (NEW.id,NEW.name);
@@ -690,7 +725,7 @@ CREATE TABLE IF NOT EXISTS hardlinks(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
-CREATE INDEX IF NOT EXISTS hardlinksIndex ON hardlinks (storageId,name);
+CREATE INDEX ON hardlinks (storageId,name);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
@@ -701,7 +736,7 @@ CREATE VIRTUAL TABLE FTS_hardlinks USING FTS4(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER hardlinksInsert AFTER INSERT ON hardlinks
+CREATE TRIGGER AFTER INSERT ON hardlinks
   BEGIN
     UPDATE storage
       SET totalEntryCount   =totalEntryCount   +1,
@@ -716,7 +751,7 @@ CREATE TRIGGER hardlinksInsert AFTER INSERT ON hardlinks
             AND directories.name=DIRNAME(NEW.name);
     INSERT INTO FTS_hardlinks VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER hardlinksDelete BEFORE DELETE ON hardlinks
+CREATE TRIGGER BEFORE DELETE ON hardlinks
   BEGIN
     UPDATE storage
       SET totalEntryCount   =totalEntryCount   -1,
@@ -731,7 +766,7 @@ CREATE TRIGGER hardlinksDelete BEFORE DELETE ON hardlinks
             AND directories.name=DIRNAME(OLD.name);
     DELETE FROM FTS_hardlinks WHERE hardlinkId MATCH OLD.id;
   END;
-CREATE TRIGGER hardlinksUpdateStorageSize AFTER UPDATE OF storageId,size ON hardlinks
+CREATE TRIGGER AFTER UPDATE OF storageId,size ON hardlinks
   BEGIN
     UPDATE storage
       SET totalEntryCount   =totalEntryCount   -1,
@@ -756,7 +791,7 @@ CREATE TRIGGER hardlinksUpdateStorageSize AFTER UPDATE OF storageId,size ON hard
       WHERE     directories.storageId=NEW.storageId
             AND directories.name=DIRNAME(NEW.name);
   END;
-CREATE TRIGGER hardlinksUpdateName AFTER UPDATE OF name ON hardlinks
+CREATE TRIGGER AFTER UPDATE OF name ON hardlinks
   BEGIN
     DELETE FROM FTS_hardlinks WHERE hardlinkId MATCH OLD.id;
     INSERT INTO FTS_hardlinks VALUES (NEW.id,NEW.name);
@@ -782,7 +817,7 @@ CREATE TABLE IF NOT EXISTS special(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
-CREATE INDEX IF NOT EXISTS specialIndex ON special (storageId,name);
+CREATE INDEX ON special (storageId,name);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_special USING FTS4(
@@ -793,7 +828,7 @@ CREATE VIRTUAL TABLE FTS_special USING FTS4(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER specialInsert AFTER INSERT ON special
+CREATE TRIGGER AFTER INSERT ON special
   BEGIN
     UPDATE storage
       SET totalEntryCount  =totalEntryCount  +1,
@@ -801,7 +836,7 @@ CREATE TRIGGER specialInsert AFTER INSERT ON special
       WHERE storage.id=NEW.storageId;
     INSERT INTO FTS_special VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER specialDelete BEFORE DELETE ON special
+CREATE TRIGGER BEFORE DELETE ON special
   BEGIN
     UPDATE storage
       SET totalEntryCount  =totalEntryCount  -1,
@@ -809,7 +844,7 @@ CREATE TRIGGER specialDelete BEFORE DELETE ON special
       WHERE storage.id=OLD.storageId;
     DELETE FROM FTS_special WHERE specialId MATCH OLD.id;
   END;
-CREATE TRIGGER specialUpdateStorage AFTER UPDATE OF storageId ON special
+CREATE TRIGGER AFTER UPDATE OF storageId ON special
   BEGIN
     UPDATE storage
       SET totalEntryCount  =totalEntryCount  -1,
@@ -820,7 +855,7 @@ CREATE TRIGGER specialUpdateStorage AFTER UPDATE OF storageId ON special
           totalSpecialCount=totalSpecialCount+1
       WHERE storage.id=NEW.storageId;
   END;
-CREATE TRIGGER specialUpdateName AFTER UPDATE OF name ON special
+CREATE TRIGGER AFTER UPDATE OF name ON special
   BEGIN
     DELETE FROM FTS_special WHERE specialId MATCH OLD.id;
     INSERT INTO FTS_special VALUES (NEW.id,NEW.name);

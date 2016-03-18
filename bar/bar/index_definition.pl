@@ -33,6 +33,7 @@ my $version=0;
 my $allDatabaseTableDefinitions = "";
 my $databaseTableDefinitionName="";
 my $databaseTableDefinition="";
+my $id=0;
 while ($line=<STDIN>)
 {
   chop $line;
@@ -100,6 +101,8 @@ while ($line=<STDIN>)
     }
     elsif ($line =~ /\s*CREATE\s+TABLE\s+.*?(\S+)\s*\(/)
     {
+      # create table
+
       # replace macros
       $line =~ s/\$version/$version/g;
 
@@ -107,8 +110,48 @@ while ($line=<STDIN>)
       $databaseTableDefinitionName=$1;
       $databaseTableDefinition=$line;
     }
+#CREATE INDEX IF NOT EXISTS filesIndex1 ON files (storageId,name);
+    elsif ($line =~ /\s*CREATE\s+INDEX\s+ON\s+(\S+)\s+(.*?)$/)
+    {
+      # create anonymous index
+
+      # replace macros
+      $1 =~ s/\$version/$version/g;
+      $1 =~ s/"/\\"/g;
+      $2 =~ s/\$version/$version/g;
+      $2 =~ s/"/\\"/g;
+
+      # create index name
+      my $index="index$id"; $id++;
+
+      $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."CREATE INDEX $index ON $1 $2\\\n";
+      if ($databaseTableDefinitionName ne "")
+      {
+        $databaseTableDefinition=$databaseTableDefinition."CREATE INDEX $index ON $1 $2\\\n";
+      }
+    }
+#CREATE TRIGGER AFTER INSERT ON files
+    elsif ($line =~ /\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
+    {
+      # create anonymous trigger
+
+      # replace macros
+      $2 =~ s/\$version/$version/g;
+      $2 =~ s/"/\\"/g;
+
+      # create trigger name
+      my $trigger="trigger$id"; $id++;
+
+      $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."CREATE TRIGGER $trigger $1 $2\\\n";
+      if ($databaseTableDefinitionName ne "")
+      {
+        $databaseTableDefinition=$databaseTableDefinition."CREATE TRIGGER $trigger $1 $2\\\n";
+      }
+    }
     elsif ($line =~ /\);/)
     {
+      # end table/index
+
       # replace macros
       $line =~ s/\$version/$version/g;
       $line =~ s/"/\\"/g;
