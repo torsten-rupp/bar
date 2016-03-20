@@ -1170,7 +1170,8 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
 
 Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
                           DatabaseHandle            *toDatabaseHandle,
-                          const char                *tableName,
+                          const char                *fromTableName,
+                          const char                *toTableName,
                           bool                      transactionFlag,
                           DatabaseCopyTableFunction preCopyTableFunction,
                           void                      *preCopyTableUserData,
@@ -1197,19 +1198,20 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
   assert(fromDatabaseHandle->handle != NULL);
   assert(toDatabaseHandle != NULL);
   assert(toDatabaseHandle->handle != NULL);
-  assert(tableName != NULL);
+  assert(fromTableName != NULL);
+  assert(toTableName != NULL);
 
 uint64 t0 = Misc_getTimestamp();
 ulong xxx=0;
 int a,b,r;
 
   // get table columns
-  error = getTableColumnList(&fromColumnList,fromDatabaseHandle,tableName);
+  error = getTableColumnList(&fromColumnList,fromDatabaseHandle,fromTableName);
   if (error != ERROR_NONE)
   {
     return error;
   }
-  error = getTableColumnList(&toColumnList,toDatabaseHandle,tableName);
+  error = getTableColumnList(&toColumnList,toDatabaseHandle,toTableName);
   if (error != ERROR_NONE)
   {
     freeTableColumnList(&fromColumnList);
@@ -1225,7 +1227,7 @@ int a,b,r;
     String_appendCString(sqlSelectString,columnNode->name);
     n++;
   }
-  formatSQLString(sqlSelectString," FROM %s",tableName);
+  formatSQLString(sqlSelectString," FROM %s",fromTableName);
   if (fromAdditional != NULL)
   {
     String_appendChar(sqlSelectString,' ');
@@ -1239,40 +1241,11 @@ int a,b,r;
   String_appendCString(sqlSelectString,";");
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlSelectString);
 
-  // create SQL insert statement string
-#if 0
-  sqlInsertString = formatSQLString(String_new(),"INSERT INTO %s (",tableName);
-  n = 0;
-  LIST_ITERATE(&toColumnList,columnNode)
-  {
-    if (columnNode->type != DATABASE_TYPE_PRIMARY_KEY)
-    {
-      if (n > 0) String_appendChar(sqlInsertString,',');
-      String_appendCString(sqlInsertString,columnNode->name);
-      n++;
-    }
-  }
-  String_appendCString(sqlInsertString,") VALUES (");
-  n = 0;
-  LIST_ITERATE(&toColumnList,columnNode)
-  {
-    if (columnNode->type != DATABASE_TYPE_PRIMARY_KEY)
-    {
-      if (n > 0) String_appendChar(sqlInsertString,',');
-      String_appendChar(sqlInsertString,'?');
-      n++;
-    }
-  }
-  String_appendCString(sqlInsertString,");");
-  DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
-#else
-  sqlInsertString = String_new();
-#endif
-
   // select rows in from-table and copy to to-table
+  sqlInsertString = String_new();
   BLOCK_DOX(error,
             { DATABASE_LOCK(fromDatabaseHandle,NULL);
-              DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName);
+              DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",toTableName);
             },
             { DATABASE_UNLOCK(fromDatabaseHandle);
               DATABASE_UNLOCK(toDatabaseHandle);
@@ -1300,31 +1273,14 @@ int a,b,r;
                                      );
     if (sqliteResult != SQLITE_OK)
     {
+fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
+      error = ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle));
       if (transactionFlag)
       {
         (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
       }
-      return ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle));
+      return error;
     }
-
-#if 0
-    // create insert statement
-    sqliteResult = sqlite3_prepare_v2(toDatabaseHandle->handle,
-                                      String_cString(sqlInsertString),
-                                      -1,
-                                      &toHandle,
-                                      NULL
-                                     );
-    if (sqliteResult != SQLITE_OK)
-    {
-      sqlite3_finalize(fromHandle);
-      if (transactionFlag)
-      {
-        (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
-      }
-      return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
-    }
-#endif
 
     // copy rows
     while ((sqliteResult = sqlite3_step(fromHandle)) == SQLITE_ROW)
@@ -1410,12 +1366,13 @@ xxx++;
       {
         BLOCK_DOX(error,
                   DATABASE_UNLOCK(toDatabaseHandle),
-                  DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName),
+                  DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",toTableName),
         {
           return preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
         });
         if (error != ERROR_NONE)
         {
+fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
 //          sqlite3_finalize(toHandle);
           sqlite3_finalize(fromHandle);
           if (transactionFlag)
@@ -1428,7 +1385,7 @@ xxx++;
       }
 
       // create SQL insert statement string
-      formatSQLString(String_clear(sqlInsertString),"INSERT INTO %s (",tableName);
+      formatSQLString(String_clear(sqlInsertString),"INSERT INTO %s (",toTableName);
       n = 0;
       LIST_ITERATE(&toColumnList,columnNode)
       {
@@ -1462,12 +1419,14 @@ xxx++;
                                        );
       if (sqliteResult != SQLITE_OK)
       {
+fprintf(stderr,"%s, %d: 3\n",__FILE__,__LINE__);
+        error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         sqlite3_finalize(fromHandle);
         if (transactionFlag)
         {
           (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
         }
-        return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
+        return error;
       }
 
       // set to value
@@ -1511,13 +1470,15 @@ xxx++;
       // insert row
       if (sqlite3_step(toHandle) != SQLITE_DONE)
       {
+fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
+        error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         sqlite3_finalize(toHandle);
         sqlite3_finalize(fromHandle);
         if (transactionFlag)
         {
           (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
         }
-        return ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",String_cString(sqlInsertString),sqlite3_errmsg(toDatabaseHandle->handle));
+        return error;
       }
       lastRowId = (uint64)sqlite3_last_insert_rowid(toDatabaseHandle->handle);
       LIST_ITERATE(&toColumnList,columnNode)
@@ -1549,12 +1510,13 @@ xxx++;
       {
         BLOCK_DOX(error,
                   DATABASE_UNLOCK(toDatabaseHandle),
-                  DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",tableName),
+                  DATABASE_LOCK(toDatabaseHandle,"copy table to '%s'",toTableName),
         {
           return postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
         });
         if (error != ERROR_NONE)
         {
+fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
 //          sqlite3_finalize(toHandle);
           sqlite3_finalize(fromHandle);
           if (transactionFlag)
@@ -1583,22 +1545,22 @@ xxx++;
 //    sqlite3_finalize(toHandle);
     sqlite3_finalize(fromHandle);
 
-//if (xxx > 5000)
+if (xxx > 0)
 {
 uint64 t1 = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: tableName=%s %llums xxx=%lu -> %lfms/trans\n",__FILE__,__LINE__,tableName,(t1-t0)/1000,xxx,(double)(t1-t0)/((double)xxx*1000));
+fprintf(stderr,"%s, %d: %s->%s %llums xxx=%lu -> %lfms/trans\n",__FILE__,__LINE__,fromTableName,toTableName,(t1-t0)/1000,xxx,(double)(t1-t0)/((double)xxx*1000));
 //exit(12);
 }
 
     return ERROR_NONE;
   });
+  String_delete(sqlInsertString);
 
 //fprintf(stderr,"%s, %d: -------------------------- do check\n",__FILE__,__LINE__);
 //sqlite3_wal_checkpoint_v2(toDatabaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
 //fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(toDatabaseHandle->handle));
 
   // free resources
-  String_delete(sqlInsertString);
   String_delete(sqlSelectString);
   freeTableColumnList(&toColumnList);
   freeTableColumnList(&fromColumnList);
@@ -1925,7 +1887,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                );
     if (sqliteResult != SQLITE_OK)
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
     // copy old table -> new table
@@ -1938,7 +1900,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                      );
     if (sqliteResult != SQLITE_OK)
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
     // copy table rows
@@ -2003,7 +1965,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                  );
       if (sqliteResult != SQLITE_OK)
       {
-        return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+        return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
       }
     }
 
@@ -2090,7 +2052,7 @@ Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *nam
   if (sqliteResult != SQLITE_OK)
   {
     String_delete(sqlString);
-    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION BEGIN: %s",sqlite3_errmsg(databaseHandle->handle));
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
   }
 
   // free resources
@@ -2121,7 +2083,7 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   if (sqliteResult != SQLITE_OK)
   {
     String_delete(sqlString);
-    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION END: %s",sqlite3_errmsg(databaseHandle->handle));
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
   }
 
   // free resources
@@ -2157,7 +2119,7 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
   if (sqliteResult != SQLITE_OK)
   {
     String_delete(sqlString);
-    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"TRANSACTION ROLLBACK: %s",sqlite3_errmsg(databaseHandle->handle));
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
   }
 
   // free resources
@@ -2220,7 +2182,7 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
     return error;
@@ -2302,7 +2264,7 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
   });
   if (error != ERROR_NONE)
@@ -2754,7 +2716,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
     if (sqlite3_step(handle) == SQLITE_ROW)
@@ -2839,7 +2801,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
     return error;
@@ -2877,7 +2839,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
       }
       else
       {
-        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
       }
 
       return error;
@@ -2952,7 +2914,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
     if (sqlite3_step(handle) == SQLITE_ROW)
@@ -3036,7 +2998,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
     return error;

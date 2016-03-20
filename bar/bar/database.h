@@ -249,9 +249,17 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
 /***********************************************************************\
 * Name   : Database_copyTable
 * Purpose: copy table content
-* Input  : fromDatabaseHandle - from-database handle
-*          toDatabaseHandle   - fo-database handle
-*          tableName          - table name
+* Input  : fromDatabaseHandle    - from-database handle
+*          toDatabaseHandle      - fo-database handle
+*          fromTableName         - from-table name
+*          toTableName           - to-table name
+*          preCopyTableFunction  - pre-copy call-back function
+*          preCopyTableUserData  - user data for pre-copy call-back
+*          postCopyTableFunction - pre-copy call-back function
+*          postCopyTableUserData - user data for pre-copy call-back
+*          fromAdditional        - additional SQL condition
+*          ...                   - optional arguments for additional
+*                                  SQL condition
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -259,7 +267,8 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
 
 Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
                           DatabaseHandle            *toDatabaseHandle,
-                          const char                *tableName,
+                          const char                *fromTableName,
+                          const char                *toTableName,
                           bool                      transactionFlag,
                           DatabaseCopyTableFunction preCopyTableFunction,
                           void                      *preCopyTableUserData,
@@ -269,12 +278,34 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
                           ...
                          );
 
+/***********************************************************************\
+* Name   : Database_getTableColumnList*
+* Purpose: get table column list entry
+* Input  : columnList   - column list
+*          columnName   - column name
+*          defaultValue - default value
+* Output : -
+* Return : value
+* Notes  : -
+\***********************************************************************/
+
 int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 defaultValue);
 double Database_getTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double defaultValue);
 uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 defaultValue);
 String Database_getTableColumnList(const DatabaseColumnList *columnList, const char *columnName, String value, const char *defaultValue);
 const char *Database_getTableColumnListCString(const DatabaseColumnList *columnList, const char *columnName, const char *defaultValue);
 void Database_getTableColumnListBlob(const DatabaseColumnList *columnList, const char *columnName, void *data, uint length);
+
+/***********************************************************************\
+* Name   : Database_setTableColumnList*
+* Purpose: set table column list entry
+* Input  : columnList - column list
+*          columnName - column name
+*          value      - value
+* Output : -
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
 
 bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 value);
 bool Database_setTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double value);
