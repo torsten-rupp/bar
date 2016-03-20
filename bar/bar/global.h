@@ -408,7 +408,7 @@ typedef struct
 #define ALIGN(n,alignment) (((alignment)>0) ? (((n)+(alignment)-1) & ~((alignment)-1)) : (n))
 
 /***********************************************************************\
-* Name   : SET_CLEAR, SET_VALUE, SET_ADD, SET_REM
+* Name   : SET_CLEAR, SET_VALUE, SET_ADD, SET_REM, IN_SET
 * Purpose: set macros
 * Input  : set     - set (integer)
 *          element - element
