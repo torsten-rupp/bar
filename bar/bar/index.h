@@ -50,6 +50,9 @@ typedef enum
 } IndexStates;
 typedef uint64 IndexStateSet;
 
+#define INDEX_STATE_MIN INDEX_STATE_OK
+#define INDEX_STATE_MAX INDEX_STATE_ERROR
+
 #define INDEX_STATE_SET_NONE 0
 #define INDEX_STATE_SET_ALL  (1 << INDEX_STATE_NONE|\
                               1 << INDEX_STATE_OK|\
@@ -100,6 +103,7 @@ typedef enum
   INDEX_TYPE_UUID,
   INDEX_TYPE_ENTITY,
   INDEX_TYPE_STORAGE,
+  INDEX_TYPE_ENTRY,
   INDEX_TYPE_FILE,
   INDEX_TYPE_IMAGE,
   INDEX_TYPE_DIRECTORY,
@@ -108,13 +112,16 @@ typedef enum
   INDEX_TYPE_SPECIAL
 } IndexTypes;
 
+#define INDEX_TYPE_MIN INDEX_TYPE_UUID
+#define INDEX_TYPE_MAX INDEX_TYPE_SPECIAL
+
 #define INDEX_TYPE_SET_NONE 0
 #define INDEX_TYPE_SET_ANY \
   (  SET_VALUE(INDEX_TYPE_STORAGE) \
    | SET_VALUE(INDEX_TYPE_ENTITY) \
+   | SET_VALUE(INDEX_TYPE_DIRECTORY) \
    | SET_VALUE(INDEX_TYPE_FILE) \
    | SET_VALUE(INDEX_TYPE_IMAGE) \
-   | SET_VALUE(INDEX_TYPE_DIRECTORY) \
    | SET_VALUE(INDEX_TYPE_LINK) \
    | SET_VALUE(INDEX_TYPE_HARDLINK) \
    | SET_VALUE(INDEX_TYPE_SPECIAL) \
@@ -890,14 +897,15 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_getEntriesInfo
 * Purpose: get entries info
-* Input  : indexQueryHandle - index query handle variable
-*          indexHandle      - index handle
-*          storageIds       - storage ids or NULL
-*          storageIdCount   - storage id count or 0
-*          entryIds         - entry ids or NULL
-*          entryIdCount     - entry id count or 0
-*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
-*          pattern          - name pattern (glob, can be NULL)
+* Input  : indexQueryHandle  - index query handle variable
+*          indexHandle       - index handle
+*          storageIds        - storage ids or NULL
+*          storageIdCount    - storage id count or 0
+*          entryIds          - entry ids or NULL
+*          entryIdCount      - entry id count or 0
+*          indexTypeSet      - index type set or INDEX_TYPE_SET_ANY
+*          pattern           - name pattern (glob, can be NULL)
+*          newestEntriesOnly - TRUE for newest entries only
 * Output : count - entry count (can be NULL)
 *          size  - size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
@@ -911,6 +919,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             uint          entryIdCount,
                             IndexTypeSet  indexTypeSet,
                             ConstString   pattern,
+                            bool          newestEntriesOnly,
                             ulong         *count,
                             uint64        *size
                            );
@@ -963,9 +972,9 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 *          userId                      - user id
 *          groupId                     - group id
 *          permission                  - permission flags
-*          fragmentOffsetOrBlockOffset - fragment/block offset
-*                                        [bytes/block]
-*          fragmentSizeOrBlockSize     - fragment/block size [bytes]
+*          fragmentOffsetOrBlockOffset - fragment [bytes]/block offset
+*          fragmentSizeOrBlockCount    - fragment size [bytes]/block
+*                                        count
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -983,8 +992,70 @@ bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
                    uint32            *groupId,
                    uint32            *permission,
                    uint64            *fragmentOrBlockOffset,
-                   uint64            *fragmentOrBlockSize
+                   uint64            *fragmentSizeOrBlockCount
                   );
+
+/***********************************************************************\
+* Name   : Index_initListDirectories
+* Purpose: list directory entries
+* Input  : indexHandle    - index handle
+*          storageIds     - storage ids or NULL
+*          storageIdCount - storage id count or 0
+*          entryIds       - entry ids or NULL
+*          entryIdCount   - entry id count or 0
+*          pattern        - name pattern (glob, can be NULL)
+* Output : indexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
+                                 IndexHandle      *indexHandle,
+                                 const IndexId    storageIds[],
+                                 uint             storageIdCount,
+                                 const IndexId    entryIds[],
+                                 uint             entryIdCount,
+                                 ConstString      pattern
+                                );
+
+/***********************************************************************\
+* Name   : Index_getNextDirectory
+* Purpose: get next directory entry
+* Input  : indexQueryHandle - index query handle
+* Output : indexId       - index id of entry
+*          storageName   - storage name
+*          directoryName - directory name
+*          timeModified  - modified date/time stamp [s]
+*          userId        - user id
+*          groupId       - group id
+*          permission    - permission flags
+* Return : TRUE if entry read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
+                            IndexId          *indexId,
+                            String           storageName,
+                            uint64           *storageDateTime,
+                            String           directoryName,
+                            uint64           *timeModified,
+                            uint32           *userId,
+                            uint32           *groupId,
+                            uint32           *permission
+                           );
+
+/***********************************************************************\
+* Name   : Index_deleteDirectory
+* Purpose: delete directory entry
+* Input  : indexHandle - index handle
+*          indexId     - index id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteDirectory(IndexHandle *indexHandle,
+                             IndexId     indexId
+                            );
 
 /***********************************************************************\
 * Name   : Index_initListFiles
@@ -1115,68 +1186,6 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
 Errors Index_deleteImage(IndexHandle *indexHandle,
                          IndexId     indexId
                         );
-
-/***********************************************************************\
-* Name   : Index_initListDirectories
-* Purpose: list directory entries
-* Input  : indexHandle    - index handle
-*          storageIds     - storage ids or NULL
-*          storageIdCount - storage id count or 0
-*          entryIds       - entry ids or NULL
-*          entryIdCount   - entry id count or 0
-*          pattern        - name pattern (glob, can be NULL)
-* Output : indexQueryHandle - index query handle
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
-                                 IndexHandle      *indexHandle,
-                                 const IndexId    storageIds[],
-                                 uint             storageIdCount,
-                                 const IndexId    entryIds[],
-                                 uint             entryIdCount,
-                                 ConstString      pattern
-                                );
-
-/***********************************************************************\
-* Name   : Index_getNextDirectory
-* Purpose: get next directory entry
-* Input  : indexQueryHandle - index query handle
-* Output : indexId       - index id of entry
-*          storageName   - storage name
-*          directoryName - directory name
-*          timeModified  - modified date/time stamp [s]
-*          userId        - user id
-*          groupId       - group id
-*          permission    - permission flags
-* Return : TRUE if entry read, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
-                            IndexId          *indexId,
-                            String           storageName,
-                            uint64           *storageDateTime,
-                            String           directoryName,
-                            uint64           *timeModified,
-                            uint32           *userId,
-                            uint32           *groupId,
-                            uint32           *permission
-                           );
-
-/***********************************************************************\
-* Name   : Index_deleteDirectory
-* Purpose: delete directory entry
-* Input  : indexHandle - index handle
-*          indexId     - index id of entry
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_deleteDirectory(IndexHandle *indexHandle,
-                             IndexId     indexId
-                            );
 
 /***********************************************************************\
 * Name   : Index_initListLinks
@@ -1503,7 +1512,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                     );
 
 /***********************************************************************\
-* Name   : Index_addHardLink
+* Name   : Index_addHardlink
 * Purpose: add hard link entry
 * Input  : indexHandle     - index handle
 *          storageId       - index id of index
@@ -1522,7 +1531,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_addHardLink(IndexHandle *indexHandle,
+Errors Index_addHardlink(IndexHandle *indexHandle,
                          IndexId     storageId,
                          ConstString fileName,
                          uint64      size,

@@ -10869,7 +10869,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             // add to index database
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
             {
-              error = Index_addHardLink(indexHandle,
+              error = Index_addHardlink(indexHandle,
                                         storageId,
                                         fileName,
                                         fileInfo.size,

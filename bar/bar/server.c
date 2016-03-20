@@ -13118,7 +13118,8 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const St
                                Array_cArray(&clientInfo->entryIdArray),
                                Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_SET_ANY,
-                               NULL,  // pattern
+                               NULL,  // pattern,
+                               FALSE,  // newestEntriesOnly
                                &count,
                                &size
                               );
@@ -15755,6 +15756,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
                                0,  // entryIdCount
                                indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
                                entryPattern,
+                               newestEntriesOnly,
                                &count,
                                &size
                               );
