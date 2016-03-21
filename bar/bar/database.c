@@ -1470,7 +1470,7 @@ fprintf(stderr,"%s, %d: 3\n",__FILE__,__LINE__);
       // insert row
       if (sqlite3_step(toHandle) != SQLITE_DONE)
       {
-fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         sqlite3_finalize(toHandle);
         sqlite3_finalize(fromHandle);
