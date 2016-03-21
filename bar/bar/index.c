@@ -514,9 +514,32 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_DIRECTORY);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO directoryEntries \
+                                                                                         ( \
+                                                                                          storageId, \
+                                                                                          entryId, \
+                                                                                          name \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      toStorageId,
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(toColumnList,"name",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -537,7 +560,31 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO fileEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -548,7 +595,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
-                                                            "images",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -558,7 +605,37 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO imageEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fileSystemType, \
+                                                                                          blockSize, \
+                                                                                          blockOffset, \
+                                                                                          blockCount \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -569,7 +646,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
-                                                            "links",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -579,7 +656,25 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO linkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          destinationName \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -590,7 +685,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
-                                                            "special",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -600,7 +695,31 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO specialEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          specialType, \
+                                                                                          major, \
+                                                                                          minor \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -680,7 +799,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
-                                                            "directories",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -688,9 +807,32 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_DIRECTORY);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO directoryEntries \
+                                                                                         ( \
+                                                                                          storageId, \
+                                                                                          entryId, \
+                                                                                          name \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      toStorageId,
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(toColumnList,"name",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -701,7 +843,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
-                                                            "files",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -709,6 +851,8 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_FILE);
+
                                                               return ERROR_NONE;
                                                             },NULL),
                                                             CALLBACK(NULL,NULL),
@@ -722,7 +866,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
-                                                            "images",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -730,9 +874,35 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_IMAGE);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO fileEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -743,7 +913,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
-                                                            "links",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -751,9 +921,29 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_LINK);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO linkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          destinationName \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -764,7 +954,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
-                                                            "hardlinks",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -772,9 +962,35 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_HARDLINK);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO hardlinkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -785,7 +1001,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
-                                                            "special",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -793,9 +1009,35 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_SPECIAL);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO specialEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          specialType, \
+                                                                                          major, \
+                                                                                          minor \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -883,7 +1125,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
-                                                            "directories",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -891,9 +1133,32 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_DIRECTORY);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO directoryEntries \
+                                                                                         ( \
+                                                                                          storageId, \
+                                                                                          entryId, \
+                                                                                          name \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      toStorageId,
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(toColumnList,"name",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -904,7 +1169,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
-                                                            "files",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -912,9 +1177,35 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_FILE);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO fileEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -925,7 +1216,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
-                                                            "images",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -933,9 +1224,41 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_IMAGE);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO imageEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fileSystemType, \
+                                                                                          blockSize, \
+                                                                                          blockOffset, \
+                                                                                          blockCount \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -946,7 +1269,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
-                                                            "links",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -954,9 +1277,29 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_LINK);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO linkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          destinationName \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -967,7 +1310,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
-                                                            "hardlinks",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -975,9 +1318,35 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_HARDLINK);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO hardlinkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -988,7 +1357,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
-                                                            "special",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -996,9 +1365,35 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_SPECIAL);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO specialEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          specialType, \
+                                                                                          major, \
+                                                                                          minor \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1219,9 +1614,32 @@ Database_getTableColumnListCString(fromColumnList,"name",NULL)
 );
 #endif
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_DIRECTORY);
+
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                   CALLBACK(NULL,NULL),
+                                                                                                                   "INSERT INTO directoryEntries \
+                                                                                                                      ( \
+                                                                                                                       storageId, \
+                                                                                                                       entryId, \
+                                                                                                                       name \
+                                                                                                                      ) \
+                                                                                                                    VALUES \
+                                                                                                                      ( \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %'s \
+                                                                                                                      ); \
+                                                                                                                   ",
+                                                                                                                   toStorageId,
+                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                                                   Database_getTableColumnListCString(toColumnList,"name",NULL)
+                                                                                                                  );
+                                                                                         },NULL),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -1235,7 +1653,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "files",
-                                                                                         "files",
+                                                                                         "entries",
                                                                                          TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
@@ -1250,9 +1668,35 @@ Database_getTableColumnListInt64(fromColumnList,"size",0)
 );
 #endif
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_FILE);
+
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                   CALLBACK(NULL,NULL),
+                                                                                                                   "INSERT INTO fileEntries \
+                                                                                                                      ( \
+                                                                                                                       entryId, \
+                                                                                                                       size, \
+                                                                                                                       fragmentOffset, \
+                                                                                                                       fragmentSize \
+                                                                                                                      ) \
+                                                                                                                    VALUES \
+                                                                                                                      ( \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu \
+                                                                                                                      ); \
+                                                                                                                   ",
+                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                  );
+                                                                                         },NULL),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -1266,7 +1710,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "images",
-                                                                                         "images",
+                                                                                         "entries",
                                                                                          TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
@@ -1274,9 +1718,41 @@ tx=Misc_getTimestamp();
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_IMAGE);
+
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                   CALLBACK(NULL,NULL),
+                                                                                                                   "INSERT INTO imageEntries \
+                                                                                                                      ( \
+                                                                                                                       entryId, \
+                                                                                                                       size, \
+                                                                                                                       fileSystemType, \
+                                                                                                                       blockSize, \
+                                                                                                                       blockOffset, \
+                                                                                                                       blockCount \
+                                                                                                                      ) \
+                                                                                                                    VALUES \
+                                                                                                                      ( \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu \
+                                                                                                                      ); \
+                                                                                                                   ",
+                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                                                  );
+                                                                                         },NULL),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -1290,7 +1766,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "links",
-                                                                                         "links",
+                                                                                         "entries",
                                                                                          TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
@@ -1298,9 +1774,29 @@ tx=Misc_getTimestamp();
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_LINK);
+
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                   CALLBACK(NULL,NULL),
+                                                                                                                   "INSERT INTO linkEntries \
+                                                                                                                      ( \
+                                                                                                                       entryId, \
+                                                                                                                       destinationName \
+                                                                                                                      ) \
+                                                                                                                    VALUES \
+                                                                                                                      ( \
+                                                                                                                       %llu, \
+                                                                                                                       %'s \
+                                                                                                                      ); \
+                                                                                                                   ",
+                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                                                   Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
+                                                                                                                  );
+                                                                                         },NULL),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -1314,7 +1810,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "hardlinks",
-                                                                                         "hardlinks",
+                                                                                         "entries",
                                                                                          TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
@@ -1322,9 +1818,35 @@ tx=Misc_getTimestamp();
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_HARDLINK);
+
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                   CALLBACK(NULL,NULL),
+                                                                                                                   "INSERT INTO hardlinkEntries \
+                                                                                                                      ( \
+                                                                                                                       entryId, \
+                                                                                                                       size, \
+                                                                                                                       fragmentOffset, \
+                                                                                                                       fragmentSize \
+                                                                                                                      ) \
+                                                                                                                    VALUES \
+                                                                                                                      ( \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu \
+                                                                                                                      ); \
+                                                                                                                   ",
+                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                  );
+                                                                                         },NULL),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -1338,7 +1860,7 @@ tx=Misc_getTimestamp();
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "special",
-                                                                                         "special",
+                                                                                         "entries",
                                                                                          TRUE,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
@@ -1346,9 +1868,35 @@ tx=Misc_getTimestamp();
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                           (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_SPECIAL);
+
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),
+                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         {
+                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                   CALLBACK(NULL,NULL),
+                                                                                                                   "INSERT INTO specialEntries \
+                                                                                                                      ( \
+                                                                                                                       entryId, \
+                                                                                                                       specialType, \
+                                                                                                                       major, \
+                                                                                                                       minor \
+                                                                                                                      ) \
+                                                                                                                    VALUES \
+                                                                                                                      ( \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu, \
+                                                                                                                       %llu \
+                                                                                                                      ); \
+                                                                                                                   ",
+                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"major",0LL),
+                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                                                  );
+                                                                                         },NULL),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -1446,7 +1994,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
-                                                            "directories",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -1454,9 +2002,32 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_DIRECTORY);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO directoryEntries \
+                                                                                         ( \
+                                                                                          storageId, \
+                                                                                          entryId, \
+                                                                                          name \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      toStorageId,
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(toColumnList,"name",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1467,7 +2038,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
-                                                            "files",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -1475,9 +2046,35 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_FILE);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO fileEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1488,7 +2085,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
-                                                            "images",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -1496,9 +2093,41 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_IMAGE);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO imageEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fileSystemType, \
+                                                                                          blockSize, \
+                                                                                          blockOffset, \
+                                                                                          blockCount \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1509,7 +2138,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
-                                                            "links",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -1517,9 +2146,29 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_LINK);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO linkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          destinationName \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1530,7 +2179,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
-                                                            "hardlinks",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -1538,9 +2187,35 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_HARDLINK);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO hardlinkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1551,7 +2226,7 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
-                                                            "special",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -1559,9 +2234,35 @@ fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_SPECIAL);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO specialEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          specialType, \
+                                                                                          major, \
+                                                                                          minor \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2027,7 +2728,7 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
-                                                            "directories",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -2035,9 +2736,32 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_DIRECTORY);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO directoryEntries \
+                                                                                         ( \
+                                                                                          storageId, \
+                                                                                          entryId, \
+                                                                                          name \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      toStorageId,
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(toColumnList,"name",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2048,7 +2772,7 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
-                                                            "files",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -2056,9 +2780,35 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_FILE);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO fileEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2069,7 +2819,7 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
-                                                            "images",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -2077,9 +2827,41 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_IMAGE);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO imageEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fileSystemType, \
+                                                                                          blockSize, \
+                                                                                          blockOffset, \
+                                                                                          blockCount \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2090,7 +2872,7 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
-                                                            "links",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -2098,9 +2880,29 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_LINK);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO linkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          destinationName \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %'s \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2111,7 +2913,7 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
-                                                            "hardlinks",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -2119,9 +2921,35 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_HARDLINK);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO hardlinkEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          size, \
+                                                                                          fragmentOffset, \
+                                                                                          fragmentSize \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2132,7 +2960,7 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
-                                                            "special",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -2140,9 +2968,35 @@ fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                                               UNUSED_VARIABLE(userData);
 
                                                               (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                              (void)Database_setTableColumnListInt64(toColumnList,"type",INDEX_TYPE_SPECIAL);
+
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            {
+                                                              return Database_execute(&newIndexHandle->databaseHandle,
+                                                                                      CALLBACK(NULL,NULL),
+                                                                                      "INSERT INTO specialEntries \
+                                                                                         ( \
+                                                                                          entryId, \
+                                                                                          specialType, \
+                                                                                          major, \
+                                                                                          minor \
+                                                                                         ) \
+                                                                                       VALUES \
+                                                                                         ( \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu, \
+                                                                                          %llu \
+                                                                                         ); \
+                                                                                      ",
+                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
+                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                     );
+                                                            },NULL),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -7813,7 +8667,10 @@ Errors Index_addFile(IndexHandle *indexHandle,
                      uint64      fragmentSize
                     )
 {
-  Errors error;
+  #define TRANSACTION_NAME "ADD_FILE"
+
+  Errors     error;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
@@ -7826,55 +8683,89 @@ Errors Index_addFile(IndexHandle *indexHandle,
   }
 
   // add file entry
+  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "INSERT INTO files \
+                           "INSERT INTO entries \
                               ( \
                                storageId, \
+                               type, \
                                name, \
-                               size, \
                                timeLastAccess, \
                                timeModified, \
                                timeLastChanged, \
                                userId, \
                                groupId, \
-                               permission, \
-                               fragmentOffset, \
-                               fragmentSize\
+                               permission \
                               ) \
                             VALUES \
                               ( \
-                               %lu, \
+                               %llu, \
                                %'S, \
-                               %lu, \
-                               %lu, \
-                               %lu, \
-                               %lu, \
+                               %llu, \
+                               %llu, \
+                               %llu, \
                                %u, \
                                %u, \
-                               %u, \
-                               %lu, \
-                               %lu\
+                               %u \
                               ); \
                            ",
                            INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_FILE,
                            fileName,
-                           size,
                            timeLastAccess,
                            timeModified,
                            timeLastChanged,
                            userId,
                            groupId,
-                           permission,
+                           permission
+                          );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO fileEntries \
+                              ( \
+                               entryId, \
+                               size, \
+                               fragmentOffset, \
+                               fragmentSize\
+                              ) \
+                            VALUES \
+                              ( \
+                               %llu, \
+                               %llu, \
+                               %llu, \
+                               %llu\
+                              ); \
+                           ",
+                           entryId,
+                           size,
                            fragmentOffset,
                            fragmentSize
                           );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
   return ERROR_NONE;
+
+  #undef TRANSACTION_NAME
 }
 
 Errors Index_addImage(IndexHandle     *indexHandle,
@@ -7887,7 +8778,10 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                       uint64          blockCount
                      )
 {
-  Errors error;
+  #define TRANSACTION_NAME "ADD_IMAGE"
+
+  Errors     error;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
@@ -7900,31 +8794,73 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   }
 
   // add image entry
+  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "INSERT INTO images \
+                           "INSERT INTO entries \
                               ( \
                                storageId, \
+                               type, \
                                name, \
-                               fileSystemType, \
-                               size, \
-                               blockSize, \
-                               blockOffset, \
-                               blockCount\
+                               timeLastAccess, \
+                               timeModified, \
+                               timeLastChanged, \
+                               userId, \
+                               groupId, \
+                               permission \
                               ) \
                             VALUES \
                               ( \
-                               %lu, \
+                               %llu, \
                                %'S, \
-                               %d, \
-                               %lu, \
+                               %llu, \
+                               %llu, \
+                               %llu, \
                                %u, \
-                               %lu, \
-                               %lu\
+                               %u, \
+                               %u \
                               ); \
                            ",
                            INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_IMAGE,
                            imageName,
+                           0LL,
+                           0LL,
+                           0LL,
+                           0,
+                           0,
+                           0
+                          );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO imageEntries \
+                              ( \
+                               entryId, \
+                               size, \
+                               fragmentOffset, \
+                               fragmentSize\
+                              ) \
+                            VALUES \
+                              ( \
+                               %llu, \
+                               %d, \
+                               %llu, \
+                               %u, \
+                               %llu, \
+                               %llu\
+                              ); \
+                           ",
+                           entryId,
                            fileSystemType,
                            size,
                            blockSize,
@@ -7933,10 +8869,18 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                           );
   if (error != ERROR_NONE)
   {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
     return error;
   }
 
   return ERROR_NONE;
+
+  #undef TRANSACTION_NAME
 }
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
@@ -7950,7 +8894,10 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                           uint32      permission
                          )
 {
-  Errors error;
+  #define TRANSACTION_NAME "ADD_DIRECTORY"
+
+  Errors     error;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
@@ -7963,11 +8910,17 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   }
 
   // add directory entry
+  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "INSERT INTO directories \
+                           "INSERT INTO entries \
                               ( \
                                storageId, \
+                               type, \
                                name, \
                                timeLastAccess, \
                                timeModified, \
@@ -7978,17 +8931,18 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               ) \
                             VALUES \
                               ( \
-                               %lu, \
+                               %llu, \
                                %'S, \
-                               %lu, \
-                               %lu, \
-                               %lu, \
+                               %llu, \
+                               %llu, \
+                               %llu, \
                                %u, \
                                %u, \
                                %u \
                               ); \
                            ",
                            INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_DIRECTORY,
                            directoryName,
                            timeLastAccess,
                            timeModified,
@@ -7999,10 +8953,43 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                           );
   if (error != ERROR_NONE)
   {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO directoryEntries \
+                              ( \
+                               entryId, \
+                               storageId, \
+                               name \
+                              ) \
+                            VALUES \
+                              ( \
+                               %llu, \
+                               %llu, \
+                               %'S\
+                              ); \
+                           ",
+                           entryId,
+                           INDEX_DATABASE_ID_(storageId),
+                           directoryName
+                          );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
     return error;
   }
 
   return ERROR_NONE;
+
+  #undef TRANSACTION_NAME
 }
 
 Errors Index_addLink(IndexHandle *indexHandle,
@@ -8017,7 +9004,10 @@ Errors Index_addLink(IndexHandle *indexHandle,
                      uint32      permission
                     )
 {
-  Errors error;
+  #define TRANSACTION_NAME "ADD_LINK"
+
+  Errors     error;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
@@ -8033,36 +9023,40 @@ Errors Index_addLink(IndexHandle *indexHandle,
   }
 
   // add link entry
+  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "INSERT INTO links \
+                           "INSERT INTO entries \
                               ( \
                                storageId, \
+                               type, \
                                name, \
-                               destinationName, \
                                timeLastAccess, \
                                timeModified, \
                                timeLastChanged, \
                                userId, \
                                groupId, \
-                               permission\
+                               permission \
                               ) \
                             VALUES \
                               ( \
-                               %lu, \
+                               %llu, \
                                %'S, \
-                               %'S, \
-                               %lu, \
-                               %lu, \
-                               %lu, \
+                               %llu, \
+                               %llu, \
+                               %llu, \
                                %u, \
                                %u, \
-                               %u\
+                               %u \
                               ); \
-                            ",
+                           ",
                            INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_LINK,
                            linkName,
-                           destinationName,
                            timeLastAccess,
                            timeModified,
                            timeLastChanged,
@@ -8072,10 +9066,40 @@ Errors Index_addLink(IndexHandle *indexHandle,
                           );
   if (error != ERROR_NONE)
   {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO linkEntries \
+                              ( \
+                               entryId, \
+                               destinationName, \
+                              ) \
+                            VALUES \
+                              ( \
+                               %llu, \
+                               %'S \
+                              ); \
+                           ",
+                           entryId,
+                           destinationName
+                          );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
     return error;
   }
 
   return ERROR_NONE;
+
+  #undef TRANSACTION_NAME
 }
 
 Errors Index_addHardlink(IndexHandle *indexHandle,
@@ -8092,7 +9116,10 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                          uint64      fragmentSize
                         )
 {
-  Errors error;
+  #define TRANSACTION_NAME "ADD_HARDLINK"
+
+  Errors     error;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
@@ -8105,55 +9132,89 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
   }
 
   // add hard link entry
+  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "INSERT INTO hardlinks \
+                           "INSERT INTO entries \
                               ( \
                                storageId, \
+                               type, \
                                name, \
-                               size, \
                                timeLastAccess, \
                                timeModified, \
                                timeLastChanged, \
                                userId, \
                                groupId, \
-                               permission, \
-                               fragmentOffset, \
-                               fragmentSize\
+                               permission \
                               ) \
                             VALUES \
                               ( \
-                               %lu, \
+                               %llu, \
                                %'S, \
-                               %lu, \
-                               %lu, \
-                               %lu, \
-                               %lu, \
+                               %llu, \
+                               %llu, \
+                               %llu, \
                                %u, \
                                %u, \
-                               %u, \
-                               %lu, \
-                               %lu\
+                               %u \
                               ); \
                            ",
                            INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_HARDLINK,
                            fileName,
-                           size,
                            timeLastAccess,
                            timeModified,
                            timeLastChanged,
                            userId,
                            groupId,
-                           permission,
+                           permission
+                          );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO hardlinkEntries \
+                              ( \
+                               entryId, \
+                               size, \
+                               fragmentOffset, \
+                               fragmentSize\
+                              ) \
+                            VALUES \
+                              ( \
+                               %llu, \
+                               %llu, \
+                               %llu, \
+                               %llu\
+                              ); \
+                           ",
+                           entryId,
+                           size,
                            fragmentOffset,
                            fragmentSize
                           );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
   return ERROR_NONE;
+
+  #undef TRANSACTION_NAME
 }
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
@@ -8170,7 +9231,10 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                         uint32           minor
                        )
 {
-  Errors  error;
+  #define TRANSACTION_NAME "ADD_SPECIAL"
+
+  Errors     error;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
@@ -8183,56 +9247,89 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   }
 
   // add special entry
+  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "INSERT INTO special \
+                           "INSERT INTO entries \
                               ( \
                                storageId, \
+                               type, \
                                name, \
-                               specialType, \
                                timeLastAccess, \
                                timeModified, \
                                timeLastChanged, \
                                userId, \
                                groupId, \
-                               permission, \
-                               major, \
-                               minor \
+                               permission \
                               ) \
                             VALUES \
                               ( \
-                               %lu, \
+                               %llu, \
                                %'S, \
-                               %u, \
-                               %lu, \
-                               %lu, \
-                               %lu, \
-                               %u, \
+                               %llu, \
+                               %llu, \
+                               %llu, \
                                %u, \
                                %u, \
-                               %d, \
-                               %u\
+                               %u \
                               ); \
                            ",
                            INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_SPECIAL,
                            name,
-                           specialType,
                            timeLastAccess,
                            timeModified,
                            timeLastChanged,
                            userId,
                            groupId,
-                           permission,
+                           permission
+                          );
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO specialEntries \
+                              ( \
+                               entryId, \
+                               specialType, \
+                               major, \
+                               minor \
+                              ) \
+                            VALUES \
+                              ( \
+                               %llu, \
+                               %d, \
+                               %d, \
+                               %d\
+                              ); \
+                           ",
+                           entryId,
+                           specialType,
                            major,
                            minor
                           );
-
+  if (error != ERROR_NONE)
+  {
+    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    return error;
+  }
+  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
   return ERROR_NONE;
+
+  #undef TRANSACTION_NAME
 }
 
 Errors Index_assignTo(IndexHandle  *indexHandle,
