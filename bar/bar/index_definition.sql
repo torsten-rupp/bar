@@ -874,9 +874,9 @@ CREATE TRIGGER AFTER UPDATE ON imagesNewest
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
   id                    INTEGER PRIMARY KEY,
-  storageId             INTEGER,
   entryId               INTEGER,
-  name                  TEXT,
+  storageId             INTEGER,            // Note: duplicate storage for faster access parent directories
+  name                  TEXT,               // Note: duplicate storage for faster access parent directories
 
   // updated by triggers
   totalEntryCount       INTEGER DEFAULT 0,  // total number of entries
