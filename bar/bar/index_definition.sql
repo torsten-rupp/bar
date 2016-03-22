@@ -347,6 +347,7 @@ CREATE TABLE IF NOT EXISTS entries(
 );
 CREATE INDEX ON entries (storageId,name);
 CREATE INDEX ON entries (name);
+CREATE INDEX ON entries (type);
 
 // newest entries
 CREATE TABLE IF NOT EXISTS entriesNewest(
