@@ -484,6 +484,7 @@ CREATE TABLE IF NOT EXISTS fileEntries(
 
   FOREIGN KEY(entryId) REFERENCES entries(id)
 );
+CREATE INDEX ON fileEntries (entryId);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON fileEntries
@@ -721,6 +722,7 @@ CREATE TABLE IF NOT EXISTS imageEntries(
 
   FOREIGN KEY(entryId) REFERENCES entries(id)
 );
+CREATE INDEX ON imageEntries (entryId);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON imageEntries
@@ -887,6 +889,7 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
 
   FOREIGN KEY(entryId) REFERENCES entries(id)
 );
+CREATE INDEX ON directoryEntries (entryId);
 CREATE INDEX ON directoryEntries (storageId,name);
 
 // insert/delete/update triggeres
@@ -1076,6 +1079,7 @@ CREATE TABLE IF NOT EXISTS linkEntries(
 
   FOREIGN KEY(entryId) REFERENCES entries(id)
 );
+CREATE INDEX ON linkEntries (entryId);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON linkEntries
@@ -1236,6 +1240,7 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
 
   FOREIGN KEY(entryId) REFERENCES entries(id)
 );
+CREATE INDEX ON hardlinkEntries (entryId);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON hardlinkEntries
@@ -1449,6 +1454,7 @@ CREATE TABLE IF NOT EXISTS specialEntries(
 
   FOREIGN KEY(entryId) REFERENCES entries(id)
 );
+CREATE INDEX ON specialEntries (entryId);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON specialEntries
