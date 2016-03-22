@@ -5692,6 +5692,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   }
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 //TODO
 //Database_debugEnable(1);
@@ -7262,10 +7263,9 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   String ftsString;
   String regexpString;
   String storageIdsString;
-  String fileIdsString,imageIdsString,directoryIdsString,linkIdsString,hardlinkIdsString,specialIdsString;
+  String entryIdsString;
   uint   i;
   String filter;
-  String filesFilter,imagesFilter,directoriesFilter,linksFilter,hardlinksFilter,specialFilter;
   String indexTypeSetString;
   Errors error;
 
@@ -7294,254 +7294,24 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     if (i > 0) String_appendChar(storageIdsString,',');
     String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
-
-  directoryIdsString = String_new();
-  fileIdsString      = String_new();
-  imageIdsString     = String_new();
-  linkIdsString      = String_new();
-  hardlinkIdsString  = String_new();
-  specialIdsString   = String_new();
+  entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
-    switch (Index_getType(entryIds[i]))
-    {
-      case INDEX_TYPE_DIRECTORY:
-        if (!String_isEmpty(directoryIdsString)) String_appendChar(directoryIdsString,',');
-        String_format(directoryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-        break;
-      case INDEX_TYPE_FILE:
-        if (!String_isEmpty(fileIdsString)) String_appendChar(fileIdsString,',');
-        String_format(fileIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-        break;
-      case INDEX_TYPE_IMAGE:
-        if (!String_isEmpty(imageIdsString)) String_appendChar(imageIdsString,',');
-        String_format(imageIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-        break;
-      case INDEX_TYPE_LINK:
-        if (!String_isEmpty(linkIdsString)) String_appendChar(linkIdsString,',');
-        String_format(linkIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-        break;
-      case INDEX_TYPE_HARDLINK:
-        if (!String_isEmpty(hardlinkIdsString)) String_appendChar(hardlinkIdsString,',');
-        String_format(hardlinkIdsString,"%lld",INDEX_DATABASE_ID_(entryIds[i]));
-        break;
-      case INDEX_TYPE_SPECIAL:
-        if (!String_isEmpty(specialIdsString)) String_appendChar(specialIdsString,',');
-        String_format(specialIdsString,"%lld",INDEX_DATABASE_ID_(entryIds[i]));
-        break;
-      default:
-        // ignore other types
-        break;
-    }
+    if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+    String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
 
-  directoriesFilter = String_new();
-  if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
-  {
-    filterAppend(directoriesFilter,!String_isEmpty(pattern),"AND","directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S)",ftsString);
-//    filterAppend(directoriesFilter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,directories.name)",regexpString);
-    filterAppend(directoriesFilter,!String_isEmpty(storageIdsString),"AND","directories.storageId IN (%S)",storageIdsString);
-    filterAppend(directoriesFilter,!String_isEmpty(directoryIdsString),"AND","directories.id IN (%S)",directoryIdsString);
-  }
-  else
-  {
-    String_setCString(directoriesFilter,"0");
-  }
-
+  // get filter
   filter = String_newCString("1");
-  if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
-  {
-    filterAppend(filter,!String_isEmpty(pattern),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsString);
+  filterAppend(filter,!String_isEmpty(pattern),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsString);
 //    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
-    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-    filterAppend(filter,!String_isEmpty(fileIdsString),"AND","entries.id IN (%S)",fileIdsString);
-  }
-
-  filesFilter = String_new();
-  if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
-  {
-    filterAppend(filesFilter,!String_isEmpty(pattern),"AND","files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S)",ftsString);
-//    filterAppend(filesFilter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,files.name)",regexpString);
-    filterAppend(filesFilter,!String_isEmpty(storageIdsString),"AND","files.storageId IN (%S)",storageIdsString);
-    filterAppend(filesFilter,!String_isEmpty(fileIdsString),"AND","files.id IN (%S)",fileIdsString);
-  }
-  else
-  {
-    String_setCString(filesFilter,"0");
-  }
-
-  imagesFilter = String_new();
-  if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
-  {
-    filterAppend(imagesFilter,!String_isEmpty(pattern),"AND","images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S)",ftsString);
-//    filterAppend(imagesFilter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,images.name)",regexpString);
-    filterAppend(imagesFilter,!String_isEmpty(storageIdsString),"AND","images.storageId IN (%S)",storageIdsString);
-    filterAppend(imagesFilter,!String_isEmpty(imageIdsString),"AND","images.id IN (%S)",imageIdsString);
-  }
-  else
-  {
-    String_setCString(imagesFilter,"0");
-  }
-
-  linksFilter = String_new();
-  if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
-  {
-    filterAppend(linksFilter,!String_isEmpty(pattern),"AND","links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S)",ftsString);
-//    filterAppend(linksFilter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,links.name)",regexpString);
-    filterAppend(linksFilter,!String_isEmpty(storageIdsString),"AND","links.storageId IN (%S)",storageIdsString);
-    filterAppend(linksFilter,!String_isEmpty(linkIdsString),"AND","links.id IN (%S)",linkIdsString);
-  }
-  else
-  {
-    String_setCString(linksFilter,"0");
-  }
-
-  hardlinksFilter = String_new();
-  if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
-  {
-    filterAppend(hardlinksFilter,!String_isEmpty(pattern),"AND","hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S)",ftsString);
-//    filterAppend(hardlinksFilter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,hardlinks.name)",regexpString);
-    filterAppend(hardlinksFilter,!String_isEmpty(storageIdsString),"AND","hardlinks.storageId IN (%S)",storageIdsString);
-    filterAppend(hardlinksFilter,!String_isEmpty(hardlinkIdsString),"AND","hardlinks.id IN (%S)",hardlinkIdsString);
-  }
-  else
-  {
-    String_setCString(hardlinksFilter,"0");
-  }
-
-  specialFilter = String_new();
-  if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
-  {
-    filterAppend(specialFilter,!String_isEmpty(pattern),"AND","special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S)",ftsString);
-//    filterAppend(specialFilter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,special.name)",regexpString);
-    filterAppend(specialFilter,!String_isEmpty(storageIdsString),"AND","special.storageId IN (%S)",storageIdsString);
-    filterAppend(specialFilter,!String_isEmpty(specialIdsString),"AND","special.id IN (%S)",specialIdsString);
-  }
-  else
-  {
-    String_setCString(specialFilter,"0");
-  }
+//  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+  filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   indexTypeSetString = String_new();
-
 Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-#if 0
-                           "  SELECT files.id, \
-                                     storage.name, \
-                                     STRFTIME('%%s',storage.created), \
-                                     %d, \
-                                     files.name, \
-                                     '', \
-                                     0, \
-                                     files.size, \
-                                     files.timeModified, \
-                                     files.userId, \
-                                     files.groupId, \
-                                     files.permission, \
-                                     files.fragmentOffset, \
-                                     files.fragmentSize \
-                              FROM files \
-                                LEFT JOIN storage ON storage.id=files.storageId \
-                              WHERE %s \
-                           "
-                           "UNION ALL"
-                           "  SELECT images.id, \
-                                     storage.name, \
-                                     STRFTIME('%%s',storage.created), \
-                                     %d, \
-                                     images.name, \
-                                     '', \
-                                     images.fileSystemType, \
-                                     images.size, \
-                                     0, \
-                                     0, \
-                                     0, \
-                                     0, \
-                                     images.blockOffset, \
-                                     images.blockCount \
-                              FROM images \
-                                LEFT JOIN storage ON storage.id=images.storageId \
-                              WHERE %s \
-                           "
-                           "UNION ALL"
-                           "  SELECT directories.id, \
-                                     storage.name, \
-                                     STRFTIME('%%s',storage.created), \
-                                     %d, \
-                                     directories.name, \
-                                     '', \
-                                     0, \
-                                     0, \
-                                     directories.timeModified, \
-                                     directories.userId, \
-                                     directories.groupId, \
-                                     directories.permission, \
-                                     0, \
-                                     0 \
-                              FROM directories \
-                                LEFT JOIN storage ON storage.id=directories.storageId \
-                              WHERE %s \
-                           "
-                           "UNION ALL"
-                           "  SELECT links.id, \
-                                     storage.name, \
-                                     STRFTIME('%%s',storage.created), \
-                                     %d, \
-                                     links.name, \
-                                     links.destinationName, \
-                                     0, \
-                                     0, \
-                                     links.timeModified, \
-                                     links.userId, \
-                                     links.groupId, \
-                                     links.permission, \
-                                     0, \
-                                     0 \
-                              FROM links \
-                                LEFT JOIN storage ON storage.id=links.storageId \
-                              WHERE %s \
-                           "
-                           "UNION ALL"
-                           "  SELECT hardlinks.id, \
-                                     storage.name, \
-                                     STRFTIME('%%s',storage.created), \
-                                     %d, \
-                                     hardlinks.name, \
-                                     '', \
-                                     0, \
-                                     hardlinks.size, \
-                                     hardlinks.timeModified, \
-                                     hardlinks.userId, \
-                                     hardlinks.groupId, \
-                                     hardlinks.permission, \
-                                     hardlinks.fragmentOffset, \
-                                     hardlinks.fragmentSize \
-                              FROM hardlinks \
-                                LEFT JOIN storage ON storage.id=hardlinks.storageId \
-                              WHERE %s \
-                           "
-                           "UNION ALL"
-                           "  SELECT special.id, \
-                                     storage.name, \
-                                     STRFTIME('%%s',storage.created), \
-                                     %d, \
-                                     special.name, \
-                                     '', \
-                                     0, \
-                                     0, \
-                                     special.timeModified, \
-                                     special.userId, \
-                                     special.groupId, \
-                                     special.permission, \
-                                     0, \
-                                     0 \
-                              FROM special \
-                                LEFT JOIN storage ON storage.id=special.storageId \
-                              WHERE %s \
-                           "
-#else
                            "SELECT entries.id, \
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
@@ -7569,39 +7339,17 @@ Database_debugEnable(1);
                               LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                             WHERE     %S \
                                   AND entries.type IN (%S) \
-                           "
-#endif
-                           "ORDER BY entries.name "
-                           "LIMIT %llu,%llu",
-#if 0
-                           INDEX_TYPE_FILE,     String_cString(filesFilter      ),
-                           INDEX_TYPE_IMAGE,    String_cString(imagesFilter     ),
-                           INDEX_TYPE_DIRECTORY,String_cString(directoriesFilter),
-                           INDEX_TYPE_LINK,     String_cString(linksFilter      ),
-                           INDEX_TYPE_HARDLINK, String_cString(hardlinksFilter  ),
-                           INDEX_TYPE_SPECIAL,  String_cString(specialFilter    ),
-#else
+                            ORDER BY entries.name \
+                            LIMIT %llu,%llu; \
+                           ",
                            filter,
                            getIndexTypeSetString(indexTypeSetString,indexTypeSet),
-#endif
-
                            offset,
                            limit
                           );
 Database_debugEnable(0);
-  String_delete(indexTypeSetString);
-  String_delete(specialFilter);
-  String_delete(hardlinksFilter);
-  String_delete(linksFilter);
-  String_delete(imagesFilter);
-  String_delete(filesFilter);
-  String_delete(directoriesFilter);
-  String_delete(specialIdsString);
-  String_delete(hardlinkIdsString);
-  String_delete(linkIdsString);
-  String_delete(imageIdsString);
-  String_delete(fileIdsString);
-  String_delete(directoryIdsString);
+  String_delete(filter);
+  String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpString);
   String_delete(ftsString);
