@@ -323,6 +323,9 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
     INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
   END;
 
+create table log(event text);
+
+
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
   id                    INTEGER PRIMARY KEY,
@@ -413,20 +416,20 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
       WHERE storage.id=NEW.storageId;
   END;
 
-//CREATE TRIGGER AFTER UPDATE OF totalEntryCount,totalEntrySize ON entries
-//  BEGIN
-//    // update count/size in parent entries
-//    UPDATE entries
-//      SET totalEntryCount=totalEntryCount-OLD.totalEntryCount,
-//          totalEntrySize =totalEntrySize -OLD.totalEntrySize
-//      WHERE     entries.storageId=OLD.storageId
-//            AND entries.name=DIRNAME(OLD.name);
-//    UPDATE entries
-//      SET totalEntryCount=totalEntryCount+NEW.totalEntryCount,
-//          totalEntrySize =totalEntrySize +NEW.totalEntrySize
-//      WHERE     entries.storageId=NEW.storageId
-//            AND entries.name=DIRNAME(NEW.name);
-//  END;
+CREATE TRIGGER AFTER UPDATE OF totalEntryCount,totalEntrySize ON entries
+  BEGIN
+    // update count/size in parent entries
+    UPDATE entries
+      SET totalEntryCount=totalEntryCount-OLD.totalEntryCount,
+          totalEntrySize =totalEntrySize -OLD.totalEntrySize
+      WHERE     entries.storageId=OLD.storageId
+            AND entries.name=DIRNAME(OLD.name);
+    UPDATE entries
+      SET totalEntryCount=totalEntryCount+NEW.totalEntryCount,
+          totalEntrySize =totalEntrySize +NEW.totalEntrySize
+      WHERE     entries.storageId=NEW.storageId
+            AND entries.name=DIRNAME(NEW.name);
+  END;
 
 //CREATE TRIGGER AFTER UPDATE OF totalEntryCountNewest,totalEntrySizeNewest ON entries
 //  BEGIN
@@ -450,7 +453,7 @@ CREATE TRIGGER AFTER UPDATE OF name ON entries
     INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
   END;
 
-CREATE TRIGGER AFTER UPDATE ON entriesNewest
+CREATE TRIGGER AFTER UPDATE OF storageId ON entriesNewest
   BEGIN
     // update count/size in storage
     UPDATE storage
@@ -459,6 +462,7 @@ CREATE TRIGGER AFTER UPDATE ON entriesNewest
     UPDATE storage
       SET totalEntryCountNewest=totalEntryCountNewest+1
       WHERE storage.id=NEW.storageId;
+//    insert into log values(printf('after start update entriesNewest %%d',(SELECT totalEntryCountNewest FROM storage WHERE id=NEW.storageId)));
 
     // update count/size in parent entries
 //    UPDATE entries
