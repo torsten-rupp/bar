@@ -353,26 +353,20 @@ CREATE INDEX ON entries (name);
 CREATE INDEX ON entries (type);
 
 // newest entries
-CREATE TABLE IF NOT EXISTS entriesNewest2(
-  id              INTEGER PRIMARY KEY,
-  storageId       INTEGER DEFAULT 0,
-  name            TEXT UNIQUE NOT NULL,
-  timeLastChanged INTEGER DEFAULT 0,
-  entryId         INTEGER DEFAULT 0,
-
-  FOREIGN KEY(entryId) REFERENCES entries(id)
-);
-
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
-  name            TEXT UNIQUE NOT NULL,
-  timeLastChanged INTEGER DEFAULT 0,
   storageId       INTEGER DEFAULT 0,
-  entryId         INTEGER DEFAULT 0,
+  name            TEXT UNIQUE NOT NULL,
+  type            INTEGER DEFAULT 0,
+  size            INTEGER DEFAULT 0,
+  timeLastChanged INTEGER DEFAULT 0,
+  entryId         INTEGER DEFAULT 0
+  //,
 
-  FOREIGN KEY(entryId) REFERENCES entries(id)
+//  FOREIGN KEY(entryId) REFERENCES entries(id)
 );
-CREATE INDEX ON entriesNewest (name,timeLastChanged);
+CREATE INDEX ON entriesNewest (name);
+CREATE INDEX ON entriesNewest (entryId);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_entries USING FTS4(
@@ -390,13 +384,14 @@ CREATE TRIGGER AFTER INSERT ON entries
       SET totalEntryCount=totalEntryCount+1
       WHERE storage.id=NEW.storageId;
 
-    // update newest info
+    // insert/update newest info
     INSERT OR IGNORE INTO entriesNewest
       (name) VALUES (NEW.name);
     UPDATE entriesNewest
-      SET timeLastChanged=NEW.timeLastChanged,
-          storageId=NEW.storageId,
-          entryId=NEW.id
+      SET storageId=NEW.storageId,
+          entryId=NEW.id,
+          type=NEW.type,
+          timeLastChanged=NEW.timeLastChanged
       WHERE     name=NEW.name
             AND timeLastChanged<NEW.timeLastChanged;
 
@@ -410,6 +405,13 @@ CREATE TRIGGER BEFORE DELETE ON entries
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1
       WHERE storage.id=OLD.storageId;
+
+    // delete/update newest info
+    DELETE FROM entriesNewest WHERE entryId=OLD.entryId;
+    INSERT OR IGNORE INTO entriesNewest
+        (storageId,name,type,timeLastChanged,entryId)
+      VALUES
+        (SELECT storageId,name,type,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.entryId AND name=OLD.name);
 
     // update FTS
     DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
@@ -426,20 +428,20 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
       WHERE storage.id=NEW.storageId;
   END;
 
-CREATE TRIGGER AFTER UPDATE OF totalEntryCount,totalEntrySize ON entries
-  BEGIN
-    // update count/size in parent entries
-    UPDATE entries
-      SET totalEntryCount=totalEntryCount-OLD.totalEntryCount,
-          totalEntrySize =totalEntrySize -OLD.totalEntrySize
-      WHERE     entries.storageId=OLD.storageId
-            AND entries.name=DIRNAME(OLD.name);
-    UPDATE entries
-      SET totalEntryCount=totalEntryCount+NEW.totalEntryCount,
-          totalEntrySize =totalEntrySize +NEW.totalEntrySize
-      WHERE     entries.storageId=NEW.storageId
-            AND entries.name=DIRNAME(NEW.name);
-  END;
+//CREATE TRIGGER AFTER UPDATE OF totalEntryCount,totalEntrySize ON entries
+//  BEGIN
+//    // update count/size in parent entries
+//    UPDATE entries
+//      SET totalEntryCount=totalEntryCount-OLD.totalEntryCount,
+//          totalEntrySize =totalEntrySize -OLD.totalEntrySize
+//      WHERE     entries.storageId=OLD.storageId
+//            AND entries.name=DIRNAME(OLD.name);
+//    UPDATE entries
+//      SET totalEntryCount=totalEntryCount+NEW.totalEntryCount,
+//          totalEntrySize =totalEntrySize +NEW.totalEntrySize
+//      WHERE     entries.storageId=NEW.storageId
+//            AND entries.name=DIRNAME(NEW.name);
+//  END;
 
 //CREATE TRIGGER AFTER UPDATE OF totalEntryCountNewest,totalEntrySizeNewest ON entries
 //  BEGIN
@@ -463,16 +465,70 @@ CREATE TRIGGER AFTER UPDATE OF name ON entries
     INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
   END;
 
-CREATE TRIGGER AFTER UPDATE OF storageId ON entriesNewest
+CREATE TRIGGER AFTER INSERT ON entriesNewest
+  BEGIN
+    UPDATE storage
+      SET totalEntryCountNewest     =totalEntryCountNewest    +1,
+          totalEntrySizeNewest      =totalEntrySizeNewest     +NEW.size,
+          totalFileCountNewest      =totalFileCountNewest     +CASE WHEN NEW.type==5 THEN 1        ELSE 0 END,
+          totalFileSizeNewest       =totalFileSizeNewest      +CASE WHEN NEW.type==5 THEN NEW.size ELSE 0 END,
+          totalImageCountNewest     =totalImageCountNewest    +CASE WHEN NEW.type==6 THEN 1        ELSE 0 END,
+          totalImageSizeNewest      =totalImageSizeNewest     +CASE WHEN NEW.type==6 THEN NEW.size ELSE 0 END,
+          totalDirectoryCountNewest =totalDirectoryCountNewest+CASE WHEN NEW.type==7 THEN 1        ELSE 0 END,
+          totalLinkCountNewest      =totalLinkCountNewest     +CASE WHEN NEW.type==8 THEN 1        ELSE 0 END,
+          totalHardlinkCountNewest  =totalHardlinkCountNewest +CASE WHEN NEW.type==9 THEN 1        ELSE 0 END,
+          totalHardlinkSizeNewest   =totalHardlinkSizeNewest  +CASE WHEN NEW.type==9 THEN NEW.size ELSE 0 END,
+          totalSpecialCountNewest   =totalSpecialCountNewest  +CASE WHEN NEW.type==9 THEN 1        ELSE 0 END
+      WHERE storage.id=NEW.storageId;
+  END;
+
+CREATE TRIGGER AFTER DELETE ON entriesNewest
+  BEGIN
+    UPDATE storage
+      SET totalEntryCountNewest     =totalEntryCountNewest    -1,
+          totalEntrySizeNewest      =totalEntrySizeNewest     -OLD.size,
+          totalFileCountNewest      =totalFileCountNewest     -CASE WHEN OLD.type==5 THEN 1        ELSE 0 END,
+          totalFileSizeNewest       =totalFileSizeNewest      -CASE WHEN OLD.type==5 THEN OLD.size ELSE 0 END,
+          totalImageCountNewest     =totalImageCountNewest    -CASE WHEN OLD.type==6 THEN 1        ELSE 0 END,
+          totalImageSizeNewest      =totalImageSizeNewest     -CASE WHEN OLD.type==6 THEN OLD.size ELSE 0 END,
+          totalDirectoryCountNewest =totalDirectoryCountNewest-CASE WHEN OLD.type==7 THEN 1        ELSE 0 END,
+          totalLinkCountNewest      =totalLinkCountNewest     -CASE WHEN OLD.type==8 THEN 1        ELSE 0 END,
+          totalHardlinkCountNewest  =totalHardlinkCountNewest -CASE WHEN OLD.type==9 THEN 1        ELSE 0 END,
+          totalHardlinkSizeNewest   =totalHardlinkSizeNewest  -CASE WHEN OLD.type==9 THEN OLD.size ELSE 0 END,
+          totalSpecialCountNewest   =totalSpecialCountNewest  -CASE WHEN OLD.type==9 THEN 1        ELSE 0 END
+      WHERE storage.id=OLD.storageId;
+  END;
+
+CREATE TRIGGER AFTER UPDATE OF storageId,size ON entriesNewest
   BEGIN
     // update count/size in storage
     UPDATE storage
-      SET totalEntryCountNewest=totalEntryCountNewest-1
+      SET totalEntryCountNewest     =totalEntryCountNewest    -1,
+          totalEntrySizeNewest      =totalEntrySizeNewest     -OLD.size,
+          totalFileCountNewest      =totalFileCountNewest     -CASE WHEN OLD.type==5 THEN 1        ELSE 0 END,
+          totalFileSizeNewest       =totalFileSizeNewest      -CASE WHEN OLD.type==5 THEN OLD.size ELSE 0 END,
+          totalImageCountNewest     =totalImageCountNewest    -CASE WHEN OLD.type==6 THEN 1        ELSE 0 END,
+          totalImageSizeNewest      =totalImageSizeNewest     -CASE WHEN OLD.type==6 THEN OLD.size ELSE 0 END,
+          totalDirectoryCountNewest =totalDirectoryCountNewest-CASE WHEN OLD.type==7 THEN 1        ELSE 0 END,
+          totalLinkCountNewest      =totalLinkCountNewest     -CASE WHEN OLD.type==8 THEN 1        ELSE 0 END,
+          totalHardlinkCountNewest  =totalHardlinkCountNewest -CASE WHEN OLD.type==9 THEN 1        ELSE 0 END,
+          totalHardlinkSizeNewest   =totalHardlinkSizeNewest  -CASE WHEN OLD.type==9 THEN OLD.size ELSE 0 END,
+          totalSpecialCountNewest   =totalSpecialCountNewest  -CASE WHEN OLD.type==9 THEN 1        ELSE 0 END
       WHERE storage.id=OLD.storageId;
     UPDATE storage
-      SET totalEntryCountNewest=totalEntryCountNewest+1
+      SET totalEntryCountNewest     =totalEntryCountNewest    +1,
+          totalEntrySizeNewest      =totalEntrySizeNewest     +NEW.size,
+          totalFileCountNewest      =totalFileCountNewest     +CASE WHEN NEW.type==5 THEN 1        ELSE 0 END,
+          totalFileSizeNewest       =totalFileSizeNewest      +CASE WHEN NEW.type==5 THEN NEW.size ELSE 0 END,
+          totalImageCountNewest     =totalImageCountNewest    +CASE WHEN NEW.type==6 THEN 1        ELSE 0 END,
+          totalImageSizeNewest      =totalImageSizeNewest     +CASE WHEN NEW.type==6 THEN NEW.size ELSE 0 END,
+          totalDirectoryCountNewest =totalDirectoryCountNewest+CASE WHEN NEW.type==7 THEN 1        ELSE 0 END,
+          totalLinkCountNewest      =totalLinkCountNewest     +CASE WHEN NEW.type==8 THEN 1        ELSE 0 END,
+          totalHardlinkCountNewest  =totalHardlinkCountNewest +CASE WHEN NEW.type==9 THEN 1        ELSE 0 END,
+          totalHardlinkSizeNewest   =totalHardlinkSizeNewest  +CASE WHEN NEW.type==9 THEN NEW.size ELSE 0 END,
+          totalSpecialCountNewest   =totalSpecialCountNewest  +CASE WHEN NEW.type==9 THEN 1        ELSE 0 END
       WHERE storage.id=NEW.storageId;
-//    insert into log values(printf('after start update entriesNewest %%d',(SELECT totalEntryCountNewest FROM storage WHERE id=NEW.storageId)));
+//insert into log values(printf('after start update entriesNewest %%d',(SELECT totalEntryCountNewest FROM storage WHERE id=NEW.storageId)));
 
     // update count/size in parent entries
 //    UPDATE entries
@@ -511,6 +567,11 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
           totalFileSize =totalFileSize +NEW.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
+    // update size in newest entry
+    UPDATE entriesNewest
+      SET size=NEW.size
+      WHERE entryId=NEW.entryId;
+
     // update count/size in parent directories
     UPDATE directoryEntries
       SET totalEntryCount=totalEntryCount+1,
@@ -521,7 +582,7 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
 
 CREATE TRIGGER BEFORE DELETE ON fileEntries
   BEGIN
-    // update count in storage
+    // update count/size in storage
     UPDATE storage
       SET totalEntrySize=totalEntrySize-OLD.fragmentSize,
           totalFileCount=totalFileCount-1,
@@ -747,6 +808,11 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
       SET totalImageCount=totalImageCount+1,
           totalImageSize =totalImageSize +NEW.blockSize*NEW.blockCount
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+
+    // update size in newest entry
+    UPDATE entriesNewest
+      SET size=NEW.size
+      WHERE entryId=NEW.entryId;
   END;
 
 CREATE TRIGGER BEFORE DELETE ON imageEntries
@@ -1266,6 +1332,11 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
           totalHardlinkCount=totalHardlinkCount+1,
           totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+
+    // update size in newest entry
+    UPDATE entriesNewest
+      SET size=NEW.size
+      WHERE entryId=NEW.entryId;
 
     // update count/size in parent directories
     UPDATE directoryEntries
