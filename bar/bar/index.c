@@ -443,63 +443,79 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 
 /***********************************************************************\
 * Name   : rebuildNewestInfo
-* Purpose: 
-* Input  : indexHandle - index handle
+* Purpose:
+* Input  : indexHandle     - index handle
+*          entryId         - index entry id
+*          storageId       - index storage id
+*          name            - name
+*          size            - size or 0
+*          timeLastChanged - time stamp last changed [s]
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors updateNewestInfo(IndexHandle *indexHandle, DatabaseId entryId, DatabaseId storageId, const char *name, uint64 size, uint64 timeLastChanged)
+LOCAL Errors updateNewestInfo(IndexHandle *indexHandle,
+                              DatabaseId  storageId,
+                              DatabaseId  entryId,
+                              IndexTypes  type,
+                              const char  *name,
+                              uint64      size,
+                              uint64      timeLastChanged
+                             )
 {
   Errors           error;
   DatabaseQueryHandle databaseQueryHandle;
   IndexQueryHandle indexQueryHandle;
+  DatabaseId       newestStorageId;
   DatabaseId       newestEntryId;
   uint64           newestSize;
   uint64           newestTimeLastChanged;
 
-  // get new entry data
-  
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,storageId);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,name);
+return ERROR_NONE;
+
   // get current newest entry data (if exists)
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT entryId,MAX(timeLastChanged) FROM entriesNewest2 \
-                              WHERE     storageId=%llu \
-                                    AND name=%'s \
+                           "SELECT storageId,entryId,size,MAX(timeLastChanged) \
+                              FROM entriesNewest \
+                              WHERE name=%'s \
                            ",
-                           storageId,
                            name
                           );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (error != ERROR_NONE)
   {
     return error;
   }
   if (!Database_getNextRow(&databaseQueryHandle,
-                           "%llu %llu",
+                           "%llu %llu %llu %llu",
+                           &newestStorageId,
                            &newestEntryId,
+                           &newestSize,
                            &newestTimeLastChanged
                           )
      )
   {
+    newestStorageId       = DATABASE_ID_NONE;
     newestEntryId         = DATABASE_ID_NONE;
+    newestSize            = 0LL;
     newestTimeLastChanged = 0LL;
   }
   Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // update newest entry data
-  if (timeLastChanged > newestTimeLastChanged)
+  if ((newestEntryId == DATABASE_ID_NONE) || (timeLastChanged >= newestTimeLastChanged))
   {
-    if (newestEntryId != NULL)
+    // update newest info
+    if (newestEntryId != DATABASE_ID_NONE)
     {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
-                               "UPDATE entriesNewest2 SET entryId=%llu,timeLastChanged=%llu WHERE id=%llu;",
+                               "UPDATE entriesNewest \
+                                 SET entryId=%llu,size=%llu,timeLastChanged=%llu \
+                                 WHERE id=%llu",
                                entryId,
+                               size,
                                timeLastChanged,
                                newestEntryId
                               );
@@ -508,20 +524,207 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
-                               "INSERT INTO entriesNewest2 (entryId,storageId,name,timeLastChanged) VALUES (%llu,%llu,%'s,%llu);",
+                               "INSERT INTO entriesNewest \
+                                   ( \
+                                    entryId, \
+                                    storageId, \
+                                    name, \
+                                    size, \
+                                    timeLastChanged \
+                                   ) \
+                                 VALUES \
+                                   ( \
+                                    %llu, \
+                                    %llu, \
+                                    %'s, \
+                                    %llu, \
+                                    %llu \
+                                   )",
                                entryId,
                                storageId,
                                name,
+                               size,
                                timeLastChanged
                               );
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // update newest counter/size
+    switch (type)
+    {
+      case INDEX_TYPE_FILE     :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest-1, \
+                                        totalEntrySizeNewest =totalEntrySizeNewest -%llu, \
+                                        totalFileCountNewest =totalFileCountNewest -1, \
+                                        totalFileSizeNewest  =totalFileSizeNewest  -%llu \
+                                    WHERE id=%llu \
+                                 ",
+                                 newestSize,
+                                 newestSize,
+                                 newestStorageId
+                                );
+        break;
+      case INDEX_TYPE_IMAGE    :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest-1, \
+                                        totalEntrySizeNewest =totalEntrySizeNewest -%llu, \
+                                        totalImageCountNewest=totalImageCountNewest-1, \
+                                        totalImageSizeNewest =totalImageSizeNewest -%llu \
+                                    WHERE id=%llu \
+                                 ",
+                                 newestSize,
+                                 newestSize,
+                                 newestStorageId
+                                );
+        break;
+      case INDEX_TYPE_DIRECTORY:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest-1 \
+                                    WHERE id=%llu \
+                                 ",
+                                 newestStorageId
+                                );
+        break;
+      case INDEX_TYPE_LINK     :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest-1 \
+                                    WHERE id=%llu \
+                                 ",
+                                 newestStorageId
+                                );
+        break;
+      case INDEX_TYPE_HARDLINK :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest   =totalEntryCountNewest   -1, \
+                                        totalEntrySizeNewest    =totalEntrySizeNewest    -%llu, \
+                                        totalHardlinkCountNewest=totalHardlinkCountNewest-1, \
+                                        totalHardlinkSizeNewest =totalHardlinkSizeNewest -%llu \
+                                    WHERE id=%llu \
+                                 ",
+                                 newestSize,
+                                 newestSize,
+                                 newestStorageId
+                                );
+        break;
+      case INDEX_TYPE_SPECIAL  :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest-1 \
+                                    WHERE id=%llu \
+                                 ",
+                                 newestStorageId
+                                );
+        break;
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    }
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+//if (size > 0) fprintf(stderr,"%s, %d: sub %llu add %llu \n",__FILE__,__LINE__,newestSize,size);
+    switch (type)
+    {
+      case INDEX_TYPE_FILE     :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest+1, \
+                                        totalEntrySizeNewest =totalEntrySizeNewest +%llu, \
+                                        totalFileCountNewest =totalFileCountNewest +1, \
+                                        totalFileSizeNewest  =totalFileSizeNewest  +%llu \
+                                    WHERE id=%llu \
+                                 ",
+                                 size,
+                                 size,
+                                 storageId
+                                );
+        break;
+      case INDEX_TYPE_IMAGE    :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest+1, \
+                                        totalEntrySizeNewest =totalEntrySizeNewest +%llu, \
+                                        totalImageCountNewest=totalImageCountNewest+1, \
+                                        totalImageSizeNewest =totalImageSizeNewest +%llu \
+                                    WHERE id=%llu \
+                                 ",
+                                 size,
+                                 size,
+                                 storageId
+                                );
+        break;
+      case INDEX_TYPE_DIRECTORY:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                    WHERE id=%llu \
+                                 ",
+                                 storageId
+                                );
+        break;
+      case INDEX_TYPE_LINK     :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                    WHERE id=%llu \
+                                 ",
+                                 storageId
+                                );
+        break;
+      case INDEX_TYPE_HARDLINK :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest   =totalEntryCountNewest   +1, \
+                                        totalEntrySizeNewest    =totalEntrySizeNewest    +%llu, \
+                                        totalHardlinkCountNewest=totalHardlinkCountNewest+1, \
+                                        totalHardlinkSizeNewest =totalHardlinkSizeNewest +%llu \
+                                    WHERE id=%llu \
+                                 ",
+                                 size,
+                                 size,
+                                 storageId
+                                );
+        break;
+      case INDEX_TYPE_SPECIAL  :
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                    SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                    WHERE id=%llu \
+                                 ",
+                                 storageId
+                                );
+        break;
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    }
     if (error != ERROR_NONE)
     {
       return error;
     }
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -1706,36 +1909,52 @@ Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            DatabaseId entryId;
+                                                                                           IndexTypes type;
+                                                                                           const char *name;
+                                                                                           uint64     timeLastChanged;
 
-                                                                                           entryId = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                                                           entryId         = Database_getTableColumnListInt64  (toColumnList,  "id",             DATABASE_ID_NONE);
+                                                                                           name            = Database_getTableColumnListCString(fromColumnList,"name",           NULL            );
+                                                                                           timeLastChanged = Database_getTableColumnListInt64  (fromColumnList,"timeLastChanged",0LL             );
 
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-                                                                                           updateNewestInfo(&newIndexHandle->databaseHandle,
-                                                                                                            toStorageId,
-                                                                                                            entryId,
-                                                                                                            Database_getTableColumnListCString(toColumnList,"name",NULL),
-                                                                                                            0LL,
-                                                                                                            Database_getTableColumnListInt64(toColumnList,"timeLastChanged",0LL)
-                                                                                                           );
-                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK(NULL,NULL),
-                                                                                                                   "INSERT INTO directoryEntries \
-                                                                                                                      ( \
-                                                                                                                       storageId, \
-                                                                                                                       entryId, \
-                                                                                                                       name \
-                                                                                                                      ) \
-                                                                                                                    VALUES \
-                                                                                                                      ( \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %'s \
-                                                                                                                      ); \
-                                                                                                                   ",
-                                                                                                                   toStorageId,
-                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListCString(toColumnList,"name",NULL)
-                                                                                                                  );
+                                                                                           error = updateNewestInfo(newIndexHandle,
+                                                                                                                    toStorageId,
+                                                                                                                    entryId,
+                                                                                                                    INDEX_TYPE_DIRECTORY,
+                                                                                                                    name,
+                                                                                                                    0LL,  // size
+                                                                                                                    timeLastChanged
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+
+                                                                                           error = Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                    CALLBACK(NULL,NULL),
+                                                                                                                    "INSERT INTO directoryEntries \
+                                                                                                                       ( \
+                                                                                                                        storageId, \
+                                                                                                                        entryId, \
+                                                                                                                        name \
+                                                                                                                       ) \
+                                                                                                                     VALUES \
+                                                                                                                       ( \
+                                                                                                                        %llu, \
+                                                                                                                        %llu, \
+                                                                                                                        %'s \
+                                                                                                                       ); \
+                                                                                                                    ",
+                                                                                                                    toStorageId,
+                                                                                                                    entryId,
+                                                                                                                    name
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+
+                                                                                           return ERROR_NONE;
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
@@ -1771,28 +1990,61 @@ Database_getTableColumnListInt64(fromColumnList,"size",0)
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK(NULL,NULL),
-                                                                                                                   "INSERT INTO fileEntries \
-                                                                                                                      ( \
-                                                                                                                       entryId, \
-                                                                                                                       size, \
-                                                                                                                       fragmentOffset, \
-                                                                                                                       fragmentSize \
-                                                                                                                      ) \
-                                                                                                                    VALUES \
-                                                                                                                      ( \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu \
-                                                                                                                      ); \
-                                                                                                                   ",
-                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
-                                                                                                                  );
+                                                                                           DatabaseId entryId;
+                                                                                           const char *name;
+                                                                                           uint64     size;
+                                                                                           uint64     timeLastChanged;
+                                                                                           uint64     fragmentOffset;
+                                                                                           uint64     fragmentSize;
+
+                                                                                           entryId         = Database_getTableColumnListInt64  (toColumnList,  "id",             DATABASE_ID_NONE);
+                                                                                           name            = Database_getTableColumnListCString(fromColumnList,"name",           NULL            );
+                                                                                           size            = Database_getTableColumnListInt64  (fromColumnList,"size",           0LL             );
+                                                                                           timeLastChanged = Database_getTableColumnListInt64  (fromColumnList,"timeLastChanged",0LL             );
+                                                                                           fragmentOffset  = Database_getTableColumnListInt64  (fromColumnList,"fragmentOffset", 0LL             );
+                                                                                           fragmentSize    = Database_getTableColumnListInt64  (fromColumnList,"fragmentSize",   0LL             );
+
+                                                                                           error = updateNewestInfo(newIndexHandle,
+                                                                                                                    toStorageId,
+                                                                                                                    entryId,
+                                                                                                                    INDEX_TYPE_FILE,
+                                                                                                                    name,
+                                                                                                                    size,
+                                                                                                                    timeLastChanged
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+
+                                                                                           error = Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                    CALLBACK(NULL,NULL),
+                                                                                                                    "INSERT INTO fileEntries \
+                                                                                                                       ( \
+                                                                                                                        entryId, \
+                                                                                                                        size, \
+                                                                                                                        fragmentOffset, \
+                                                                                                                        fragmentSize \
+                                                                                                                       ) \
+                                                                                                                     VALUES \
+                                                                                                                       ( \
+                                                                                                                        %llu, \
+                                                                                                                        %llu, \
+                                                                                                                        %llu, \
+                                                                                                                        %llu \
+                                                                                                                       ); \
+                                                                                                                    ",
+                                                                                                                    entryId,
+                                                                                                                    size,
+                                                                                                                    fragmentOffset,
+                                                                                                                    fragmentSize
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+
+                                                                                           return ERROR_NONE;
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
@@ -2481,6 +2733,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                                                                            updateNewestInfo(newIndexHandle,
                                                                                                             toStorageId,
                                                                                                             entryId,
+                                                                                                            INDEX_TYPE_DIRECTORY,
                                                                                                             Database_getTableColumnListCString(toColumnList,"name",NULL),
                                                                                                             0LL,
                                                                                                             Database_getTableColumnListInt64(toColumnList,"timeLastChanged",0LL)
@@ -3938,7 +4191,7 @@ return ERROR_NONE;
 
 /***********************************************************************\
 * Name   : rebuildNewestInfo
-* Purpose: 
+* Purpose:
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -3953,7 +4206,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
   String           name;
   uint64           size;
   uint64           timeModified;
-  
+
 
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
@@ -7079,6 +7332,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
     {
       String_setCString(filter,"1");
+Database_debugEnable(1);
       if (String_isEmpty(pattern) && (entryIdCount == 0))
       {
         filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
@@ -7127,6 +7381,7 @@ if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
         Database_finalize(&databaseQueryHandle);
       }
+Database_debugEnable(0);
     }
   }
 
