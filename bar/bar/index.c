@@ -442,6 +442,91 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 }
 
 /***********************************************************************\
+* Name   : rebuildNewestInfo
+* Purpose: 
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors updateNewestInfo(IndexHandle *indexHandle, DatabaseId entryId, DatabaseId storageId, const char *name, uint64 size, uint64 timeLastChanged)
+{
+  Errors           error;
+  DatabaseQueryHandle databaseQueryHandle;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       newestEntryId;
+  uint64           newestSize;
+  uint64           newestTimeLastChanged;
+
+  // get new entry data
+  
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,storageId);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,name);
+  // get current newest entry data (if exists)
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT entryId,MAX(timeLastChanged) FROM entriesNewest2 \
+                              WHERE     storageId=%llu \
+                                    AND name=%'s \
+                           ",
+                           storageId,
+                           name
+                          );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%llu %llu",
+                           &newestEntryId,
+                           &newestTimeLastChanged
+                          )
+     )
+  {
+    newestEntryId         = DATABASE_ID_NONE;
+    newestTimeLastChanged = 0LL;
+  }
+  Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  // update newest entry data
+  if (timeLastChanged > newestTimeLastChanged)
+  {
+    if (newestEntryId != NULL)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "UPDATE entriesNewest2 SET entryId=%llu,timeLastChanged=%llu WHERE id=%llu;",
+                               entryId,
+                               timeLastChanged,
+                               newestEntryId
+                              );
+    }
+    else
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "INSERT INTO entriesNewest2 (entryId,storageId,name,timeLastChanged) VALUES (%llu,%llu,%'s,%llu);",
+                               entryId,
+                               storageId,
+                               name,
+                               timeLastChanged
+                              );
+    }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : upgradeFromVersion1
 * Purpose: upgrade index from version 1 to current version
 * Input  : oldIndexHandle,newIndexHandle - index handle
@@ -1529,7 +1614,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
   error = ERROR_NONE;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n",__FILE__,__LINE__);
   // fix possible broken ids
   fixBrokenIds(oldIndexHandle,"storage");
   fixBrokenIds(oldIndexHandle,"directories");
@@ -1620,6 +1705,18 @@ Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
+                                                                                           DatabaseId entryId;
+
+                                                                                           entryId = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+                                                                                           updateNewestInfo(&newIndexHandle->databaseHandle,
+                                                                                                            toStorageId,
+                                                                                                            entryId,
+                                                                                                            Database_getTableColumnListCString(toColumnList,"name",NULL),
+                                                                                                            0LL,
+                                                                                                            Database_getTableColumnListInt64(toColumnList,"timeLastChanged",0LL)
+                                                                                                           );
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO directoryEntries \
@@ -2376,6 +2473,19 @@ fprintf(stderr,"%s, %d: dir\n",__FILE__,__LINE__);
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
+                                                                                           DatabaseId entryId;
+
+                                                                                           entryId = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+                                                                                           updateNewestInfo(newIndexHandle,
+                                                                                                            toStorageId,
+                                                                                                            entryId,
+                                                                                                            Database_getTableColumnListCString(toColumnList,"name",NULL),
+                                                                                                            0LL,
+                                                                                                            Database_getTableColumnListInt64(toColumnList,"timeLastChanged",0LL)
+                                                                                                           );
+
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO directoryEntries \
@@ -3824,6 +3934,66 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
 UNUSED_VARIABLE(indexHandle);
 return ERROR_NONE;
 #endif
+}
+
+/***********************************************************************\
+* Name   : rebuildNewestInfo
+* Purpose: 
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       entryId;
+  String           name;
+  uint64           size;
+  uint64           timeModified;
+  
+
+  error = Index_initListEntries(&indexQueryHandle,
+                                indexHandle,
+                                NULL,  // storageIds
+                                0,  // storageIdCount
+                                NULL,  // entryIds
+                                0,  // entryIdCount
+                                INDEX_TYPE_SET_ANY,
+                                NULL,  // entryPattern,
+                                0LL,
+                                INDEX_UNLIMITED
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  name = String_new();
+  while (Index_getNext(&indexQueryHandle,
+                       &entryId,
+                       NULL,  // storageName,
+                       NULL,  // storageDateTime,
+                       name,
+                       NULL,  // destinationName,
+                       NULL,  // fileSystemType,
+                       &size,
+                       &timeModified,
+                       NULL,  // userId,
+                       NULL,  // groupId,
+                       NULL,  // permission,
+                       NULL,  // fragmentOrBlockOffset,
+                       NULL   // fragmentOrBlockSize
+                      )
+        )
+  {
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,entryId);
+  }
+  String_delete(name);
+  Index_doneList(&indexQueryHandle);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\

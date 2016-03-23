@@ -353,6 +353,16 @@ CREATE INDEX ON entries (name);
 CREATE INDEX ON entries (type);
 
 // newest entries
+CREATE TABLE IF NOT EXISTS entriesNewest2(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER DEFAULT 0,
+  name            TEXT UNIQUE NOT NULL,
+  timeLastChanged INTEGER DEFAULT 0,
+  entryId         INTEGER DEFAULT 0,
+
+  FOREIGN KEY(entryId) REFERENCES entries(id)
+);
+
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
   name            TEXT UNIQUE NOT NULL,
