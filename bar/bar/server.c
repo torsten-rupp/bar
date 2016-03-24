@@ -16195,6 +16195,7 @@ fprintf(stderr,"%s, %d: Array_length(&clientInfo->storageIdArray)=%d\n",__FILE__
                                 0,  // entryIdCount
                                 indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
                                 entryPatternString,
+                                newestEntriesOnly,
                                 offset,
                                 limit
                                );
@@ -16226,7 +16227,8 @@ fprintf(stderr,"%s, %d: Array_length(&clientInfo->storageIdArray)=%d\n",__FILE__
                          )
         )
   {
-    if (newestEntriesOnly)
+//TODO
+    if (0&&newestEntriesOnly)
     {
       // find/allocate index node
       indexNode = findIndexEntryNode(&indexList,indexId,name);
