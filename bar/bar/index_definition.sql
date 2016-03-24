@@ -410,8 +410,7 @@ CREATE TRIGGER BEFORE DELETE ON entries
     DELETE FROM entriesNewest WHERE entryId=OLD.entryId;
     INSERT OR IGNORE INTO entriesNewest
         (storageId,name,type,timeLastChanged,entryId)
-      VALUES
-        (SELECT storageId,name,type,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.entryId AND name=OLD.name);
+      SELECT storageId,name,type,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.entryId AND name=OLD.name;
 
     // update FTS
     DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
@@ -569,7 +568,7 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
 
     // update size in newest entry
     UPDATE entriesNewest
-      SET size=NEW.size
+      SET size=NEW.fragmentSize
       WHERE entryId=NEW.entryId;
 
     // update count/size in parent directories
@@ -811,7 +810,7 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
 
     // update size in newest entry
     UPDATE entriesNewest
-      SET size=NEW.size
+      SET size=NEW.blockSize*NEW.blockCount
       WHERE entryId=NEW.entryId;
   END;
 
@@ -1335,7 +1334,7 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
 
     // update size in newest entry
     UPDATE entriesNewest
-      SET size=NEW.size
+      SET size=NEW.fragmentSize
       WHERE entryId=NEW.entryId;
 
     // update count/size in parent directories
