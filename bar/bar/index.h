@@ -927,18 +927,19 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 /***********************************************************************\
 * Name   : Index_initListEntries
 * Purpose: list entries
-* Input  : indexQueryHandle - index query handle variable
-*          indexHandle      - index handle
-*          storageIds       - storage ids or NULL
-*          storageIdCount   - storage id count or 0
-*          entryIds         - entry ids or NULL
-*          entryIdCount     - entry id count or 0
-*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
-*          pattern          - name pattern (glob, can be NULL)
-*          offset           - offset or 0
-*          limit            - numer of entries to list or
-*                             INDEX_UNLIMITED
-* Output : indexQueryHandle - index query handle
+* Input  : indexQueryHandle  - index query handle variable
+*          indexHandle       - index handle
+*          storageIds        - storage ids or NULL
+*          storageIdCount    - storage id count or 0
+*          entryIds          - entry ids or NULL
+*          entryIdCount      - entry id count or 0
+*          indexTypeSet      - index type set or INDEX_TYPE_SET_ANY
+*          pattern           - name pattern (glob, can be NULL)
+*          newestEntriesOnly - TRUE for newest entries only
+*          offset            - offset or 0
+*          limit             - numer of entries to list or
+*                              INDEX_UNLIMITED
+* Output : indexQueryHandle  - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -951,6 +952,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              ConstString      pattern,
+                             bool             newestEntriesOnly,
                              uint64           offset,
                              uint64           limit
                             );

@@ -441,6 +441,8 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
                         );
 }
 
+#if 0
+TODO obsolete
 /***********************************************************************\
 * Name   : rebuildNewestInfo
 * Purpose:
@@ -728,6 +730,7 @@ return ERROR_NONE;
 
   return ERROR_NONE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : upgradeFromVersion1
@@ -794,7 +797,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
-                                                            "directories",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -838,7 +841,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
-                                                            "files",
+                                                            "entries",
                                                             TRUE,
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
@@ -1917,6 +1920,7 @@ Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                            name            = Database_getTableColumnListCString(fromColumnList,"name",           NULL            );
                                                                                            timeLastChanged = Database_getTableColumnListInt64  (fromColumnList,"timeLastChanged",0LL             );
 
+#if 0
                                                                                            error = updateNewestInfo(newIndexHandle,
                                                                                                                     toStorageId,
                                                                                                                     entryId,
@@ -1929,7 +1933,7 @@ Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                            {
                                                                                              return error;
                                                                                            }
-
+#endif
                                                                                            error = Database_execute(&newIndexHandle->databaseHandle,
                                                                                                                     CALLBACK(NULL,NULL),
                                                                                                                     "INSERT INTO directoryEntries \
@@ -2004,6 +2008,7 @@ Database_getTableColumnListInt64(fromColumnList,"size",0)
                                                                                            fragmentOffset  = Database_getTableColumnListInt64  (fromColumnList,"fragmentOffset", 0LL             );
                                                                                            fragmentSize    = Database_getTableColumnListInt64  (fromColumnList,"fragmentSize",   0LL             );
 
+#if 0
                                                                                            error = updateNewestInfo(newIndexHandle,
                                                                                                                     toStorageId,
                                                                                                                     entryId,
@@ -2016,6 +2021,7 @@ Database_getTableColumnListInt64(fromColumnList,"size",0)
                                                                                            {
                                                                                              return error;
                                                                                            }
+#endif
 
                                                                                            error = Database_execute(&newIndexHandle->databaseHandle,
                                                                                                                     CALLBACK(NULL,NULL),
@@ -2729,6 +2735,7 @@ fprintf(stderr,"%s, %d: dir\n",__FILE__,__LINE__);
 
                                                                                            entryId = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
 
+#if 0
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                                                                            updateNewestInfo(newIndexHandle,
                                                                                                             toStorageId,
@@ -2738,6 +2745,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                                                                                             0LL,
                                                                                                             Database_getTableColumnListInt64(toColumnList,"timeLastChanged",0LL)
                                                                                                            );
+#endif
 
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
                                                                                                                    CALLBACK(NULL,NULL),
@@ -4216,6 +4224,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0,  // entryIdCount
                                 INDEX_TYPE_SET_ANY,
                                 NULL,  // entryPattern,
+                                FALSE,  // newestEntriesOnly
                                 0LL,
                                 INDEX_UNLIMITED
                                );
@@ -7250,10 +7259,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   String              ftsString;
   String              regexpString;
   String              storageIdsString;
+  String              entryIdsString;
   String              fileIdsString,imageIdsString,directoryIdsString,linkIdsString,hardlinkIdsString,specialIdsString;
   uint                i;
   String              filter;
-  ulong               count_;
+  String              indexTypeSetString;
+  double              count_;
   double              size_;
 
   assert(indexHandle != NULL);
@@ -7283,6 +7294,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     if (i > 0) String_appendChar(storageIdsString,',');
     String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
+  entryIdsString     = String_new();
   fileIdsString      = String_new();
   imageIdsString     = String_new();
   directoryIdsString = String_new();
@@ -7291,6 +7303,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   specialIdsString   = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
+    if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+    String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+
     switch (Index_getType(entryIds[i]))
     {
       case INDEX_TYPE_FILE:
@@ -7323,9 +7338,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     }
   }
 
-  error  = ERROR_NONE;
-  filter = String_new();
+  error              = ERROR_NONE;
+  filter             = String_new();
+  indexTypeSetString = String_new();
 
+#if 0
   // files
   if (error == ERROR_NONE)
   {
@@ -7358,9 +7375,11 @@ Database_debugEnable(1);
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(id),TOTAL(size) \
                                     FROM %s \
-                                    WHERE %s \
+                                      LEFT JOIN fileEntries ON fileEntries.entryId=%s.entryId
+                                    WHERE     type=5 \
+                                          AND %s \
                                  ",
-                                 newestEntriesOnly ? "filesNewest" : "files",
+                                 newestEntriesOnly ? "entriesNewest" : "entries",
                                  String_cString(filter)
                                 );
 //Database_debugEnable(0);
@@ -7656,9 +7675,215 @@ if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
     }
   }
+#else
+  if (String_isEmpty(pattern) && (entryIdCount == 0))
+  {
+    // not pattern/entries selected
+    IndexTypes indexType;
+
+    String_setCString(filter,"1");
+    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
+
+    if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
+    {
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT TOTAL(%s),TOTAL(%s) \
+                                  FROM storage \
+                                  WHERE %S \
+                               ",
+                               newestEntriesOnly ? "totalFileCountNewest" : "totalFileCount",
+                               newestEntriesOnly ? "totalFileSizeNewest" : "totalFileSize",
+                               filter
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (Database_getNextRow(&databaseQueryHandle,
+                                "%lf %lf",
+                                &count_,
+                                &size_
+                               )
+           )
+        {
+          if (count != NULL) (*count) += (uint64)count_;
+          if (size != NULL) (*size) += (uint64)size_;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+    }
+    if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
+    {
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT TOTAL(%s),TOTAL(%s) \
+                                  FROM storage \
+                                  WHERE %S \
+                               ",
+                               newestEntriesOnly ? "totalImageCountNewest" : "totalImageCount",
+                               newestEntriesOnly ? "totalImageSizeNewest" : "totalImageSize",
+                               filter
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (Database_getNextRow(&databaseQueryHandle,
+                                "%lf %lf",
+                                &count_,
+                                &size_
+                               )
+           )
+        {
+          if (count != NULL) (*count) += (uint64)count_;
+          if (size != NULL) (*size) += (uint64)size_;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+    }
+    if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
+    {
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT TOTAL(%s) \
+                                  FROM storage \
+                                  WHERE %S \
+                               ",
+                               newestEntriesOnly ? "totalDirectoryCountNewest" : "totalDirectoryCount",
+                               filter
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (Database_getNextRow(&databaseQueryHandle,
+                                "%lf",
+                                &count_
+                               )
+           )
+        {
+          if (count != NULL) (*count) += (uint64)count_;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+    }
+    if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
+    {
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT TOTAL(%s) \
+                                  FROM storage \
+                                  WHERE %S \
+                               ",
+                               newestEntriesOnly ? "totalLinkCountNewest" : "totalLinkCount",
+                               filter
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (Database_getNextRow(&databaseQueryHandle,
+                                "%lf",
+                                &count_
+                               )
+           )
+        {
+          if (count != NULL) (*count) += (uint64)count_;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+    }
+    if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
+    {
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT TOTAL(%s),TOTAL(%s) \
+                                  FROM storage \
+                                  WHERE %S \
+                               ",
+                               newestEntriesOnly ? "totalHardlinkCountNewest" : "totalHardlinkCount",
+                               newestEntriesOnly ? "totalHardlinkSizeNewest" : "totalHardlinkSize",
+                               filter
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (Database_getNextRow(&databaseQueryHandle,
+                                "%lf %lf",
+                                &count_,
+                                &size_
+                               )
+           )
+        {
+          if (count != NULL) (*count) += (uint64)count_;
+          if (size != NULL) (*size) += (uint64)size_;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+    }
+    if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
+    {
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT TOTAL(%s) \
+                                  FROM storage \
+                                  WHERE %S \
+                               ",
+                               newestEntriesOnly ? "totalSpecialCountNewest" : "totalSpecialCount",
+                               filter
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (Database_getNextRow(&databaseQueryHandle,
+                                "%lf",
+                                &count_
+                               )
+           )
+        {
+          if (count != NULL) (*count) += (uint64)count_;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+    }
+  }
+  else
+  {
+    // pattern/entries selected
+
+fprintf(stderr,"%s, %d: ---------------------------------\n",__FILE__,__LINE__);
+    String_setCString(filter,"1");
+    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
+    filterAppend(filter,!String_isEmpty(pattern),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestEntriesOnly ? "entryId" : "id",ftsString);
+//        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
+    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+
+Database_lock(&indexHandle->databaseHandle);
+Database_debugEnable(1);
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(id),TOTAL(size) \
+                                FROM %s \
+                                WHERE     %S \
+                                      AND type IN (%S) \
+                             ",
+                             newestEntriesOnly ? "entriesNewest" : "entries",
+                             filter,
+                             getIndexTypeSetString(indexTypeSetString,indexTypeSet)
+                            );
+      if (error == ERROR_NONE)
+      {
+        if (Database_getNextRow(&databaseQueryHandle,
+                                "%lf %lf",
+                                &count_,
+                                &size_
+                               )
+           )
+        {
+          if (count != NULL) (*count) += (uint64)count_;
+          if (size != NULL) (*size) += (uint64)size_;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+Database_debugEnable(0);
+Database_unlock(&indexHandle->databaseHandle);
+  }
+#endif
 //Database_debugEnable(0);
 
   // free resources
+  String_delete(indexTypeSetString);
   String_delete(filter);
   String_delete(specialIdsString);
   String_delete(hardlinkIdsString);
@@ -7666,9 +7891,11 @@ if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   String_delete(directoryIdsString);
   String_delete(imageIdsString);
   String_delete(fileIdsString);
+  String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpString);
   String_delete(ftsString);
+fprintf(stderr,"%s, _____%d: %llu %llu\n",__FILE__,__LINE__,*size,*count);
 
   return error;
 }
@@ -7681,6 +7908,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              ConstString      pattern,
+                             bool             newestEntriesOnly,
                              uint64           offset,
                              uint64           limit
                             )
@@ -7734,45 +7962,92 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   indexTypeSetString = String_new();
+//Database_debugEnable(1);
+Database_lock(&indexHandle->databaseHandle);
 Database_debugEnable(1);
-  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT entries.id, \
-                                   storage.name, \
-                                   STRFTIME('%%s',storage.created), \
-                                   entries.type, \
-                                   entries.name, \
-                                   entries.timeModified, \
-                                   entries.userId, \
-                                   entries.groupId, \
-                                   entries.permission, \
-                                   fileEntries.size, \
-                                   fileEntries.fragmentOffset, \
-                                   fileEntries.fragmentSize, \
-                                   imageEntries.size, \
-                                   imageEntries.fileSystemType, \
-                                   imageEntries.blockSize, \
-                                   imageEntries.blockOffset, \
-                                   imageEntries.blockCount, \
-                                   linkEntries.destinationName, \
-                                   hardlinkEntries.size \
-                            FROM entries \
-                              LEFT JOIN storage ON storage.id=entries.storageId \
-                              LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
-                              LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
-                              LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
-                              LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
-                            WHERE     %S \
-                                  AND entries.type IN (%S) \
-                            ORDER BY entries.name \
-                            LIMIT %llu,%llu; \
-                           ",
-                           filter,
-                           getIndexTypeSetString(indexTypeSetString,indexTypeSet),
-                           offset,
-                           limit
-                          );
+  if (newestEntriesOnly)
+  {
+    error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT entries.id, \
+                                     storage.name, \
+                                     STRFTIME('%%s',storage.created), \
+                                     entries.type, \
+                                     entries.name, \
+                                     entries.timeModified, \
+                                     entries.userId, \
+                                     entries.groupId, \
+                                     entries.permission, \
+                                     fileEntries.size, \
+                                     fileEntries.fragmentOffset, \
+                                     fileEntries.fragmentSize, \
+                                     imageEntries.size, \
+                                     imageEntries.fileSystemType, \
+                                     imageEntries.blockSize, \
+                                     imageEntries.blockOffset, \
+                                     imageEntries.blockCount, \
+                                     linkEntries.destinationName, \
+                                     hardlinkEntries.size \
+                              FROM entriesNewest \
+                                LEFT JOIN entries ON entries.id=entriesNewest.entryId \
+                                LEFT JOIN storage ON storage.id=entries.storageId \
+                                LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                                LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                              WHERE     %S \
+                                    AND entriesNewest.type IN (%S) \
+                              ORDER BY entriesNewest.name \
+                              LIMIT %llu,%llu; \
+                             ",
+                             filter,
+                             getIndexTypeSetString(indexTypeSetString,indexTypeSet),
+                             offset,
+                             limit
+                            );
+  }
+  else
+  {
+    error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT entries.id, \
+                                     storage.name, \
+                                     STRFTIME('%%s',storage.created), \
+                                     entries.type, \
+                                     entries.name, \
+                                     entries.timeModified, \
+                                     entries.userId, \
+                                     entries.groupId, \
+                                     entries.permission, \
+                                     fileEntries.size, \
+                                     fileEntries.fragmentOffset, \
+                                     fileEntries.fragmentSize, \
+                                     imageEntries.size, \
+                                     imageEntries.fileSystemType, \
+                                     imageEntries.blockSize, \
+                                     imageEntries.blockOffset, \
+                                     imageEntries.blockCount, \
+                                     linkEntries.destinationName, \
+                                     hardlinkEntries.size \
+                              FROM entries \
+                                LEFT JOIN storage ON storage.id=entries.storageId \
+                                LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                                LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                              WHERE     %S \
+                                    AND entries.type IN (%S) \
+                              ORDER BY entries.name \
+                              LIMIT %llu,%llu; \
+                             ",
+                             filter,
+                             getIndexTypeSetString(indexTypeSetString,indexTypeSet),
+                             offset,
+                             limit
+                            );
+  }
 Database_debugEnable(0);
+Database_unlock(&indexHandle->databaseHandle);
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
