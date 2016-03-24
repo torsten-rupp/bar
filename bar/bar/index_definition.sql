@@ -340,32 +340,29 @@ CREATE TABLE IF NOT EXISTS entries(
   permission            INTEGER,
 
   // updated by triggers
-//  totalEntryCount       INTEGER DEFAULT 0,  // total number of entries
-//  totalEntrySize        INTEGER DEFAULT 0,  // total size of entries [bytes]
-
-//  totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest entries
-//  totalEntrySizeNewest  INTEGER DEFAULT 0,  // total size of newest entries [bytes]
+  offset                INTEGER DEFAULT 0,  // Note: redundancy for faster access
+  size                  INTEGER DEFAULT 0,  // Note: redundancy for faster access
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
 CREATE INDEX ON entries (storageId,name);
 CREATE INDEX ON entries (name);
-CREATE INDEX ON entries (type);
+CREATE INDEX ON entries (type,name);
 
 // newest entries
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER DEFAULT 0,
+  storageId       INTEGER DEFAULT 0,       // Note: redundancy for faster access
   name            TEXT UNIQUE NOT NULL,
-  type            INTEGER DEFAULT 0,
-  size            INTEGER DEFAULT 0,
-  timeLastChanged INTEGER DEFAULT 0,
-  entryId         INTEGER DEFAULT 0
-  //,
-
+  type            INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  timeLastChanged INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  entryId         INTEGER DEFAULT 0,
+  offset          INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  size            INTEGER DEFAULT 0        // Note: redundancy for faster access
 //  FOREIGN KEY(entryId) REFERENCES entries(id)
 );
 CREATE INDEX ON entriesNewest (name);
+CREATE INDEX ON entriesNewest (type,name);
 CREATE INDEX ON entriesNewest (entryId);
 
 // full-text-search
@@ -391,6 +388,7 @@ CREATE TRIGGER AFTER INSERT ON entries
       SET storageId=NEW.storageId,
           entryId=NEW.id,
           type=NEW.type,
+          size=NEW.size,
           timeLastChanged=NEW.timeLastChanged
       WHERE     name=NEW.name
             AND timeLastChanged<NEW.timeLastChanged;
@@ -409,8 +407,8 @@ CREATE TRIGGER BEFORE DELETE ON entries
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.entryId;
     INSERT OR IGNORE INTO entriesNewest
-        (storageId,name,type,timeLastChanged,entryId)
-      SELECT storageId,name,type,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.entryId AND name=OLD.name;
+        (storageId,name,type,size,timeLastChanged,entryId)
+      SELECT storageId,name,type,size,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.entryId AND name=OLD.name;
 
     // update FTS
     DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
@@ -566,9 +564,14 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
           totalFileSize =totalFileSize +NEW.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
-    // update size in newest entry
+    // update offset/size in entries/newest entry
+    UPDATE entries
+      SET offset=NEW.fragmentOffset,
+          size  =NEW.fragmentSize
+      WHERE id=NEW.entryId;
     UPDATE entriesNewest
-      SET size=NEW.fragmentSize
+      SET offset=NEW.fragmentOffset,
+          size  =NEW.fragmentSize
       WHERE entryId=NEW.entryId;
 
     // update count/size in parent directories
@@ -808,9 +811,14 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
           totalImageSize =totalImageSize +NEW.blockSize*NEW.blockCount
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
-    // update size in newest entry
+    // update offset/size in newest entry
+    UPDATE entries
+      SET offset=NEW.blockOffset*NEW.blockSize,
+          size  =NEW.blockCount *NEW.blockSize
+      WHERE id=NEW.entryId;
     UPDATE entriesNewest
-      SET size=NEW.blockSize*NEW.blockCount
+      SET offset=NEW.blockOffset*NEW.blockSize,
+          size  =NEW.blockCount *NEW.blockSize
       WHERE entryId=NEW.entryId;
   END;
 
@@ -1332,9 +1340,14 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
           totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
-    // update size in newest entry
+    // update offset/size in entries
+    UPDATE entries
+      SET offset=NEW.fragmentOffset,
+          size  =NEW.fragmentSize
+      WHERE id=NEW.entryId;
     UPDATE entriesNewest
-      SET size=NEW.fragmentSize
+      SET offset=NEW.fragmentOffset,
+          size  =NEW.fragmentSize
       WHERE entryId=NEW.entryId;
 
     // update count/size in parent directories
