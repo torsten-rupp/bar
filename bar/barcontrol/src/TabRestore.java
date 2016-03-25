@@ -1861,10 +1861,10 @@ Dprintf.dprintf("cirrect?");
       synchronized(trigger)
       {
 //        if (!this.storagePattern.equals(storagePattern))
-//Note: at least 3 characters?
         if (   (this.storagePattern == null)
             || (storagePattern == null)
-            || ((storagePattern.length() >= 3) && !this.storagePattern.equals(storagePattern))
+//Note: at least 3 characters?
+            || (((storagePattern.length() == 0) || (storagePattern.length() >= 3)) && !this.storagePattern.equals(storagePattern))
            )
         {
           this.storagePattern     = storagePattern;
@@ -3561,10 +3561,10 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       synchronized(trigger)
       {
         // if ((this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern))
-//Note: at least 3 characters?
         if (   (this.entryPattern == null)
             || (entryPattern == null)
-            || ((entryPattern.length() >= 3) && !this.entryPattern.equals(entryPattern))
+//Note: at least 3 characters?
+            || (((entryPattern.length() == 0) || (entryPattern.length() >= 3)) && !this.entryPattern.equals(entryPattern))
            )
         {
           this.entryPattern       = entryPattern;
@@ -4948,7 +4948,10 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
           TableItem tableItem = (TableItem)event.item;
 
           int i = widgetStorageTable.indexOf(tableItem);
-          updateStorageTreeTableThread.triggerUpdate(i);
+          if (i >= 0)
+          {
+            updateStorageTreeTableThread.triggerUpdate(i);
+          }
         }
       });
       widgetStorageTable.addListener(SWT.MouseDoubleClick,new Listener()
@@ -5574,7 +5577,10 @@ Dprintf.dprintf("remove");
           TableItem tableItem = (TableItem)event.item;
 
           int i = widgetEntryTable.indexOf(tableItem);
-          updateEntryTableThread.triggerUpdateTableItem(i);
+          if (i >= 0)
+          {
+            updateEntryTableThread.triggerUpdateTableItem(i);
+          }
         }
       });
       widgetEntryTable.addListener(SWT.MouseDoubleClick,new Listener()
