@@ -294,7 +294,7 @@ typedef struct
   uint64           size;              // size of file [bytes]
   uint64           timeLastAccess;    // timestamp of last access
   uint64           timeModified;      // timestamp of last modification (changed content)
-  uint64           timeLastChanged;   // timestamp of last changed (changed meta-data)
+  uint64           timeLastChanged;   // timestamp of last changed (changed meta-data or content)
   uint32           userId;            // user id
   uint32           groupId;           // group id
   FilePermission   permission;        // permission flags
