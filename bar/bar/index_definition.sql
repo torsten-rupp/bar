@@ -353,10 +353,15 @@ CREATE INDEX ON entries (type,name);
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER DEFAULT 0,       // Note: redundancy for faster access
-  name            TEXT UNIQUE NOT NULL,
   type            INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  name            TEXT UNIQUE NOT NULL,
   timeLastChanged INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  userId          INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  groupId         INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  permission      INTEGER DEFAULT 0,       // Note: redundancy for faster access
+
   entryId         INTEGER DEFAULT 0,
+
   offset          INTEGER DEFAULT 0,       // Note: redundancy for faster access
   size            INTEGER DEFAULT 0        // Note: redundancy for faster access
 //  FOREIGN KEY(entryId) REFERENCES entries(id)
@@ -386,10 +391,15 @@ CREATE TRIGGER AFTER INSERT ON entries
       (name) VALUES (NEW.name);
     UPDATE entriesNewest
       SET storageId=NEW.storageId,
-          entryId=NEW.id,
           type=NEW.type,
           size=NEW.size,
-          timeLastChanged=NEW.timeLastChanged
+          timeLastChanged=NEW.timeLastChanged,
+          userId=NEW.userId,
+          groupId=NEW.groupId,
+          permission=NEW.permission,
+          entryId=NEW.id,
+          offset=NEW.offset,
+          size=NEW.size
       WHERE     name=NEW.name
             AND timeLastChanged<NEW.timeLastChanged;
 
@@ -564,7 +574,7 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
           totalFileSize =totalFileSize +NEW.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
-    // update offset/size in entries/newest entry
+    // update offset/size in entry/newest entry
     UPDATE entries
       SET offset=NEW.fragmentOffset,
           size  =NEW.fragmentSize
@@ -811,7 +821,7 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
           totalImageSize =totalImageSize +NEW.blockSize*NEW.blockCount
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
-    // update offset/size in newest entry
+    // update offset/size in entry/newest entry
     UPDATE entries
       SET offset=NEW.blockOffset*NEW.blockSize,
           size  =NEW.blockCount *NEW.blockSize
@@ -1340,7 +1350,7 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
           totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
-    // update offset/size in entries
+    // update offset/size in entry/newest entry
     UPDATE entries
       SET offset=NEW.fragmentOffset,
           size  =NEW.fragmentSize

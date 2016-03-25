@@ -1829,7 +1829,6 @@ fprintf(stderr,"%s, %d: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
   fixBrokenIds(oldIndexHandle,"links");
   fixBrokenIds(oldIndexHandle,"special");
 
-uint64 tx;
   // transfer entities with storage and entries
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
@@ -1885,7 +1884,6 @@ uint64 t0 = Misc_getTimestamp();
                                                             error = ERROR_NONE;
 
                                                             // Note: first directories to update totalEntryCount/totalEntrySize
-tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -1965,9 +1963,7 @@ Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                         );
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit(12); }
-fprintf(stderr,"%s, %d: copt dir %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
-tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -2057,9 +2053,7 @@ Database_getTableColumnListInt64(fromColumnList,"size",0)
                                                                                         );
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
-fprintf(stderr,"%s, %d: copt files %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
-tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -2113,9 +2107,7 @@ tx=Misc_getTimestamp();
                                                                                         );
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
-fprintf(stderr,"%s, %d: copt image %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
-tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -2157,9 +2149,7 @@ tx=Misc_getTimestamp();
                                                                                         );
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
-fprintf(stderr,"%s, %d: copt links %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
-tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -2207,9 +2197,7 @@ tx=Misc_getTimestamp();
                                                                                         );
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
-fprintf(stderr,"%s, %d: copt hardlinks %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
 
-tx=Misc_getTimestamp();
                                                             if (error == ERROR_NONE)
                                                             {
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -2257,9 +2245,6 @@ tx=Misc_getTimestamp();
                                                                                         );
                                                             }
 if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
-fprintf(stderr,"%s, %d: copt special %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-tx)/1000);
-uint64 t1 = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: copt storage total %llums\n\n",__FILE__,__LINE__,(t1-t0)/1000);
 
                                                             return error;
                                                           },NULL),
@@ -2736,7 +2721,6 @@ fprintf(stderr,"%s, %d: dir\n",__FILE__,__LINE__);
                                                                                            entryId = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
 
 #if 0
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                                                                            updateNewestInfo(newIndexHandle,
                                                                                                             toStorageId,
                                                                                                             entryId,
@@ -7260,7 +7244,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   String              regexpString;
   String              storageIdsString;
   String              entryIdsString;
-  String              fileIdsString,imageIdsString,directoryIdsString,linkIdsString,hardlinkIdsString,specialIdsString;
   uint                i;
   String              filter;
   String              indexTypeSetString;
@@ -7294,394 +7277,23 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     if (i > 0) String_appendChar(storageIdsString,',');
     String_format(storageIdsString,"%lld",Index_getDatabaseId(storageIds[i]));
   }
-  entryIdsString     = String_new();
-  fileIdsString      = String_new();
-  imageIdsString     = String_new();
-  directoryIdsString = String_new();
-  linkIdsString      = String_new();
-  hardlinkIdsString  = String_new();
-  specialIdsString   = String_new();
+  entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
     String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-
-    switch (Index_getType(entryIds[i]))
-    {
-      case INDEX_TYPE_FILE:
-        if (!String_isEmpty(fileIdsString)) String_appendChar(fileIdsString,',');
-        String_format(fileIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-        break;
-      case INDEX_TYPE_IMAGE:
-        if (!String_isEmpty(imageIdsString)) String_appendChar(imageIdsString,',');
-        String_format(imageIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-        break;
-      case INDEX_TYPE_DIRECTORY:
-        if (!String_isEmpty(directoryIdsString)) String_appendChar(directoryIdsString,',');
-        String_format(directoryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-        break;
-      case INDEX_TYPE_LINK:
-        if (!String_isEmpty(linkIdsString)) String_appendChar(linkIdsString,',');
-        String_format(linkIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-        break;
-      case INDEX_TYPE_HARDLINK:
-        if (!String_isEmpty(hardlinkIdsString)) String_appendChar(hardlinkIdsString,',');
-        String_format(hardlinkIdsString,"%lld",INDEX_DATABASE_ID_(entryIds[i]));
-        break;
-      case INDEX_TYPE_SPECIAL:
-        if (!String_isEmpty(specialIdsString)) String_appendChar(specialIdsString,',');
-        String_format(specialIdsString,"%ld",INDEX_DATABASE_ID_(entryIds[i]));
-        break;
-      default:
-        // ignore other types
-        break;
-    }
   }
 
   error              = ERROR_NONE;
-  filter             = String_new();
+  filter             = String_newCString("1");
   indexTypeSetString = String_new();
 
-#if 0
-  // files
-  if (error == ERROR_NONE)
-  {
-    if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
-    {
-      String_setCString(filter,"1");
-Database_debugEnable(1);
-      if (String_isEmpty(pattern) && (entryIdCount == 0))
-      {
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),TOTAL(%s) \
-                                    FROM storage \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "totalFileCountNewest" : "totalFileCount",
-                                 newestEntriesOnly ? "totalFileSizeNewest" : "totalFileSize",
-                                 String_cString(filter)
-                                );
-      }
-      else
-      {
 //Database_debugEnable(1);
-        filterAppend(filter,!String_isEmpty(pattern),"AND","files.id IN (SELECT fileId FROM FTS_files WHERE FTS_files MATCH %S)",ftsString);
-//        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,files.name)",regexpString);
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","files.storageId IN (%S)",storageIdsString);
-        filterAppend(filter,!String_isEmpty(fileIdsString),"AND","files.id IN (%S)",fileIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT COUNT(id),TOTAL(size) \
-                                    FROM %s \
-                                      LEFT JOIN fileEntries ON fileEntries.entryId=%s.entryId
-                                    WHERE     type=5 \
-                                          AND %s \
-                                 ",
-                                 newestEntriesOnly ? "entriesNewest" : "entries",
-                                 String_cString(filter)
-                                );
-//Database_debugEnable(0);
-      }
-if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      if (error == ERROR_NONE)
-      {
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lu %lf",
-                                &count_,
-                                &size_
-                               )
-           )
-        {
-//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
-          if (count != NULL) (*count) += count_;
-          if (size != NULL) (*size) += (uint64)size_;
-        }
-        Database_finalize(&databaseQueryHandle);
-      }
-Database_debugEnable(0);
-    }
-  }
-
-  // images
-  if (error == ERROR_NONE)
-  {
-    if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
-    {
-      String_setCString(filter,"1");
-      if (String_isEmpty(pattern) && (entryIdCount == 0))
-      {
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),TOTAL(%s) \
-                                    FROM storage \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "totalImageCountNewest" : "totalImageCount",
-                                 newestEntriesOnly ? "totalImageSizeNewest" : "totalImageSize",
-                                 String_cString(filter)
-                                );
-      }
-      else
-      {
-        filterAppend(filter,!String_isEmpty(pattern),"AND","images.id IN (SELECT imageId FROM FTS_images WHERE FTS_images MATCH %S)",ftsString);
-//        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,images.name)",regexpString);
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","images.storageId IN (%S)",storageIdsString);
-        filterAppend(filter,!String_isEmpty(fileIdsString),"AND","images.id IN (%S)",imageIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT COUNT(id),TOTAL(size) \
-                                    FROM %s \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "imagesNewest" : "images",
-                                 String_cString(filter)
-                                );
-      }
-if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      if (error == ERROR_NONE)
-      {
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lu %lf",
-                                &count_,
-                                &size_
-                               )
-           )
-        {
-//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
-          if (count != NULL) (*count) += count_;
-          if (size != NULL) (*size) += (uint64)size_;
-        }
-        Database_finalize(&databaseQueryHandle);
-      }
-    }
-  }
-
-  // directories
-  if (error == ERROR_NONE)
-  {
-    if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
-    {
-      String_setCString(filter,"1");
-      if (String_isEmpty(pattern) && (entryIdCount == 0))
-      {
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),0.0 \
-                                    FROM storage \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "totalDirectoryCountNewest" : "totalDirectoryCount",
-                                 String_cString(filter)
-                                );
-      }
-      else
-      {
-        filterAppend(filter,!String_isEmpty(pattern),"AND","directories.id IN (SELECT directoryId FROM FTS_directories WHERE FTS_directories MATCH %S)",ftsString);
-//        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,directories.name)",regexpString);
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","directories.storageId IN (%S)",storageIdsString);
-        filterAppend(filter,!String_isEmpty(fileIdsString),"AND","directories.id IN (%S)",directoryIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT COUNT(id),0.0 \
-                                    FROM %s \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "directoriesNewest" : "directories",
-                                 String_cString(filter)
-                                );
-      }
-if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      if (error == ERROR_NONE)
-      {
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lu %lf",
-                                &count_,
-                                &size_
-                               )
-           )
-        {
-//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
-          if (count != NULL) (*count) += count_;
-          if (size != NULL) (*size) += (uint64)size_;
-        }
-        Database_finalize(&databaseQueryHandle);
-      }
-    }
-  }
-
-  // links
-  if (error == ERROR_NONE)
-  {
-    if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
-    {
-      String_setCString(filter,"1");
-      if (String_isEmpty(pattern) && (entryIdCount == 0))
-      {
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),0.0 \
-                                    FROM storage \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "totalLinkCountNewest" : "totalLinkCount",
-                                 String_cString(filter)
-                                );
-      }
-      else
-      {
-        filterAppend(filter,!String_isEmpty(pattern),"AND","links.id IN (SELECT linkId FROM FTS_links WHERE FTS_links MATCH %S)",ftsString);
-//        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,links.name)",regexpString);
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","links.storageId IN (%S)",storageIdsString);
-        filterAppend(filter,!String_isEmpty(fileIdsString),"AND","links.id IN (%S)",linkIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT COUNT(id),0.0 \
-                                    FROM %s \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "linksNewest" : "links",
-                                 String_cString(filter)
-                                );
-      }
-if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      if (error == ERROR_NONE)
-      {
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lu %lf",
-                                &count_,
-                                &size_
-                               )
-           )
-        {
-//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
-          if (count != NULL) (*count) += count_;
-          if (size != NULL) (*size) += (uint64)size_;
-        }
-        Database_finalize(&databaseQueryHandle);
-      }
-    }
-  }
-
-  // hardlinks
-  if (error == ERROR_NONE)
-  {
-    if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
-    {
-      String_setCString(filter,"1");
-      if (String_isEmpty(pattern) && (entryIdCount == 0))
-      {
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),TOTAL(%s) \
-                                    FROM storage \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "totalHardlinkCountNewest" : "totalHardlinkCount",
-                                 newestEntriesOnly ? "totalHardlinkSizeNewest" : "totalHardlinkSize",
-                                 String_cString(filter)
-                                );
-      }
-      else
-      {
-        filterAppend(filter,!String_isEmpty(pattern),"AND","hardlinks.id IN (SELECT hardlinkId FROM FTS_hardlinks WHERE FTS_hardlinks MATCH %S)",ftsString);
-//        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,hardlinks.name)",regexpString);
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","hardlinks.storageId IN (%S)",storageIdsString);
-        filterAppend(filter,!String_isEmpty(fileIdsString),"AND","hardlinks.id IN (%S)",hardlinkIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT COUNT(id),TOTAL(size) \
-                                    FROM %s \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "hardlinksNewest" : "hardlinks",
-                                 String_cString(filter)
-                                );
-      }
-if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      if (error == ERROR_NONE)
-      {
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lu %lf",
-                                &count_,
-                                &size_
-                               )
-           )
-        {
-//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
-          if (count != NULL) (*count) += count_;
-          if (size != NULL) (*size) += (uint64)size_;
-        }
-        Database_finalize(&databaseQueryHandle);
-      }
-    }
-  }
-
-  // special
-  if (error == ERROR_NONE)
-  {
-    if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
-    {
-      String_setCString(filter,"1");
-      if (String_isEmpty(pattern) && (entryIdCount == 0))
-      {
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),0.0 \
-                                    FROM storage \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "totalSpecialCountNewest" : "totalSpecialCount",
-                                 String_cString(filter)
-                                );
-      }
-      else
-      {
-        filterAppend(filter,!String_isEmpty(pattern),"AND","special.id IN (SELECT specialId FROM FTS_special WHERE FTS_special MATCH %S)",ftsString);
-//        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,special.name)",regexpString);
-        filterAppend(filter,!String_isEmpty(storageIdsString),"AND","special.storageId IN (%S)",storageIdsString);
-        filterAppend(filter,!String_isEmpty(fileIdsString),"AND","special.id IN (%S)",specialIdsString);
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT COUNT(id),0.0 \
-                                    FROM %s \
-                                    WHERE %s \
-                                 ",
-                                 newestEntriesOnly ? "specialNewest" : "special",
-                                 String_cString(filter)
-                                );
-      }
-if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      if (error == ERROR_NONE)
-      {
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lu %lf",
-                                &count_,
-                                &size_
-                               )
-           )
-        {
-//fprintf(stderr,"%s, %d: %lu %lf\n",__FILE__,__LINE__,count_,size_);
-          if (count != NULL) (*count) += count_;
-          if (size != NULL) (*size) += (uint64)size_;
-        }
-        Database_finalize(&databaseQueryHandle);
-      }
-    }
-  }
-#else
   if (String_isEmpty(pattern) && (entryIdCount == 0))
   {
     // not pattern/entries selected
     IndexTypes indexType;
 
-    String_setCString(filter,"1");
     filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
 
     if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
@@ -7841,16 +7453,11 @@ if (error !=  ERROR_NONE) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   else
   {
     // pattern/entries selected
-
-fprintf(stderr,"%s, %d: ---------------------------------\n",__FILE__,__LINE__);
-    String_setCString(filter,"1");
-    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
+    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","storageId IN (%S)",storageIdsString);
     filterAppend(filter,!String_isEmpty(pattern),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestEntriesOnly ? "entryId" : "id",ftsString);
-//        filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
+//    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
     filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
-Database_lock(&indexHandle->databaseHandle);
-Database_debugEnable(1);
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(id),TOTAL(size) \
@@ -7876,26 +7483,16 @@ Database_debugEnable(1);
         }
         Database_finalize(&databaseQueryHandle);
       }
-Database_debugEnable(0);
-Database_unlock(&indexHandle->databaseHandle);
   }
-#endif
 //Database_debugEnable(0);
 
   // free resources
   String_delete(indexTypeSetString);
   String_delete(filter);
-  String_delete(specialIdsString);
-  String_delete(hardlinkIdsString);
-  String_delete(linkIdsString);
-  String_delete(directoryIdsString);
-  String_delete(imageIdsString);
-  String_delete(fileIdsString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpString);
   String_delete(ftsString);
-fprintf(stderr,"%s, _____%d: %llu %llu\n",__FILE__,__LINE__,*size,*count);
 
   return error;
 }
@@ -7954,30 +7551,31 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
 
-  // get filter
-  filter = String_newCString("1");
-  filterAppend(filter,!String_isEmpty(pattern),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsString);
-//    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
-//  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
-
   indexTypeSetString = String_new();
 //Database_debugEnable(1);
 Database_lock(&indexHandle->databaseHandle);
 Database_debugEnable(1);
+  filter = String_newCString("1");
   if (newestEntriesOnly)
   {
+    // get filter
+    filterAppend(filter,!String_isEmpty(pattern),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsString);
+//    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
+    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entriesNewest.storageId IN (%S)",storageIdsString);
+    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+    filterAppend(filter,TRUE,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+
     error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                              &indexHandle->databaseHandle,
-                             "SELECT entries.id, \
+                             "SELECT entriesNewest.entryId, \
                                      storage.name, \
                                      STRFTIME('%%s',storage.created), \
-                                     entries.type, \
-                                     entries.name, \
-                                     entries.timeModified, \
-                                     entries.userId, \
-                                     entries.groupId, \
-                                     entries.permission, \
+                                     entriesNewest.type, \
+                                     entriesNewest.name, \
+                                     entriesNewest.timeLastChanged, \
+                                     entriesNewest.userId, \
+                                     entriesNewest.groupId, \
+                                     entriesNewest.permission, \
                                      fileEntries.size, \
                                      fileEntries.fragmentOffset, \
                                      fileEntries.fragmentSize, \
@@ -7989,25 +7587,29 @@ Database_debugEnable(1);
                                      linkEntries.destinationName, \
                                      hardlinkEntries.size \
                               FROM entriesNewest \
-                                LEFT JOIN entries ON entries.id=entriesNewest.entryId \
-                                LEFT JOIN storage ON storage.id=entries.storageId \
-                                LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
-                                LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
-                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
-                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
-                              WHERE     %S \
-                                    AND entriesNewest.type IN (%S) \
+                                LEFT JOIN storage ON storage.id=entriesNewest.storageId \
+                                LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.entryId \
+                                LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.entryId \
+                                LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
+                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
+                              WHERE %S \
                               ORDER BY entriesNewest.name \
                               LIMIT %llu,%llu; \
                              ",
                              filter,
-                             getIndexTypeSetString(indexTypeSetString,indexTypeSet),
                              offset,
                              limit
                             );
   }
   else
   {
+    // get filter
+    filterAppend(filter,!String_isEmpty(pattern),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsString);
+//    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
+    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+    filterAppend(filter,TRUE,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+
     error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT entries.id, \
@@ -8015,7 +7617,7 @@ Database_debugEnable(1);
                                      STRFTIME('%%s',storage.created), \
                                      entries.type, \
                                      entries.name, \
-                                     entries.timeModified, \
+                                     entries.timeLastChanged, \
                                      entries.userId, \
                                      entries.groupId, \
                                      entries.permission, \
@@ -8035,13 +7637,11 @@ Database_debugEnable(1);
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
                                 LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
-                              WHERE     %S \
-                                    AND entries.type IN (%S) \
+                              WHERE %S \
                               ORDER BY entries.name \
                               LIMIT %llu,%llu; \
                              ",
                              filter,
-                             getIndexTypeSetString(indexTypeSetString,indexTypeSet),
                              offset,
                              limit
                             );
