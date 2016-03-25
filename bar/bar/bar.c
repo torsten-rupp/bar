@@ -858,7 +858,7 @@ const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] = CONFIG_VALUE_SET_ARRAY
   {"all",       LOG_TYPE_ALL                },
 );
 
-const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[] = CONFIG_VALUE_SET_ARRAY
+const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[] = CONFIG_VALUE_SELECT_ARRAY
 (
   {"stop",      ARCHIVE_FILE_MODE_STOP      },
   {"append",    ARCHIVE_FILE_MODE_APPEND    },
