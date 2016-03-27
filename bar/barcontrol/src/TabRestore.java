@@ -7742,7 +7742,6 @@ assert storagePattern != null;
             // set storage entries to restore
             setStorageList(indexIdSet);
 
-Dprintf.dprintf("+++++++++++++++++++++++");
             // start restore
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
@@ -7877,6 +7876,10 @@ Dprintf.dprintf("");
                                                                    }
                                                                  }
                                                                });
+                                                             }
+                                                             else
+                                                             {
+                                                               resultError[0] = Errors.NONE;
                                                              }
                                                              BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
                                                                                                           resultError[0]
@@ -8772,6 +8775,10 @@ Dprintf.dprintf("");
                                                                    }
                                                                  }
                                                                });
+                                                             }
+                                                             else
+                                                             {
+                                                               resultError[0] = Errors.NONE;
                                                              }
                                                              BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
                                                                                                           resultError[0]
