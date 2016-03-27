@@ -7541,9 +7541,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
 
   indexTypeSetString = String_new();
-//Database_debugEnable(1);
-Database_lock(&indexHandle->databaseHandle);
-Database_debugEnable(1);
   filter = String_newCString("1");
   if (newestEntriesOnly)
   {
@@ -7635,8 +7632,6 @@ Database_debugEnable(1);
                              limit
                             );
   }
-Database_debugEnable(0);
-Database_unlock(&indexHandle->databaseHandle);
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
