@@ -257,7 +257,7 @@ LOCAL bool StorageDevice_parseSpecifier(ConstString deviceSpecifier,
 
   String_clear(deviceName);
 
-  if (String_matchCString(deviceSpecifier,STRING_BEGIN,"^([^:]*):$",NULL,NULL,deviceName,NULL))
+  if (String_matchCString(deviceSpecifier,STRING_BEGIN,"^([^:]*):$",NULL,STRING_NO_ASSIGN,deviceName,NULL))
   {
     // <device name>
 

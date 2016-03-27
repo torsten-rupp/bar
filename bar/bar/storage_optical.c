@@ -294,7 +294,7 @@ LOCAL void executeIOmkisofs(ConstString line,
 
 //fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
-  if (String_matchCString(line,STRING_BEGIN,".* ([0-9\\.]+)% done.*",NULL,NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".* ([0-9\\.]+)% done.*",NULL,STRING_NO_ASSIGN,s,NULL))
   {
 //fprintf(stderr,"%s,%d: mkisofs: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
@@ -330,13 +330,13 @@ LOCAL void executeIOdvdisaster(ConstString line,
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   s = String_new();
-  if (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
   {
     p = String_toDouble(s,0,NULL,NULL,0);
     storageHandle->runningInfo.volumeProgress = ((double)(storageHandle->opticalDisk.write.step+0)*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
     updateStorageStatusInfo(storageHandle);
   }
-  if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
   {
     p = String_toDouble(s,0,NULL,NULL,0);
     storageHandle->runningInfo.volumeProgress = ((double)(storageHandle->opticalDisk.write.step+1)*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
@@ -371,7 +371,7 @@ LOCAL void executeIOgrowisofs(ConstString line,
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
   s = String_new();
-  if (String_matchCString(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,NULL,s,NULL))
+  if (String_matchCString(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,STRING_NO_ASSIGN,s,NULL))
   {
     p = String_toDouble(s,0,NULL,NULL,0);
     storageHandle->runningInfo.volumeProgress = ((double)storageHandle->opticalDisk.write.step*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
@@ -416,7 +416,7 @@ LOCAL bool StorageOptical_parseSpecifier(ConstString deviceSpecifier,
 
   String_clear(deviceName);
 
-  if (String_matchCString(deviceSpecifier,STRING_BEGIN,"^([^:]*):$",NULL,NULL,deviceName,NULL))
+  if (String_matchCString(deviceSpecifier,STRING_BEGIN,"^([^:]*):$",NULL,STRING_NO_ASSIGN,deviceName,NULL))
   {
     // <device name>
 

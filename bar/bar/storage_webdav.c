@@ -489,7 +489,7 @@ LOCAL bool StorageWebDAV_parseSpecifier(ConstString webdavSpecifier,
   if (loginPassword != NULL) Password_clear(loginPassword);
 
   s = String_new();
-  if      (String_matchCString(webdavSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,NULL,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
+  if      (String_matchCString(webdavSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>:<login password>@<host name>
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
@@ -497,7 +497,7 @@ LOCAL bool StorageWebDAV_parseSpecifier(ConstString webdavSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(webdavSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@/]*?)$",NULL,NULL,loginName,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(webdavSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>@<host name>
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
@@ -712,7 +712,7 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
       {
         error = checkWebDAVLogin(storageHandle->storageSpecifier.hostName,
                                  storageHandle->storageSpecifier.loginName,
-                                 defaultWebDAVPassword
+                                 storageHandle->storageSpecifier.loginPassword
                                 );
       }
       if (error != ERROR_NONE)
@@ -1842,6 +1842,8 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
+fprintf(stderr,"%s, %d: wedav seek %llu %llu\n",__FILE__,__LINE__,offset,storageArchiveHandle->webdav.index);
+
   error = ERROR_NONE;
   #ifdef HAVE_CURL
     if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
@@ -1949,6 +1951,8 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
       }
       else
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       }
     }
@@ -2325,7 +2329,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
       {
         error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                  storageDirectoryListHandle->storageSpecifier.loginName,
-                                 defaultWebDAVPassword
+                                 storageDirectoryListHandle->storageSpecifier.loginPassword
                                 );
       }
       if (error != ERROR_NONE)
