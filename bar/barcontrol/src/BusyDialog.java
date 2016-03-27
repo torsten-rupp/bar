@@ -588,9 +588,17 @@ class BusyDialog
    */
   public void abort()
   {
-    animateQuitFlag = true;
     abortedFlag = true;
-    close();
+    display.syncExec(new Runnable()
+    {
+      public void run()
+      {
+        if (!widgetAbortCloseButton.isDisposed())
+        {
+          widgetAbortCloseButton.setEnabled(false);
+        }
+      }
+    });
   }
 
   /** check if "abort" button clicked
