@@ -7735,149 +7735,163 @@ assert storagePattern != null;
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
-            BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
-                                                         restoreToDirectory,
-                                                         overwriteEntries
-                                                        ),
-                                     0,  // debugLevel
-                                     errorMessage,
-                                     new CommandResultHandler()
-                                     {
-                                       public int handleResult(int i, ValueMap valueMap)
-                                       {
-                                         // parse and update progresss
-                                         try
-                                         {
-                                           if (valueMap.containsKey("action"))
-                                           {
-                                             Actions             action       = valueMap.getEnum  ("action",Actions.class);
-                                             final String        passwordText = valueMap.getString("passwordText","");
-                                             final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
-                                             final String        volume       = valueMap.getString("volume","");
-                                             final int           error        = valueMap.getInt   ("error",Errors.NONE);
-                                             final String        errorMessage = valueMap.getString("errorMessage","");
-                                             final String        storage      = valueMap.getString("storage","");
-                                             final String        entry        = valueMap.getString("entry","");
-
-                                             switch (action)
-                                             {
-                                               case REQUEST_PASSWORD:
-                                                 // get password
-                                                 display.syncExec(new Runnable()
+            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
+                                                                     restoreToDirectory,
+                                                                     overwriteEntries
+                                                                    ),
+                                                 0,  // debugLevel
+                                                 errorMessage,
+                                                 new CommandResultHandler()
                                                  {
-                                                   @Override
-                                                   public void run()
+                                                   public int handleResult(int i, ValueMap valueMap)
                                                    {
-                                                     String password = Dialogs.password(shell,
-                                                                                        BARControl.tr("{0} login password",passwordType),
-                                                                                        BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
-                                                                                        BARControl.tr("Password")+":"
-                                                                                       );
-                                                     if (password != null)
+                                                     // parse and update progresss
+                                                     try
                                                      {
-                                                       BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
-                                                                                                    Errors.NONE,
-                                                                                                    BARServer.getPasswordEncryptType(),
-                                                                                                    BARServer.encryptPassword(password)
-                                                                                                   ),
-                                                                                0  // debugLevel
-                                                                               );
-                                                     }
-                                                     else
-                                                     {
-                                                       BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                    Errors.NO_PASSWORD
-                                                                                                   ),
-                                                                                0  // debugLevel
-                                                                               );
-                                                     }
-                                                   }
-                                                 });
-                                                 break;
-                                               case REQUEST_VOLUME:
-Dprintf.dprintf("");
-                                                 break;
-                                               case CONFIRM:
-                                                 busyDialog.updateList(!entry.isEmpty() ? entry : storage);
-                                                 errorCount[0]++;
-
-                                                 final int resultError[] = new int[]{error};
-                                                 if (!skipAllFlag[0])
-                                                 {
-                                                   display.syncExec(new Runnable()
-                                                   {
-                                                     @Override
-                                                     public void run()
-                                                     {
-                                                       switch (Dialogs.select(shell,
-                                                                              BARControl.tr("Confirmation"),
-                                                                              BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
-                                                                                            !entry.isEmpty() ? entry : storage,
-                                                                                            errorMessage
-                                                                                           ),
-                                                                              new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                                                              0
-                                                                             )
-                                                              )
+                                                       if (valueMap.containsKey("action"))
                                                        {
-                                                         case 0:
-                                                           resultError[0] = Errors.NONE;
-                                                           break;
-                                                         case 1:
-                                                           resultError[0] = Errors.NONE;
-                                                           skipAllFlag[0] = true;
-                                                           break;
-                                                         case 2:
-                                                           abort();
-                                                           break;
+                                                         Actions             action       = valueMap.getEnum  ("action",Actions.class);
+                                                         final String        passwordText = valueMap.getString("passwordText","");
+                                                         final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+                                                         final String        volume       = valueMap.getString("volume","");
+                                                         final int           error        = valueMap.getInt   ("error",Errors.NONE);
+                                                         final String        errorMessage = valueMap.getString("errorMessage","");
+                                                         final String        storage      = valueMap.getString("storage","");
+                                                         final String        entry        = valueMap.getString("entry","");
+
+                                                         switch (action)
+                                                         {
+                                                           case REQUEST_PASSWORD:
+                                                             // get password
+                                                             display.syncExec(new Runnable()
+                                                             {
+                                                               @Override
+                                                               public void run()
+                                                               {
+                                                                 String password = Dialogs.password(shell,
+                                                                                                    BARControl.tr("{0} login password",passwordType),
+                                                                                                    BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                                                                    BARControl.tr("Password")+":"
+                                                                                                   );
+                                                                 if (password != null)
+                                                                 {
+                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                                Errors.NONE,
+                                                                                                                BARServer.getPasswordEncryptType(),
+                                                                                                                BARServer.encryptPassword(password)
+                                                                                                               ),
+                                                                                            0  // debugLevel
+                                                                                           );
+                                                                 }
+                                                                 else
+                                                                 {
+                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                                Errors.NO_PASSWORD
+                                                                                                               ),
+                                                                                            0  // debugLevel
+                                                                                           );
+                                                                 }
+                                                               }
+                                                             });
+                                                             break;
+                                                           case REQUEST_VOLUME:
+            Dprintf.dprintf("");
+                                                             break;
+                                                           case CONFIRM:
+                                                             busyDialog.updateList(!entry.isEmpty() ? entry : storage);
+                                                             errorCount[0]++;
+
+                                                             final int resultError[] = new int[]{error};
+                                                             if (!skipAllFlag[0])
+                                                             {
+                                                               display.syncExec(new Runnable()
+                                                               {
+                                                                 @Override
+                                                                 public void run()
+                                                                 {
+                                                                   switch (Dialogs.select(shell,
+                                                                                          BARControl.tr("Confirmation"),
+                                                                                          BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
+                                                                                                        !entry.isEmpty() ? entry : storage,
+                                                                                                        errorMessage
+                                                                                                       ),
+                                                                                          new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                                                                          0
+                                                                                         )
+                                                                          )
+                                                                   {
+                                                                     case 0:
+                                                                       resultError[0] = Errors.NONE;
+                                                                       break;
+                                                                     case 1:
+                                                                       resultError[0] = Errors.NONE;
+                                                                       skipAllFlag[0] = true;
+                                                                       break;
+                                                                     case 2:
+                                                                       abort();
+                                                                       break;
+                                                                   }
+                                                                 }
+                                                               });
+                                                             }
+                                                             BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                          resultError[0]
+                                                                                                         ),
+                                                                                      0  // debugLevel
+                                                                                     );
+                                                             break;
+                                                         }
+                                                       }
+                                                       else
+                                                       {
+Dprintf.dprintf("valueMap=%s",valueMap);
+                                                         RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
+                                                         String        storageName      = valueMap.getString("storageName");
+                                                         long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
+                                                         long          storageTotalSize = valueMap.getLong  ("storageTotalSize");
+                                                         String        entryName        = valueMap.getString("entryName");
+                                                         long          entryDoneSize    = valueMap.getLong  ("entryDoneSize");
+                                                         long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
+
+                                                         busyDialog.updateText(0,"%s",storageName);
+                                                         busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? ((double)storageTotalSize*100.0)/(double)storageTotalSize : 0.0);
+                                                         busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
+                                                         busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? ((double)entryTotalSize*100.0)/(double)entryTotalSize : 0.0);
                                                        }
                                                      }
-                                                   });
+                                                     catch (IllegalArgumentException exception)
+                                                     {
+                                                       if (Settings.debugLevel > 0)
+                                                       {
+                                                         System.err.println("ERROR: "+exception.getMessage());
+                                                         System.exit(1);
+                                                       }
+                                                     }
+
+                                                     if (busyDialog.isAborted())
+                                                     {
+                                                       busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
+                                                       busyDialog.updateText(1,"");
+                                                       abort();
+                                                     }
+
+                                                     return Errors.NONE;
+                                                   }
                                                  }
-                                                 BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                              resultError[0]
-                                                                                             ),
-                                                                          0  // debugLevel
-                                                                         );
-                                                 break;
-                                             }
-                                           }
-                                           else
-                                           {
-                                             RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class);
-                                             String        storageName       = valueMap.getString("storageName");
-                                             long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes");
-                                             long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
-                                             String        entryName         = valueMap.getString("entryName");
-                                             long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes");
-                                             long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes");
-
-                                             busyDialog.updateText(0,"%s",storageName);
-                                             busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                                             busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
-                                             busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-                                           }
-                                         }
-                                         catch (IllegalArgumentException exception)
-                                         {
-                                           if (Settings.debugLevel > 0)
-                                           {
-                                             System.err.println("ERROR: "+exception.getMessage());
-                                             System.exit(1);
-                                           }
-                                         }
-
-                                         if (busyDialog.isAborted())
-                                         {
-                                           busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
-                                           busyDialog.updateText(1,"");
-                                           abort();
-                                         }
-
-                                         return Errors.NONE;
-                                       }
-                                     }
-                                    );
+                                                );
+            if (error != Errors.NONE)
+            {
+              display.syncExec(new Runnable()
+              {
+                @Override
+                public void run()
+                {
+                  Dialogs.error(shell,BARControl.tr("Cannot restore archives\n\n(error: {0})",errorMessage[0]));
+                }
+              });
+              busyDialog.close();
+              return;
+            }
 
             // close/done busy dialog, restore cursor
             if (errorCount[0] == 0)
@@ -8643,7 +8657,7 @@ Dprintf.dprintf("");
                                                              });
                                                              break;
                                                            case REQUEST_VOLUME:
-            Dprintf.dprintf("");
+Dprintf.dprintf("");
                                                              break;
                                                            case CONFIRM:
                                                              busyDialog.updateList(!entry.isEmpty() ? entry : storage);
