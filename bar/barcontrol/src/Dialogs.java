@@ -2504,14 +2504,14 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param message message to display (can be null)
-   * @param userName user name to display (can be null)
+   * @param name user name to display (can be null)
    * @param text1 text (can be null)
    * @param text2 text (can be null)
    * @param okText OK button text
    * @param CancelText cancel button text
-   * @return password or null on cancel
+   * @return name+password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message, String userName, String text1, final String text2, String okText, String cancelText)
+  public static String password(Shell parentShell, String title, String message, String name, String text1, final String text2, String okText, String cancelText)
   {
     int       row0,row1;
     Composite composite;
@@ -2542,7 +2542,7 @@ class Dialogs
       composite.setLayoutData(new TableLayoutData(row0,0,TableLayoutData.WE));
       {
         row1 = 0;
-        if (userName != null)
+        if (name != null)
         {
           label = new Label(composite,SWT.LEFT);
           label.setText(Dialogs.tr("Name")+":");
@@ -2550,7 +2550,7 @@ class Dialogs
 
           text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.READ_ONLY);
           text.setBackground(composite.getBackground());
-          text.setText(userName);
+          text.setText(name);
           text.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
 
           row1++;
@@ -2673,27 +2673,27 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param message message to display
-   * @param userName user name to display (can be null)
+   * @param name name to display (can be null)
    * @param text1 text
    * @param text2 text (can be null)
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message, String userName, String text1, String text2)
+  public static String password(Shell parentShell, String title, String message, String name, String text1, String text2)
   {
-    return password(parentShell,title,message,userName,text1,text2,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
+    return password(parentShell,title,message,name,text1,text2,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
 
   /** password dialog
    * @param parentShell parent shell
    * @param title title string
    * @param message message to display
+   * @param name name to display (can be null)
    * @param text1 text
-   * @param text2 text (can be null)
    * @return password or null on cancel
    */
-  public static String password(Shell parentShell, String title, String message, String text1, String text2)
+  public static String password(Shell parentShell, String title, String message, String name, String text1)
   {
-    return password(parentShell,title,message,null,text1,text2);
+    return password(parentShell,title,message,name,text1,(String)null);
   }
 
   /** password dialog
@@ -2704,7 +2704,7 @@ class Dialogs
    */
   public static String password(Shell parentShell, String title, String message, String text)
   {
-    return password(parentShell,title,message,text,null);
+    return password(parentShell,title,message,(String)null,text);
   }
 
   /** password dialog
@@ -2715,7 +2715,7 @@ class Dialogs
    */
   public static String password(Shell parentShell, String title, String message)
   {
-    return password(parentShell,title,message,null);
+    return password(parentShell,title,message,(String)null);
   }
 
   /** password dialog
@@ -2725,7 +2725,201 @@ class Dialogs
    */
   public static String password(Shell parentShell, String title)
   {
-    return password(parentShell,title,null);
+    return password(parentShell,title,(String)null);
+  }
+
+  /** login dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message message to display (can be null)
+   * @param name name to display
+   * @param text1 text (can be null)
+   * @param text2 text (can be null)
+   * @param okText OK button text
+   * @param CancelText cancel button text
+   * @return name+password or null on cancel
+   */
+  public static String[] login(Shell parentShell, String title, String message, String name, String text1, final String text2, String okText, String cancelText)
+  {
+    int       row0,row1;
+    Composite composite;
+    Label     label;
+    Text      text;
+    Button    button;
+
+    if (!parentShell.isDisposed())
+    {
+      final String[] result = new String[1];
+
+      final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
+
+      // password
+      final Text   widgetName;
+      final Text   widgetPassword1,widgetPassword2;
+      final Button widgetOkButton;
+      row0 = 0;
+      if (message != null)
+      {
+        label = new Label(dialog,SWT.LEFT);
+        label.setText(message);
+        label.setLayoutData(new TableLayoutData(row0,0,TableLayoutData.W));
+        row0++;
+      }
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
+      composite.setLayoutData(new TableLayoutData(row0,0,TableLayoutData.WE));
+      {
+        row1 = 0;
+
+        label = new Label(composite,SWT.LEFT);
+        label.setText(Dialogs.tr("Name")+":");
+        label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
+
+        widgetName = new Text(composite,SWT.LEFT|SWT.BORDER);
+        widgetName.setText(name);
+        widgetName.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        row1++;
+
+        label = new Label(composite,SWT.LEFT);
+        label.setText((text1 != null) ? text1 : Dialogs.tr("Password")+":");
+        label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
+
+        widgetPassword1 = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+        widgetPassword1.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        row1++;
+
+        if (text2 != null)
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setText(text2);
+          label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
+
+          widgetPassword2 = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+          widgetPassword2.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+
+          row1++;
+        }
+        else
+        {
+          widgetPassword2 = null;
+        }
+      }
+      row0++;
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(row0,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetOkButton = new Button(composite,SWT.CENTER);
+        widgetOkButton.setText(okText);
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String name      = widgetName.getText();
+            String password1 = widgetPassword1.getText();
+            if (text2 != null)
+            {
+              String password2 = widgetPassword2.getText();
+              if (password1.equals(password2))
+              {
+                close(dialog,new String[]{name,password1});
+              }
+            }
+            else
+            {
+              close(dialog,new String[]{name,password1});
+            }
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,null);
+          }
+        });
+      }
+
+      // install handlers
+      widgetPassword1.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          if (text2 != null)
+          {
+            widgetPassword2.forceFocus();
+          }
+          else
+          {
+            widgetOkButton.forceFocus();
+          }
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+      if (text2 != null)
+      {
+        widgetPassword2.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            widgetOkButton.forceFocus();
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
+
+      widgetName.setFocus();
+      return (String[])run(dialog,null);
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  /** login dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message message to display
+   * @param name name
+   * @param text1 text
+   * @param text2 text (can be null)
+   * @return name+password or null on cancel
+   */
+  public static String[] login(Shell parentShell, String title, String message, String name, String text1, String text2)
+  {
+    return login(parentShell,title,message,name,text1,text2,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
+  }
+
+  /** login dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message message to display
+   * @param name name
+   * @param text text
+   * @return name+password or null on cancel
+   */
+  public static String[] login(Shell parentShell, String title, String message, String name, String text)
+  {
+    return login(parentShell,title,message,name,text,(String)null);
   }
 
   /** open a file dialog
