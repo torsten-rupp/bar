@@ -1438,7 +1438,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                             {
                               ValueMap valueMap = new ValueMap();
                               int error = command.getNextResult(errorMessage,valueMap);
-                              if (error == Errors.NONE)
+                              if ((error == Errors.NONE) && !valueMap.isEmpty())
                               {
                                 error = commandResultHandler.handleResult(i,valueMap);
                               }
