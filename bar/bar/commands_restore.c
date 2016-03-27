@@ -67,11 +67,11 @@ typedef struct
   bool                            *requestedAbortFlag;           // TRUE to abort restore
   LogHandle                       *logHandle;                    // log handle
 
-  FragmentList                    fragmentList;
+  FragmentList                    fragmentList;                  // entry fragments
 
-  Errors                          failError;                      // restore error
-  RestoreStatusInfo               statusInfo;                     // status info
-  Semaphore                       statusInfoLock;                 // status info lock
+  Errors                          failError;                     // restore error
+  RestoreStatusInfo               statusInfo;                    // status info
+  Semaphore                       statusInfoLock;                // status info lock
 } RestoreInfo;
 
 /***************************** Variables *******************************/
@@ -429,8 +429,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
   File_initExtendedAttributes(&fileExtendedAttributeList);
   AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
   AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
 
   // read file entry
   error = Archive_readFileEntry(&archiveEntryInfo,
@@ -463,7 +461,6 @@ asm("int3");
      )
   {
     String_set(restoreInfo->statusInfo.entryName,fileName);
-fprintf(stderr,"%s, %d: restoreInfo->statusInfo.entryName=%s\n",__FILE__,__LINE__,String_cString(restoreInfo->statusInfo.entryName));
     restoreInfo->statusInfo.entryDoneSize  = 0LL;
     restoreInfo->statusInfo.entryTotalSize = fragmentSize;
     updateStatusInfo(restoreInfo,TRUE);
@@ -2429,6 +2426,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     }
 
     // update storage status
+fprintf(stderr,"%s, %d: update sto don\n",__FILE__,__LINE__);
     restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveInfo);
     updateStatusInfo(restoreInfo,TRUE);
 
@@ -2687,15 +2685,13 @@ Errors Command_restore(const StringList                *storageNameList,
             printInfo(2,"  Fragments:\n");
             FragmentList_print(stdout,4,fragmentNode);
           }
-          if (restoreInfo.failError == ERROR_NONE)
-          {
-            restoreInfo.failError = ERRORX_(ENTRY_INCOMPLETE,0,"%s",String_cString(fragmentNode->name));
-          }
+          error = ERRORX_(ENTRY_INCOMPLETE,0,"%s",String_cString(fragmentNode->name));
+          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
         }
 
         if (fragmentNode->userData != NULL)
         {
-          // set file time, file owner/group, file permission
+          // set file time, file owner/group, file permission of incomplete entries
           if (!jobOptions->dryRunFlag)
           {
             if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
