@@ -7408,9 +7408,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &excludePatternList,
                                     &deltaSourceList,
                                     &jobOptions,
-                                    CALLBACK(inputCryptPassword,NULL),
                                     CALLBACK(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK(NULL,NULL),  // restoreError callback
+                                    CALLBACK(inputCryptPassword,NULL),
                                     NULL,  // pauseRestoreFlag
                                     NULL,  // requestedAbortFlag,
                                     NULL  // logHandle

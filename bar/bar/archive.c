@@ -176,9 +176,9 @@ LOCAL void freePasswordNode(PasswordNode *passwordNode, void *userData)
 * Input  : archiveInfo         - archive info
 *          jobOptions          - job options
 *          passwordMode        - password mode
-*          getPasswordFunction - get password call back (can
+*          getPasswordFunction - get password call-back (can
 *                                be NULL)
-*          getPasswordUserData - user data for get password call back
+*          getPasswordUserData - user data for get password call-back
 * Output : password - password
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -397,8 +397,8 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 * Input  : archiveInfo         - archive info
 *          jobOptions          - job options
 *          passwordMode        - password mode
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password call back
+*          getPasswordFunction - get password call-back
+*          getPasswordUserData - user data for get password call-back
 * Output : passwordHandle - intialized password handle
 * Return : password or NULL if no more passwords
 * Notes  : -
@@ -977,7 +977,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
         archiveInfo->storageId = DATABASE_ID_NONE;
       }
 
-      // call back for init archive
+      // call-back for init archive
       if (archiveInfo->archiveInitFunction != NULL)
       {
         error = archiveInfo->archiveInitFunction(archiveInfo->archiveInitUserData,
@@ -1041,7 +1041,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     // mark archive file "closed"
     archiveInfo->file.openFlag = FALSE;
 
-    // call back to store archive
+    // call-back to store archive
     if (archiveInfo->archiveStoreFunction != NULL)
     {
       error = archiveInfo->archiveStoreFunction(archiveInfo->archiveStoreUserData,
@@ -1065,7 +1065,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
       DEBUG_TESTCODE("closeArchiveFile1") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
     }
 
-    // call back for done archive
+    // call-back for done archive
     if (archiveInfo->archiveDoneFunction != NULL)
     {
       error = archiveInfo->archiveDoneFunction(archiveInfo->archiveDoneUserData,
