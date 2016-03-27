@@ -402,17 +402,18 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
     {
       // initialize default password
       while (   (error != ERROR_NONE)
-             && initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,
-                                       storageHandle->storageSpecifier.loginName,
-                                       jobOptions,
-                                       CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
-                                      )
+             && initSSHLogin(storageHandle->storageSpecifier.hostName,
+                             storageHandle->storageSpecifier.loginName,
+                             storageHandle->storageSpecifier.loginPassword,
+                             jobOptions,
+                             CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                            )
             )
       {
         error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
                               storageHandle->storageSpecifier.hostPort,
                               storageHandle->storageSpecifier.loginName,
-                              defaultSSHPassword,
+                              storageHandle->storageSpecifier.loginPassword,
                               storageHandle->sftp.publicKey.data,
                               storageHandle->sftp.publicKey.length,
                               storageHandle->sftp.privateKey.data,
@@ -428,6 +429,13 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
         error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
                   ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
                   : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
+      }
+
+      // store passwrd as default SSH password
+      if (error == ERROR_NONE)
+      {
+        if (defaultSSHPassword == NULL) defaultSSHPassword = Password_new();
+        Password_set(defaultSSHPassword,storageHandle->storageSpecifier.loginPassword);
       }
     }
     assert(error != ERROR_UNKNOWN);
@@ -1584,12 +1592,13 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
       {
         // initialize default password
         while (   (error != ERROR_NONE)
-               && initDefaultSSHPassword(storageDirectoryListHandle->storageSpecifier.hostName,
-                                         storageDirectoryListHandle->storageSpecifier.loginName,
-                                         jobOptions,
+               && initSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                               storageDirectoryListHandle->storageSpecifier.loginName,
+                               storageDirectoryListHandle->storageSpecifier.loginPassword,
+                               jobOptions,
 //TODO
-                                         CALLBACK(NULL,NULL) // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
-                                        )
+                               CALLBACK(NULL,NULL) // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                              )
            )
         {
           error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
@@ -1597,7 +1606,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                                   storageDirectoryListHandle->storageSpecifier.hostName,
                                   storageDirectoryListHandle->storageSpecifier.hostPort,
                                   storageDirectoryListHandle->storageSpecifier.loginName,
-                                  defaultSSHPassword,
+                                  storageDirectoryListHandle->storageSpecifier.loginPassword,
                                   sshServer.publicKey.data,
                                   sshServer.publicKey.length,
                                   sshServer.privateKey.data,
@@ -1610,6 +1619,13 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
           error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
                     ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
                     : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
+        }
+
+        // store passwrd as default SSH password
+        if (error == ERROR_NONE)
+        {
+          if (defaultSSHPassword == NULL) defaultSSHPassword = Password_new();
+          Password_set(defaultSSHPassword,storageDirectoryListHandle->storageSpecifier.loginPassword);
         }
       }
       assert(error != ERROR_UNKNOWN);

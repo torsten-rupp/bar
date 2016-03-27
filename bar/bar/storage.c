@@ -383,10 +383,11 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 
 #ifdef HAVE_SSH2
 /***********************************************************************\
-* Name   : initDefaultSSHPassword
-* Purpose: init default SSH password
+* Name   : initSSHLogin
+* Purpose: init SSH login
 * Input  : hostName            - host name
 *          loginName           - login name
+*          loginPassword       - login password
 *          jobOptions          - job options
 *          getPasswordFunction - get password call-back (can
 *                                be NULL)
@@ -396,16 +397,22 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initDefaultSSHPassword(ConstString         hostName,
-                                  ConstString         loginName,
-                                  const JobOptions    *jobOptions,
-                                  GetPasswordFunction getPasswordFunction,
-                                  void                *getPasswordUserData
-                                 )
+LOCAL bool initSSHLogin(ConstString         hostName,
+                        String              loginName,
+                        Password            *loginPassword,
+                        const JobOptions    *jobOptions,
+                        GetPasswordFunction getPasswordFunction,
+                        void                *getPasswordUserData
+                       )
 {
   SemaphoreLock semaphoreLock;
   String        s;
   bool          initFlag;
+
+  assert(!String_isEmpty(hostName));
+  assert(loginName != NULL);
+  assert(!String_isEmpty(loginName));
+  assert(loginPassword != NULL);
 
   initFlag = FALSE;
 
@@ -420,18 +427,12 @@ LOCAL bool initDefaultSSHPassword(ConstString         hostName,
           case RUN_MODE_INTERACTIVE:
             if (defaultSSHPassword == NULL)
             {
-              Password *password = Password_new();
               s = !String_isEmpty(loginName)
                     ? String_format(String_new(),"SSH login password for %S@%S",loginName,hostName)
                     : String_format(String_new(),"SSH login password for %S",hostName);
-              if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+              if (Password_input(loginPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY))
               {
-                defaultSSHPassword = password;
                 initFlag = TRUE;
-              }
-              else
-              {
-                  Password_delete(password);
               }
               String_delete(s);
             }
@@ -444,33 +445,20 @@ LOCAL bool initDefaultSSHPassword(ConstString         hostName,
           case RUN_MODE_SERVER:
             if (getPasswordFunction != NULL)
             {
-              Password *password = Password_new();
               s = !String_isEmpty(loginName)
                     ? String_format(String_new(),"%S@%S",loginName,hostName)
                     : String_format(String_new(),"%S",hostName);
-              if (getPasswordFunction(password,
+              if (getPasswordFunction(loginName,
+                                      loginPassword,
                                       PASSWORD_TYPE_SSH,
-                                      String_cString(hostName),
+                                      String_cString(s),
                                       TRUE,
                                       TRUE,
                                       getPasswordUserData
                                      ) == ERROR_NONE
                  )
               {
-                if (defaultSSHPassword != NULL)
-                {
-                  Password_set(defaultSSHPassword,password);
-                  Password_delete(password);
-                }
-                else
-                {
-                  defaultSSHPassword = password;
-                }
                 initFlag = TRUE;
-              }
-              else
-              {
-                Password_delete(password);
               }
               String_delete(s);
             }

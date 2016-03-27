@@ -72,10 +72,11 @@
 
 #if defined(HAVE_CURL) || defined(HAVE_FTP)
 /***********************************************************************\
-* Name   : initDefaultFTPPassword
-* Purpose: init default FTP password
+* Name   : initFTPLogin
+* Purpose: init FTP login
 * Input  : hostName            - host name
 *          loginName           - login name
+*          loginPassword       - password
 *          jobOptions          - job options
 *          getPasswordFunction - get password call-back (can
 *                                be NULL)
@@ -85,16 +86,22 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initDefaultFTPPassword(ConstString         hostName,
-                                  ConstString         loginName,
-                                  const JobOptions    *jobOptions,
-                                  GetPasswordFunction getPasswordFunction,
-                                  void                *getPasswordUserData
-                                 )
+LOCAL bool initFTPLogin(ConstString         hostName,
+                        String              loginName,
+                        Password            *loginPassword,
+                        const JobOptions    *jobOptions,
+                        GetPasswordFunction getPasswordFunction,
+                        void                *getPasswordUserData
+                       )
 {
   SemaphoreLock semaphoreLock;
   String        s;
   bool          initFlag;
+
+  assert(!String_isEmpty(hostName));
+  assert(loginName != NULL);
+  assert(!String_isEmpty(loginName));
+  assert(loginPassword != NULL);
 
   initFlag = FALSE;
 
@@ -109,18 +116,12 @@ LOCAL bool initDefaultFTPPassword(ConstString         hostName,
           case RUN_MODE_INTERACTIVE:
             if (defaultFTPPassword == NULL)
             {
-              Password *password = Password_new();
               s = !String_isEmpty(loginName)
                     ? String_format(String_new(),"FTP login password for %S@%S",loginName,hostName)
                     : String_format(String_new(),"FTP login password for %S",hostName);
-              if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+              if (Password_input(loginPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY))
               {
-                defaultFTPPassword = password;
                 initFlag = TRUE;
-              }
-              else
-              {
-                Password_delete(password);
               }
               String_delete(s);
             }
@@ -133,33 +134,20 @@ LOCAL bool initDefaultFTPPassword(ConstString         hostName,
           case RUN_MODE_SERVER:
             if (getPasswordFunction != NULL)
             {
-              Password *password = Password_new();
               s = !String_isEmpty(loginName)
                     ? String_format(String_new(),"%S@%S",loginName,hostName)
                     : String_format(String_new(),"%S",hostName);
-              if (getPasswordFunction(password,
+              if (getPasswordFunction(loginName,
+                                      loginPassword,
                                       PASSWORD_TYPE_FTP,
-                                      String_cString(hostName),
+                                      String_cString(s),
                                       TRUE,
                                       TRUE,
                                       getPasswordUserData
                                      ) == ERROR_NONE
                  )
               {
-                if (defaultFTPPassword != NULL)
-                {
-                  Password_set(defaultFTPPassword,password);
-                  Password_delete(password);
-                }
-                else
-                {
-                  defaultFTPPassword = password;
-                }
                 initFlag = TRUE;
-              }
-              else
-              {
-                Password_delete(password);
               }
               String_delete(s);
             }
@@ -1150,17 +1138,18 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
       {
         // initialize default password
         while (   (error != ERROR_NONE)
-               && initDefaultFTPPassword(storageHandle->storageSpecifier.hostName,
-                                         storageHandle->storageSpecifier.loginName,
-                                         jobOptions,
-                                         CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
-                                        )
+               && initFTPLogin(storageHandle->storageSpecifier.hostName,
+                               storageHandle->storageSpecifier.loginName,
+                               storageHandle->storageSpecifier.loginPassword,
+                               jobOptions,
+                               CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                              )
            )
         {
           error = checkFTPLogin(storageHandle->storageSpecifier.hostName,
                                 storageHandle->storageSpecifier.hostPort,
                                 storageHandle->storageSpecifier.loginName,
-                                defaultFTPPassword
+                                storageHandle->storageSpecifier.loginPassword
                                );
           if (error == ERROR_NONE)
           {
@@ -1172,6 +1161,13 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
           error = (!Password_isEmpty(storageHandle->storageSpecifier.loginPassword) || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword))
                     ? ERRORX_(INVALID_FTP_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
                     : ERRORX_(NO_FTP_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
+        }
+
+        // store passwrd as default FTP password
+        if (error == ERROR_NONE)
+        {
+          if (defaultFTPPassword == NULL) defaultFTPPassword = Password_new();
+          Password_set(defaultFTPPassword,storageHandle->storageSpecifier.loginPassword);
         }
       }
       if (error != ERROR_NONE)
@@ -1243,30 +1239,34 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
       }
       if (error != ERROR_NONE)
       {
-        // initialize default password
+        // initialize login password
         while (   (error != ERROR_NONE)
-               && initDefaultFTPPassword(storageHandle->storageSpecifier.hostName,
-                                         storageHandle->storageSpecifier.loginName,
-                                         jobOptions
-                                         CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
-                                        )
+               && initFTPLogin(storageHandle->storageSpecifier.hostName,
+                               storageHandle->storageSpecifier.loginName,
+                               storageHandle->storageSpecifier.loginPassword,
+                               jobOptions
+                               CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                              )
               )
         {
           error = checkFTPLogin(storageHandle->storageSpecifier.hostName,
                                 storageHandle->storageSpecifier.hostPort,
                                 storageHandle->storageSpecifier.loginName,
-                                defaultFTPPassword
+                                storageHandle->storageSpecifier.loginPassword
                                );
-          if (error == ERROR_NONE)
-          {
-            Password_set(storageHandle->storageSpecifier.loginPassword,defaultFTPPassword);
-          }
         }
         if (error != ERROR_NONE)
         {
           error = (!Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword) || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword))
                     ? ERRORX_(ERROR_INVALID_FTP_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
                     : ERRORX_(ERROR_NO_FTP_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
+        }
+
+        // store passwrd as default FTP password
+        if (error == ERROR_NONE)
+        {
+          if (defaultFTPPassword == NULL) defaultFTPPassword = Password_new();
+          Password_set(defaultFTPPassword,storageHandle->storageSpecifier.loginPassword);
         }
       }
       if (error != ERROR_NONE)
@@ -3462,18 +3462,19 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     {
       // initialize default password
       while (   (error != ERROR_NONE)
-             && initDefaultFTPPassword(storageDirectoryListHandle->storageSpecifier.hostName,
-                                       storageDirectoryListHandle->storageSpecifier.loginName,
-                                       jobOptions,
+             && initFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                             storageDirectoryListHandle->storageSpecifier.loginName,
+                             storageDirectoryListHandle->storageSpecifier.loginPassword,
+                             jobOptions,
 //TODO
-                                       CALLBACK(NULL,NULL) // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
-                                      )
+                             CALLBACK(NULL,NULL) // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                            )
             )
       {
         error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                               storageDirectoryListHandle->storageSpecifier.hostPort,
                               storageDirectoryListHandle->storageSpecifier.loginName,
-                              defaultFTPPassword
+                              storageDirectoryListHandle->storageSpecifier.loginPassword
                              );
         if (error == ERROR_NONE)
         {
@@ -3485,6 +3486,13 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
         error = (!Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword) || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword))
                   ? ERRORX_(INVALID_FTP_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
                   : ERRORX_(NO_FTP_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
+      }
+
+      // store passwrd as default FTP password
+      if (error == ERROR_NONE)
+      {
+        if (defaultFTPPassword == NULL) defaultFTPPassword = Password_new();
+        Password_set(defaultFTPPassword,storageDirectoryListHandle->storageSpecifier.loginPassword);
       }
     }
     if (error != ERROR_NONE)
@@ -3611,12 +3619,12 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     {
       // initialize default password
       while (   (error != ERROR_NONE)
-             && initDefaultFTPPassword(storageDirectoryListHandle->storageSpecifier.hostName,
-                                       storageDirectoryListHandle->storageSpecifier.loginName,
-                                       jobOptions,
+             && initFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                             storageDirectoryListHandle->storageSpecifier.loginName,
+                             jobOptions,
 //TODO
-                                       CALLBACK(NULL,NULL)  // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
-                                      )
+                             CALLBACK(NULL,NULL)  // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                            )
             )
       {
         error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
@@ -3634,6 +3642,13 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
         error = (!Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword) || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword))
                   ? ERRORX_(ERROR_INVALID_FTP_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
                   : ERRORX_(ERROR_NO_FTP_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
+      }
+
+      // store passwrd as default FTP password
+      if (error == ERROR_NONE)
+      {
+        if (defaultFTPPassword == NULL) defaultFTPPassword = Password_new();
+        Password_set(defaultFTPPassword,storageHandle->storageSpecifier.loginPassword);
       }
     }
     if (error != ERROR_NONE)

@@ -13531,7 +13531,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   /***********************************************************************\
   * Name   : getPassword
   * Purpose: get password
-  * Input  : password      - password variable
+  * Input  : name          - name (can be NULL)
+  *          password      - password variable
   *          passwordType  - password type
   *          text          - text (file name, host name, etc.)
   *          validateFlag  - TRUE to validate input, FALSE otherwise
@@ -13544,7 +13545,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   * Notes  : -
   \***********************************************************************/
 
-  Errors getPassword(Password      *password,
+  Errors getPassword(String        name,
+                     Password      *password,
                      PasswordTypes passwordType,
                      const char    *text,
                      bool          validateFlag,
@@ -13573,7 +13575,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                          resultMap,
                          "REQUEST_PASSWORD",
                          60*1000,
-                         "passwordType=%'s passwordText=%'s",
+                         "name=%'S passwordType=%'s passwordText=%'s",
+                         name,
                          getPasswordTypeName(passwordType),
                          text
                         );
@@ -13583,7 +13586,15 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
       return error;
     }
 
-    // parse result
+    // get name, password
+    if (name != NULL)
+    {
+      if (!StringMap_getString(resultMap,"name",name,NULL))
+      {
+        StringMap_delete(resultMap);
+        return ERROR_EXPECTED_PARAMETER;
+      }
+    }
     encryptType = String_new();
     if (!StringMap_getString(resultMap,"encryptType",encryptType,NULL))
     {
@@ -13597,8 +13608,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
     }
-
-    // decrypt password
     if (!decryptPassword(password,clientInfo,encryptType,encryptedPassword))
     {
       String_delete(encryptedPassword);

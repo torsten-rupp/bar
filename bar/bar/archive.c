@@ -211,7 +211,8 @@ LOCAL Errors getCryptPassword(Password            *password,
       {
         if (!archiveInfo->cryptPasswordReadFlag && (getPasswordFunction != NULL))
         {
-          error = getPasswordFunction(password,
+          error = getPasswordFunction(NULL,  // loginName
+                                      password,
                                       PASSWORD_TYPE_CRYPT,
                                       (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
                                         ? String_cString(Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL))
@@ -238,7 +239,8 @@ LOCAL Errors getCryptPassword(Password            *password,
       {
         if (!archiveInfo->cryptPasswordReadFlag && (getPasswordFunction != NULL))
         {
-          error = getPasswordFunction(password,
+          error = getPasswordFunction(NULL,  // loginName
+                                      password,
                                       PASSWORD_TYPE_CRYPT,
                                       (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
                                         ? String_cString(Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL))
@@ -270,7 +272,8 @@ LOCAL Errors getCryptPassword(Password            *password,
       {
         if (!archiveInfo->cryptPasswordReadFlag && (getPasswordFunction != NULL))
         {
-          error = getPasswordFunction(password,
+          error = getPasswordFunction(NULL,  // loginName
+                                      password,
                                       PASSWORD_TYPE_CRYPT,
                                       (archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
                                         ? String_cString(Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,NULL))
@@ -362,7 +365,8 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
       {
         // input password
         Password_init(&newPassword);
-        error = passwordHandle->getPasswordFunction(&newPassword,
+        error = passwordHandle->getPasswordFunction(NULL,  // loginName
+                                                    &newPassword,
                                                     PASSWORD_TYPE_CRYPT,
                                                     (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
                                                       ? String_cString(Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL))
