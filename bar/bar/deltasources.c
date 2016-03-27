@@ -823,8 +823,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                       jobOptions,
                                       tmpFileName,
                                       &fragmentNode,
-                                      inputCryptPassword,
-                                      NULL,  // getPasswordFunction
+                                      CALLBACK(getPasswordConsole,NULL),
                                       NULL,  // pauseFlag
                                       NULL,  // requestedAbortFlag,
                                       NULL   // logHandle
@@ -919,8 +918,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                                         jobOptions,
                                         tmpFileName,
                                         &fragmentNode,
-                                        inputCryptPassword,
-                                        NULL,  // getPasswordFunction
+                                        CALLBACK(getPasswordConsole,NULL),
                                         NULL,  // pauseFlag
                                         NULL,  // requestedAbortFlag
                                         NULL   // logHandle
@@ -999,8 +997,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               jobOptions,
                               tmpFileName,
                               NULL,  // fragmentNode
-                              inputCryptPassword,
-                              NULL,  // getPasswordFunction
+                              CALLBACK(getPasswordConsole,NULL),
                               NULL,  // pauseFlag
                               NULL,  // requestedAbortFlag
                               NULL   // logHandle
@@ -1068,8 +1065,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                               jobOptions,
                               tmpFileName,
                               NULL,  // fragmentNode
-                              inputCryptPassword,
-                              NULL,  // getPasswordFunction
+                              CALLBACK(getPasswordConsole,NULL),
                               NULL,  // pauseFlag
                               NULL,  // requestedAbortFlag
                               NULL   // logHandle

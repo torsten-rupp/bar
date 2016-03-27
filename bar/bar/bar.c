@@ -5496,7 +5496,8 @@ bool isServerAllocationPending(uint serverId)
   return pendingFlag;
 }
 
-Errors inputCryptPassword(Password      *password,
+Errors getPasswordConsole(String        name,
+                          Password      *password,
                           PasswordTypes passwordType,
                           const char    *text,
                           bool          validateFlag,
@@ -5507,6 +5508,7 @@ Errors inputCryptPassword(Password      *password,
   Errors        error;
   SemaphoreLock semaphoreLock;
 
+  assert(name == NULL);
   assert(password != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -7227,7 +7229,7 @@ LOCAL Errors runJob(void)
                          ARCHIVE_TYPE_NORMAL,
                          NULL, // scheduleTitle
                          NULL, // scheduleCustomText
-                         CALLBACK(inputCryptPassword,NULL),
+                         CALLBACK(getPasswordConsole,NULL),
                          CALLBACK(NULL,NULL), // createStatusInfoFunction
                          CALLBACK(NULL,NULL), // storageRequestVolumeFunction
                          NULL, // pauseCreateFlag
@@ -7342,7 +7344,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                 ARCHIVE_TYPE_NORMAL,
                                 NULL, // scheduleTitle
                                 NULL, // scheduleCustomText
-                                CALLBACK(inputCryptPassword,NULL),
+                                CALLBACK(getPasswordConsole,NULL),
                                 CALLBACK(NULL,NULL), // createStatusInfoFunction
                                 CALLBACK(NULL,NULL), // storageRequestVolumeFunction
                                 NULL, // pauseCreateFlag
@@ -7378,7 +7380,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &includeEntryList,
                                  &excludePatternList,
                                  &jobOptions,
-                                 CALLBACK(inputCryptPassword,NULL),
+                                 CALLBACK(getPasswordConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -7388,7 +7390,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &excludePatternList,
                                  &deltaSourceList,
                                  &jobOptions,
-                                 CALLBACK(inputCryptPassword,NULL),
+                                 CALLBACK(getPasswordConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -7398,7 +7400,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &excludePatternList,
                                     &deltaSourceList,
                                     &jobOptions,
-                                    CALLBACK(inputCryptPassword,NULL),
+                                    CALLBACK(getPasswordConsole,NULL),
                                     NULL  // logHandle
                                    );
             break;
@@ -7410,7 +7412,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &jobOptions,
                                     CALLBACK(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK(NULL,NULL),  // restoreError callback
-                                    CALLBACK(inputCryptPassword,NULL),
+                                    CALLBACK(getPasswordConsole,NULL),
                                     NULL,  // pauseRestoreFlag
                                     NULL,  // requestedAbortFlag,
                                     NULL  // logHandle
@@ -7470,7 +7472,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 
         // input crypt password for private key encryption
         Password_init(&cryptPassword);
-        error = inputCryptPassword(&cryptPassword,
+        error = getPasswordConsole(NULL,  // name
+                                   &cryptPassword,
                                    PASSWORD_TYPE_CRYPT,
                                    String_cString(privateKeyFileName),
                                    TRUE,  // validateFlag

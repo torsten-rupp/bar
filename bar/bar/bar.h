@@ -898,9 +898,10 @@ bool isServerAllocationPending(uint serverId);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : inputCryptPassword
-* Purpose: input crypt password
-* Input  : password      - crypt password variable
+* Name   : getPasswordConsole
+* Purpose: get name/password from console
+* Input  : name          - name variable (can be NULL)
+*          password      - crypt password variable
 *          passwordType  - password type; see PASSWORD_TYPE_...
 *          text          - text
 *          validateFlag  - TRUE to validate input, FALSE otherwise
@@ -913,7 +914,8 @@ bool isServerAllocationPending(uint serverId);
 * Notes  : -
 \***********************************************************************/
 
-Errors inputCryptPassword(Password      *password,
+Errors getPasswordConsole(String        name,
+                          Password      *password,
                           PasswordTypes passwordType,
                           const char    *text,
                           bool          validateFlag,
