@@ -12606,8 +12606,10 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, uint id, const Stri
 
   UNUSED_VARIABLE(argumentMap);
 
+  // init variables
   storageName = String_new();
 
+  // list storage
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
                                  INDEX_ID_ANY,  // uuidId
@@ -13085,12 +13087,66 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
 
 LOCAL void serverCommand_entryList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
+  String           entryName;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          entryId;
+  uint64           size;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(argumentMap);
 
-  Array_clear(&clientInfo->entryIdArray);
+  // init variables
+  entryName = String_new();
+
+  // list entries
+  error = Index_initListEntries(&indexQueryHandle,
+                                indexHandle,
+                                NULL, // Array_cArray(clientInfo->storageIdArray),
+                                0, // Array_length(clientInfo->storageIdArray),
+                                Array_cArray(&clientInfo->entryIdArray),
+                                Array_length(&clientInfo->entryIdArray),
+                                INDEX_TYPE_SET_ANY,
+                                NULL, // pattern
+                                FALSE,  // newestEntriesOnly,
+                                0,
+                                INDEX_UNLIMITED
+                               );
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+    return;
+  }
+  while (Index_getNextEntry(&indexQueryHandle,
+                            &entryId, // entryId,
+                            NULL, // storageName
+                            NULL, // storageDateTime
+                            entryName,
+                            NULL,  // destinationName
+                            NULL,  // fileSystemType
+                            &size,  // size
+                            NULL,  // timeModified
+                            NULL,  // userId
+                            NULL,  // groupId
+                            NULL,  // permission
+                            NULL,  // fragmentOrBlockOffset
+                            NULL // fragmentSizeOrBlockCount
+                           )
+        )
+  {
+    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                     "entryId=%llu name=%'S size=%llu",
+                     entryId,
+                     entryName,
+                     size
+                    );
+  }
+  Index_doneList(&indexQueryHandle);
+
+  String_delete(entryName);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }

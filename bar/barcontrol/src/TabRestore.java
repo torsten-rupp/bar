@@ -1951,7 +1951,7 @@ Dprintf.dprintf("cirrect?");
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S",
                                                    storagePattern
                                                   ),
-                               1,
+                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -7402,9 +7402,9 @@ assert storagePattern != null;
 
     final Data data = new Data();
 
-    Label      label;
-    Composite  composite,subComposite;
-    Button     button;
+    Label     label;
+    Composite composite,subComposite;
+    Button    button;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore archives"),400,300,new double[]{1.0,0.0},1.0);
@@ -7412,9 +7412,9 @@ assert storagePattern != null;
     final WidgetEvent selectRestoreToEvent = new WidgetEvent();
 
     // create widgets
-    final List   widgetArchiveList;
+    final Table  widgetArchiveTable;
     final Label  widgetTotalEntryCount;
-    final Label  widgetSize;
+    final Label  widgetTotal;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
     final Button widgetOverwriteEntries;
@@ -7425,17 +7425,16 @@ assert storagePattern != null;
     {
       label = Widgets.newLabel(composite,BARControl.tr("Archives:"));
       Widgets.layout(label,0,0,TableLayoutData.NW);
-      widgetArchiveList = Widgets.newList(composite);
-      Widgets.layout(widgetArchiveList,1,0,TableLayoutData.NSWE,0,2);
-//      label = Widgets.newLabel(composite,BARControl.tr("Archives:"));
-//      Widgets.layout(label,0,0,TableLayoutData.NW);
-//      widgetTotalEntryCount = Widgets.newLabel(composite,"-");
-//      Widgets.layout(widgetTotalEntryCount,0,1,TableLayoutData.WE);
+      widgetArchiveTable = Widgets.newTable(composite);
+      Widgets.layout(widgetArchiveTable,1,0,TableLayoutData.NSWE,0,2,0,4);
+      Widgets.addTableColumn(widgetArchiveTable,0,"Name",   SWT.LEFT,  450,true);
+      Widgets.addTableColumn(widgetArchiveTable,1,"Entries",SWT.RIGHT,  50,true);
+      Widgets.addTableColumn(widgetArchiveTable,2,"Size",   SWT.RIGHT,  50,true);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Total size:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Total:"));
       Widgets.layout(label,2,0,TableLayoutData.W);
-      widgetSize = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetSize,2,1,TableLayoutData.WE);
+      widgetTotal = Widgets.newLabel(composite,"-");
+      Widgets.layout(widgetTotal,2,1,TableLayoutData.WE);
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
@@ -7606,29 +7605,51 @@ assert storagePattern != null;
           setStorageList(indexIdSet);
 
           final String[] errorMessage = new String[1];
-          ValueMap       valueMap     = new ValueMap();
 
           // get archives
-          if (BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
-                                       0,  // debugLevel
-                                       errorMessage,
-                                       valueMap
-                                      ) == Errors.NONE
-             )
-          {
-            display.syncExec(new Runnable()
-            {
-              public void run()
-              {
-//                widgetTotalEntryCount.setText(Long.toString(totalEntryCount));
-//                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
-              }
-            });
-          }
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
+                                   0,  // debugLevel
+                                   errorMessage,
+                                   new CommandResultHandler()
+                                   {
+                                     public int handleResult(int i, ValueMap valueMap)
+                                     {
+                                       try
+                                       {
+                                         final long   storageId       = valueMap.getLong  ("storageId"      );
+                                         final String name            = valueMap.getString("name"           );
+                                         final long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
+                                         final long   totalEntrySize  = valueMap.getLong  ("totalEntrySize" );
 
-          // get number entries, size
-//          final String[] errorMessage = new String[1];
-//          ValueMap       valueMap     = new ValueMap();
+                                         display.syncExec(new Runnable()
+                                         {
+                                           public void run()
+                                           {
+                                              Widgets.addTableItem(widgetArchiveTable,
+                                                                   storageId,
+                                                                   name,
+                                                                   Long.toString(totalEntryCount),
+                                                                   Long.toString(totalEntrySize)
+                                                                  );
+                                           }
+                                         });
+                                       }
+                                       catch (IllegalArgumentException exception)
+                                       {
+                                         if (Settings.debugLevel > 0)
+                                         {
+                                           System.err.println("ERROR: "+exception.getMessage());
+                                           System.exit(1);
+                                         }
+                                       }
+
+                                       return Errors.NONE;
+                                     }
+                                   }
+                                  );
+
+          // get total number entries, size
+          ValueMap       valueMap     = new ValueMap();
           if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
                                        0,  // debugLevel
                                        errorMessage,
@@ -7643,8 +7664,7 @@ assert storagePattern != null;
             {
               public void run()
               {
-//                widgetTotalEntryCount.setText(Long.toString(totalEntryCount));
-//                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
+                widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
               }
             });
           }
@@ -8241,34 +8261,36 @@ Dprintf.dprintf("");
     Button     button;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore entries"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore entries"),400,300,new double[]{1.0,0.0},1.0);
 
     final WidgetEvent selectRestoreToEvent = new WidgetEvent();
 
     // create widgets
-    final Label  widgetTotalEntryCount;
-    final Label  widgetSize;
+    final Table  widgetEntryTable;
+    final Label  widgetTotal;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
     final Button widgetOverwriteEntries;
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
-    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    composite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
+    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Entries:"));
-      Widgets.layout(label,0,0,TableLayoutData.W);
-      widgetTotalEntryCount = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetTotalEntryCount,0,1,TableLayoutData.WE);
+      Widgets.layout(label,0,0,TableLayoutData.NW);
+      widgetEntryTable = Widgets.newTable(composite);
+      Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE,0,2,0,4);
+      Widgets.addTableColumn(widgetEntryTable,0,"Name",   SWT.LEFT,  450,true);
+      Widgets.addTableColumn(widgetEntryTable,1,"Size",   SWT.RIGHT,  50,true);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Total size:"));
-      Widgets.layout(label,1,0,TableLayoutData.W);
-      widgetSize = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetSize,1,1,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("Total:"));
+      Widgets.layout(label,2,0,TableLayoutData.W);
+      widgetTotal = Widgets.newLabel(composite,"-");
+      Widgets.layout(widgetTotal,2,1,TableLayoutData.WE);
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
-      Widgets.layout(subComposite,2,0,TableLayoutData.WE,0,2);
+      Widgets.layout(subComposite,3,0,TableLayoutData.WE,0,2);
       {
         widgetRestoreTo = Widgets.newCheckbox(subComposite,BARControl.tr("to"));
         widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
@@ -8365,7 +8387,7 @@ Dprintf.dprintf("");
 
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,3,0,TableLayoutData.W,0,2);
+      Widgets.layout(widgetOverwriteEntries,4,0,TableLayoutData.W,0,2);
     }
 
     // buttons
@@ -8435,7 +8457,46 @@ Dprintf.dprintf("");
           // set entries to restore
           setEntryList(entryIdSet);
 
-          // get number entries, size
+          // get archives
+          BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
+                                   0,  // debugLevel
+                                   new CommandResultHandler()
+                                   {
+                                     public int handleResult(int i, ValueMap valueMap)
+                                     {
+                                       try
+                                       {
+                                         final long   entryId = valueMap.getLong  ("entryId");
+                                         final String name    = valueMap.getString("name"   );
+                                         final long   size    = valueMap.getLong  ("size"   );
+
+                                         display.syncExec(new Runnable()
+                                         {
+                                           public void run()
+                                           {
+                                              Widgets.addTableItem(widgetEntryTable,
+                                                                   entryId,
+                                                                   name,
+                                                                   Long.toString(size)
+                                                                  );
+                                           }
+                                         });
+                                       }
+                                       catch (IllegalArgumentException exception)
+                                       {
+                                         if (Settings.debugLevel > 0)
+                                         {
+                                           System.err.println("ERROR: "+exception.getMessage());
+                                           System.exit(1);
+                                         }
+                                       }
+
+                                       return Errors.NONE;
+                                     }
+                                   }
+                                  );
+
+          // get total number entries, size
           final String[] errorMessage = new String[1];
           ValueMap       valueMap     = new ValueMap();
           if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
@@ -8452,8 +8513,7 @@ Dprintf.dprintf("");
             {
               public void run()
               {
-                widgetTotalEntryCount.setText(Long.toString(totalEntryCount));
-                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(totalEntrySize),totalEntrySize));
+                widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
               }
             });
           }
