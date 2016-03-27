@@ -13693,6 +13693,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
       }
       break;
     case ENTRIES:
+//TODO remove
 #if 0
       if (error == ERROR_NONE)
       {
