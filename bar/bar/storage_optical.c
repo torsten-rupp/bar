@@ -153,9 +153,9 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
     // request new medium via call back, unload if requested
     do
     {
-      storageRequestResult = storageHandle->requestVolumeFunction(storageHandle->requestVolumeUserData,
-                                                                      storageHandle->requestedVolumeNumber
-                                                                     );
+      storageRequestResult = storageHandle->requestVolumeFunction(storageHandle->requestedVolumeNumber,
+                                                                  storageHandle->requestVolumeUserData
+                                                                 );
       if (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
@@ -250,7 +250,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
 
         // update status info
         storageHandle->runningInfo.volumeNumber = storageHandle->volumeNumber;
-        updateStatusInfo(storageHandle);
+        updateStorageStatusInfo(storageHandle);
 
         storageHandle->volumeState = STORAGE_VOLUME_STATE_LOADED;
         return ERROR_NONE;
@@ -299,7 +299,7 @@ LOCAL void executeIOmkisofs(ConstString line,
 //fprintf(stderr,"%s,%d: mkisofs: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
     storageHandle->runningInfo.volumeProgress = ((double)storageHandle->opticalDisk.write.step*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStatusInfo(storageHandle);
+    updateStorageStatusInfo(storageHandle);
   }
   String_delete(s);
 
@@ -334,13 +334,13 @@ LOCAL void executeIOdvdisaster(ConstString line,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
     storageHandle->runningInfo.volumeProgress = ((double)(storageHandle->opticalDisk.write.step+0)*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStatusInfo(storageHandle);
+    updateStorageStatusInfo(storageHandle);
   }
   if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,NULL,s,NULL))
   {
     p = String_toDouble(s,0,NULL,NULL,0);
     storageHandle->runningInfo.volumeProgress = ((double)(storageHandle->opticalDisk.write.step+1)*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStatusInfo(storageHandle);
+    updateStorageStatusInfo(storageHandle);
   }
   String_delete(s);
 
@@ -375,7 +375,7 @@ LOCAL void executeIOgrowisofs(ConstString line,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
     storageHandle->runningInfo.volumeProgress = ((double)storageHandle->opticalDisk.write.step*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStatusInfo(storageHandle);
+    updateStorageStatusInfo(storageHandle);
   }
   String_delete(s);
 
@@ -890,7 +890,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
 
       // update info
       storageHandle->runningInfo.volumeProgress = 0.0;
-      updateStatusInfo(storageHandle);
+      updateStorageStatusInfo(storageHandle);
 
       // get temporary image file name
       imageFileName = String_new();
@@ -972,7 +972,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             StringList_done(&stderrList);
             return error;
           }
-          updateStatusInfo(storageHandle);
+          updateStorageStatusInfo(storageHandle);
         }
 
         retryFlag = TRUE;
@@ -1026,7 +1026,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             StringList_done(&stderrList);
             return error;
           }
-          updateStatusInfo(storageHandle);
+          updateStorageStatusInfo(storageHandle);
         }
 
         retryFlag = TRUE;
@@ -1072,7 +1072,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
 
       // update info
       storageHandle->runningInfo.volumeProgress = 1.0;
-      updateStatusInfo(storageHandle);
+      updateStorageStatusInfo(storageHandle);
 
       // delete stored files
       fileName = String_new();
@@ -1126,7 +1126,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
     // update info
     storageHandle->opticalDisk.write.step     = 3;
     storageHandle->runningInfo.volumeProgress = 1.0;
-    updateStatusInfo(storageHandle);
+    updateStorageStatusInfo(storageHandle);
   }
 
   return error;

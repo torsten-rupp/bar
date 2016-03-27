@@ -113,9 +113,9 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
     // request new volume via call back, unload if requested
     do
     {
-      storageRequestResult = storageHandle->requestVolumeFunction(storageHandle->requestVolumeUserData,
-                                                                      storageHandle->requestedVolumeNumber
-                                                                     );
+      storageRequestResult = storageHandle->requestVolumeFunction(storageHandle->requestedVolumeNumber,
+                                                                  storageHandle->requestVolumeUserData
+                                                                 );
       if (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
@@ -211,7 +211,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
 
         // update status info
         storageHandle->runningInfo.volumeNumber = storageHandle->volumeNumber;
-        updateStatusInfo(storageHandle);
+        updateStorageStatusInfo(storageHandle);
 
         storageHandle->volumeState = STORAGE_VOLUME_STATE_LOADED;
         return ERROR_NONE;
@@ -572,7 +572,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
         {
           return error;
         }
-        updateStatusInfo(storageHandle);
+        updateStorageStatusInfo(storageHandle);
       }
 
       // get temporary image file name
@@ -717,7 +717,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
   {
     // update info
     storageHandle->runningInfo.volumeProgress = 1.0;
-    updateStatusInfo(storageHandle);
+    updateStorageStatusInfo(storageHandle);
   }
 
   return error;

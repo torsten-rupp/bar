@@ -82,19 +82,27 @@
 /***********************************************************************\
 * Name   : initDefaultWebDAVPassword
 * Purpose: init default WebDAV password
-* Input  : hostName   - host name
-*          loginName  - login name
-*          jobOptions - job options
+* Input  : hostName            - host name
+*          loginName           - login name
+*          jobOptions          - job options
+*          getPasswordFunction - get password call-back (can
+*                                be NULL)
+*          getPasswordUserData - user data for get password call-back
 * Output : -
 * Return : TRUE if WebDAV password intialized, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initDefaultWebDAVPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
+LOCAL bool initDefaultWebDAVPassword(ConstString         hostName,
+                                     ConstString         loginName,
+                                     const JobOptions    *jobOptions,
+                                     GetPasswordFunction getPasswordFunction,
+                                     void                *getPasswordUserData
+                                    )
 {
+  bool          initFlag;
   SemaphoreLock semaphoreLock;
   String        s;
-  bool          initFlag;
 
   initFlag = FALSE;
 
@@ -104,29 +112,70 @@ LOCAL bool initDefaultWebDAVPassword(ConstString hostName, ConstString loginName
     {
       if (jobOptions->webDAVServer.password == NULL)
       {
-        if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+        switch (globalOptions.runMode)
         {
-          if (defaultWebDAVPassword == NULL)
-          {
-            Password *password = Password_new();
-            s = !String_isEmpty(loginName)
-                  ? String_format(String_new(),"WebDAV login password for %S@%S",loginName,hostName)
-                  : String_format(String_new(),"WebDAV login password for %S",hostName);
-            if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+          case RUN_MODE_INTERACTIVE:
+            if (defaultWebDAVPassword == NULL)
             {
-              defaultWebDAVPassword = password;
-              initFlag = TRUE;
+              Password *password = Password_new();
+              s = !String_isEmpty(loginName)
+                    ? String_format(String_new(),"WebDAV login password for %S@%S",loginName,hostName)
+                    : String_format(String_new(),"WebDAV login password for %S",hostName);
+              if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+              {
+                defaultWebDAVPassword = password;
+                initFlag = TRUE;
+              }
+              else
+              {
+                Password_delete(password);
+              }
+              String_delete(s);
             }
             else
             {
-              Password_delete(password);
+              initFlag = TRUE;
             }
-            String_delete(s);
-          }
-          else
-          {
-            initFlag = TRUE;
-          }
+            break;
+          case RUN_MODE_BATCH:
+          case RUN_MODE_SERVER:
+            if (getPasswordFunction != NULL)
+            {
+              Password *password = Password_new();
+              s = !String_isEmpty(loginName)
+                    ? String_format(String_new(),"%S@%S",loginName,hostName)
+                    : String_format(String_new(),"%S",hostName);
+              if (getPasswordFunction(password,
+                                      PASSWORD_TYPE_WEBDAV,
+                                      String_cString(hostName),
+                                      TRUE,
+                                      TRUE,
+                                      getPasswordUserData
+                                     ) == ERROR_NONE
+                 )
+              {
+                if (defaultWebDAVPassword != NULL)
+                {
+                  Password_set(defaultWebDAVPassword,password);
+                  Password_delete(password);
+                }
+                else
+                {
+                  defaultWebDAVPassword = password;
+                }
+                initFlag = TRUE;
+              }
+              else
+              {
+                Password_delete(password);
+              }
+              String_delete(s);
+            }
+            else
+            {
+              initFlag = TRUE;
+            }
+            break;
         }
       }
       else
@@ -664,7 +713,13 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
     if (error != ERROR_NONE)
     {
       // initialize default password
-      if (initDefaultWebDAVPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions))
+      while (   (error != ERROR_NONE)
+             && initDefaultWebDAVPassword(storageHandle->storageSpecifier.hostName,
+                                          storageHandle->storageSpecifier.loginName,
+                                          jobOptions,
+                                          CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                                         )
+            )
       {
         error = checkWebDAVLogin(storageHandle->storageSpecifier.hostName,
                                  storageHandle->storageSpecifier.loginName,
@@ -675,9 +730,11 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
           Password_set(storageHandle->storageSpecifier.loginPassword,defaultWebDAVPassword);
         }
       }
-      else
+      if (error != ERROR_NONE)
       {
-        error = !Password_isEmpty(defaultWebDAVPassword) ? ERROR_INVALID_WEBDAV_PASSWORD : ERROR_NO_WEBDAV_PASSWORD;
+        error = (!Password_isEmpty(storageHandle->storageSpecifier.loginPassword) || !Password_isEmpty(webDAVServer.password) || !Password_isEmpty(defaultWebDAVPassword))
+                  ? ERRORX_(INVALID_WEBDAV_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
+                  : ERRORX_(NO_WEBDAV_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
       }
     }
     if (error != ERROR_NONE)
@@ -2264,7 +2321,13 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     if (error != ERROR_NONE)
     {
       // initialize default password
-      if (initDefaultWebDAVPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions))
+      if (initDefaultWebDAVPassword(storageDirectoryListHandle->storageSpecifier.hostName,
+                                    storageDirectoryListHandle->storageSpecifier.loginName,
+                                    jobOptions,
+//TODO
+                                    CALLBACK(NULL,NULL) //storageDirectoryListHandle->getPasswordFunction,
+                                   )
+         )
       {
         error = checkWebDAVLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                  storageDirectoryListHandle->storageSpecifier.loginName,
@@ -2277,7 +2340,9 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
       }
       else
       {
-        error = !Password_isEmpty(defaultWebDAVPassword) ? ERROR_INVALID_WEBDAV_PASSWORD : ERROR_NO_WEBDAV_PASSWORD;
+        error = (!Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword) || !Password_isEmpty(webDAVServer.password) || !Password_isEmpty(defaultWebDAVPassword))
+                  ? ERRORX_(INVALID_WEBDAV_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
+                  : ERRORX_(NO_WEBDAV_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
       }
     }
     if (error != ERROR_NONE)

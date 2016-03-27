@@ -401,9 +401,13 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
     if (error != ERROR_NONE)
     {
       // initialize default password
-      if (   initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions)
-          && !Password_isEmpty(defaultSSHPassword)
-         )
+      while (   (error != ERROR_NONE)
+             && initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,
+                                       storageHandle->storageSpecifier.loginName,
+                                       jobOptions,
+                                       CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                                      )
+            )
       {
         error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
                               storageHandle->storageSpecifier.hostPort,
@@ -419,7 +423,7 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
           Password_set(storageHandle->storageSpecifier.loginPassword,defaultSSHPassword);
         }
       }
-      else
+      if (error != ERROR_NONE)
       {
         error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
                   ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
@@ -1579,8 +1583,13 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
       if (error == ERROR_UNKNOWN)
       {
         // initialize default password
-        if (   initDefaultSSHPassword(storageDirectoryListHandle->storageSpecifier.hostName,storageDirectoryListHandle->storageSpecifier.loginName,jobOptions)
-            && !Password_isEmpty(defaultSSHPassword)
+        while (   (error != ERROR_NONE)
+               && initDefaultSSHPassword(storageDirectoryListHandle->storageSpecifier.hostName,
+                                         storageDirectoryListHandle->storageSpecifier.loginName,
+                                         jobOptions,
+//TODO
+                                         CALLBACK(NULL,NULL) // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                                        )
            )
         {
           error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
@@ -1596,7 +1605,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                                   0
                                  );
         }
-        else
+        if (error != ERROR_NONE)
         {
           error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
                     ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))

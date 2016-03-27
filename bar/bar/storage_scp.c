@@ -409,8 +409,12 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
     if (error == ERROR_UNKNOWN)
     {
       // initialize default password
-      if (   initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,storageHandle->storageSpecifier.loginName,jobOptions)
-          && !Password_isEmpty(defaultSSHPassword)
+      while (   (error != ERROR_NONE)
+             && initDefaultSSHPassword(storageHandle->storageSpecifier.hostName,
+                                       storageHandle->storageSpecifier.loginName,
+                                       jobOptions,
+                                       CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                                      )
          )
       {
         error = checkSSHLogin(storageHandle->storageSpecifier.hostName,
@@ -427,7 +431,7 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
           Password_set(storageHandle->storageSpecifier.loginPassword,defaultSSHPassword);
         }
       }
-      else
+      if (error != ERROR_NONE)
       {
         error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
                   ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))

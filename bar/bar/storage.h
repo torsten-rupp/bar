@@ -70,7 +70,28 @@
 
 /***************************** Datatypes *******************************/
 
-/* storage modes */
+// status info data
+typedef struct
+{
+  uint   volumeNumber;                     // current volume number
+  double volumeProgress;                   // current volume progress [0..100]
+} StorageStatusInfo;
+
+/***********************************************************************\
+* Name   : StorageStatusInfoFunction
+* Purpose: storage status call-back
+* Input  : storageStatusInfo - storage status info
+*          userData          - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*StorageUpdateStatusInfoFunction)(const StorageStatusInfo *storageStatusInfo,
+                                               void                    *userData
+                                              );
+
+// storage request volume results
 typedef enum
 {
   STORAGE_REQUEST_VOLUME_NONE,
@@ -86,37 +107,16 @@ typedef enum
 /***********************************************************************\
 * Name   : StorageRequestVolumeFunction
 * Purpose: request new volume call-back
-* Input  : userData - user data
-*          volumeNumber - requested volume number
+* Input  : volumeNumber - requested volume number
+*          userData     - user data
 * Output : -
 * Return : storage request result; see StorageRequestResults
 * Notes  : -
 \***********************************************************************/
 
-typedef StorageRequestResults(*StorageRequestVolumeFunction)(void *userData,
-                                                             uint volumeNumber
+typedef StorageRequestResults(*StorageRequestVolumeFunction)(uint volumeNumber,
+                                                             void *userData
                                                             );
-
-/* status info data */
-typedef struct
-{
-  uint   volumeNumber;                     // current volume number
-  double volumeProgress;                   // current volume progress [0..100]
-} StorageStatusInfo;
-
-/***********************************************************************\
-* Name   : StorageStatusInfoFunction
-* Purpose: storage status call-back
-* Input  : userData          - user data
-*          storageStatusInfo - storage status info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*StorageStatusInfoFunction)(void                    *userData,
-                                         const StorageStatusInfo *storageStatusInfo
-                                        );
 
 // storage modes
 typedef enum
@@ -154,19 +154,19 @@ typedef enum
 // storage specifier
 typedef struct
 {
-  StorageTypes type;                                       // storage type
-  String       hostName;                                   // host name
-  uint         hostPort;                                   // host port
-  bool         sslFlag;                                    // TRUE for SSL
-  String       loginName;                                  // login name
-  Password     *loginPassword;                             // login name
-  String       deviceName;                                 // device name
-  String       archiveName;                                // archive base name
-  String       archivePatternString;                       // archive pattern string or NULL if no pattern
+  StorageTypes type;                                         // storage type
+  String       hostName;                                     // host name
+  uint         hostPort;                                     // host port
+  bool         sslFlag;                                      // TRUE for SSL
+  String       loginName;                                    // login name
+  Password     *loginPassword;                               // login name
+  String       deviceName;                                   // device name
+  String       archiveName;                                  // archive base name
+  String       archivePatternString;                         // archive pattern string or NULL if no pattern
   Pattern      archivePattern;
 
-  String       storageName;                                // storage name (returned by Storage_getStorageName())
-  String       printableStorageName;                       // printable storage name without password (returned by Storage_getPrintableStorageName())
+  String       storageName;                                  // storage name (returned by Storage_getStorageName())
+  String       printableStorageName;                         // printable storage name without password (returned by Storage_getPrintableStorageName())
 } StorageSpecifier;
 
 // volume states
@@ -181,32 +181,35 @@ typedef enum
 // bandwidth data
 typedef struct
 {
-  BandWidthList *maxBandWidthList;                         // list with max. band width [bits/s] to use or NULL
-  ulong         maxBlockSize;                              // max. block size [bytes]
-  ulong         blockSize;                                 // current block size [bytes]
-  ulong         measurements[16];                          // measured band width values [bis/s]
+  BandWidthList *maxBandWidthList;                           // list with max. band width [bits/s] to use or NULL
+  ulong         maxBlockSize;                                // max. block size [bytes]
+  ulong         blockSize;                                   // current block size [bytes]
+  ulong         measurements[16];                            // measured band width values [bis/s]
   uint          measurementNextIndex;
   uint          measurementCount;
-  ulong         measurementBytes;                          // measurement sum of transmitted bytes
-  uint64        measurementTime;                           // measurement sum of time for transmission [us]
+  ulong         measurementBytes;                            // measurement sum of transmitted bytes
+  uint64        measurementTime;                             // measurement sum of time for transmission [us]
 } StorageBandWidthLimiter;
 
 // storage handle
 typedef struct
 {
-  StorageSpecifier             storageSpecifier;           // storage specifier data
-  const JobOptions             *jobOptions;
+  StorageSpecifier                storageSpecifier;          // storage specifier data
+  const JobOptions                *jobOptions;
 
-  bool                         mountedDeviceFlag;          // true iff device was mounted
+  bool                            mountedDeviceFlag;         // true iff device was mounted
 
-  StorageRequestVolumeFunction requestVolumeFunction;      // call back for request new volume
-  void                         *requestVolumeUserData;
-  uint                         volumeNumber;               // current loaded volume number
-  uint                         requestedVolumeNumber;      // requested volume number
-  StorageVolumeStates          volumeState;                // volume state
+  StorageUpdateStatusInfoFunction updateStatusInfoFunction;  // storage status info update call-back
+  void                            *updateStatusInfoUserData;
+  GetPasswordFunction             getPasswordFunction;       // get password call-back
+  void                            *getPasswordUserData;
+  StorageRequestVolumeFunction    requestVolumeFunction;     // request new volume call-back
+  void                            *requestVolumeUserData;
 
-  StorageStatusInfoFunction    storageStatusInfoFunction;  // call back new storage status info
-  void                         *storageStatusInfoUserData;
+  uint                            volumeNumber;              // current loaded volume number
+  uint                            requestedVolumeNumber;     // requested volume number
+  StorageVolumeStates             volumeState;               // volume state
+
 
   union
   {
@@ -219,34 +222,34 @@ typedef struct
       // FTP storage
       struct
       {
-        uint                    serverId;                  // id of allocated server
-        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+        uint                      serverId;                  // id of allocated server
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
       } ftp;
 
       // WebDAV storage
       struct
       {
-        uint                    serverId;                  // id of allocated server
-        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+        uint                      serverId;                  // id of allocated server
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
       } webdav;
     #elif defined(HAVE_FTP)
       // FTP storage
       struct
       {
-        uint                    serverId;                  // id of allocated server
+        uint                      serverId;                  // id of allocated server
 #if 0
-        netbuf                  *control;
-        netbuf                  *data;
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
+        netbuf                    *control;
+        netbuf                    *data;
+        uint64                    index;                     // current read/write index in file [0..n-1]
+        uint64                    size;                      // size of file [bytes]
+        struct                                               // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
 #endif
-        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
       } ftp;
     #endif /* HAVE_CURL || HAVE_FTP */
 
@@ -254,38 +257,38 @@ typedef struct
       // ssh storage (remote BAR)
       struct
       {
-        uint                    serverId;                  // id of allocated server
-//        String                  hostName;                  // ssh server host name
-//        uint                    hostPort;                  // ssh server port number
-//        String                  loginName;                 // ssh login name
-//        Password                *password;                 // ssh login password
-//        String                  sshPublicKeyFileName;      // ssh public key file name
-//        String                  sshPrivateKeyFileName;     // ssh private key file name
-        Key                     publicKey;                   // ssh public key data (ssh,scp,sftp)
-        Key                     privateKey;                  // ssh private key data (ssh,scp,sftp)
-        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
+        uint                      serverId;                  // id of allocated server
+//        String                    hostName;                  // ssh server host name
+//        uint                      hostPort;                  // ssh server port number
+//        String                    loginName;                 // ssh login name
+//        Password                  *password;                 // ssh login password
+//        String                    sshPublicKeyFileName;      // ssh public key file name
+//        String                    sshPrivateKeyFileName;     // ssh private key file name
+        Key                       publicKey;                   // ssh public key data (ssh,scp,sftp)
+        Key                       privateKey;                  // ssh private key data (ssh,scp,sftp)
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } ssh;
 
       // scp storage
       struct
       {
-        uint                    serverId;                  // id of allocated server
-        String                  sshPublicKeyFileName;      // ssh public key file name
-        String                  sshPrivateKeyFileName;     // ssh private key file name
-        Key                     publicKey;                 // ssh public key data (ssh,scp,sftp)
-        Key                     privateKey;                // ssh private key data (ssh,scp,sftp)
-        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
+        uint                      serverId;                  // id of allocated server
+        String                    sshPublicKeyFileName;      // ssh public key file name
+        String                    sshPrivateKeyFileName;     // ssh private key file name
+        Key                       publicKey;                 // ssh public key data (ssh,scp,sftp)
+        Key                       privateKey;                // ssh private key data (ssh,scp,sftp)
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } scp;
 
       // sftp storage
       struct
       {
-        uint                    serverId;                  // id of allocated server
-        String                  sshPublicKeyFileName;      // ssh public key file name
-        String                  sshPrivateKeyFileName;     // ssh private key file name
-        Key                     publicKey;                 // ssh public key data (ssh,scp,sftp)
-        Key                     privateKey;                // ssh private key data (ssh,scp,sftp)
-        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
+        uint                      serverId;                  // id of allocated server
+        String                    sshPublicKeyFileName;      // ssh public key file name
+        String                    sshPrivateKeyFileName;     // ssh private key file name
+        Key                       publicKey;                 // ssh public key data (ssh,scp,sftp)
+        Key                       privateKey;                // ssh private key data (ssh,scp,sftp)
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limiter data
       } sftp;
     #endif /* HAVE_SSH2 */
 
@@ -302,58 +305,58 @@ typedef struct
       // write cd/dvd/bd
       struct
       {
-        String     requestVolumeCommand;                   // command to request new cd/dvd/bd
-        String     unloadVolumeCommand;                    // command to unload cd/dvd/bd
-        String     loadVolumeCommand;                      // command to load cd/dvd/bd
-        uint64     volumeSize;                             // size of cd/dvd/bd [bytes]
-        String     imagePreProcessCommand;                 // command to execute before creating image
-        String     imagePostProcessCommand;                // command to execute after created image
-        String     imageCommand;                           // command to create cd/dvd/bd image
-        String     eccPreProcessCommand;                   // command to execute before ECC calculation
-        String     eccPostProcessCommand;                  // command to execute after ECC calculation
-        String     eccCommand;                             // command for ECC calculation
-        String     writePreProcessCommand;                 // command to execute before writing cd/dvd/bd
-        String     writePostProcessCommand;                // command to execute after writing cd/dvd/bd
-        String     writeCommand;                           // command to write cd/dvd/bd
-        String     writeImageCommand;                      // command to write image on cd/dvd/bd
-        bool       alwaysCreateImage;                      // TRUE iff always creating image
+        String     requestVolumeCommand;                     // command to request new cd/dvd/bd
+        String     unloadVolumeCommand;                      // command to unload cd/dvd/bd
+        String     loadVolumeCommand;                        // command to load cd/dvd/bd
+        uint64     volumeSize;                               // size of cd/dvd/bd [bytes]
+        String     imagePreProcessCommand;                   // command to execute before creating image
+        String     imagePostProcessCommand;                  // command to execute after created image
+        String     imageCommand;                             // command to create cd/dvd/bd image
+        String     eccPreProcessCommand;                     // command to execute before ECC calculation
+        String     eccPostProcessCommand;                    // command to execute after ECC calculation
+        String     eccCommand;                               // command for ECC calculation
+        String     writePreProcessCommand;                   // command to execute before writing cd/dvd/bd
+        String     writePostProcessCommand;                  // command to execute after writing cd/dvd/bd
+        String     writeCommand;                             // command to write cd/dvd/bd
+        String     writeImageCommand;                        // command to write image on cd/dvd/bd
+        bool       alwaysCreateImage;                        // TRUE iff always creating image
 
-        uint       steps;                                  // total number of steps to create cd/dvd/bd
-        String     directory;                              // temporary directory for cd/dvd/bd files
+        uint       steps;                                    // total number of steps to create cd/dvd/bd
+        String     directory;                                // temporary directory for cd/dvd/bd files
 
-        uint       step;                                   // current step number
-        double     progress;                               // progress of current step
+        uint       step;                                     // current step number
+        double     progress;                                 // progress of current step
 
-        uint       number;                                 // current cd/dvd/bd number
-        bool       newVolumeFlag;                          // TRUE iff new cd/dvd/bd volume needed
-        StringList fileNameList;                           // list with file names
-        uint64     totalSize;                              // current size of cd/dvd/bd [bytes]
+        uint       number;                                   // current cd/dvd/bd number
+        bool       newVolumeFlag;                            // TRUE iff new cd/dvd/bd volume needed
+        StringList fileNameList;                             // list with file names
+        uint64     totalSize;                                // current size of cd/dvd/bd [bytes]
       } write;
     } opticalDisk;
 
     // device storage
     struct
     {
-      String     requestVolumeCommand;                     // command to request new volume
-      String     unloadVolumeCommand;                      // command to unload volume
-      String     loadVolumeCommand;                        // command to load volume
-      uint64     volumeSize;                               // size of volume [bytes]
-      String     imagePreProcessCommand;                   // command to execute before creating image
-      String     imagePostProcessCommand;                  // command to execute after created image
-      String     imageCommand;                             // command to create volume image
-      String     eccPreProcessCommand;                     // command to execute before ECC calculation
-      String     eccPostProcessCommand;                    // command to execute after ECC calculation
-      String     eccCommand;                               // command for ECC calculation
-      String     writePreProcessCommand;                   // command to execute before writing volume
-      String     writePostProcessCommand;                  // command to execute after writing volume
-      String     writeCommand;                             // command to write volume
+      String     requestVolumeCommand;                       // command to request new volume
+      String     unloadVolumeCommand;                        // command to unload volume
+      String     loadVolumeCommand;                          // command to load volume
+      uint64     volumeSize;                                 // size of volume [bytes]
+      String     imagePreProcessCommand;                     // command to execute before creating image
+      String     imagePostProcessCommand;                    // command to execute after created image
+      String     imageCommand;                               // command to create volume image
+      String     eccPreProcessCommand;                       // command to execute before ECC calculation
+      String     eccPostProcessCommand;                      // command to execute after ECC calculation
+      String     eccCommand;                                 // command for ECC calculation
+      String     writePreProcessCommand;                     // command to execute before writing volume
+      String     writePostProcessCommand;                    // command to execute after writing volume
+      String     writeCommand;                               // command to write volume
 
-      String     directory;                                // temporary directory for files
+      String     directory;                                  // temporary directory for files
 
-      uint       number;                                   // volume number
-      bool       newVolumeFlag;                            // TRUE iff new volume needed
-      StringList fileNameList;                             // list with file names
-      uint64     totalSize;                                // current size [bytes]
+      uint       number;                                     // volume number
+      bool       newVolumeFlag;                              // TRUE iff new volume needed
+      StringList fileNameList;                               // list with file names
+      uint64     totalSize;                                  // current size [bytes]
     } device;
   };
 
@@ -364,17 +367,17 @@ typedef struct
 typedef struct
 {
   StorageHandle                *storageHandle;
-  StorageModes                 mode;                       // storage mode: READ, WRITE
-  String                       archiveName;                // archive name
+  StorageModes                 mode;                         // storage mode: READ, WRITE
+  String                       archiveName;                  // archive name
 
-  bool                         mountedDeviceFlag;          // true iff device was mounted
+  bool                         mountedDeviceFlag;            // true iff device was mounted
 
   union
   {
     // file storage
     struct
     {
-      FileHandle fileHandle;                               // file handle
+      FileHandle fileHandle;                                 // file handle
     } fileSystem;
 
     #if defined(HAVE_CURL)
@@ -383,19 +386,19 @@ typedef struct
       {
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
-//        int                     runningHandles;            // curl number of active handles (1 or 0)
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
+//        int                     runningHandles;              // curl number of active handles (1 or 0)
+        uint64                  index;                       // current read/write index in file [0..n-1]
+        uint64                  size;                        // size of file [bytes]
+        struct                                               // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
-        void                    *buffer;                   // next data to write/read
-        ulong                   length;                    // length of data to write/read
-        ulong                   transferedBytes;           // number of data bytes read/written
+        StorageBandWidthLimiter bandWidthLimiter;            // band width limit data
+        void                    *buffer;                     // next data to write/read
+        ulong                   length;                      // length of data to write/read
+        ulong                   transferedBytes;             // number of data bytes read/written
       } ftp;
 
       // WebDAV storage
@@ -403,22 +406,22 @@ typedef struct
       {
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // receive buffer
+        uint64                  index;                       // current read/write index in file [0..n-1]
+        uint64                  size;                        // size of file [bytes]
+        struct                                               // receive buffer
         {
-          byte   *data;                                    // data received
-          ulong  size;                                     // buffer size [bytes]
-          uint64 offset;                                   // data offset
-          ulong  length;                                   // length of data received
+          byte   *data;                                      // data received
+          ulong  size;                                       // buffer size [bytes]
+          uint64 offset;                                     // data offset
+          ulong  length;                                     // length of data received
         } receiveBuffer;
-        struct                                             // send buffer
+        struct                                               // send buffer
         {
-          const byte *data;                                // data to send
-          ulong      index;                                // data index
-          ulong      length;                               // length of data to send
+          const byte *data;                                  // data to send
+          ulong      index;                                  // data index
+          ulong      length;                                 // length of data to send
         } sendBuffer;
-//        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+//        StorageBandWidthLimiter bandWidthLimiter;            // band width limit data
       } webdav;
     #elif defined(HAVE_FTP)
       // FTP storage
@@ -426,15 +429,15 @@ typedef struct
       {
         netbuf                  *control;
         netbuf                  *data;
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
+        uint64                  index;                       // current read/write index in file [0..n-1]
+        uint64                  size;                        // size of file [bytes]
+        struct                                               // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-//        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+//        StorageBandWidthLimiter bandWidthLimiter;            // band width limit data
       } ftp;
     #endif /* HAVE_CURL || HAVE_FTP */
 
@@ -443,26 +446,26 @@ typedef struct
       struct
       {
         SocketHandle            socketHandle;
-        LIBSSH2_CHANNEL         *channel;                  // ssh channel
-        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
-        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
-        uint64                  totalSentBytes;            // total sent bytes
-        uint64                  totalReceivedBytes;        // total received bytes
-        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
+        LIBSSH2_CHANNEL         *channel;                    // ssh channel
+        LIBSSH2_SEND_FUNC((*oldSendCallback));               // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));            // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;              // total sent bytes
+        uint64                  totalReceivedBytes;          // total received bytes
+        StorageBandWidthLimiter bandWidthLimiter;            // band width limiter data
       } ssh;
 
       // scp storage
       struct
       {
         SocketHandle            socketHandle;
-        LIBSSH2_CHANNEL         *channel;                  // scp channel
-        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
-        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
-        uint64                  totalSentBytes;            // total sent bytes
-        uint64                  totalReceivedBytes;        // total received bytes
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
+        LIBSSH2_CHANNEL         *channel;                    // scp channel
+        LIBSSH2_SEND_FUNC((*oldSendCallback));               // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));            // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;              // total sent bytes
+        uint64                  totalReceivedBytes;          // total received bytes
+        uint64                  index;                       // current read/write index in file [0..n-1]
+        uint64                  size;                        // size of file [bytes]
+        struct                                               // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
@@ -474,39 +477,128 @@ typedef struct
       struct
       {
         SocketHandle            socketHandle;
-        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
-        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
-        uint64                  totalSentBytes;            // total sent bytes
-        uint64                  totalReceivedBytes;        // total received bytes
-        LIBSSH2_SFTP            *sftp;                     // sftp session
-        LIBSSH2_SFTP_HANDLE     *sftpHandle;               // sftp handle
-        uint64                  index;                     // current read/write index in file [0..n-1]
-        uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
+        LIBSSH2_SEND_FUNC((*oldSendCallback));               // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));            // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;              // total sent bytes
+        uint64                  totalReceivedBytes;          // total received bytes
+        LIBSSH2_SFTP            *sftp;                       // sftp session
+        LIBSSH2_SFTP_HANDLE     *sftpHandle;                 // sftp handle
+        uint64                  index;                       // current read/write index in file [0..n-1]
+        uint64                  size;                        // size of file [bytes]
+        struct                                               // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-//        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
+//        StorageBandWidthLimiter bandWidthLimiter;            // band width limiter data
       } sftp;
     #endif /* HAVE_SSH2 */
 
     // cd/dvd/bd storage
-    struct
+    struct// storage specifier data
+
+
+
+
+
+
+
+
+
+
+
+// id of allocated server
+// directory name
+
+
+// last parsed entry
+
+
+
+
+
+
+// TRUE if entry read
+
+
+
+
+// id of allocated server
+// directory name
+
+
+
+
+
+
+// last parsed entry
+
+
+
+
+
+
+// TRUE if entry read
+
+
+
+
+
+// id of allocated server
+// directory name
+
+
+
+
+
+// last parsed entry
+
+
+
+
+
+
+// TRUE if entry read
+
+
+
+
+
+// directory name
+
+
+
+
+
+
+// buffer for reading file names
+
+
+// TRUE if entry read
+
+
+
+
+
+// directory name
+
+// ISO9660 image handle
+// ISO9660 entry list
+// next entry in list
     {
       // read cd/dvd/bd
       struct
       {
         #ifdef HAVE_ISO9660
-          iso9660_t      *iso9660Handle;                   // ISO9660 image handle
-          iso9660_stat_t *iso9660Stat;                     // ISO9660 file handle
-          uint64         index;                            // current read/write index in ISO image [0..n-1]
+          iso9660_t      *iso9660Handle;                     // ISO9660 image handle
+          iso9660_stat_t *iso9660Stat;                       // ISO9660 file handle
+          uint64         index;                              // current read/write index in ISO image [0..n-1]
 
-          struct                                           // read buffer
+          struct                                             // read buffer
           {
             byte   *data;
-            uint64 blockIndex;                             // ISO9660 block index
+            uint64 blockIndex;                               // ISO9660 block index
             ulong  length;
           } buffer;
         #endif /* HAVE_ISO9660 */
@@ -515,7 +607,7 @@ typedef struct
       // write cd/dvd/bd
       struct
       {
-        String     fileName;                               // current file name
+        String     fileName;                                 // current file name
         FileHandle fileHandle;
       } write;
     } opticalDisk;
@@ -523,7 +615,7 @@ typedef struct
     // device storage
     struct
     {
-      String     fileName;                                 // current file name
+      String     fileName;                                   // current file name
       FileHandle fileHandle;
     } device;
   };
@@ -532,7 +624,7 @@ typedef struct
 // directory list handle
 typedef struct
 {
-  StorageSpecifier storageSpecifier;                       // storage specifier data
+  StorageSpecifier storageSpecifier;                         // storage specifier data
 
   StorageTypes type;
   union
@@ -544,84 +636,84 @@ typedef struct
     #if   defined(HAVE_CURL)
       struct
       {
-        uint                    serverId;                  // id of allocated server
-        String                  pathName;                  // directory name
+        uint                    serverId;                    // id of allocated server
+        String                  pathName;                    // directory name
         StringList              lineList;
 
-        String                  fileName;                  // last parsed entry
+        String                  fileName;                    // last parsed entry
         FileTypes               type;
         int64                   size;
         uint64                  timeModified;
         uint32                  userId;
         uint32                  groupId;
         FilePermission          permission;
-        bool                    entryReadFlag;             // TRUE if entry read
+        bool                    entryReadFlag;               // TRUE if entry read
       } ftp;
 
       struct
       {
-        uint                    serverId;                  // id of allocated server
-        String                  pathName;                  // directory name
+        uint                    serverId;                    // id of allocated server
+        String                  pathName;                    // directory name
 
         mxml_node_t             *rootNode;
         mxml_node_t             *lastNode;
         mxml_node_t             *currentNode;
 
 /*
-        String                  fileName;                  // last parsed entry
+        String                  fileName;                    // last parsed entry
         FileTypes               type;
         int64                   size;
         uint64                  timeModified;
         uint32                  userId;
         uint32                  groupId;
         FilePermission          permission;
-        bool                    entryReadFlag;             // TRUE if entry read
+        bool                    entryReadFlag;               // TRUE if entry read
 */
       } webdav;
     #elif defined(HAVE_FTP)
       struct
       {
-        uint                    serverId;                  // id of allocated server
-        String                  pathName;                  // directory name
+        uint                    serverId;                    // id of allocated server
+        String                  pathName;                    // directory name
 
         String                  fileListFileName;
         String                  line;
         FileHandle              fileHandle;
 
-        String                  fileName;                  // last parsed entry
+        String                  fileName;                    // last parsed entry
         FileTypes               type;
         int64                   size;
         uint64                  timeModified;
         uint32                  userId;
         uint32                  groupId;
         FilePermission          permission;
-        bool                    entryReadFlag;             // TRUE if entry read
+        bool                    entryReadFlag;               // TRUE if entry read
       } ftp;
     #endif /* HAVE_CURL || HAVE_FTP */
     #ifdef HAVE_SSH2
       struct
       {
-        String                  pathName;                  // directory name
+        String                  pathName;                    // directory name
 
         SocketHandle            socketHandle;
         LIBSSH2_SESSION         *session;
         LIBSSH2_CHANNEL         *channel;
         LIBSSH2_SFTP            *sftp;
         LIBSSH2_SFTP_HANDLE     *sftpHandle;
-        char                    *buffer;                   // buffer for reading file names
+        char                    *buffer;                     // buffer for reading file names
         ulong                   bufferLength;
         LIBSSH2_SFTP_ATTRIBUTES attributes;
-        bool                    entryReadFlag;             // TRUE if entry read
+        bool                    entryReadFlag;               // TRUE if entry read
       } sftp;
     #endif /* HAVE_SSH2 */
     struct
     {
       #ifdef HAVE_ISO9660
-        String                  pathName;                  // directory name
+        String                  pathName;                    // directory name
 
-        iso9660_t               *iso9660Handle;            // ISO9660 image handle
-        CdioList_t              *cdioList;                 // ISO9660 entry list
-        CdioListNode_t          *cdioNextNode;             // next entry in list
+        iso9660_t               *iso9660Handle;              // ISO9660 image handle
+        CdioList_t              *cdioList;                   // ISO9660 entry list
+        CdioListNode_t          *cdioNextNode;               // next entry in list
       #else /* not HAVE_ISO9660 */
         DirectoryListHandle     directoryListHandle;
       #endif /* HAVE_ISO9660 */
@@ -1022,46 +1114,54 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_init
 * Purpose: init new storage
-* Input  : storageHandle                - storage storage variable
-*          storageSpecifier             - storage specifier structure
-*          jobOptions                   - job options or NULL
-*          maxBandWidthList             - list with max. band width to
-*                                         use [bits/s] or NULL
-*          serverConnectionPriority     - server connection priority
-*          storageRequestVolumeFunction - volume request call back
-*          storageRequestVolumeUserData - user data for volume request
-*                                         call back
-*          storageStatusInfoFunction    - status info call back
-*          storageStatusInfoUserData    - user data for status info
-*                                         call back
+* Input  : storageHandle                   - storage storage variable
+*          storageSpecifier                - storage specifier structure
+*          jobOptions                      - job options or NULL
+*          maxBandWidthList                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          serverConnectionPriority        - server connection priority
+*          storageUpdateStatusInfoFunction - update status info call-back
+*          storageUpdateStatusInfoUserData - user data for update status
+*                                            info call-back
+*          getPasswordFunction             - get password call-back (can
+*                                            be NULL)
+*          getPasswordUserData             - user data for get password
+*                                            call-back
+*          storageRequestVolumeFunction    - volume request call-back
+*          storageRequestVolumeUserData    - user data for volume
+*                                            request call-back
 * Output : storageHandle - initialized storage handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_init(StorageHandle                *storageHandle,
-                      const StorageSpecifier       *storageSpecifier,
-                      const JobOptions             *jobOptions,
-                      BandWidthList                *maxBandWidthList,
-                      ServerConnectionPriorities   serverConnectionPriority,
-                      StorageRequestVolumeFunction storageRequestVolumeFunction,
-                      void                         *storageRequestVolumeUserData,
-                      StorageStatusInfoFunction    storageStatusInfoFunction,
-                      void                         *storageStatusInfoUserData
+  Errors Storage_init(StorageHandle                   *storageHandle,
+                      const StorageSpecifier          *storageSpecifier,
+                      const JobOptions                *jobOptions,
+                      BandWidthList                   *maxBandWidthList,
+                      ServerConnectionPriorities      serverConnectionPriority,
+                      StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
+                      void                            *storageUpdateStatusInfoUserData,
+                      GetPasswordFunction             getPasswordFunction,
+                      void                            *getPasswordUserData,
+                      StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                      void                            *storageRequestVolumeUserData
                      );
 #else /* not NDEBUG */
-  Errors __Storage_init(const char                   *__fileName__,
-                        ulong                        __lineNb__,
-                        StorageHandle                *storageHandle,
-                        const StorageSpecifier       *storageSpecifier,
-                        const JobOptions             *jobOptions,
-                        BandWidthList                *maxBandWidthList,
-                        ServerConnectionPriorities   serverConnectionPriority,
-                        StorageRequestVolumeFunction storageRequestVolumeFunction,
-                        void                         *storageRequestVolumeUserData,
-                        StorageStatusInfoFunction    storageStatusInfoFunction,
-                        void                         *storageStatusInfoUserData
+  Errors __Storage_init(const char                      *__fileName__,
+                        ulong                           __lineNb__,
+                        StorageHandle                   *storageHandle,
+                        const StorageSpecifier          *storageSpecifier,
+                        const JobOptions                *jobOptions,
+                        BandWidthList                   *maxBandWidthList,
+                        ServerConnectionPriorities      serverConnectionPriority,
+                        StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
+                        void                            *storageUpdateStatusInfoUserData,
+                        GetPasswordFunction             getPasswordFunction,
+                        void                            *getPasswordUserData,
+                        StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                        void                            *storageRequestVolumeUserData
                        );
 #endif /* NDEBUG */
 
@@ -1451,29 +1551,30 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 /***********************************************************************\
 * Name   : Storage_copy
 * Purpose: copy storage file to local file
-* Input  : storageSpecifier             - storage specifier structure
-*          jobOptions                   - job options
-*          maxBandWidthLIst             - list with max. band width to use [bits/s] or NULL
-*          storageRequestVolumeFunction - volume request call back
-*          storageRequestVolumeUserData - user data for volume request
-*                                         call back
-*          storageStatusInfoFunction    - status info call back
-*          storageStatusInfoUserData    - user data for status info
-*                                         call back
-*          localFileName                - local archive file name
+* Input  : storageSpecifier                - storage specifier structure
+*          jobOptions                      - job options
+*          maxBandWidthLIst                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          storageUpdateStatusInfoFunction - status info call-back
+*          storageUpdateStatusInfoUserData - user data for status info
+*                                            call-back
+*          storageRequestVolumeFunction    - volume request call-back
+*          storageRequestVolumeUserData    - user data for volume request
+*                                            call-back
+*          localFileName                   - local archive file name
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
-                    const JobOptions             *jobOptions,
-                    BandWidthList                *maxBandWidthList,
-                    StorageRequestVolumeFunction storageRequestVolumeFunction,
-                    void                         *storageRequestVolumeUserData,
-                    StorageStatusInfoFunction    storageStatusInfoFunction,
-                    void                         *storageStatusInfoUserData,
-                    ConstString                  localFileName
+Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
+                    const JobOptions                *jobOptions,
+                    BandWidthList                   *maxBandWidthList,
+                    StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
+                    void                            *storageUpdateStatusInfoUserData,
+                    StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                    void                            *storageRequestVolumeUserData,
+                    ConstString                     localFileName
                    );
 
 /***********************************************************************\

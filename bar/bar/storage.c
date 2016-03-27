@@ -104,24 +104,24 @@ LOCAL void signalHandler(int signalNumber)
 }
 
 /***********************************************************************\
-* Name   : updateStatusInfo
-* Purpose: update status info
-* Input  : storageStatusInfo - storage status info
+* Name   : updateStorageStatusInfo
+* Purpose: update storage status info
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateStatusInfo(const StorageHandle *storageHandle)
+LOCAL void updateStorageStatusInfo(const StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
 
-  if (storageHandle->storageStatusInfoFunction != NULL)
+  if (storageHandle->updateStatusInfoFunction != NULL)
   {
-    storageHandle->storageStatusInfoFunction(storageHandle->storageStatusInfoUserData,
-                                             &storageHandle->runningInfo
-                                            );
+    storageHandle->updateStatusInfoFunction(&storageHandle->runningInfo,
+                                            storageHandle->updateStatusInfoUserData
+                                           );
   }
 }
 
@@ -385,15 +385,23 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 /***********************************************************************\
 * Name   : initDefaultSSHPassword
 * Purpose: init default SSH password
-* Input  : hostName   - host name
-*          loginName  - login name
-*          jobOptions - job options
+* Input  : hostName            - host name
+*          loginName           - login name
+*          jobOptions          - job options
+*          getPasswordFunction - get password call-back (can
+*                                be NULL)
+*          getPasswordUserData - user data for get password call-back
 * Output : -
 * Return : TRUE if SSH password intialized, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initDefaultSSHPassword(ConstString hostName, ConstString loginName, const JobOptions *jobOptions)
+LOCAL bool initDefaultSSHPassword(ConstString         hostName,
+                                  ConstString         loginName,
+                                  const JobOptions    *jobOptions,
+                                  GetPasswordFunction getPasswordFunction,
+                                  void                *getPasswordUserData
+                                 )
 {
   SemaphoreLock semaphoreLock;
   String        s;
@@ -407,29 +415,66 @@ LOCAL bool initDefaultSSHPassword(ConstString hostName, ConstString loginName, c
     {
       if (jobOptions->sshServer.password == NULL)
       {
-        if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+        switch (globalOptions.runMode)
         {
-          if (defaultSSHPassword == NULL)
-          {
-            Password *password = Password_new();
-            s = !String_isEmpty(loginName)
-                  ? String_format(String_new(),"SSH login password for %S@%S",loginName,hostName)
-                  : String_format(String_new(),"SSH login password for %S",hostName);
-            if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+          case RUN_MODE_INTERACTIVE:
+            if (defaultSSHPassword == NULL)
             {
-              defaultSSHPassword = password;
-              initFlag = TRUE;
+              Password *password = Password_new();
+              s = !String_isEmpty(loginName)
+                    ? String_format(String_new(),"SSH login password for %S@%S",loginName,hostName)
+                    : String_format(String_new(),"SSH login password for %S",hostName);
+              if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+              {
+                defaultSSHPassword = password;
+                initFlag = TRUE;
+              }
+              else
+              {
+                  Password_delete(password);
+              }
+              String_delete(s);
             }
             else
             {
-                Password_delete(password);
+              initFlag = TRUE;
             }
-            String_delete(s);
-          }
-          else
-          {
-            initFlag = TRUE;
-          }
+            break;
+          case RUN_MODE_BATCH:
+          case RUN_MODE_SERVER:
+            if (getPasswordFunction != NULL)
+            {
+              Password *password = Password_new();
+              s = !String_isEmpty(loginName)
+                    ? String_format(String_new(),"%S@%S",loginName,hostName)
+                    : String_format(String_new(),"%S",hostName);
+              if (getPasswordFunction(password,
+                                      PASSWORD_TYPE_SSH,
+                                      String_cString(hostName),
+                                      TRUE,
+                                      TRUE,
+                                      getPasswordUserData
+                                     ) == ERROR_NONE
+                 )
+              {
+                if (defaultSSHPassword != NULL)
+                {
+                  Password_set(defaultSSHPassword,password);
+                  Password_delete(password);
+                }
+                else
+                {
+                  defaultSSHPassword = password;
+                }
+                initFlag = TRUE;
+              }
+              else
+              {
+                Password_delete(password);
+              }
+              String_delete(s);
+            }
+            break;
         }
       }
       else
@@ -1501,28 +1546,32 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
 }
 
 #ifdef NDEBUG
-  Errors Storage_init(StorageHandle                *storageHandle,
-                      const StorageSpecifier       *storageSpecifier,
-                      const JobOptions             *jobOptions,
-                      BandWidthList                *maxBandWidthList,
-                      ServerConnectionPriorities   serverConnectionPriority,
-                      StorageRequestVolumeFunction storageRequestVolumeFunction,
-                      void                         *storageRequestVolumeUserData,
-                      StorageStatusInfoFunction    storageStatusInfoFunction,
-                      void                         *storageStatusInfoUserData
+  Errors Storage_init(StorageHandle                   *storageHandle,
+                      const StorageSpecifier          *storageSpecifier,
+                      const JobOptions                *jobOptions,
+                      BandWidthList                   *maxBandWidthList,
+                      ServerConnectionPriorities      serverConnectionPriority,
+                      StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
+                      void                            *storageUpdateStatusInfoUserData,
+                      GetPasswordFunction             getPasswordFunction,
+                      void                            *getPasswordUserData,
+                      StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                      void                            *storageRequestVolumeUserData
                      )
 #else /* not NDEBUG */
-  Errors __Storage_init(const char                   *__fileName__,
-                        ulong                        __lineNb__,
-                        StorageHandle                *storageHandle,
-                        const StorageSpecifier       *storageSpecifier,
-                        const JobOptions             *jobOptions,
-                        BandWidthList                *maxBandWidthList,
-                        ServerConnectionPriorities   serverConnectionPriority,
-                        StorageRequestVolumeFunction storageRequestVolumeFunction,
-                        void                         *storageRequestVolumeUserData,
-                        StorageStatusInfoFunction    storageStatusInfoFunction,
-                        void                         *storageStatusInfoUserData
+  Errors __Storage_init(const char                      *__fileName__,
+                        ulong                           __lineNb__,
+                        StorageHandle                   *storageHandle,
+                        const StorageSpecifier          *storageSpecifier,
+                        const JobOptions                *jobOptions,
+                        BandWidthList                   *maxBandWidthList,
+                        ServerConnectionPriorities      serverConnectionPriority,
+                        StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
+                        void                            *storageUpdateStatusInfoUserData,
+                        GetPasswordFunction             getPasswordFunction,
+                        void                            *getPasswordUserData,
+                        StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                        void                            *storageRequestVolumeUserData
                        )
 #endif /* NDEBUG */
 {
@@ -1541,6 +1590,10 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   Storage_duplicateSpecifier(&storageHandle->storageSpecifier,storageSpecifier);
   storageHandle->jobOptions                = jobOptions;
   storageHandle->mountedDeviceFlag         = FALSE;
+  storageHandle->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
+  storageHandle->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
+  storageHandle->getPasswordFunction       = getPasswordFunction;
+  storageHandle->getPasswordUserData       = getPasswordUserData;
   storageHandle->requestVolumeFunction     = storageRequestVolumeFunction;
   storageHandle->requestVolumeUserData     = storageRequestVolumeUserData;
   if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
@@ -1555,8 +1608,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     storageHandle->requestedVolumeNumber   = 1;
     storageHandle->volumeState             = STORAGE_VOLUME_STATE_LOADED;
   }
-  storageHandle->storageStatusInfoFunction = storageStatusInfoFunction;
-  storageHandle->storageStatusInfoUserData = storageStatusInfoUserData;
   AUTOFREE_ADD(&autoFreeList,&storageHandle->storageSpecifier,{ Storage_doneSpecifier(&storageHandle->storageSpecifier); });
 
   // mount device if needed
@@ -2990,14 +3041,14 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   return error;
 }
 
-Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
-                    const JobOptions             *jobOptions,
-                    BandWidthList                *maxBandWidthList,
-                    StorageRequestVolumeFunction storageRequestVolumeFunction,
-                    void                         *storageRequestVolumeUserData,
-                    StorageStatusInfoFunction    storageStatusInfoFunction,
-                    void                         *storageStatusInfoUserData,
-                    ConstString                  localFileName
+Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
+                    const JobOptions                *jobOptions,
+                    BandWidthList                   *maxBandWidthList,
+                    StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
+                    void                            *storageUpdateStatusInfoUserData,
+                    StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                    void                            *storageRequestVolumeUserData,
+                    ConstString                     localFileName
                    )
 {
   AutoFreeList      autoFreeList;
@@ -3027,8 +3078,9 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                        jobOptions,
                        maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
-                       CALLBACK(storageStatusInfoFunction,storageStatusInfoUserData)
+                       CALLBACK(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
+                       CALLBACK(NULL,NULL),
+                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
                       );
   if (error != ERROR_NONE)
   {
