@@ -375,8 +375,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          archiveType      - archive type (can be NULL)
 *          lastErrorMessage - last error message (can be NULL)
-*          totalEntries     - total number of entries (can be NULL)
-*          totalSize        - total size [bytes] (can be NULL)
+*          totalEntryCount  - total number of entries (can be NULL)
+*          totalEntrySize   - total size [bytes] (can be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -389,8 +389,8 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
                          uint64       *createdDateTime,
                          ArchiveTypes *archiveType,
                          String       lastErrorMessage,
-                         uint64       *totalEntries,
-                         uint64       *totalSize
+                         ulong        *totalEntryCount,
+                         uint64       *totalEntrySize
                         );
 
 /***********************************************************************\
@@ -569,8 +569,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 *          jobUUID             - unique job id (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
 *          lastErrorMessage    - last storage error message (can be NULL)
-*          totalEntries        - total number of entries (can be NULL)
-*          totalSize           - total storage size [bytes] (can be NULL)
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total storage size [bytes] (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -580,8 +580,8 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
                        uint64           *lastCreatedDateTime,
                        String           lastErrorMessage,
-                       uint64           *totalEntries,
-                       uint64           *totalSize
+                       ulong            *totalEntryCount,
+                       uint64           *totalEntrySize
                       );
 
 /***********************************************************************\
@@ -645,8 +645,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          archiveType      - archive type (can be NULL)
 *          lastErrorMessage - last storage error message (can be NULL)
-*          totalEntries     - total number of entries (can be NULL)
-*          totalSize        - total storage size [bytes] (can be NULL)
+*          totalEntryCount  - total number of entries (can be NULL)
+*          totalEntrySize   - total storage size [bytes] (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -659,8 +659,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          uint64           *createdDateTime,
                          ArchiveTypes     *archiveType,
                          String           lastErrorMessage,
-                         uint64           *totalEntries,
-                         uint64           *totalSize
+                         ulong            *totalEntryCount,
+                         uint64           *totalEntrySize
                         );
 
 /***********************************************************************\
@@ -704,8 +704,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          pattern          - name pattern (glob, can be NULL)
-* Output : count - entry count (can be NULL)
-*          size  - size [bytes] (can be NULL)
+* Output : storageCount    - number of storage (can be NULL)
+*          totalEntryCount - total entry count (can be NULL)
+*          totalEntrySize  - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -715,8 +716,9 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              uint          indexIdCount,
                              IndexStateSet indexStateSet,
                              ConstString   pattern,
-                             ulong         *count,
-                             uint64        *size
+                             ulong         *storageCount,
+                             ulong         *totalEntryCount,
+                             uint64        *totalEntrySize
                             );
 
 /***********************************************************************\
@@ -770,8 +772,8 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 *          archiveType         - archive type (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
-*          entries             - number of entries (can be NULL)
-*          size                - size [bytes] (can be NULL)
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total size [bytes] (can be NULL)
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can be
@@ -790,8 +792,8 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           ArchiveTypes     *archiveType,
                           String           storageName,
                           uint64           *createdDateTime,
-                          uint64           *entries,
-                          uint64           *size,
+                          ulong            *totalEntryCount,
+                          uint64           *totalEntrySize,
                           IndexStates      *indexState,
                           IndexModes       *indexMode,
                           uint64           *lastCheckedDateTime,
@@ -958,13 +960,13 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                             );
 
 /***********************************************************************\
-* Name   : Index_getNext
+* Name   : Index_getNextEntry
 * Purpose: get next entry
 * Input  : indexQueryHandle - index query handle
 * Output : indexId                     - index id of entry
 *          storageName                 - storage name (can be NULL)
 *          storageDateTime             - storage date/time stamp [s]
-*          name                        - entry name
+*          entryName                   - entry name
 *          destinationName             - destination name (for link
 *                                        entries)
 *          fileSystemType              - file system type (for image
@@ -981,83 +983,21 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNext(IndexQueryHandle  *indexQueryHandle,
-                   IndexId           *indexId,
-                   String            storageName,
-                   uint64            *storageDateTime,
-                   String            name,
-                   String            destinationName,
-                   FileSystemTypes   *fileSystemType,
-                   uint64            *size,
-                   uint64            *timeModified,
-                   uint32            *userId,
-                   uint32            *groupId,
-                   uint32            *permission,
-                   uint64            *fragmentOrBlockOffset,
-                   uint64            *fragmentSizeOrBlockCount
-                  );
-
-/***********************************************************************\
-* Name   : Index_initListDirectories
-* Purpose: list directory entries
-* Input  : indexHandle    - index handle
-*          storageIds     - storage ids or NULL
-*          storageIdCount - storage id count or 0
-*          entryIds       - entry ids or NULL
-*          entryIdCount   - entry id count or 0
-*          pattern        - name pattern (glob, can be NULL)
-* Output : indexQueryHandle - index query handle
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
-                                 IndexHandle      *indexHandle,
-                                 const IndexId    storageIds[],
-                                 uint             storageIdCount,
-                                 const IndexId    entryIds[],
-                                 uint             entryIdCount,
-                                 ConstString      pattern
-                                );
-
-/***********************************************************************\
-* Name   : Index_getNextDirectory
-* Purpose: get next directory entry
-* Input  : indexQueryHandle - index query handle
-* Output : indexId       - index id of entry
-*          storageName   - storage name
-*          directoryName - directory name
-*          timeModified  - modified date/time stamp [s]
-*          userId        - user id
-*          groupId       - group id
-*          permission    - permission flags
-* Return : TRUE if entry read, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
-                            IndexId          *indexId,
-                            String           storageName,
-                            uint64           *storageDateTime,
-                            String           directoryName,
-                            uint64           *timeModified,
-                            uint32           *userId,
-                            uint32           *groupId,
-                            uint32           *permission
-                           );
-
-/***********************************************************************\
-* Name   : Index_deleteDirectory
-* Purpose: delete directory entry
-* Input  : indexHandle - index handle
-*          indexId     - index id of entry
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_deleteDirectory(IndexHandle *indexHandle,
-                             IndexId     indexId
-                            );
+bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
+                        IndexId           *indexId,
+                        String            storageName,
+                        uint64            *storageDateTime,
+                        String            entryName,
+                        String            destinationName,
+                        FileSystemTypes   *fileSystemType,
+                        uint64            *size,
+                        uint64            *timeModified,
+                        uint32            *userId,
+                        uint32            *groupId,
+                        uint32            *permission,
+                        uint64            *fragmentOrBlockOffset,
+                        uint64            *fragmentSizeOrBlockCount
+                       );
 
 /***********************************************************************\
 * Name   : Index_initListFiles
@@ -1188,6 +1128,68 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
 Errors Index_deleteImage(IndexHandle *indexHandle,
                          IndexId     indexId
                         );
+
+/***********************************************************************\
+* Name   : Index_initListDirectories
+* Purpose: list directory entries
+* Input  : indexHandle    - index handle
+*          storageIds     - storage ids or NULL
+*          storageIdCount - storage id count or 0
+*          entryIds       - entry ids or NULL
+*          entryIdCount   - entry id count or 0
+*          pattern        - name pattern (glob, can be NULL)
+* Output : indexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
+                                 IndexHandle      *indexHandle,
+                                 const IndexId    storageIds[],
+                                 uint             storageIdCount,
+                                 const IndexId    entryIds[],
+                                 uint             entryIdCount,
+                                 ConstString      pattern
+                                );
+
+/***********************************************************************\
+* Name   : Index_getNextDirectory
+* Purpose: get next directory entry
+* Input  : indexQueryHandle - index query handle
+* Output : indexId       - index id of entry
+*          storageName   - storage name
+*          directoryName - directory name
+*          timeModified  - modified date/time stamp [s]
+*          userId        - user id
+*          groupId       - group id
+*          permission    - permission flags
+* Return : TRUE if entry read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
+                            IndexId          *indexId,
+                            String           storageName,
+                            uint64           *storageDateTime,
+                            String           directoryName,
+                            uint64           *timeModified,
+                            uint32           *userId,
+                            uint32           *groupId,
+                            uint32           *permission
+                           );
+
+/***********************************************************************\
+* Name   : Index_deleteDirectory
+* Purpose: delete directory entry
+* Input  : indexHandle - index handle
+*          indexId     - index id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteDirectory(IndexHandle *indexHandle,
+                             IndexId     indexId
+                            );
 
 /***********************************************************************\
 * Name   : Index_initListLinks
