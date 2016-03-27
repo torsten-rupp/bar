@@ -2777,7 +2777,7 @@ class Dialogs
         label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
 
         widgetName = new Text(composite,SWT.LEFT|SWT.BORDER);
-        widgetName.setText(name);
+        if (name != null) widgetName.setText(name);
         widgetName.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
         row1++;
 
@@ -2855,6 +2855,16 @@ class Dialogs
       }
 
       // install handlers
+      widgetName.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          widgetPassword1.forceFocus();
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
       widgetPassword1.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2887,6 +2897,7 @@ class Dialogs
       }
 
       widgetName.setFocus();
+      widgetName.setSelection(new Point(0,widgetName.getText().length()));
       return (String[])run(dialog,null);
     }
     else
