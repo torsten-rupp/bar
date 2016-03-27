@@ -2164,7 +2164,7 @@ LOCAL bool vmatchString(ConstString  string,
         (*nextIndex) = index+subMatches[0].rm_eo-subMatches[0].rm_so;
       }
 
-      if (matchedString != NULL)
+      if (matchedString != STRING_NO_ASSIGN)
       {
         String_setBuffer(matchedString,&string->data[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
       }
