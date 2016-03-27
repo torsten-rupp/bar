@@ -2024,7 +2024,6 @@ Dprintf.dprintf("");
           {
             if (true ||widgetStorageTree.getItemCount() > 0)
             {
-Dprintf.dprintf("start");
               for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
               {
                 TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexData);
@@ -2062,7 +2061,6 @@ Dprintf.dprintf("start");
                   uuidTreeItems.add(uuidTreeItem);
                 }
               }
-Dprintf.dprintf("end");
             }
             else
             {
@@ -2352,8 +2350,8 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
                                      Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
                                      String                name                = valueMap.getString("name"                                   );
                                      long                  dateTime            = valueMap.getLong  ("dateTime"                               );
-                                     long                  entries             = valueMap.getLong  ("entries"                                );
-                                     long                  size                = valueMap.getLong  ("size"                                   );
+                                     long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
+                                     long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
                                      IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
                                      IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
                                      long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
@@ -2365,8 +2363,8 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
                                                                                    archiveType,
                                                                                    name,
                                                                                    dateTime,
-                                                                                   entries,
-                                                                                   size,
+                                                                                   totalEntryCount,
+                                                                                   totalEntrySize,
                                                                                    indexState,
                                                                                    indexMode,
                                                                                    lastCheckedDateTime,
@@ -2514,7 +2512,7 @@ Dprintf.dprintf("******************************************");
                                                        storagePattern,
                                                        storageIndexStateSet.nameList("|")
                                                       ),
-                                   0,  // debugLevel
+                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -2714,7 +2712,6 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
           }
         }
       });
-Dprintf.dprintf("");
       if (isUpdateTriggered()) return;
 
       // update UUIDs menu items
@@ -3123,7 +3120,7 @@ Dprintf.dprintf("");
         case NONE:   return "none";
         case FTP:    return "FTP";
         case SSH:    return "SSH";
-        case WEBDAV: return "webDAV";
+        case WEBDAV: return "WebDAV";
         case CRYPT:  return "encryption";
       }
 
@@ -6145,7 +6142,7 @@ Dprintf.dprintf("remove");
             busyDialog.close();
             if (error != Errors.NONE)
             {
-              Dialogs.error(shell,BARControl.tr("Cannot mark all storages\n\n(error: {0})",errorMessage[0]));
+              Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",errorMessage[0]));
               return;
             }
 
@@ -6537,13 +6534,13 @@ assert storagePattern != null;
             }
             if (error != Errors.NONE)
             {
-              Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
+              Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
             }
           }
         }
         else
         {
-          Dialogs.error(shell,BARControl.tr("Cannot create entity for\n\n''{0}''\n\n(error: {1})",toUUIDIndexData.jobUUID,errorMessage[0]));
+          Dialogs.error(shell,BARControl.tr("Cannot create entity for\n\n''{0}''!\n\n(error: {1})",toUUIDIndexData.jobUUID,errorMessage[0]));
         }
       }
       catch (CommunicationError error)
@@ -6629,7 +6626,7 @@ assert storagePattern != null;
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
           }
         }
       }
@@ -6714,7 +6711,7 @@ assert storagePattern != null;
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
           }
         }
       }
@@ -6800,7 +6797,7 @@ assert storagePattern != null;
             }
             else
             {
-              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
+              Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
             }
           }
         }
@@ -6834,7 +6831,7 @@ assert storagePattern != null;
         }
         else
         {
-          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state (error: {0})",errorMessage[0]));
+          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state!\n\n(error: {0})",errorMessage[0]));
         }
       }
     }
@@ -6954,7 +6951,7 @@ assert storagePattern != null;
       }
       else
       {
-        Dialogs.error(shell,BARControl.tr("Cannot add index database for storage file\n\n''{0}''\n\n(error: {1})",storageName,errorMessage[0]));
+        Dialogs.error(shell,BARControl.tr("Cannot add index database for storage file!\n\n''{0}''\n\n(error: {1})",storageName,errorMessage[0]));
       }
     }
   }
@@ -7031,7 +7028,7 @@ assert storagePattern != null;
                     @Override
                     public void run()
                     {
-                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
+                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
                     }
                   });
                 }
@@ -7103,7 +7100,7 @@ assert storagePattern != null;
           @Override
           public void run()
           {
-            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state (error: {0})",errorMessage[0]));
+            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state!\n\n(error: {0})",errorMessage[0]));
           }
         });
         return;
@@ -7166,7 +7163,7 @@ assert storagePattern != null;
                     public void run()
                     {
                       busyDialog.close();
-                      Dialogs.error(shell,BARControl.tr("Cannot remove database indizes with error state (error: {0})",errorMessage[0]));
+                      Dialogs.error(shell,BARControl.tr("Cannot remove database indizes with error state!\n\n(error: {0})",errorMessage[0]));
                     }
                   });
 
@@ -7329,9 +7326,7 @@ assert storagePattern != null;
                         @Override
                         public void run()
                         {
-                          Dialogs.error(shell,
-                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,errorMessage[0])
-                                       );
+                          Dialogs.error(shell,BARControl.tr("Cannot delete storage:\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
                         }
                       });
                     }
@@ -7747,6 +7742,7 @@ assert storagePattern != null;
             // set storage entries to restore
             setStorageList(indexIdSet);
 
+Dprintf.dprintf("+++++++++++++++++++++++");
             // start restore
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
@@ -7793,25 +7789,25 @@ assert storagePattern != null;
                                                                                                  name,
                                                                                                  BARControl.tr("Password")+":"
                                                                                                 );
-                                                                 if (data != null)
-                                                                 {
-                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
-                                                                                                                Errors.NONE,
-                                                                                                                data[0],
-                                                                                                                BARServer.getPasswordEncryptType(),
-                                                                                                                BARServer.encryptPassword(data[1])
-                                                                                                               ),
-                                                                                            0  // debugLevel
-                                                                                           );
-                                                                 }
-                                                                 else
-                                                                 {
-                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                                Errors.NO_PASSWORD
-                                                                                                               ),
-                                                                                            0  // debugLevel
-                                                                                           );
-                                                                 }
+                                                                   if (data != null)
+                                                                   {
+                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                                                                                  Errors.NONE,
+                                                                                                                  data[0],
+                                                                                                                  BARServer.getPasswordEncryptType(),
+                                                                                                                  BARServer.encryptPassword(data[1])
+                                                                                                                 ),
+                                                                                              0  // debugLevel
+                                                                                             );
+                                                                   }
+                                                                   else
+                                                                   {
+                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                                  Errors.NO_PASSWORD
+                                                                                                                 ),
+                                                                                              0  // debugLevel
+                                                                                             );
+                                                                   }
                                                                  }
                                                                  else
                                                                  {
@@ -7902,9 +7898,9 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                                          long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
 
                                                          busyDialog.updateText(0,"%s",storageName);
-                                                         busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? ((double)storageTotalSize*100.0)/(double)storageTotalSize : 0.0);
+                                                         busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
                                                          busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
-                                                         busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? ((double)entryTotalSize*100.0)/(double)entryTotalSize : 0.0);
+                                                         busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
                                                        }
                                                      }
                                                      catch (IllegalArgumentException exception)
@@ -7927,14 +7923,15 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                                    }
                                                  }
                                                 );
-            if (error != Errors.NONE)
+
+            if ((error != Errors.NONE) && (error != Errors.ABORTED))
             {
               display.syncExec(new Runnable()
               {
                 @Override
                 public void run()
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot restore archives\n\n(error: {0})",errorMessage[0]));
+                  Dialogs.error(shell,BARControl.tr("Cannot restore archives!\n\n(error: {0})",errorMessage[0]));
                 }
               });
               busyDialog.close();
@@ -7942,13 +7939,13 @@ Dprintf.dprintf("valueMap=%s",valueMap);
             }
 
             // close/done busy dialog, restore cursor
-            if (errorCount[0] == 0)
+            if (errorCount[0] > 0)
             {
-              busyDialog.close();
+              busyDialog.done();
             }
             else
             {
-              busyDialog.done();
+              busyDialog.close();
             }
           }
           catch (CommunicationError error)
@@ -8126,7 +8123,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
         busyDialog.close();
         if (error != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot mark all index entries\n\n(error: {0})",errorMessage[0]));
+          Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",errorMessage[0]));
           return;
         }
 
@@ -8661,6 +8658,7 @@ Dprintf.dprintf("");
                                                        if (valueMap.containsKey("action"))
                                                        {
                                                          Actions             action       = valueMap.getEnum  ("action",Actions.class);
+                                                         final String        name         = valueMap.getString("name","");
                                                          final String        passwordText = valueMap.getString("passwordText","");
                                                          final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
                                                          final String        volume       = valueMap.getString("volume","");
@@ -8678,28 +8676,59 @@ Dprintf.dprintf("");
                                                                @Override
                                                                public void run()
                                                                {
-                                                                 String password = Dialogs.password(shell,
-                                                                                                    BARControl.tr("{0} login password",passwordType),
-                                                                                                    BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
-                                                                                                    BARControl.tr("Password")+":"
-                                                                                                   );
-                                                                 if (password != null)
+                                                                 if (passwordType.isLogin())
                                                                  {
-                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
-                                                                                                                Errors.NONE,
-                                                                                                                BARServer.getPasswordEncryptType(),
-                                                                                                                BARServer.encryptPassword(password)
-                                                                                                               ),
-                                                                                            0  // debugLevel
-                                                                                           );
+                                                                   String[] data = Dialogs.login(shell,
+                                                                                                 BARControl.tr("{0} login password",passwordType),
+                                                                                                 BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
+                                                                                                 name,
+                                                                                                 BARControl.tr("Password")+":"
+                                                                                                );
+                                                                   if (data != null)
+                                                                   {
+                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                                                                                  Errors.NONE,
+                                                                                                                  data[0],
+                                                                                                                  BARServer.getPasswordEncryptType(),
+                                                                                                                  BARServer.encryptPassword(data[1])
+                                                                                                                 ),
+                                                                                              0  // debugLevel
+                                                                                             );
+                                                                   }
+                                                                   else
+                                                                   {
+                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                                  Errors.NO_PASSWORD
+                                                                                                                 ),
+                                                                                              0  // debugLevel
+                                                                                             );
+                                                                   }
                                                                  }
                                                                  else
                                                                  {
-                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                                Errors.NO_PASSWORD
-                                                                                                               ),
-                                                                                            0  // debugLevel
-                                                                                           );
+                                                                   String password = Dialogs.password(shell,
+                                                                                                      BARControl.tr("{0} login password",passwordType),
+                                                                                                      BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                                                                      BARControl.tr("Password")+":"
+                                                                                                     );
+                                                                   if (password != null)
+                                                                   {
+                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                                  Errors.NONE,
+                                                                                                                  BARServer.getPasswordEncryptType(),
+                                                                                                                  BARServer.encryptPassword(password)
+                                                                                                                 ),
+                                                                                              0  // debugLevel
+                                                                                             );
+                                                                   }
+                                                                   else
+                                                                   {
+                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                                  Errors.NO_PASSWORD
+                                                                                                                 ),
+                                                                                              0  // debugLevel
+                                                                                             );
+                                                                   }
                                                                  }
                                                                }
                                                              });
@@ -8754,18 +8783,18 @@ Dprintf.dprintf("");
                                                        }
                                                        else
                                                        {
-                                                         RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class);
-                                                         String        storageName       = valueMap.getString("storageName");
-                                                         long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes");
-                                                         long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
-                                                         String        entryName         = valueMap.getString("entryName");
-                                                         long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes");
-                                                         long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes");
+                                                         RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
+                                                         String        storageName      = valueMap.getString("storageName");
+                                                         long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
+                                                         long          storageTotalSize = valueMap.getLong  ("storageTotalSize");
+                                                         String        entryName        = valueMap.getString("entryName");
+                                                         long          entryDoneSize    = valueMap.getLong  ("entryDoneSize");
+                                                         long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
 
                                                          busyDialog.updateText(0,"%s",storageName);
-                                                         busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                                                         busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
                                                          busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
-                                                         busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
+                                                         busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
                                                        }
                                                      }
                                                      catch (IllegalArgumentException exception)
@@ -8788,14 +8817,14 @@ Dprintf.dprintf("");
                                                    }
                                                  }
                                                 );
-            if (error != Errors.NONE)
+            if ((error != Errors.NONE) && (error != Errors.ABORTED))
             {
               display.syncExec(new Runnable()
               {
                 @Override
                 public void run()
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot restore entries\n\n(error: {0})",errorMessage[0]));
+                  Dialogs.error(shell,BARControl.tr("Cannot restore entries!\n\n(error: {0})",errorMessage[0]));
                 }
               });
               busyDialog.close();
@@ -8803,13 +8832,13 @@ Dprintf.dprintf("");
             }
 
             // close/done busy dialog, restore cursor
-            if ((error == Errors.NONE) && errorCount[0] == 0)
+            if (errorCount[0] > 0)
             {
-              busyDialog.close();
+              busyDialog.done();
             }
             else
             {
-              busyDialog.done();
+              busyDialog.close();
             }
           }
           catch (CommunicationError error)
