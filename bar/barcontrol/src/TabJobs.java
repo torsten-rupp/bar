@@ -987,7 +987,7 @@ public class TabJobs
     boolean noStorage;
     boolean enabled;
     long    lastExecutedDateTime;
-    long    totalEntities,totalEntries,totalSize;
+    long    totalEntities,totalEntryCount,totalEntrySize;
 
     /** create schedule data
      * @param uuid schedule UUID
@@ -1007,8 +1007,8 @@ public class TabJobs
      * @param enabled true iff enabled
      * @param lastExecutedDateTime date/time of last execution
      * @param totalEntities total number of existing entities for schedule
-     * @param totalEntries total number of existing entries for schedule
-     * @param totalSize total size of existing entities for schedule [bytes]
+     * @param totalEntryCount total number of existing entries for schedule
+     * @param totalEntrySize total size of existing entries for schedule [bytes]
      */
     ScheduleData(String  uuid,
                  int     year,
@@ -1027,8 +1027,8 @@ public class TabJobs
                  boolean enabled,
                  long    lastExecutedDateTime,
                  long    totalEntities,
-                 long    totalEntries,
-                 long    totalSize
+                 long    totalEntryCount,
+                 long    totalEntrySize
                 )
     {
       this.uuid                 = uuid;
@@ -1048,8 +1048,8 @@ public class TabJobs
       this.enabled              = enabled;
       this.lastExecutedDateTime = lastExecutedDateTime;
       this.totalEntities        = totalEntities;
-      this.totalEntries         = totalEntries;
-      this.totalSize            = totalSize;
+      this.totalEntryCount      = totalEntryCount;
+      this.totalEntrySize       = totalEntrySize;
     }
 
     /** create schedule data
@@ -1070,8 +1070,8 @@ public class TabJobs
      * @param enabled true iff enabled
      * @param lastExecutedDateTime date/time of last execution
      * @param totalEntities total number of existing entities for schedule
-     * @param totalEntries total number of existing entries for schedule
-     * @param totalSize total size of existing entities for schedule [bytes]
+     * @param totalEntryCount total number of existing entries for schedule
+     * @param totalEntrySize total size of existing entries for schedule [bytes]
      */
     ScheduleData(String  uuid,
                  String  date,
@@ -1087,8 +1087,8 @@ public class TabJobs
                  boolean enabled,
                  long    lastExecutedDateTime,
                  long    totalEntities,
-                 long    totalEntries,
-                 long    totalSize
+                 long    totalEntryCount,
+                 long    totalEntrySize
                 )
     {
       this.uuid                 = uuid;
@@ -1105,8 +1105,8 @@ public class TabJobs
       this.enabled              = enabled;
       this.lastExecutedDateTime = lastExecutedDateTime;
       this.totalEntities        = totalEntities;
-      this.totalEntries         = totalEntries;
-      this.totalSize            = totalSize;
+      this.totalEntryCount      = totalEntryCount;
+      this.totalEntrySize       = totalEntrySize;
     }
 
     /** clone schedule data object
@@ -1131,8 +1131,8 @@ public class TabJobs
                               enabled,
                               lastExecutedDateTime,
                               totalEntities,
-                              totalEntries,
-                              totalSize
+                              totalEntryCount,
+                              totalEntrySize
                              );
     }
 
@@ -8293,7 +8293,7 @@ Dprintf.dprintf("");
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleData.totalEntries));
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleData.totalEntryCount));
               label.setForeground(COLOR_INFO_FORGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -8303,7 +8303,7 @@ Dprintf.dprintf("");
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),scheduleData.totalSize,Units.formatByteSize(scheduleData.totalSize)));
+              label = Widgets.newLabel(widgetScheduleTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),scheduleData.totalEntrySize,Units.formatByteSize(scheduleData.totalEntrySize)));
               label.setForeground(COLOR_INFO_FORGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -12803,8 +12803,8 @@ Dprintf.dprintf("line=%s",line);
           boolean enabled              = resultMap.getBoolean("enabled"              );
           long    lastExecutedDateTime = resultMap.getLong   ("lastExecutedDateTime" );
           long    totalEntities        = resultMap.getLong   ("totalEntities"        );
-          long    totalEntries         = resultMap.getLong   ("totalEntries"         );
-          long    totalSize            = resultMap.getLong   ("totalSize"            );
+          long    totalEntryCount      = resultMap.getLong   ("totalEntryCount"      );
+          long    totalEntrySize       = resultMap.getLong   ("totalEntrySize"       );
 
           ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
           if (scheduleData != null)
@@ -12820,8 +12820,8 @@ Dprintf.dprintf("line=%s",line);
             scheduleData.maxAge               = maxAge;
             scheduleData.lastExecutedDateTime = lastExecutedDateTime;
             scheduleData.totalEntities        = totalEntities;
-            scheduleData.totalEntries         = totalEntries;
-            scheduleData.totalSize            = totalSize;
+            scheduleData.totalEntryCount      = totalEntryCount;
+            scheduleData.totalEntrySize       = totalEntrySize;
             scheduleData.noStorage            = noStorage;
             scheduleData.enabled              = enabled;
           }
@@ -12841,8 +12841,8 @@ Dprintf.dprintf("line=%s",line);
                                             enabled,
                                             lastExecutedDateTime,
                                             totalEntities,
-                                            totalEntries,
-                                            totalSize
+                                            totalEntryCount,
+                                            totalEntrySize
                                            );
           }
           newScheduleDataMap.put(scheduleUUID,scheduleData);

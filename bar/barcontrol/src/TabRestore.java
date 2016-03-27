@@ -808,8 +808,6 @@ public class TabRestore
       }
       else
       {
-Dprintf.dprintf("remove id %d",id);
-new Throwable().printStackTrace();
         remove(id);
       }
     }
@@ -838,8 +836,8 @@ new Throwable().printStackTrace();
     public String name;
     public long   lastCreatedDateTime;            // last date/time when some storage was created
     public String lastErrorMessage;               // last error message
-    public long   totalEntries;
-    public long   totalSize;
+    public long   totalEntryCount;
+    public long   totalEntrySize;
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -847,11 +845,10 @@ new Throwable().printStackTrace();
       {
         UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
 
-Dprintf.dprintf("remove");
         Widgets.updateTreeItem(treeItem,
                                (Object)uuidIndexData,
                                uuidIndexData.name,
-                               Units.formatByteSize(uuidIndexData.totalSize),
+                               Units.formatByteSize(uuidIndexData.totalEntrySize),
                                (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                ""
                               );
@@ -874,16 +871,16 @@ Dprintf.dprintf("remove");
      * @param name job name
      * @param lastCreatedDateTime last date/time (timestamp) when some storage was created
      * @param lastErrorMessage last error message text
-     * @param totalEntries total number of entries of storage
-     * @param totalSize total size of storage [byte]
+     * @param totalEntryCount total number of entries of storage
+     * @param totalEntrySize total size of storage [byte]
      */
     UUIDIndexData(long   indexId,
                   String jobUUID,
                   String name,
                   long   lastCreatedDateTime,
                   String lastErrorMessage,
-                  long   totalEntries,
-                  long   totalSize
+                  long   totalEntryCount,
+                  long   totalEntrySize
                  )
     {
       super(indexId);
@@ -891,8 +888,8 @@ Dprintf.dprintf("remove");
       this.name                = name;
       this.lastCreatedDateTime = lastCreatedDateTime;
       this.lastErrorMessage    = lastErrorMessage;
-      this.totalEntries        = totalEntries;
-      this.totalSize           = totalSize;
+      this.totalEntryCount     = totalEntryCount;
+      this.totalEntrySize      = totalEntrySize;
     }
 
     /** get name
@@ -911,20 +908,20 @@ Dprintf.dprintf("remove");
       return lastCreatedDateTime;
     }
 
-    /** get number of entries
+    /** get total number of entries
      * @return entries
      */
-    public long getEntries()
+    public long getTotalEntryCount()
     {
-      return totalEntries;
+      return totalEntryCount;
     }
 
-    /** get size
+    /** get total size of entries
      * @return size [bytes]
      */
-    public long getSize()
+    public long getTotalEntrySize()
     {
-      return totalSize;
+      return totalEntrySize;
     }
 
     /** set tree item reference
@@ -957,7 +954,7 @@ Dprintf.dprintf("remove");
      */
     public String toString()
     {
-      return "UUIDIndexData {"+indexId+", jobUUID="+jobUUID+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes}";
+      return "UUIDIndexData {"+indexId+", jobUUID="+jobUUID+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes}";
     }
   }
 
@@ -968,8 +965,8 @@ Dprintf.dprintf("remove");
     public Settings.ArchiveTypes archiveType;
     public long                  lastCreatedDateTime;  // last date/time when some storage was created
     public String                lastErrorMessage;     // last error message
-    public long                  totalEntries;
-    public long                  totalSize;
+    public long                  totalEntryCount;
+    public long                  totalEntrySize;
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -977,11 +974,10 @@ Dprintf.dprintf("remove");
       {
         EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
-Dprintf.dprintf("remove");
         Widgets.updateTreeItem(treeItem,
                                (Object)entityIndexData,
                                entityIndexData.archiveType.toString(),
-                               Units.formatByteSize(entityIndexData.totalSize),
+                               Units.formatByteSize(entityIndexData.totalEntrySize),
                                (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
                                ""
                               );
@@ -1004,23 +1000,23 @@ Dprintf.dprintf("");
      * @param name name of storage
      * @param lastCreatedDateTime last date/time (timestamp) when some storage was created
      * @param lastErrorMessage last error message text
-     * @param totalEntries total number of entresi of storage
-     * @param totalSize total size of storage [byte]
+     * @param totalEntryCount total number of entresi of storage
+     * @param totalEntrySize total size of storage [byte]
      */
     EntityIndexData(long                  entityId,
                     Settings.ArchiveTypes archiveType,
                     long                  lastCreatedDateTime,
                     String                lastErrorMessage,
-                    long                  totalEntries,
-                    long                  totalSize
+                    long                  totalEntryCount,
+                    long                  totalEntrySize
                    )
     {
       super(entityId);
       this.archiveType         = archiveType;
       this.lastCreatedDateTime = lastCreatedDateTime;
       this.lastErrorMessage    = lastErrorMessage;
-      this.totalEntries        = totalEntries;
-      this.totalSize           = totalSize;
+      this.totalEntryCount     = totalEntryCount;
+      this.totalEntrySize      = totalEntrySize;
     }
 
     /** get date/time
@@ -1031,20 +1027,20 @@ Dprintf.dprintf("");
       return lastCreatedDateTime;
     }
 
-    /** get number of entries
+    /** get total number of entries
      * @return entries
      */
-    public long getEntries()
+    public long getTotalEntryCount()
     {
-      return totalEntries;
+      return totalEntryCount;
     }
 
-    /** get size
+    /** get total size of entries
      * @return size [bytes]
      */
-    public long getSize()
+    public long getTotalEntrySize()
     {
-      return totalSize;
+      return totalEntrySize;
     }
 
     /** set tree item reference
@@ -1084,8 +1080,8 @@ Dprintf.dprintf("");
       out.writeObject(archiveType);
       out.writeObject(lastCreatedDateTime);
       out.writeObject(lastErrorMessage);
-      out.writeObject(totalEntries);
-      out.writeObject(totalSize);
+      out.writeObject(totalEntryCount);
+      out.writeObject(totalEntrySize);
     }
 
     /** read storage index data object from object stream
@@ -1101,8 +1097,8 @@ Dprintf.dprintf("");
       archiveType         = (Settings.ArchiveTypes)in.readObject();
       lastCreatedDateTime = (Long)in.readObject();
       lastErrorMessage    = (String)in.readObject();
-      totalEntries        = (Long)in.readObject();
-      totalSize           = (Long)in.readObject();
+      totalEntryCount     = (Long)in.readObject();
+      totalEntrySize      = (Long)in.readObject();
     }
 
     /** convert data to string
@@ -1110,7 +1106,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "EntityIndexData {"+indexId+", type="+archiveType.toString()+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes}";
+      return "EntityIndexData {"+indexId+", type="+archiveType.toString()+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes}";
     }
   }
 
@@ -1118,16 +1114,17 @@ Dprintf.dprintf("");
    */
   class StorageIndexData extends IndexData implements Serializable
   {
-    public String                jobName;                  // job name or null
-    public Settings.ArchiveTypes archiveType;              // archive type
-    public String                name;                     // name
-    public long                  lastCreatedDateTime;      // last date/time when some storage was created
-    private long                 totalEntries;
-    private long                 totalSize;
-    public IndexStates           indexState;               // state of index
-    public IndexModes            indexMode;                // mode of index
-    public long                  lastCheckedDateTime;      // last checked date/time
-    public String                errorMessage;             // last error message
+    public  String                jobName;                  // job name or null
+    public  Settings.ArchiveTypes archiveType;              // archive type
+    public  String                name;                     // name
+    public  long                  lastCreatedDateTime;      // last date/time when some storage was created
+    public  IndexStates           indexState;               // state of index
+    public  IndexModes            indexMode;                // mode of index
+    public  long                  lastCheckedDateTime;      // last checked date/time
+    public  String                errorMessage;             // last error message
+
+    private long                  totalEntryCount;
+    private long                  totalEntrySize;
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -1135,11 +1132,10 @@ Dprintf.dprintf("");
       {
         StorageIndexData storageIndexData = (StorageIndexData)indexData;
 
-Dprintf.dprintf("remove");
-        Widgets.updateTreeItem(treeItem,
+ Widgets.updateTreeItem(treeItem,
                                (Object)storageIndexData,
                                storageIndexData.name,
-                               Units.formatByteSize(storageIndexData.totalSize),
+                               Units.formatByteSize(storageIndexData.totalEntrySize),
                                (storageIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                storageIndexData.indexState.toString()
                               );
@@ -1155,7 +1151,7 @@ Dprintf.dprintf("remove");
          Widgets.updateTableItem(tableItem,
                                  (Object)storageIndexData,
                                  storageIndexData.name,
-                                 Units.formatByteSize(storageIndexData.totalSize),
+                                 Units.formatByteSize(storageIndexData.totalEntrySize),
                                  simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                  storageIndexData.indexState.toString()
                                 );
@@ -1168,8 +1164,8 @@ Dprintf.dprintf("remove");
      * @param archiveType archive type
      * @param name name of storage
      * @param lastCreatedDateTime date/time (timestamp) when some storage was created
-     * @param totalEntries number of entries
-     * @param totalSize size of storage [byte]
+     * @param totalEntryCount number of entries
+     * @param totalEntrySize size of storage [byte]
      * @param indexState storage index state
      * @param indexMode storage index mode
      * @param lastCheckedDateTime last checked date/time (timestamp)
@@ -1180,8 +1176,8 @@ Dprintf.dprintf("remove");
                      Settings.ArchiveTypes archiveType,
                      String                name,
                      long                  lastCreatedDateTime,
-                     long                  totalEntries,
-                     long                  totalSize,
+                     long                  totalEntryCount,
+                     long                  totalEntrySize,
                      IndexStates           indexState,
                      IndexModes            indexMode,
                      long                  lastCheckedDateTime,
@@ -1193,8 +1189,8 @@ Dprintf.dprintf("remove");
       this.archiveType         = archiveType;
       this.name                = name;
       this.lastCreatedDateTime = lastCreatedDateTime;
-      this.totalEntries        = totalEntries;
-      this.totalSize           = totalSize;
+      this.totalEntryCount     = totalEntryCount;
+      this.totalEntrySize      = totalEntrySize;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
       this.lastCheckedDateTime = lastCheckedDateTime;
@@ -1218,7 +1214,6 @@ Dprintf.dprintf("remove");
                     )
     {
       this(storageId,jobName,archiveType,name,lastCreatedDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
-Dprintf.dprintf("");
     }
 
     /** create storage data
@@ -1249,20 +1244,20 @@ Dprintf.dprintf("");
       return lastCreatedDateTime;
     }
 
-    /** get number of entries
+    /** get total number of entries
      * @return entries
      */
-    public long getEntries()
+    public long getTotalEntryCount()
     {
-      return totalEntries;
+      return totalEntryCount;
     }
 
-    /** get size
+    /** get togal size of entries
      * @return size [bytes]
      */
-    public long getSize()
+    public long getTotalEntrySize()
     {
-      return totalSize;
+      return totalEntrySize;
     }
 
     /** get index state
@@ -1291,7 +1286,7 @@ Dprintf.dprintf("");
       Widgets.updateTableItem(tableItem,
                               (Object)this,
                               name,
-                              Units.formatByteSize(totalSize),
+                              Units.formatByteSize(totalEntrySize),
                               simpleDateFormat.format(new Date(lastCreatedDateTime*1000L)),
                               indexState.toString()
                              );
@@ -1328,8 +1323,8 @@ Dprintf.dprintf("");
       out.writeObject(archiveType);
       out.writeObject(name);
       out.writeObject(lastCreatedDateTime);
-      out.writeObject(totalEntries);
-      out.writeObject(totalSize);
+      out.writeObject(totalEntryCount);
+      out.writeObject(totalEntrySize);
       out.writeObject(indexState);
       out.writeObject(indexMode);
       out.writeObject(lastCheckedDateTime);
@@ -1349,8 +1344,8 @@ Dprintf.dprintf("");
       archiveType         = (Settings.ArchiveTypes)in.readObject();
       name                = (String)in.readObject();
       lastCreatedDateTime = (Long)in.readObject();
-      totalEntries        = (Long)in.readObject();
-      totalSize           = (Long)in.readObject();
+      totalEntryCount     = (Long)in.readObject();
+      totalEntrySize      = (Long)in.readObject();
       indexState          = (IndexStates)in.readObject();
       indexMode           = (IndexModes)in.readObject();
       lastCheckedDateTime = (Long)in.readObject();
@@ -1361,7 +1356,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "StorageIndexData {"+indexId+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalSize="+totalSize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
+      return "StorageIndexData {"+indexId+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
     }
   };
 
@@ -1627,9 +1622,9 @@ Dprintf.dprintf("cirrect?");
     private final int PAGE_SIZE = 32;
 
     private Object           trigger              = new Object();   // trigger update object
-    private boolean          updateCount          = false;
+    private boolean          updateStorageCount   = false;
     private HashSet<Integer> updateOffsets        = new HashSet<Integer>();
-    private int              count                = 0;
+    private int              storageCount         = 0;
     private String           storagePattern       = "";
     private IndexStateSet    storageIndexStateSet = INDEX_STATE_SET_ALL;
     private EntityStates     storageEntityState   = EntityStates.ANY;
@@ -1648,7 +1643,7 @@ Dprintf.dprintf("cirrect?");
      */
     public void run()
     {
-      boolean          updateCount        = true;
+      boolean          updateStorageCount = true;
       HashSet<Integer> updateOffsets      = new HashSet<Integer>();
       boolean          setUpdateIndicator = true;
       try
@@ -1678,22 +1673,22 @@ Dprintf.dprintf("cirrect?");
             // update tree/table
             try
             {
-              if (updateCount)
+              if (updateStorageCount)
               {
                 updateStorageTableCount();
               }
 
               HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
-              if (!this.updateCount)
+              if (!this.updateStorageCount)
               {
                 updateUUIDTreeItems(uuidTreeItems);
               }
               HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
-              if (!this.updateCount)
+              if (!this.updateStorageCount)
               {
                 updateEntityTreeItems(uuidTreeItems,entityTreeItems);
               }
-              if (!this.updateCount)
+              if (!this.updateStorageCount)
               {
                 updateStorageTreeItems(entityTreeItems);
               }
@@ -1758,35 +1753,35 @@ Dprintf.dprintf("cirrect?");
           // wait for trigger or sleep a short time
           synchronized(trigger)
           {
-            if (!this.updateCount && this.updateOffsets.isEmpty())
+            if (!this.updateStorageCount && this.updateOffsets.isEmpty())
             {
               // wait for refresh request trigger or timeout
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // get update count, offsets to update
-            updateCount        = this.updateCount;
+            updateStorageCount = this.updateStorageCount;
             updateOffsets.addAll(this.updateOffsets);
             setUpdateIndicator = this.setUpdateIndicator;
 
             // if not triggered (timeout occurred) update count is done invisible (color is not set)
-            if (!this.updateCount && this.updateOffsets.isEmpty())
+            if (!this.updateStorageCount && this.updateOffsets.isEmpty())
             {
-              updateCount        = true;
+              updateStorageCount = true;
               setUpdateIndicator = false;
             }
 
             // wait for immediate further triggers
             do
             {
-              this.updateCount        = false;
+              this.updateStorageCount = false;
               this.updateOffsets.clear();
               this.setUpdateIndicator = false;
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
               updateOffsets.addAll(this.updateOffsets);
             }
-            while (this.updateCount || !this.updateOffsets.isEmpty());
+            while (this.updateStorageCount || !this.updateOffsets.isEmpty());
           }
         }
       }
@@ -1802,12 +1797,12 @@ Dprintf.dprintf("cirrect?");
       }
     }
 
-    /** get count
-     * @return count
+    /** get storage count
+     * @return storage count
      */
-    public int getCount()
+    public int getStorageCount()
     {
-      return count;
+      return storageCount;
     }
 
     /** get storage pattern
@@ -1845,7 +1840,7 @@ Dprintf.dprintf("cirrect?");
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
-          this.updateCount          = true;
+          this.updateStorageCount   = true;
           trigger.notify();
         }
       }
@@ -1869,7 +1864,7 @@ Dprintf.dprintf("cirrect?");
         {
           this.storagePattern     = storagePattern;
           this.setUpdateIndicator = true;
-          this.updateCount        = true;
+          this.updateStorageCount = true;
           trigger.notify();
         }
       }
@@ -1888,7 +1883,7 @@ Dprintf.dprintf("cirrect?");
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
-          this.updateCount          = true;
+          this.updateStorageCount   = true;
           trigger.notify();
         }
       }
@@ -1917,7 +1912,7 @@ Dprintf.dprintf("cirrect?");
       synchronized(trigger)
       {
         this.setUpdateIndicator = true;
-        this.updateCount        = true;
+        this.updateStorageCount = true;
         trigger.notify();
       }
     }
@@ -1927,7 +1922,7 @@ Dprintf.dprintf("cirrect?");
      */
     private boolean isUpdateTriggered()
     {
-      return updateCount || !updateOffsets.isEmpty();
+      return updateStorageCount || !updateOffsets.isEmpty();
     }
 
     /** update UUID tree items
@@ -1968,16 +1963,16 @@ Dprintf.dprintf("cirrect?");
                                      String name                = valueMap.getString("name"               );
                                      long   lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
                                      String lastErrorMessage    = valueMap.getString("lastErrorMessage"   );
-                                     long   totalEntries        = valueMap.getLong  ("totalEntries"       );
-                                     long   totalSize           = valueMap.getLong  ("totalSize"          );
+                                     long   totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
+                                     long   totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
 
                                      uuidIndexDataList.add(new UUIDIndexData(uuidId,
                                                                              jobUUID,
                                                                              name,
                                                                              lastCreatedDateTime,
                                                                              lastErrorMessage,
-                                                                             totalEntries,
-                                                                             totalSize
+                                                                             totalEntryCount,
+                                                                             totalEntrySize
                                                                             )
                                                           );
                                    }
@@ -1986,6 +1981,7 @@ Dprintf.dprintf("cirrect?");
                                      if (Settings.debugLevel > 0)
                                      {
                                        System.err.println("ERROR: "+exception.getMessage());
+                                       System.exit(1);
                                      }
                                    }
 
@@ -2040,7 +2036,7 @@ Dprintf.dprintf("start");
                                                         (Object)uuidIndexData,
                                                         true,  // folderFlag
                                                         uuidIndexData.name,
-                                                        Units.formatByteSize(uuidIndexData.totalSize),
+                                                        Units.formatByteSize(uuidIndexData.totalEntrySize),
                                                         (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                                         ""
                                                        );
@@ -2055,7 +2051,7 @@ Dprintf.dprintf("start");
                   Widgets.updateTreeItem(uuidTreeItem,
                                          (Object)uuidIndexData,
                                          uuidIndexData.name,
-                                         Units.formatByteSize(uuidIndexData.totalSize),
+                                         Units.formatByteSize(uuidIndexData.totalEntrySize),
                                          (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                          ""
                                         );
@@ -2077,7 +2073,7 @@ Dprintf.dprintf("end");
                                                             (Object)uuidIndexData,
                                                             true,  // folderFlag
                                                             uuidIndexData.name,
-                                                            Units.formatByteSize(uuidIndexData.totalSize),
+                                                            Units.formatByteSize(uuidIndexData.totalEntrySize),
                                                             (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                                             ""
                                                            );
@@ -2174,16 +2170,16 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
                                      Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
                                      long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
                                      String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
-                                     long                  totalEntries        = valueMap.getLong  ("totalEntries"                           );
-                                     long                  totalSize           = valueMap.getLong  ("totalSize"                              );
+                                     long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
+                                     long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
 
                                      // add entity data index
                                      entityIndexDataList.add(new EntityIndexData(entityId,
                                                                                  archiveType,
                                                                                  lastCreatedDateTime,
                                                                                  lastErrorMessage,
-                                                                                 totalEntries,
-                                                                                 totalSize
+                                                                                 totalEntryCount,
+                                                                                 totalEntrySize
                                                                                 )
                                                             );
                                    }
@@ -2192,6 +2188,7 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
                                      if (Settings.debugLevel > 0)
                                      {
                                        System.err.println("ERROR: "+exception.getMessage());
+                                       System.exit(1);
                                      }
                                    }
 
@@ -2234,7 +2231,7 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
                                                         (Object)entityIndexData,
                                                         true,
                                                         entityIndexData.archiveType.toString(),
-                                                        Units.formatByteSize(entityIndexData.totalSize),
+                                                        Units.formatByteSize(entityIndexData.totalEntrySize),
                                                         (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
                                                         ""
                                                        );
@@ -2249,7 +2246,7 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
                 Widgets.updateTreeItem(entityTreeItem,
                                        (Object)entityIndexData,
                                        entityIndexData.archiveType.toString(),
-                                       Units.formatByteSize(entityIndexData.totalSize),
+                                       Units.formatByteSize(entityIndexData.totalEntrySize),
                                        (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
                                        ""
                                       );
@@ -2382,6 +2379,7 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
                                      if (Settings.debugLevel > 0)
                                      {
                                        System.err.println("ERROR: "+exception.getMessage());
+                                       System.exit(1);
                                      }
                                    }
 
@@ -2422,7 +2420,7 @@ Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
                                                            (Object)storageIndexData,
                                                            false,
                                                            storageIndexData.name,
-                                                           Units.formatByteSize(storageIndexData.totalSize),
+                                                           Units.formatByteSize(storageIndexData.totalEntrySize),
                                                            (storageIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                                            storageIndexData.indexState.toString()
                                                           );
@@ -2436,7 +2434,7 @@ Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
                   Widgets.updateTreeItem(storageTreeItem,
                                          (Object)storageIndexData,
                                          storageIndexData.name,
-                                         Units.formatByteSize(storageIndexData.totalSize),
+                                         Units.formatByteSize(storageIndexData.totalEntrySize),
                                          (storageIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                          storageIndexData.indexState.toString()
                                         );
@@ -2516,13 +2514,13 @@ Dprintf.dprintf("******************************************");
                                                        storagePattern,
                                                        storageIndexStateSet.nameList("|")
                                                       ),
-                                   1,  // debugLevel
+                                   0,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
          )
       {
-        count = valueMap.getInt("count");
+        storageCount = valueMap.getInt("storageCount");
       }
 
       // set count
@@ -2537,7 +2535,7 @@ Dprintf.dprintf("******************************************");
           widgetStorageTable.setItemCount(0);
           widgetStorageTable.clearAll();
 
-          widgetStorageTable.setItemCount(count);
+          widgetStorageTable.setItemCount(storageCount);
           widgetStorageTable.setTopIndex(0);
 
           widgetStorageTable.setRedraw(true);
@@ -2553,10 +2551,10 @@ Dprintf.dprintf("******************************************");
     {
       assert storagePattern != null;
       assert offset >= 0;
-      assert count >= 0;
+      assert storageCount >= 0;
 
       // get limit
-      final int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
+      final int limit = ((offset+PAGE_SIZE) < storageCount) ? PAGE_SIZE : storageCount-offset;
 
 //TODO: sort
 Dprintf.dprintf("/TODO: sort");
@@ -2589,8 +2587,8 @@ Dprintf.dprintf("/TODO: sort");
                                      final Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class,Settings.ArchiveTypes.NORMAL);
                                      final String                name                = valueMap.getString("name");
                                      final long                  dateTime            = valueMap.getLong  ("dateTime");
-                                     final long                  entries             = valueMap.getLong  ("entries");
-                                     final long                  size                = valueMap.getLong  ("size");
+                                     final long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount");
+                                     final long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize");
                                      final IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class);
                                      final IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class);
                                      final long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime");
@@ -2602,8 +2600,8 @@ Dprintf.dprintf("/TODO: sort");
                                                                                                     archiveType,
                                                                                                     name,
                                                                                                     dateTime,
-                                                                                                    entries,
-                                                                                                    size,
+                                                                                                    totalEntryCount,
+                                                                                                    totalEntrySize,
                                                                                                     indexState,
                                                                                                     indexMode,
                                                                                                     lastCheckedDateTime,
@@ -2619,7 +2617,7 @@ Dprintf.dprintf("/TODO: sort");
                                          Widgets.updateTableItem(tableItem,
                                                                  (Object)storageIndexData,
                                                                  storageIndexData.name,
-                                                                 Units.formatByteSize(storageIndexData.totalSize),
+                                                                 Units.formatByteSize(storageIndexData.totalEntrySize),
                                                                  simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                                                  storageIndexData.indexState.toString()
                                                                 );
@@ -2632,6 +2630,7 @@ Dprintf.dprintf("/TODO: sort");
                                      if (Settings.debugLevel > 0)
                                      {
                                        System.err.println("ERROR: "+exception.getMessage());
+                                       System.exit(1);
                                      }
                                    }
 
@@ -2732,8 +2731,8 @@ Dprintf.dprintf("");
                                      String name                = valueMap.getString("name"               );
                                      long   lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
                                      String lastErrorMessage    = valueMap.getString("lastErrorMessage"   );
-                                     long   totalEntries        = valueMap.getLong  ("totalEntries"       );
-                                     long   totalSize           = valueMap.getLong  ("totalSize"          );
+                                     long   totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
+                                     long   totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
 
                                      // add UUID index data
                                      final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
@@ -2741,8 +2740,8 @@ Dprintf.dprintf("");
                                                                                            name,
                                                                                            lastCreatedDateTime,
                                                                                            lastErrorMessage,
-                                                                                           totalEntries,
-                                                                                           totalSize
+                                                                                           totalEntryCount,
+                                                                                           totalEntrySize
                                                                                           );
 
                                      // update/insert menu item
@@ -2851,6 +2850,7 @@ Dprintf.dprintf("");
                                      if (Settings.debugLevel > 0)
                                      {
                                        System.err.println("ERROR: "+exception.getMessage());
+                                       System.exit(1);
                                      }
                                    }
 
@@ -2925,16 +2925,16 @@ Dprintf.dprintf("");
                                        Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
                                        long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
                                        String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
-                                       long                  totalEntries        = valueMap.getLong  ("totalEntries"                           );
-                                       long                  totalSize           = valueMap.getLong  ("totalSize"                              );
+                                       long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                           );
+                                       long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                              );
 
                                        // add entity data index
                                        final EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                                                    archiveType,
                                                                                                    lastCreatedDateTime,
                                                                                                    lastErrorMessage,
-                                                                                                   totalEntries,
-                                                                                                   totalSize
+                                                                                                   totalEntryCount,
+                                                                                                   totalEntrySize
                                                                                                   );
 
                                        // update/insert menu item
@@ -2982,6 +2982,7 @@ Dprintf.dprintf("");
                                        if (Settings.debugLevel > 0)
                                        {
                                          System.err.println("ERROR: "+exception.getMessage());
+                                         System.exit(1);
                                        }
                                      }
 
@@ -3095,6 +3096,23 @@ Dprintf.dprintf("");
     SSH,
     WEBDAV,
     CRYPT;
+
+    /** convert to string
+     * @return string
+     */
+    public String toString()
+    {
+      switch (this)
+      {
+        case NONE:   return "none";
+        case FTP:    return "FTP";
+        case SSH:    return "SSH";
+        case WEBDAV: return "webDAV";
+        case CRYPT:  return "encryption";
+      }
+
+      return "";
+    }
   };
 
   /** entry data
@@ -3358,14 +3376,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
   {
     private final int PAGE_SIZE = 32;
 
-    private Object           trigger            = new Object();   // trigger update object
-    private boolean          updateCount        = false;
-    private HashSet<Integer> updateOffsets      = new HashSet<Integer>();
-    private int              count              = 0;
-    private EntryTypes       entryType          = EntryTypes.ANY;
-    private String           entryPattern       = "";
-    private boolean          newestEntriesOnly  = false;
-    private boolean          setUpdateIndicator = false;          // true to set color/cursor at update
+    private Object           trigger               = new Object();   // trigger update object
+    private boolean          updateTotalEntryCount = false;
+    private HashSet<Integer> updateOffsets         = new HashSet<Integer>();
+    private long             totalEntryCount       = 0;
+    private EntryTypes       entryType             = EntryTypes.ANY;
+    private String           entryPattern          = "";
+    private boolean          newestEntriesOnly     = false;
+    private boolean          setUpdateIndicator    = false;          // true to set color/cursor at update
 
     /** create update entry list thread
      */
@@ -3380,9 +3398,9 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      */
     public void run()
     {
-      boolean          updateCount        = true;
-      HashSet<Integer> updateOffsets      = new HashSet<Integer>();
-      boolean          setUpdateIndicator = true;
+      boolean          updateTotalEntryCount = true;
+      HashSet<Integer> updateOffsets         = new HashSet<Integer>();
+      boolean          setUpdateIndicator    = true;
       try
       {
         for (;;)
@@ -3408,9 +3426,9 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             // update table count, table segment
             try
             {
-              if (updateCount)
+              if (updateTotalEntryCount)
               {
-                updateEntryTableCount();
+                updateEntryTableTotalEntryCount();
               }
               if (!updateOffsets.isEmpty())
               {
@@ -3452,34 +3470,34 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           synchronized(trigger)
           {
             // wait for refresh request trigger or timeout
-            if (!this.updateCount && this.updateOffsets.isEmpty())
+            if (!this.updateTotalEntryCount && this.updateOffsets.isEmpty())
             {
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // get update count, offsets to update
-            updateCount        = this.updateCount;
+            updateTotalEntryCount = this.updateTotalEntryCount;
             updateOffsets.addAll(this.updateOffsets);
             setUpdateIndicator = this.setUpdateIndicator;
 
             // if not triggered (timeout occurred) update count is done invisible (color is not set)
-            if (!this.updateCount && this.updateOffsets.isEmpty())
+            if (!this.updateTotalEntryCount && this.updateOffsets.isEmpty())
             {
-              updateCount        = true;
-              setUpdateIndicator = false;
+              updateTotalEntryCount = true;
+              setUpdateIndicator    = false;
             }
 
             // wait for immediate further triggers
             do
             {
-              this.updateCount        = false;
+              this.updateTotalEntryCount = false;
               this.updateOffsets.clear();
-              this.setUpdateIndicator = false;
+              this.setUpdateIndicator    = false;
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
               updateOffsets.addAll(this.updateOffsets);
             }
-            while (this.updateCount || !this.updateOffsets.isEmpty());
+            while (this.updateTotalEntryCount || !this.updateOffsets.isEmpty());
           }
         }
       }
@@ -3495,12 +3513,12 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       }
     }
 
-    /** get count
-     * @return count
+    /** get total count
+     * @return total count
      */
-    public int getCount()
+    public long getTotalEntryCount()
     {
-      return count;
+      return totalEntryCount;
     }
 
     /** get entry type
@@ -3541,11 +3559,11 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             || (this.newestEntriesOnly != newestEntriesOnly)
            )
         {
-          this.entryPattern       = entryPattern;
-          this.entryType          = entryType;
-          this.newestEntriesOnly  = newestEntriesOnly;
-          this.setUpdateIndicator = true;
-          this.updateCount        = true;
+          this.entryPattern          = entryPattern;
+          this.entryType             = entryType;
+          this.newestEntriesOnly     = newestEntriesOnly;
+          this.setUpdateIndicator    = true;
+          this.updateTotalEntryCount = true;
           trigger.notify();
         }
       }
@@ -3567,9 +3585,9 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             || (((entryPattern.length() == 0) || (entryPattern.length() >= 3)) && !this.entryPattern.equals(entryPattern))
            )
         {
-          this.entryPattern       = entryPattern;
-          this.setUpdateIndicator = true;
-          this.updateCount        = true;
+          this.entryPattern          = entryPattern;
+          this.setUpdateIndicator    = true;
+          this.updateTotalEntryCount = true;
           trigger.notify();
         }
       }
@@ -3584,9 +3602,9 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       {
         if (entryType != this.entryType)
         {
-          this.entryType          = entryType;
-          this.setUpdateIndicator = true;
-          this.updateCount        = true;
+          this.entryType             = entryType;
+          this.setUpdateIndicator    = true;
+          this.updateTotalEntryCount = true;
           trigger.notify();
         }
       }
@@ -3602,9 +3620,9 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       {
         if (this.newestEntriesOnly != newestEntriesOnly)
         {
-          this.newestEntriesOnly  = newestEntriesOnly;
-          this.setUpdateIndicator = true;
-          this.updateCount        = true;
+          this.newestEntriesOnly     = newestEntriesOnly;
+          this.setUpdateIndicator    = true;
+          this.updateTotalEntryCount = true;
           trigger.notify();
         }
       }
@@ -3632,7 +3650,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     {
       synchronized(trigger)
       {
-        updateCount = true;
+        updateTotalEntryCount = true;
         trigger.notify();
       }
     }
@@ -3642,16 +3660,16 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
      */
     private boolean isUpdateTriggered()
     {
-      return updateCount || !updateOffsets.isEmpty();
+      return updateTotalEntryCount || !updateOffsets.isEmpty();
     }
 
-    /** refresh entry table display count
+    /** refresh entry table display total count
      */
-    private void updateEntryTableCount()
+    private void updateEntryTableTotalEntryCount()
     {
       assert entryPattern != null;
 
-      int oldCount = count;
+      long oldTotalEntryCount = totalEntryCount;
 
       // get entries info
       final String[] errorMessage = new String[1];
@@ -3661,14 +3679,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                        entryType.toString(),
                                                        newestEntriesOnly
                                                       ),
-                                   0,  // debugLevel
+                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
          )
       {
-        count = valueMap.getInt("count");
-        if ((oldCount > 0) && (oldCount <= MAX_SHOWN_ENTRIES) && (count > MAX_SHOWN_ENTRIES))
+        totalEntryCount = valueMap.getLong("totalEntryCount");
+        if ((oldTotalEntryCount > 0) && (oldTotalEntryCount <= MAX_SHOWN_ENTRIES) && (totalEntryCount > MAX_SHOWN_ENTRIES))
         {
           display.syncExec(new Runnable()
           {
@@ -3677,7 +3695,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
               Dialogs.warning(shell,
                               Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
                               BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
-                                            updateEntryTableThread.getCount(),
+                                            updateEntryTableThread.getTotalEntryCount(),
                                             MAX_SHOWN_ENTRIES
                                            )
                              );
@@ -3686,7 +3704,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
         }
       }
 
-      if (oldCount != count)
+      if (oldTotalEntryCount != totalEntryCount)
       {
         // set count
         display.syncExec(new Runnable()
@@ -3700,7 +3718,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
             widgetEntryTable.setItemCount(0);
             widgetEntryTable.clearAll();
 
-            widgetEntryTable.setItemCount(Math.min(count,MAX_SHOWN_ENTRIES));
+            widgetEntryTable.setItemCount((int)Math.min(totalEntryCount,MAX_SHOWN_ENTRIES));
             widgetEntryTable.setTopIndex(0);
 
             widgetEntryTable.setRedraw(true);
@@ -3717,10 +3735,10 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     {
       assert entryPattern != null;
       assert offset >= 0;
-      assert count >= 0;
+      assert totalEntryCount >= 0;
 
       // get limit
-      final int limit = ((offset+PAGE_SIZE) < count) ? PAGE_SIZE : count-offset;
+      final int limit = ((offset+PAGE_SIZE) < totalEntryCount) ? PAGE_SIZE : (int)(totalEntryCount-offset);
 
 //TODO: sort
 //IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
@@ -3986,6 +4004,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                      if (Settings.debugLevel > 0)
                                      {
                                        System.err.println("ERROR: "+exception.getMessage());
+                                       System.exit(1);
                                      }
                                    }
 
@@ -4102,11 +4121,6 @@ Dprintf.dprintf("");
   private Table                        widgetEntryTable;
   private Shell                        widgetEntryTableToolTip = null;
   private WidgetEvent                  checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
-
-  private Button                       widgetRestoreTo;
-  private Text                         widgetRestoreToDirectory;
-  private Button                       widgetOverwriteEntries;
-  private WidgetEvent                  selectRestoreToEvent = new WidgetEvent();
 
   private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
   private IndexData                    selectedIndexData = null;
@@ -4507,12 +4521,12 @@ Dprintf.dprintf("");
         TabItem[] tabItems = parentTabFolder.getItems();
         if (tabItem == tabItems[2])
         {
-          if (updateEntryTableThread.getCount() >= MAX_SHOWN_ENTRIES)
+          if (updateEntryTableThread.getTotalEntryCount() >= MAX_SHOWN_ENTRIES)
           {
             Dialogs.warning(shell,
                             Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
                             BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
-                                          updateEntryTableThread.getCount(),
+                                          updateEntryTableThread.getTotalEntryCount(),
                                           MAX_SHOWN_ENTRIES
                                          )
                            );
@@ -4554,7 +4568,7 @@ Dprintf.dprintf("");
                       8
                      );
 
-          text = BARControl.tr("Count: {0}",updateStorageTreeTableThread.getCount());
+          text = BARControl.tr("Count: {0}",updateStorageTreeTableThread.getStorageCount());
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
                       bounds.width-size.x-8,
@@ -5515,7 +5529,7 @@ Dprintf.dprintf("remove");
                      );
 
           // number of entries
-          text = BARControl.tr("Count: {0}",updateEntryTableThread.getCount());
+          text = BARControl.tr("Count: {0}",updateEntryTableThread.getTotalEntryCount());
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
                       bounds.width-size.x-8,
@@ -5934,111 +5948,6 @@ Dprintf.dprintf("remove");
       }
     }
 
-    // destination
-    group = Widgets.newGroup(widgetTab,BARControl.tr("Destination"));
-    group.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0},4));
-    Widgets.layout(group,1,0,TableLayoutData.WE);
-    {
-      // fix layout
-      control = Widgets.newSpacer(group);
-      Widgets.layout(control,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,1);
-
-      widgetRestoreTo = Widgets.newCheckbox(group,BARControl.tr("to"));
-      widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
-      Widgets.layout(widgetRestoreTo,1,0,TableLayoutData.W);
-      widgetRestoreTo.addSelectionListener(new SelectionListener()
-      {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button  widget      = (Button)selectionEvent.widget;
-          boolean checkedFlag = widget.getSelection();
-          widgetRestoreTo.setSelection(checkedFlag);
-          selectRestoreToEvent.trigger();
-        }
-      });
-
-      widgetRestoreToDirectory = Widgets.newText(group);
-      widgetRestoreToDirectory.setEnabled(false);
-      Widgets.layout(widgetRestoreToDirectory,1,1,TableLayoutData.WE);
-      Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
-      {
-        @Override
-        public void trigger(Control control)
-        {
-          control.setEnabled(widgetRestoreTo.getSelection());
-        }
-      });
-      group.addMouseListener(new MouseListener()
-      {
-        @Override
-        public void mouseDoubleClick(final MouseEvent mouseEvent)
-        {
-        }
-        @Override
-        public void mouseDown(final MouseEvent mouseEvent)
-        {
-          Rectangle bounds = widgetRestoreToDirectory.getBounds();
-
-          if (bounds.contains(mouseEvent.x,mouseEvent.y))
-          {
-            widgetRestoreTo.setSelection(true);
-            selectRestoreToEvent.trigger();
-            Widgets.setFocus(widgetRestoreToDirectory);
-          }
-        }
-        @Override
-        public void mouseUp(final MouseEvent mouseEvent)
-        {
-        }
-      });
-
-      button = Widgets.newButton(group,IMAGE_DIRECTORY);
-      Widgets.layout(button,1,2,TableLayoutData.DEFAULT);
-      button.addSelectionListener(new SelectionListener()
-      {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          String pathName;
-          if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-          {
-            pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.DIRECTORY,
-                                    BARControl.tr("Select path"),
-                                    widgetRestoreTo.getText(),
-                                    BARServer.remoteListDirectory
-                                   );
-          }
-          else
-          {
-           pathName = Dialogs.directory(shell,
-                                        BARControl.tr("Select path"),
-                                        widgetRestoreTo.getText()
-                                       );
-          }
-          if (pathName != null)
-          {
-            widgetRestoreTo.setSelection(true);
-            selectRestoreToEvent.trigger();
-            widgetRestoreToDirectory.setText(pathName);
-          }
-        }
-      });
-
-      widgetOverwriteEntries = Widgets.newCheckbox(group,BARControl.tr("overwrite existing entries"));
-      widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,1,3,TableLayoutData.W);
-    }
-
     // start storage/entry update threads
     updateStorageTreeTableThread.start();
     updateEntryTableThread.start();
@@ -6151,8 +6060,8 @@ Dprintf.dprintf("remove");
         checkedStorageEvent.trigger();
         break;
       case 1:
-        final int     count[] = new int[]{0};
-        final boolean doit[]  = new boolean[]{true};
+        final int     totalEntryCount[] = new int[]{0};
+        final boolean doit[]            = new boolean[]{true};
 
         if (checked)
         {
@@ -6166,8 +6075,8 @@ Dprintf.dprintf("remove");
                                       ) == Errors.NONE
              )
           {
-            count[0] = valueMap.getInt("count");
-            if (count[0] > MAX_CONFIRM_ENTRIES)
+            totalEntryCount[0] = valueMap.getInt("totalEntryCount");
+            if (totalEntryCount[0] > MAX_CONFIRM_ENTRIES)
             {
               display.syncExec(new Runnable()
               {
@@ -6176,7 +6085,7 @@ Dprintf.dprintf("remove");
                   doit[0] = Dialogs.confirm(shell,
                                             Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
                                             BARControl.tr("There are {0} entries. Really mark all entries?",
-                                                          count[0]
+                                                          totalEntryCount[0]
                                                          )
                                            );
                 }
@@ -6192,7 +6101,7 @@ Dprintf.dprintf("remove");
             // check/uncheck all entries
             final int n[] = new int[]{0};
             final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
-            busyDialog.setMaximum(count[0]);
+            busyDialog.setMaximum(totalEntryCount[0]);
             int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s",
                                                                      "*",
                                                                      updateStorageTreeTableThread.getStoragePattern(),
@@ -6337,16 +6246,16 @@ Dprintf.dprintf("remove");
                                        Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
                                        long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
                                        String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
-                                       long                  totalEntries        = valueMap.getLong  ("totalEntries"                           );
-                                       long                  totalSize           = valueMap.getLong  ("totalSize"                              );
+                                       long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
+                                       long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
 
                                        // add entity data index
                                        final EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                                                    archiveType,
                                                                                                    lastCreatedDateTime,
                                                                                                    lastErrorMessage,
-                                                                                                   totalEntries,
-                                                                                                   totalSize
+                                                                                                   totalEntryCount,
+                                                                                                   totalEntrySize
                                                                                                   );
 
                                        // insert/update tree item
@@ -6381,6 +6290,7 @@ Dprintf.dprintf("remove");
                                        if (Settings.debugLevel > 0)
                                        {
                                          System.err.println("ERROR: "+exception.getMessage());
+                                         System.exit(1);
                                        }
                                      }
 
@@ -6448,8 +6358,8 @@ assert storagePattern != null;
                                        Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
                                        String                name                = valueMap.getString("name"                                   );
                                        long                  dateTime            = valueMap.getLong  ("dateTime"                               );
-                                       long                  entries             = valueMap.getLong  ("entries"                                );
-                                       long                  size                = valueMap.getLong  ("size"                                   );
+                                       long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
+                                       long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
                                        IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
                                        IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
                                        long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
@@ -6461,8 +6371,8 @@ assert storagePattern != null;
                                                                                                       archiveType,
                                                                                                       name,
                                                                                                       dateTime,
-                                                                                                      entries,
-                                                                                                      size,
+                                                                                                      totalEntryCount,
+                                                                                                      totalEntrySize,
                                                                                                       indexState,
                                                                                                       indexMode,
                                                                                                       lastCheckedDateTime,
@@ -6499,6 +6409,7 @@ assert storagePattern != null;
                                        if (Settings.debugLevel > 0)
                                        {
                                          System.err.println("ERROR: "+exception.getMessage());
+                                         System.exit(1);
                                        }
                                      }
 
@@ -7181,14 +7092,14 @@ assert storagePattern != null;
         });
         return;
       }
-      long errorCount = valueMap.getLong("count");
+      long errorTotalEntryCount = valueMap.getLong("totalEntryCount");
 
-      if (errorCount > 0)
+      if (errorTotalEntryCount > 0)
       {
-        if (Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#indizes|1#index|1<indizes} with error state?",errorCount)))
+        if (Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#indizes|1#index|1<indizes} with error state?",errorTotalEntryCount)))
         {
           final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE);
-          busyDialog.setMaximum(errorCount);
+          busyDialog.setMaximum(errorTotalEntryCount);
 
           new BackgroundTask(busyDialog)
           {
@@ -7227,6 +7138,7 @@ assert storagePattern != null;
                     if (Settings.debugLevel > 0)
                     {
                       System.err.println("ERROR: "+exception.getMessage());
+                      System.exit(1);
                     }
                   }
                 }
@@ -7495,32 +7407,39 @@ assert storagePattern != null;
     Button     button;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore archives"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore archives"),400,300,new double[]{1.0,0.0},1.0);
+
+    final WidgetEvent selectRestoreToEvent = new WidgetEvent();
 
     // create widgets
-    final Label  widgetCount;
+    final List   widgetArchiveList;
+    final Label  widgetTotalEntryCount;
     final Label  widgetSize;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
     final Button widgetOverwriteEntries;
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
-    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    composite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
+    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Archives:"));
-      Widgets.layout(label,0,0,TableLayoutData.W);
-      widgetCount = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetCount,0,1,TableLayoutData.WE);
+      Widgets.layout(label,0,0,TableLayoutData.NW);
+      widgetArchiveList = Widgets.newList(composite);
+      Widgets.layout(widgetArchiveList,1,0,TableLayoutData.NSWE,0,2);
+//      label = Widgets.newLabel(composite,BARControl.tr("Archives:"));
+//      Widgets.layout(label,0,0,TableLayoutData.NW);
+//      widgetTotalEntryCount = Widgets.newLabel(composite,"-");
+//      Widgets.layout(widgetTotalEntryCount,0,1,TableLayoutData.WE);
 
       label = Widgets.newLabel(composite,BARControl.tr("Total size:"));
-      Widgets.layout(label,1,0,TableLayoutData.W);
+      Widgets.layout(label,2,0,TableLayoutData.W);
       widgetSize = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetSize,1,1,TableLayoutData.WE);
+      Widgets.layout(widgetSize,2,1,TableLayoutData.WE);
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
-      Widgets.layout(subComposite,2,0,TableLayoutData.WE,0,2);
+      Widgets.layout(subComposite,3,0,TableLayoutData.WE,0,2);
       {
         widgetRestoreTo = Widgets.newCheckbox(subComposite,BARControl.tr("to"));
         widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
@@ -7616,7 +7535,7 @@ assert storagePattern != null;
 
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,3,0,TableLayoutData.W,0,2);
+      Widgets.layout(widgetOverwriteEntries,4,0,TableLayoutData.W,0,2);
     }
 
     // buttons
@@ -7686,9 +7605,30 @@ assert storagePattern != null;
           // set storage entries to restore
           setStorageList(indexIdSet);
 
-          // get number entries, size
           final String[] errorMessage = new String[1];
           ValueMap       valueMap     = new ValueMap();
+
+          // get archives
+          if (BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
+                                       0,  // debugLevel
+                                       errorMessage,
+                                       valueMap
+                                      ) == Errors.NONE
+             )
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+//                widgetTotalEntryCount.setText(Long.toString(totalEntryCount));
+//                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
+              }
+            });
+          }
+
+          // get number entries, size
+//          final String[] errorMessage = new String[1];
+//          ValueMap       valueMap     = new ValueMap();
           if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
                                        0,  // debugLevel
                                        errorMessage,
@@ -7696,15 +7636,15 @@ assert storagePattern != null;
                                       ) == Errors.NONE
              )
           {
-            final long count = valueMap.getLong("count");
-            final long size  = valueMap.getLong("size");
+            final long totalEntryCount = valueMap.getLong("totalEntryCount");
+            final long totalEntrySize  = valueMap.getLong("totalEntrySize");
 
             display.syncExec(new Runnable()
             {
               public void run()
               {
-                widgetCount.setText(Long.toString(count));
-                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
+//                widgetTotalEntryCount.setText(Long.toString(totalEntryCount));
+//                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
               }
             });
           }
@@ -7795,7 +7735,7 @@ assert storagePattern != null;
                                              final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
                                              final String        volume       = valueMap.getString("volume","");
                                              final int           error        = valueMap.getInt   ("error",Errors.NONE);
-                                             final String        errorText    = valueMap.getString("errorText","");
+                                             final String        errorMessage = valueMap.getString("errorMessage","");
                                              final String        storage      = valueMap.getString("storage","");
                                              final String        entry        = valueMap.getString("entry","");
 
@@ -7853,7 +7793,7 @@ Dprintf.dprintf("");
                                                                               BARControl.tr("Confirmation"),
                                                                               BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
                                                                                             !entry.isEmpty() ? entry : storage,
-                                                                                            errorText
+                                                                                            errorMessage
                                                                                            ),
                                                                               new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
                                                                               0
@@ -7903,6 +7843,7 @@ Dprintf.dprintf("");
                                            if (Settings.debugLevel > 0)
                                            {
                                              System.err.println("ERROR: "+exception.getMessage());
+                                             System.exit(1);
                                            }
                                          }
 
@@ -8031,8 +7972,8 @@ Dprintf.dprintf("");
 //TODO: use setEntryList
 
     // confirm check if there are many entries
-    final int     count[] = new int[]{0};
-    final boolean doit[]  = new boolean[]{true};
+    final int     totalEntryCount[] = new int[]{0};
+    final boolean doit[]            = new boolean[]{true};
     if (checked)
     {
       if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestEntriesOnly=%y",
@@ -8046,8 +7987,8 @@ Dprintf.dprintf("");
                                   ) == Errors.NONE
          )
       {
-        count[0] = valueMap.getInt("count");
-        if (count[0] > MAX_CONFIRM_ENTRIES)
+        totalEntryCount[0] = valueMap.getInt("totalEntryCount");
+        if (totalEntryCount[0] > MAX_CONFIRM_ENTRIES)
         {
           display.syncExec(new Runnable()
           {
@@ -8056,7 +7997,7 @@ Dprintf.dprintf("");
               doit[0] = Dialogs.confirm(shell,
                                         Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
                                         BARControl.tr("There are {0} entries. Really mark all entries?",
-                                                      count[0]
+                                                      totalEntryCount[0]
                                                      )
                                        );
             }
@@ -8072,7 +8013,7 @@ Dprintf.dprintf("");
       {
         final int n[] = new int[]{0};
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
-        busyDialog.setMaximum(count[0]);
+        busyDialog.setMaximum(totalEntryCount[0]);
         int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y",
                                                                  updateEntryTableThread.getEntryPattern(),
                                                                  updateEntryTableThread.getEntryType().toString(),
@@ -8302,8 +8243,10 @@ Dprintf.dprintf("");
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore entries"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
+    final WidgetEvent selectRestoreToEvent = new WidgetEvent();
+
     // create widgets
-    final Label  widgetCount;
+    final Label  widgetTotalEntryCount;
     final Label  widgetSize;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
@@ -8315,8 +8258,8 @@ Dprintf.dprintf("");
     {
       label = Widgets.newLabel(composite,BARControl.tr("Entries:"));
       Widgets.layout(label,0,0,TableLayoutData.W);
-      widgetCount = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetCount,0,1,TableLayoutData.WE);
+      widgetTotalEntryCount = Widgets.newLabel(composite,"-");
+      Widgets.layout(widgetTotalEntryCount,0,1,TableLayoutData.WE);
 
       label = Widgets.newLabel(composite,BARControl.tr("Total size:"));
       Widgets.layout(label,1,0,TableLayoutData.W);
@@ -8502,15 +8445,15 @@ Dprintf.dprintf("");
                                       ) == Errors.NONE
              )
           {
-            final long count = valueMap.getLong("count");
-            final long size  = valueMap.getLong("size");
+            final long totalEntryCount = valueMap.getLong("totalEntryCount");
+            final long totalEntrySize  = valueMap.getLong("totalEntrySize");
 
             display.syncExec(new Runnable()
             {
               public void run()
               {
-                widgetCount.setText(Long.toString(count));
-                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(size),size));
+                widgetTotalEntryCount.setText(Long.toString(totalEntryCount));
+                widgetSize.setText(String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(totalEntrySize),totalEntrySize));
               }
             });
           }
@@ -8580,151 +8523,165 @@ Dprintf.dprintf("");
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
-            BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S overwriteFiles=%y",
-                                                         restoreToDirectory,
-                                                         overwriteEntries
-                                                        ),
-                                     0,  // debugLevel
-                                     errorMessage,
-                                     new CommandResultHandler()
-                                     {
-                                       public int handleResult(int i, ValueMap valueMap)
-                                       {
-                                         // parse and update progress
-                                         try
-                                         {
-                                           if (valueMap.containsKey("action"))
-                                           {
-                                             Actions             action       = valueMap.getEnum  ("action",Actions.class);
-                                             final String        passwordText = valueMap.getString("passwordText","");
-                                             final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
-                                             final String        volume       = valueMap.getString("volume","");
-                                             final int           error        = valueMap.getInt   ("error",Errors.NONE);
-                                             final String        errorText    = valueMap.getString("errorText","");
-                                             final String        storage      = valueMap.getString("storage","");
-                                             final String        entry        = valueMap.getString("entry","");
-
-                                             switch (action)
-                                             {
-                                               case REQUEST_PASSWORD:
-                                                 // get password
-                                                 display.syncExec(new Runnable()
+            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S overwriteFiles=%y",
+                                                                     restoreToDirectory,
+                                                                     overwriteEntries
+                                                                    ),
+                                                 0,  // debugLevel
+                                                 errorMessage,
+                                                 new CommandResultHandler()
                                                  {
-                                                   @Override
-                                                   public void run()
+                                                   public int handleResult(int i, ValueMap valueMap)
                                                    {
-                                                     String password = Dialogs.password(shell,
-                                                                                        BARControl.tr("{0} login password",passwordType),
-                                                                                        BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
-                                                                                        BARControl.tr("Password")+":"
-                                                                                       );
-                                                     if (password != null)
+                                                     // parse and update progress
+                                                     try
                                                      {
-                                                       BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
-                                                                                                    Errors.NONE,
-                                                                                                    BARServer.getPasswordEncryptType(),
-                                                                                                    BARServer.encryptPassword(password)
-                                                                                                   ),
-                                                                                0  // debugLevel
-                                                                               );
-                                                     }
-                                                     else
-                                                     {
-                                                       BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                    Errors.NO_PASSWORD
-                                                                                                   ),
-                                                                                0  // debugLevel
-                                                                               );
-                                                     }
-                                                   }
-                                                 });
-                                                 break;
-                                               case REQUEST_VOLUME:
-Dprintf.dprintf("");
-                                                 break;
-                                               case CONFIRM:
-                                                 busyDialog.updateList(!entry.isEmpty() ? entry : storage);
-                                                 errorCount[0]++;
-
-                                                 final int resultError[] = new int[]{error};
-                                                 if (!skipAllFlag[0])
-                                                 {
-                                                   display.syncExec(new Runnable()
-                                                   {
-                                                     @Override
-                                                     public void run()
-                                                     {
-                                                       switch (Dialogs.select(shell,
-                                                                              BARControl.tr("Confirmation"),
-                                                                              BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
-                                                                                            !entry.isEmpty() ? entry : storage,
-                                                                                            errorText
-                                                                                           ),
-                                                                              new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                                                              0
-                                                                             )
-                                                              )
+                                                       if (valueMap.containsKey("action"))
                                                        {
-                                                         case 0:
-                                                           resultError[0] = Errors.NONE;
-                                                           break;
-                                                         case 1:
-                                                           resultError[0] = Errors.NONE;
-                                                           skipAllFlag[0] = true;
-                                                           break;
-                                                         case 2:
-                                                           abort();
-                                                           break;
+                                                         Actions             action       = valueMap.getEnum  ("action",Actions.class);
+                                                         final String        passwordText = valueMap.getString("passwordText","");
+                                                         final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+                                                         final String        volume       = valueMap.getString("volume","");
+                                                         final int           error        = valueMap.getInt   ("error",Errors.NONE);
+                                                         final String        errorMessage = valueMap.getString("errorMessage","");
+                                                         final String        storage      = valueMap.getString("storage","");
+                                                         final String        entry        = valueMap.getString("entry","");
+
+                                                         switch (action)
+                                                         {
+                                                           case REQUEST_PASSWORD:
+                                                             // get password
+                                                             display.syncExec(new Runnable()
+                                                             {
+                                                               @Override
+                                                               public void run()
+                                                               {
+                                                                 String password = Dialogs.password(shell,
+                                                                                                    BARControl.tr("{0} login password",passwordType),
+                                                                                                    BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                                                                    BARControl.tr("Password")+":"
+                                                                                                   );
+                                                                 if (password != null)
+                                                                 {
+                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                                Errors.NONE,
+                                                                                                                BARServer.getPasswordEncryptType(),
+                                                                                                                BARServer.encryptPassword(password)
+                                                                                                               ),
+                                                                                            0  // debugLevel
+                                                                                           );
+                                                                 }
+                                                                 else
+                                                                 {
+                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                                Errors.NO_PASSWORD
+                                                                                                               ),
+                                                                                            0  // debugLevel
+                                                                                           );
+                                                                 }
+                                                               }
+                                                             });
+                                                             break;
+                                                           case REQUEST_VOLUME:
+            Dprintf.dprintf("");
+                                                             break;
+                                                           case CONFIRM:
+                                                             busyDialog.updateList(!entry.isEmpty() ? entry : storage);
+                                                             errorCount[0]++;
+
+                                                             final int resultError[] = new int[]{error};
+                                                             if (!skipAllFlag[0])
+                                                             {
+                                                               display.syncExec(new Runnable()
+                                                               {
+                                                                 @Override
+                                                                 public void run()
+                                                                 {
+                                                                   switch (Dialogs.select(shell,
+                                                                                          BARControl.tr("Confirmation"),
+                                                                                          BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
+                                                                                                        !entry.isEmpty() ? entry : storage,
+                                                                                                        errorMessage
+                                                                                                       ),
+                                                                                          new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                                                                          0
+                                                                                         )
+                                                                          )
+                                                                   {
+                                                                     case 0:
+                                                                       resultError[0] = Errors.NONE;
+                                                                       break;
+                                                                     case 1:
+                                                                       resultError[0] = Errors.NONE;
+                                                                       skipAllFlag[0] = true;
+                                                                       break;
+                                                                     case 2:
+                                                                       abort();
+                                                                       break;
+                                                                   }
+                                                                 }
+                                                               });
+                                                             }
+                                                             BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                          resultError[0]
+                                                                                                         ),
+                                                                                      0  // debugLevel
+                                                                                     );
+                                                             break;
+                                                         }
+                                                       }
+                                                       else
+                                                       {
+                                                         RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class);
+                                                         String        storageName       = valueMap.getString("storageName");
+                                                         long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes");
+                                                         long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
+                                                         String        entryName         = valueMap.getString("entryName");
+                                                         long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes");
+                                                         long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes");
+
+                                                         busyDialog.updateText(0,"%s",storageName);
+                                                         busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
+                                                         busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
+                                                         busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
                                                        }
                                                      }
-                                                   });
+                                                     catch (IllegalArgumentException exception)
+                                                     {
+                                                       if (Settings.debugLevel > 0)
+                                                       {
+                                                         System.err.println("ERROR: "+exception.getMessage());
+                                                         System.exit(1);
+                                                       }
+                                                     }
+
+                                                     if (busyDialog.isAborted())
+                                                     {
+                                                       busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
+                                                       busyDialog.updateText(1,"");
+                                                       abort();
+                                                     }
+
+                                                     return Errors.NONE;
+                                                   }
                                                  }
-                                                 BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                              resultError[0]
-                                                                                             ),
-                                                                          0  // debugLevel
-                                                                         );
-                                                 break;
-                                             }
-                                           }
-                                           else
-                                           {
-                                             RestoreStates state             = valueMap.getEnum  ("state",RestoreStates.class);
-                                             String        storageName       = valueMap.getString("storageName");
-                                             long          storageDoneBytes  = valueMap.getLong  ("storageDoneBytes");
-                                             long          storageTotalBytes = valueMap.getLong  ("storageTotalBytes");
-                                             String        entryName         = valueMap.getString("entryName");
-                                             long          entryDoneBytes    = valueMap.getLong  ("entryDoneBytes");
-                                             long          entryTotalBytes   = valueMap.getLong  ("entryTotalBytes");
-
-                                             busyDialog.updateText(0,"%s",storageName);
-                                             busyDialog.updateProgressBar(0,(storageTotalBytes > 0) ? ((double)storageDoneBytes*100.0)/(double)storageTotalBytes : 0.0);
-                                             busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
-                                             busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
-                                           }
-                                         }
-                                         catch (IllegalArgumentException exception)
-                                         {
-                                           if (Settings.debugLevel > 0)
-                                           {
-                                             System.err.println("ERROR: "+exception.getMessage());
-                                           }
-                                         }
-
-                                         if (busyDialog.isAborted())
-                                         {
-                                           busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
-                                           busyDialog.updateText(1,"");
-                                           abort();
-                                         }
-
-                                         return Errors.NONE;
-                                       }
-                                     }
-                                    );
+                                                );
+            if (error != Errors.NONE)
+            {
+              display.syncExec(new Runnable()
+              {
+                @Override
+                public void run()
+                {
+                  Dialogs.error(shell,BARControl.tr("Cannot restore entries\n\n(error: {0})",errorMessage[0]));
+                }
+              });
+              busyDialog.close();
+              return;
+            }
 
             // close/done busy dialog, restore cursor
-            if (errorCount[0] == 0)
+            if ((error == Errors.NONE) && errorCount[0] == 0)
             {
               busyDialog.close();
             }

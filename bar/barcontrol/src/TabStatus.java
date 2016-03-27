@@ -374,13 +374,13 @@ public class TabStatus
           try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
         }
       }
-      catch (Exception exception)
+      catch (Throwable throwable)
       {
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("ERROR: "+exception.getMessage());
-          BARControl.printStackTrace(exception);
+          System.err.println("ERROR: "+throwable.getMessage());
+          BARControl.printStackTrace(throwable);
           System.exit(1);
         }
       }
@@ -431,15 +431,15 @@ public class TabStatus
   public  Button      widgetButtonQuit;
 
   // BAR variables
-  private WidgetVariable doneEntries           = new WidgetVariable<Long>(0);
-  private WidgetVariable doneBytes             = new WidgetVariable<Long>(0);
-  private WidgetVariable storageTotalBytes     = new WidgetVariable<Long>(0);
-  private WidgetVariable skippedEntries        = new WidgetVariable<Long>(0);
-  private WidgetVariable skippedBytes          = new WidgetVariable<Long>(0);
-  private WidgetVariable errorEntries          = new WidgetVariable<Long>(0);
-  private WidgetVariable errorBytes            = new WidgetVariable<Long>(0);
-  private WidgetVariable totalEntries          = new WidgetVariable<Long>(0);
-  private WidgetVariable totalBytes            = new WidgetVariable<Long>(0);
+  private WidgetVariable doneCount             = new WidgetVariable<Long>(0);
+  private WidgetVariable doneSize              = new WidgetVariable<Long>(0);
+  private WidgetVariable storageTotalSize      = new WidgetVariable<Long>(0);
+  private WidgetVariable skippedEntryCount     = new WidgetVariable<Long>(0);
+  private WidgetVariable skippedEntrySize      = new WidgetVariable<Long>(0);
+  private WidgetVariable errorEntryCount       = new WidgetVariable<Long>(0);
+  private WidgetVariable errorEntrySize        = new WidgetVariable<Long>(0);
+  private WidgetVariable totalEntryCount       = new WidgetVariable<Long>(0);
+  private WidgetVariable totalEntrySize        = new WidgetVariable<Long>(0);
 
   private WidgetVariable filesPerSecond        = new WidgetVariable<Double>(0.0);
   private WidgetVariable bytesPerSecond        = new WidgetVariable<Double>(0.0);
@@ -883,19 +883,19 @@ public class TabStatus
       Widgets.layout(label,1,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,1,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,doneEntries));
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneCount));
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
       Widgets.layout(label,1,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,1,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneSize));
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,1,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,1,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,1,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneSize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -911,7 +911,7 @@ public class TabStatus
                                                                                                }
                                                                             )
                     );
-      Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneSize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -972,14 +972,14 @@ public class TabStatus
       Widgets.layout(label,2,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,2,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalSize));
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,2,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,2,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,2,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalSize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -995,7 +995,7 @@ public class TabStatus
                                                                                                }
                                                                             )
                     );
-      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalSize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -1058,19 +1058,19 @@ public class TabStatus
       Widgets.layout(label,3,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntries));
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntryCount));
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
       Widgets.layout(label,3,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntrySize));
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,3,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,3,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntrySize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -1086,7 +1086,7 @@ public class TabStatus
                                                                                                }
                                                                             )
                     );
-      Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntrySize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -1099,19 +1099,19 @@ public class TabStatus
       Widgets.layout(label,4,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntries));
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntryCount));
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
       Widgets.layout(label,4,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize));
       label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
       Widgets.layout(label,4,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,4,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -1127,7 +1127,7 @@ public class TabStatus
                                                                                                }
                                                                             )
                     );
-      Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -1140,7 +1140,7 @@ public class TabStatus
       Widgets.layout(label,5,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,5,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,totalEntries));
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntryCount));
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
       {
         public void modified(Control control, WidgetVariable widgetVariable)
@@ -1153,7 +1153,7 @@ public class TabStatus
       Widgets.layout(label,5,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,5,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalEntrySize));
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
       {
         public void modified(Control control, WidgetVariable widgetVariable)
@@ -1168,7 +1168,7 @@ public class TabStatus
       Widgets.layout(label,5,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,5,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -1192,7 +1192,7 @@ public class TabStatus
                                                                                                }
                                                                             )
                     );
-      Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -1777,15 +1777,15 @@ public class TabStatus
         {
           String state = resultMap.getString("state");
 
-          doneEntries.set          (resultMap.getLong("doneEntries"            ));
-          doneBytes.set            (resultMap.getLong("doneBytes"              ));
-          storageTotalBytes.set    (resultMap.getLong("storageTotalBytes"      ));
-          skippedEntries.set       (resultMap.getLong("skippedEntries"         ));
-          skippedBytes.set         (resultMap.getLong("skippedBytes"           ));
-          errorEntries.set         (resultMap.getLong("errorEntries"           ));
-          errorBytes.set           (resultMap.getLong("errorBytes"             ));
-          totalEntries.set         (resultMap.getLong("totalEntries"           ));
-          totalBytes.set           (resultMap.getLong("totalBytes"             ));
+          doneCount.set            (resultMap.getLong("doneCount"              ));
+          doneSize.set             (resultMap.getLong("doneSize"               ));
+          storageTotalSize.set     (resultMap.getLong("storageTotalSize"       ));
+          skippedEntryCount.set    (resultMap.getLong("skippedEntryCount"      ));
+          skippedEntrySize.set     (resultMap.getLong("skippedEntrySize"       ));
+          errorEntryCount.set      (resultMap.getLong("errorEntryCount"        ));
+          errorEntrySize.set       (resultMap.getLong("errorEntrySize"         ));
+          totalEntryCount.set      (resultMap.getLong("totalEntryCount"        ));
+          totalEntrySize.set       (resultMap.getLong("totalEntrySize"         ));
           collectTotalSumDone.set  (resultMap.getBoolean("collectTotalSumDone" ));
           filesPerSecond.set       (resultMap.getDouble("entriesPerSecond"     ));
           bytesPerSecond.set       (resultMap.getDouble("bytesPerSecond"       ));
@@ -1793,13 +1793,13 @@ public class TabStatus
           compressionRatio.set     (resultMap.getDouble("compressionRatio"     ));
 
           fileName.set             (resultMap.getString("entryName"));
-          fileProgress.set         (getProgress(resultMap.getLong("entryDoneBytes"),resultMap.getLong("entryTotalBytes")));
+          fileProgress.set         (getProgress(resultMap.getLong("entryDoneSize"),resultMap.getLong("entryTotalSize")));
           storageName.set          (resultMap.getString("storageName"));
-          storageProgress.set      (getProgress(resultMap.getLong("storageDoneBytes"),resultMap.getLong("storageTotalBytes")));
+          storageProgress.set      (getProgress(resultMap.getLong("storageDoneSize"),resultMap.getLong("storageTotalSize")));
           volumeNumber.set         (resultMap.getLong("volumeNumber"));
           volumeProgress.set       (resultMap.getDouble("volumeProgress")*100.0);
-          totalEntriesProgress.set (getProgress(doneEntries.getLong(),totalEntries.getLong()));
-          totalBytesProgress.set   (getProgress(doneBytes.getLong(),totalBytes.getLong()));
+          totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
+          totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
           requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
           message.set              (resultMap.getString("message"));
 
