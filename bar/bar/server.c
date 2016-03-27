@@ -14030,7 +14030,6 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n",__FILE__,__LINE_
                           &restoreCommandInfo.clientInfo->abortFlag,
                           NULL  // logHandle
                          );
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 restoreCommandInfo.clientInfo->abortFlag = FALSE;
   sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
   EntryList_done(&restoreEntryList);
