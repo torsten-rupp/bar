@@ -13512,7 +13512,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 
     assert(restoreCommandInfo != NULL);
 
-    // request password
+    // handle error
     error = clientAction(restoreCommandInfo->clientInfo,
                          restoreCommandInfo->id,
                          NULL,  // resultMap
