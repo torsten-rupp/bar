@@ -61,6 +61,8 @@ typedef struct
   void                            *updateStatusInfoUserData;     // user data for update status info call-back
   RestoreHandleErrorFunction      handleErrorFunction;           // handle error call-back
   void                            *handleErrorUserData;          // user data for handle error call-back
+  GetPasswordFunction             getPasswordFunction;           // get password call-back
+  void                            *getPasswordUserData;          // user data for get password call-back
   bool                            *pauseRestoreFlag;             // TRUE for pause restore
   bool                            *requestedAbortFlag;           // TRUE to abort restore
   LogHandle                       *logHandle;                    // log handle
@@ -97,18 +99,18 @@ LOCAL void initStatusInfo(RestoreStatusInfo *statusInfo)
 {
   assert(statusInfo != NULL);
 
-  statusInfo->doneEntries         = 0L;
-  statusInfo->doneBytes           = 0LL;
-  statusInfo->skippedEntries      = 0L;
-  statusInfo->skippedBytes        = 0LL;
-  statusInfo->errorEntries        = 0L;
-  statusInfo->errorBytes          = 0LL;
-  statusInfo->entryName           = String_new();
-  statusInfo->entryDoneBytes      = 0LL;
-  statusInfo->entryTotalBytes     = 0LL;
-  statusInfo->storageName         = String_new();
-  statusInfo->storageDoneBytes    = 0LL;
-  statusInfo->storageTotalBytes   = 0LL;
+  statusInfo->doneCount         = 0L;
+  statusInfo->doneSize          = 0LL;
+  statusInfo->skippedEntryCount = 0L;
+  statusInfo->skippedEntrySize  = 0LL;
+  statusInfo->errorEntryCount   = 0L;
+  statusInfo->errorEntrySize    = 0LL;
+  statusInfo->entryName         = String_new();
+  statusInfo->entryDoneSize     = 0LL;
+  statusInfo->entryTotalSize    = 0LL;
+  statusInfo->storageName       = String_new();
+  statusInfo->storageDoneSize   = 0LL;
+  statusInfo->storageTotalSize  = 0LL;
 }
 
 /***********************************************************************\
@@ -126,10 +128,14 @@ LOCAL void initStatusInfo(RestoreStatusInfo *statusInfo)
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
 *          storageNameCustomText      - storage name custome text or NULL
-*          createStatusInfoFunction   - status info call back function
+*          createStatusInfoFunction   - status info function call-back
 *                                       (can be NULL)
 *          createStatusInfoUserData   - user data for status info
 *                                       function
+*          handleErrorFunction        - get password call-back
+*          handleErrorUserData        - user data for get password
+*          getPasswordFunction        - get password call-back
+*          getPasswordUserData        - user data for get password
 *          pauseRestoreFlag           - pause restore flag (can be
 *                                       NULL)
 *          requestedAbortFlag         - request abort flag (can be NULL)
@@ -149,6 +155,8 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
                            void                            *updateStatusInfoUserData,
                            RestoreHandleErrorFunction      handleErrorFunction,
                            void                            *handleErrorUserData,
+                           GetPasswordFunction             getPasswordFunction,
+                           void                            *getPasswordUserData,
                            bool                            *pauseRestoreFlag,
                            bool                            *requestedAbortFlag,
                            LogHandle                       *logHandle
@@ -171,6 +179,8 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   restoreInfo->updateStatusInfoUserData       = updateStatusInfoUserData;
   restoreInfo->handleErrorFunction            = handleErrorFunction;
   restoreInfo->handleErrorUserData            = handleErrorUserData;
+  restoreInfo->getPasswordFunction            = getPasswordFunction;
+  restoreInfo->getPasswordUserData            = getPasswordUserData;
   initStatusInfo(&restoreInfo->statusInfo);
 
   // init locks
@@ -419,6 +429,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
   File_initExtendedAttributes(&fileExtendedAttributeList);
   AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
   AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
 
   // read file entry
   error = Archive_readFileEntry(&archiveEntryInfo,
@@ -452,8 +464,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
   {
     String_set(restoreInfo->statusInfo.entryName,fileName);
 fprintf(stderr,"%s, %d: restoreInfo->statusInfo.entryName=%s\n",__FILE__,__LINE__,String_cString(restoreInfo->statusInfo.entryName));
-    restoreInfo->statusInfo.entryDoneBytes  = 0LL;
-    restoreInfo->statusInfo.entryTotalBytes = fragmentSize;
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = fragmentSize;
     updateStatusInfo(restoreInfo,TRUE);
 
     // get destination filename
@@ -628,7 +640,7 @@ fprintf(stderr,"%s, %d: restoreInfo->statusInfo.entryName=%s\n",__FILE__,__LINE_
           break;
         }
       }
-      restoreInfo->statusInfo.entryDoneBytes += (uint64)n;
+      restoreInfo->statusInfo.entryDoneSize += (uint64)n;
       updateStatusInfo(restoreInfo,FALSE);
 
       length += (uint64)n;
@@ -849,8 +861,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
      )
   {
     String_set(restoreInfo->statusInfo.entryName,deviceName);
-    restoreInfo->statusInfo.entryDoneBytes  = 0LL;
-    restoreInfo->statusInfo.entryTotalBytes = blockCount;
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = blockCount;
     updateStatusInfo(restoreInfo,TRUE);
 
     // get destination filename
@@ -1092,7 +1104,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
           break;
         }
       }
-      restoreInfo->statusInfo.entryDoneBytes += bufferBlockCount*deviceInfo.blockSize;
+      restoreInfo->statusInfo.entryDoneSize += bufferBlockCount*deviceInfo.blockSize;
       updateStatusInfo(restoreInfo,FALSE);
 
       block += (uint64)bufferBlockCount;
@@ -1257,8 +1269,8 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
      )
   {
     String_set(restoreInfo->statusInfo.entryName,directoryName);
-    restoreInfo->statusInfo.entryDoneBytes  = 0LL;
-    restoreInfo->statusInfo.entryTotalBytes = 0LL;
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = 0LL;
     updateStatusInfo(restoreInfo,TRUE);
 
     // get destination filename
@@ -1441,8 +1453,8 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
      )
   {
     String_set(restoreInfo->statusInfo.entryName,linkName);
-    restoreInfo->statusInfo.entryDoneBytes  = 0LL;
-    restoreInfo->statusInfo.entryTotalBytes = 0LL;
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = 0LL;
     updateStatusInfo(restoreInfo,TRUE);
 
     // get destination filename
@@ -1697,8 +1709,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
        )
     {
       String_set(restoreInfo->statusInfo.entryName,fileName);
-      restoreInfo->statusInfo.entryDoneBytes  = 0LL;
-      restoreInfo->statusInfo.entryTotalBytes = fragmentSize;
+      restoreInfo->statusInfo.entryDoneSize  = 0LL;
+      restoreInfo->statusInfo.entryTotalSize = fragmentSize;
       updateStatusInfo(restoreInfo,TRUE);
 
       // get destination filename
@@ -1874,7 +1886,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
               break;
             }
           }
-          restoreInfo->statusInfo.entryDoneBytes += (uint64)n;
+          restoreInfo->statusInfo.entryDoneSize += (uint64)n;
           updateStatusInfo(restoreInfo,FALSE);
 
           length += (uint64)n;
@@ -1945,8 +1957,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
-                if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = handleError(restoreInfo,error);
-                break;
+                AutoFree_cleanup(&autoFreeList);
+                return error;
               }
               else
               {
@@ -2127,8 +2139,8 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
      )
   {
     String_set(restoreInfo->statusInfo.entryName,fileName);
-    restoreInfo->statusInfo.entryDoneBytes  = 0LL;
-    restoreInfo->statusInfo.entryTotalBytes = 0LL;
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = 0LL;
     updateStatusInfo(restoreInfo,TRUE);
 
     // get destination filename
@@ -2300,33 +2312,17 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
 /***********************************************************************\
 * Name   : restoreArchiveContent
 * Purpose: restore archive content
-* Input  : storageSpecifier     - storage specifier
-*          archiveName          - archive name
-*          includeEntryList     - include entry list
-*          excludePatternList   - exclude pattern list
-*          deltaSourceList      - delta source list
-*          jobOptions           - job options
-*          getPasswordFunction  - get password call back
-*          getPasswordUserData  - user data for get password
-*          restoreErrorFunction - error call back (can be NULL)
-*          restoreErrorUserData - user data for error call back
-*          pauseRestoreFlag     - pause restore flag (can be
-*                                 NULL)
-*          requestedAbortFlag   - request abort flag (can be
-*                                 NULL)
-*          fragmentList         - fragment list
-*          restoreInfo          - restore info
-*          logHandle            - log handle (can be NULL)
+* Input  : restoreInfo      - restore info
+*          storageSpecifier - storage to restore from
+*          archiveName      - archive to restore from or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
-                                   StorageSpecifier     *storageSpecifier,
-                                   ConstString          archiveName,
-                                   GetPasswordFunction  getPasswordFunction,
-                                   void                 *getPasswordUserData
+LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
+                                   StorageSpecifier *storageSpecifier,
+                                   ConstString      archiveName
                                   )
 {
   AutoFreeList      autoFreeList;
@@ -2353,8 +2349,8 @@ LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
 
   // init status info
   String_set(restoreInfo->statusInfo.storageName,Storage_getPrintableName(storageSpecifier,archiveName));
-  restoreInfo->statusInfo.storageDoneBytes  = 0LL;
-  restoreInfo->statusInfo.storageTotalBytes = 0LL;
+  restoreInfo->statusInfo.storageDoneSize  = 0LL;
+  restoreInfo->statusInfo.storageTotalSize = 0LL;
   updateStatusInfo(restoreInfo,TRUE);
 
   // init storage
@@ -2363,8 +2359,9 @@ LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
                        restoreInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK(NULL,NULL),  // storageRequestVolume
-                       CALLBACK(NULL,NULL)  // storageStatusInfo
+                       CALLBACK(NULL,NULL),  // updateStatusInfo
+                       CALLBACK(restoreInfo->getPasswordFunction,restoreInfo->getPasswordUserData),
+                       CALLBACK(NULL,NULL)  // requestVolume
                       );
   if (error != ERROR_NONE)
   {
@@ -2385,8 +2382,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
                        archiveName,
                        restoreInfo->deltaSourceList,
                        restoreInfo->jobOptions,
-                       getPasswordFunction,
-                       getPasswordUserData,
+                       CALLBACK(restoreInfo->getPasswordFunction,restoreInfo->getPasswordUserData),
                        restoreInfo->logHandle
                       );
   if (error != ERROR_NONE)
@@ -2400,7 +2396,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&archiveInfo,{ Archive_close(&archiveInfo); });
-  restoreInfo->statusInfo.storageTotalBytes = Archive_getSize(&archiveInfo);
+  restoreInfo->statusInfo.storageTotalSize = Archive_getSize(&archiveInfo);
   updateStatusInfo(restoreInfo,TRUE);
 
   // read archive entries
@@ -2433,7 +2429,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
     }
 
     // update storage status
-    restoreInfo->statusInfo.storageDoneBytes = Archive_tell(&archiveInfo);
+    restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveInfo);
     updateStatusInfo(restoreInfo,TRUE);
 
     // restore entry
@@ -2512,7 +2508,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo          *restoreInfo,
     }
 
     // update storage status
-    restoreInfo->statusInfo.storageDoneBytes = Archive_tell(&archiveInfo);
+    restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveInfo);
     updateStatusInfo(restoreInfo,TRUE);
   }
 
@@ -2536,12 +2532,12 @@ Errors Command_restore(const StringList                *storageNameList,
                        const PatternList               *excludePatternList,
                        DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
-                       GetPasswordFunction             getPasswordFunction,
-                       void                            *getPasswordUserData,
                        RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
                        void                            *updateStatusInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,
                        void                            *handleErrorUserData,
+                       GetPasswordFunction             getPasswordFunction,
+                       void                            *getPasswordUserData,
                        bool                            *pauseRestoreFlag,
                        bool                            *requestedAbortFlag,
                        LogHandle                       *logHandle
@@ -2574,6 +2570,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   jobOptions,
                   CALLBACK(updateStatusInfoFunction,updateStatusInfoUserData),
                   CALLBACK(handleErrorFunction,handleErrorUserData),
+                  CALLBACK(getPasswordFunction,getPasswordUserData),
                   pauseRestoreFlag,
                   requestedAbortFlag,
                   logHandle
@@ -2606,10 +2603,7 @@ Errors Command_restore(const StringList                *storageNameList,
       // restore archive content
       error = restoreArchiveContent(&restoreInfo,
                                     &storageSpecifier,
-                                    NULL,  // archiveName
-                                    getPasswordFunction,
-                                    getPasswordUserData
-
+                                    NULL  // archiveName
                                    );
       if (error != ERROR_NONE)
       {
@@ -2652,9 +2646,7 @@ Errors Command_restore(const StringList                *storageNameList,
             // restore archive content
             error = restoreArchiveContent(&restoreInfo,
                                           &storageSpecifier,
-                                          fileName,
-                                          getPasswordFunction,
-                                          getPasswordUserData
+                                          fileName
                                          );
             if (error != ERROR_NONE)
             {
@@ -2668,7 +2660,6 @@ Errors Command_restore(const StringList                *storageNameList,
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
-fprintf(stderr,"%s, %d: restoreInfo.failError=%d\n",__FILE__,__LINE__,restoreInfo.failError);
 
     if (   abortFlag
         || ((requestedAbortFlag != NULL) && (*requestedAbortFlag))

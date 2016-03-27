@@ -36,23 +36,23 @@
 // create status info data
 typedef struct
 {
-  ulong  doneEntries;                      // number of entries processed
-  uint64 doneBytes;                        // number of bytes processed
-  ulong  totalEntries;                     // total number of entries
-  uint64 totalBytes;                       // total bytes
+  ulong  doneCount;                        // number of entries processed
+  uint64 doneSize;                         // number of bytes processed
+  ulong  totalEntryCount;                  // total number of entries
+  uint64 totalEntrySize;                   // total size of entries [bytes]
   bool   collectTotalSumDone;              // TRUE iff all file sums are collected
-  ulong  skippedEntries;                   // number of skipped enttries
-  uint64 skippedBytes;                     // sum of skipped bytes
-  ulong  errorEntries;                     // number of enttries with errors
-  uint64 errorBytes;                       // sum of byste in entries with errors
-  uint64 archiveBytes;                     // number of bytes in stored in archive
+  ulong  skippedEntryCount;                // number of skipped entries
+  uint64 skippedEntrySize;                 // sum of skipped bytes
+  ulong  errorEntryCount;                  // number of entries with errors
+  uint64 errorEntrySize;                   // sum of bytes of entries with errors
+  uint64 archiveSize;                      // number of bytes stored in archive
   double compressionRatio;                 // compression ratio
   String entryName;                        // current entry name
-  uint64 entryDoneBytes;                   // number of bytes processed of current entry
-  uint64 entryTotalBytes;                  // total number of bytes of current entry
+  uint64 entryDoneSize;                    // number of bytes processed of current entry
+  uint64 entryTotalSize;                   // total number of bytes of current entry
   String storageName;                      // current storage name
-  uint64 storageDoneBytes;                 // number of bytes processed of current archive
-  uint64 storageTotalBytes;                // total bytes of current archive
+  uint64 storageDoneSize;                  // number of bytes processed of current archive
+  uint64 storageTotalSize;                 // total bytes of current archive
   uint   volumeNumber;                     // current volume number
   double volumeProgress;                   // current volume progress [0..100]
 } CreateStatusInfo;

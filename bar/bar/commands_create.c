@@ -248,23 +248,23 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
 {
   assert(statusInfo != NULL);
 
-  statusInfo->doneEntries         = 0L;
-  statusInfo->doneBytes           = 0LL;
-  statusInfo->totalEntries        = 0L;
-  statusInfo->totalBytes          = 0LL;
+  statusInfo->doneCount           = 0L;
+  statusInfo->doneSize            = 0LL;
+  statusInfo->totalEntryCount     = 0L;
+  statusInfo->totalEntrySize      = 0LL;
   statusInfo->collectTotalSumDone = FALSE;
-  statusInfo->skippedEntries      = 0L;
-  statusInfo->skippedBytes        = 0LL;
-  statusInfo->errorEntries        = 0L;
-  statusInfo->errorBytes          = 0LL;
-  statusInfo->archiveBytes        = 0LL;
+  statusInfo->skippedEntryCount   = 0L;
+  statusInfo->skippedEntrySize    = 0LL;
+  statusInfo->errorEntryCount     = 0L;
+  statusInfo->errorEntrySize      = 0LL;
+  statusInfo->archiveSize         = 0LL;
   statusInfo->compressionRatio    = 0.0;
   statusInfo->entryName           = String_new();
-  statusInfo->entryDoneBytes      = 0LL;
-  statusInfo->entryTotalBytes     = 0LL;
+  statusInfo->entryDoneSize       = 0LL;
+  statusInfo->entryTotalSize      = 0LL;
   statusInfo->storageName         = String_new();
-  statusInfo->storageDoneBytes    = 0LL;
-  statusInfo->storageTotalBytes   = 0LL;
+  statusInfo->storageDoneSize     = 0LL;
+  statusInfo->storageTotalSize    = 0LL;
   statusInfo->volumeNumber        = 0;
   statusInfo->volumeProgress      = 0.0;
 }
@@ -909,17 +909,18 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 /***********************************************************************\
 * Name   : updateStorageStatusInfo
 * Purpose: update storage info data
-* Input  : createInfo        - create info
+* Input  : userData          - user data: create info
 *          storageStatusInfo - storage status info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateStorageStatusInfo(CreateInfo              *createInfo,
-                                   const StorageStatusInfo *storageStatusInfo
+LOCAL void updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
+                                   void                    *userData
                                   )
 {
+  CreateInfo    *createInfo = (CreateInfo*)userData;
   SemaphoreLock semaphoreLock;
 
   assert(createInfo != NULL);
@@ -1469,8 +1470,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
-                    createInfo->statusInfo.totalEntries++;
-                    createInfo->statusInfo.totalBytes += fileInfo.size;
+                    createInfo->statusInfo.totalEntryCount++;
+                    createInfo->statusInfo.totalEntrySize += fileInfo.size;
                     updateStatusInfo(createInfo,FALSE);
                   }
                 }
@@ -1482,7 +1483,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
               SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
-                createInfo->statusInfo.totalEntries++;
+                createInfo->statusInfo.totalEntryCount++;
                 updateStatusInfo(createInfo,FALSE);
               }
               break;
@@ -1499,7 +1500,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
-                    createInfo->statusInfo.totalEntries++;
+                    createInfo->statusInfo.totalEntryCount++;
                     updateStatusInfo(createInfo,FALSE);
                   }
                 }
@@ -1518,8 +1519,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
-                    createInfo->statusInfo.totalEntries++;
-                    createInfo->statusInfo.totalBytes += fileInfo.size;
+                    createInfo->statusInfo.totalEntryCount++;
+                    createInfo->statusInfo.totalEntrySize += fileInfo.size;
                     updateStatusInfo(createInfo,FALSE);
                   }
                 }
@@ -1538,7 +1539,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
-                    createInfo->statusInfo.totalEntries++;
+                    createInfo->statusInfo.totalEntryCount++;
                     updateStatusInfo(createInfo,FALSE);
                   }
                 }
@@ -1639,8 +1640,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
-                        createInfo->statusInfo.totalEntries++;
-                        createInfo->statusInfo.totalBytes += fileInfo.size;
+                        createInfo->statusInfo.totalEntryCount++;
+                        createInfo->statusInfo.totalEntrySize += fileInfo.size;
                         updateStatusInfo(createInfo,FALSE);
                       }
                     }
@@ -1674,7 +1675,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       {
                         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
-                          createInfo->statusInfo.totalEntries++;
+                          createInfo->statusInfo.totalEntryCount++;
                           updateStatusInfo(createInfo,FALSE);
                         }
                       }
@@ -1739,8 +1740,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                   {
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
-                                      createInfo->statusInfo.totalEntries++;
-                                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                                      createInfo->statusInfo.totalEntryCount++;
+                                      createInfo->statusInfo.totalEntrySize += fileInfo.size;
                                       updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
@@ -1774,7 +1775,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                   {
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
-                                      createInfo->statusInfo.totalEntries++;
+                                      createInfo->statusInfo.totalEntryCount++;
                                       updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
@@ -1804,8 +1805,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                   {
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
-                                      createInfo->statusInfo.totalEntries++;
-                                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                                      createInfo->statusInfo.totalEntryCount++;
+                                      createInfo->statusInfo.totalEntrySize += fileInfo.size;
                                       updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
@@ -1835,12 +1836,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                   {
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
-                                      createInfo->statusInfo.totalEntries++;
+                                      createInfo->statusInfo.totalEntryCount++;
                                       if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
                                           && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                           )
                                       {
-                                        createInfo->statusInfo.totalBytes += fileInfo.size;
+                                        createInfo->statusInfo.totalEntrySize += fileInfo.size;
                                       }
                                       updateStatusInfo(createInfo,FALSE);
                                     }
@@ -1851,8 +1852,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                   {
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
-                                      createInfo->statusInfo.totalEntries++;
-                                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                                      createInfo->statusInfo.totalEntryCount++;
+                                      createInfo->statusInfo.totalEntrySize += fileInfo.size;
                                       updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
@@ -1895,7 +1896,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
-                        createInfo->statusInfo.totalEntries++;
+                        createInfo->statusInfo.totalEntryCount++;
                         updateStatusInfo(createInfo,FALSE);
                       }
                     }
@@ -1928,8 +1929,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
-                        createInfo->statusInfo.totalEntries++;
-                        createInfo->statusInfo.totalBytes += fileInfo.size;
+                        createInfo->statusInfo.totalEntryCount++;
+                        createInfo->statusInfo.totalEntrySize += fileInfo.size;
                         updateStatusInfo(createInfo,FALSE);
                       }
                     }
@@ -1962,7 +1963,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
-                        createInfo->statusInfo.totalEntries++;
+                        createInfo->statusInfo.totalEntryCount++;
                         updateStatusInfo(createInfo,FALSE);
                       }
                     }
@@ -1980,8 +1981,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
-                        createInfo->statusInfo.totalEntries++;
-                        createInfo->statusInfo.totalBytes += fileInfo.size;
+                        createInfo->statusInfo.totalEntryCount++;
+                        createInfo->statusInfo.totalEntrySize += fileInfo.size;
                         updateStatusInfo(createInfo,FALSE);
                       }
                     }
@@ -2078,7 +2079,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
     DatabaseQueryHandle databaseQueryHandle;
-    StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
     DatabaseId          databaseId;
 
     // process entries from continous database
@@ -2110,7 +2110,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
-            createInfo->statusInfo.errorEntries++;
+            createInfo->statusInfo.errorEntryCount++;
             updateStatusInfo(createInfo,FALSE);
           }
           continue;
@@ -2147,8 +2147,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
-                  createInfo->statusInfo.skippedEntries++;
-                  createInfo->statusInfo.skippedBytes += fileInfo.size;
+                  createInfo->statusInfo.skippedEntryCount++;
+                  createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                   updateStatusInfo(createInfo,FALSE);
                 }
               }
@@ -2194,8 +2194,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
-                  createInfo->statusInfo.skippedEntries++;
-                  createInfo->statusInfo.skippedBytes += fileInfo.size;
+                  createInfo->statusInfo.skippedEntryCount++;
+                  createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                   updateStatusInfo(createInfo,FALSE);
                 }
               }
@@ -2274,8 +2274,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
-                  createInfo->statusInfo.skippedEntries++;
-                  createInfo->statusInfo.skippedBytes += fileInfo.size;
+                  createInfo->statusInfo.skippedEntryCount++;
+                  createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                   updateStatusInfo(createInfo,FALSE);
                 }
               }
@@ -2307,8 +2307,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
-                  createInfo->statusInfo.skippedEntries++;
-                  createInfo->statusInfo.skippedBytes += fileInfo.size;
+                  createInfo->statusInfo.skippedEntryCount++;
+                  createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                   updateStatusInfo(createInfo,FALSE);
                 }
               }
@@ -2319,8 +2319,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
               SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
-                createInfo->statusInfo.errorEntries++;
-                createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+                createInfo->statusInfo.errorEntryCount++;
+                createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
                 updateStatusInfo(createInfo,FALSE);
               }
               break;
@@ -2399,7 +2399,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
-            createInfo->statusInfo.errorEntries++;
+            createInfo->statusInfo.errorEntryCount++;
             updateStatusInfo(createInfo,FALSE);
           }
           continue;
@@ -2453,8 +2453,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
-                  createInfo->statusInfo.skippedEntries++;
-                  createInfo->statusInfo.skippedBytes += fileInfo.size;
+                  createInfo->statusInfo.skippedEntryCount++;
+                  createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                   updateStatusInfo(createInfo,FALSE);
                 }
               }
@@ -2502,8 +2502,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
-                    createInfo->statusInfo.skippedEntries++;
-                    createInfo->statusInfo.skippedBytes += fileInfo.size;
+                    createInfo->statusInfo.skippedEntryCount++;
+                    createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                     updateStatusInfo(createInfo,FALSE);
                   }
                 }
@@ -2530,8 +2530,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
-                        createInfo->statusInfo.errorEntries++;
-                        createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+                        createInfo->statusInfo.errorEntryCount++;
+                        createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
                         updateStatusInfo(createInfo,FALSE);
                       }
                       continue;
@@ -2546,7 +2546,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
-                        createInfo->statusInfo.errorEntries++;
+                        createInfo->statusInfo.errorEntryCount++;
                         updateStatusInfo(createInfo,FALSE);
                       }
                       continue;
@@ -2763,8 +2763,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                             {
-                              createInfo->statusInfo.errorEntries++;
-                              createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+                              createInfo->statusInfo.errorEntryCount++;
+                              createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
                               updateStatusInfo(createInfo,FALSE);
                             }
                             break;
@@ -2776,8 +2776,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
-                          createInfo->statusInfo.skippedEntries++;
-                          createInfo->statusInfo.skippedBytes += fileInfo.size;
+                          createInfo->statusInfo.skippedEntryCount++;
+                          createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                           updateStatusInfo(createInfo,FALSE);
                         }
                       }
@@ -2788,8 +2788,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
-                        createInfo->statusInfo.skippedEntries++;
-                        createInfo->statusInfo.skippedBytes += fileInfo.size;
+                        createInfo->statusInfo.skippedEntryCount++;
+                        createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                         updateStatusInfo(createInfo,FALSE);
                       }
                     }
@@ -2805,7 +2805,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
-                    createInfo->statusInfo.errorEntries++;
+                    createInfo->statusInfo.errorEntryCount++;
                     updateStatusInfo(createInfo,FALSE);
                   }
                 }
@@ -2859,8 +2859,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
-                  createInfo->statusInfo.skippedEntries++;
-                  createInfo->statusInfo.skippedBytes += fileInfo.size;
+                  createInfo->statusInfo.skippedEntryCount++;
+                  createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                   updateStatusInfo(createInfo,FALSE);
                 }
               }
@@ -2961,8 +2961,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
-                  createInfo->statusInfo.skippedEntries++;
-                  createInfo->statusInfo.skippedBytes += fileInfo.size;
+                  createInfo->statusInfo.skippedEntryCount++;
+                  createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                   updateStatusInfo(createInfo,FALSE);
                 }
               }
@@ -3007,7 +3007,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                           {
-                            createInfo->statusInfo.errorEntries++;
+                            createInfo->statusInfo.errorEntryCount++;
                             updateStatusInfo(createInfo,FALSE);
                           }
                           continue;
@@ -3035,8 +3035,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                 {
-                  createInfo->statusInfo.skippedEntries++;
-                  createInfo->statusInfo.skippedBytes += fileInfo.size;
+                  createInfo->statusInfo.skippedEntryCount++;
+                  createInfo->statusInfo.skippedEntrySize += fileInfo.size;
                   updateStatusInfo(createInfo,FALSE);
                 }
               }
@@ -3047,8 +3047,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
               SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
-                createInfo->statusInfo.errorEntries++;
-                createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+                createInfo->statusInfo.errorEntryCount++;
+                createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
                 updateStatusInfo(createInfo,FALSE);
               }
               break;
@@ -3060,8 +3060,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
-            createInfo->statusInfo.skippedEntries++;
-            createInfo->statusInfo.skippedBytes += fileInfo.size;
+            createInfo->statusInfo.skippedEntryCount++;
+            createInfo->statusInfo.skippedEntrySize += fileInfo.size;
             updateStatusInfo(createInfo,FALSE);
           }
         }
@@ -3077,7 +3077,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
-          createInfo->statusInfo.skippedEntries++;
+          createInfo->statusInfo.skippedEntryCount++;
           updateStatusInfo(createInfo,FALSE);
         }
 
@@ -3342,7 +3342,7 @@ UNUSED_VARIABLE(archiveType);
   // update status info
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->statusInfo.storageTotalBytes += fileInfo.size;
+    createInfo->statusInfo.storageTotalSize += fileInfo.size;
     updateStatusInfo(createInfo,FALSE);
   }
 
@@ -3486,8 +3486,9 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
                              SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK(NULL,NULL),
-                             CALLBACK(NULL,NULL)
+                             CALLBACK(NULL,NULL),  // updateStatusInfo
+                             CALLBACK(NULL,NULL),  // getPassword
+                             CALLBACK(NULL,NULL)  // requestVolume
                             );
         if (error == ERROR_NONE)
         {
@@ -3625,7 +3626,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
                  "Purged storage for server '%s' fail (error: %s)\n",
-                 String_cString(server),
+                 String_cString(server->name),
                  Error_getText(error)
                 );
       break;
@@ -3680,8 +3681,9 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
                              SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK(NULL,NULL),
-                             CALLBACK(NULL,NULL)
+                             CALLBACK(NULL,NULL),  // updateStatusInfo
+                             CALLBACK(NULL,NULL),  // getPassword
+                             CALLBACK(NULL,NULL)  // requestVolume
                             );
         if (error == ERROR_NONE)
         {
@@ -4019,7 +4021,7 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
         // update status info, check for abort
         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
-          createInfo->statusInfo.storageDoneBytes += (uint64)bufferLength;
+          createInfo->statusInfo.storageDoneSize += (uint64)bufferLength;
           updateStatusInfo(createInfo,FALSE);
         }
       }
@@ -4073,9 +4075,9 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
                                      storageMsg.archiveName,
                                      NULL,  // uuidId
                                      NULL,  // entityId
-                                     &storageId,
                                      NULL,  // jobUUID,
                                      NULL,  // scheduleUUID,
+                                     &storageId,
                                      NULL,  // indexState,
                                      NULL  // lastCheckedTimestamp
                                     )
@@ -4422,8 +4424,8 @@ LOCAL bool setStatusEntryDoneInfo(CreateInfo *createInfo, ConstString name, uint
     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       String_set(createInfo->statusInfo.entryName,name);
-      createInfo->statusInfo.entryDoneBytes  = 0LL;
-      createInfo->statusInfo.entryTotalBytes = size;
+      createInfo->statusInfo.entryDoneSize  = 0LL;
+      createInfo->statusInfo.entryTotalSize = size;
       updateStatusInfo(createInfo,FALSE);
     }
   }
@@ -4476,10 +4478,10 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   bool                      deltaCompressFlag;
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
-  uint64                    entryDoneBytes;
+  uint64                    entryDoneSize;
   ulong                     bufferLength;
   uint64                    archiveSize;
-  uint64                    doneBytes,archiveBytes;
+  uint64                    doneSize;
   double                    compressionRatio;
   uint                      percentageDone;
 
@@ -4500,7 +4502,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       return ERROR_NONE;
     }
@@ -4529,7 +4531,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -4561,8 +4563,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s'\n",String_cString(fileName));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
-        createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+        createInfo->statusInfo.errorEntryCount++;
+        createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -4614,8 +4616,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     }
 
     // write file content to archive
-    error          = ERROR_NONE;
-    entryDoneBytes = 0LL;
+    error         = ERROR_NONE;
+    entryDoneSize = 0LL;
     do
     {
       // pause
@@ -4631,8 +4633,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
           if (error == ERROR_NONE)
           {
-            entryDoneBytes += (uint64)bufferLength;
-            archiveSize    = Archive_getSize(&createInfo->archiveInfo);
+            entryDoneSize += (uint64)bufferLength;
+            archiveSize   = Archive_getSize(&createInfo->archiveInfo);
 
             // try to set status done entry info
             if (!statusEntryDoneLocked)
@@ -4643,20 +4645,20 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
             // update status info
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
-              doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferLength;
-              archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-              compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneBytes > 0))
-                                   ? 100.0-(archiveBytes*100.0)/doneBytes
+              doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferLength;
+              archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
+              compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
+                                   ? 100.0-(archiveSize*100.0)/doneSize
                                    : 0.0;
 
               if (statusEntryDoneLocked)
               {
                 String_set(createInfo->statusInfo.entryName,fileName);
-                createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
-                createInfo->statusInfo.entryTotalBytes = fileInfo.size;
+                createInfo->statusInfo.entryDoneSize  = entryDoneSize;
+                createInfo->statusInfo.entryTotalSize = fileInfo.size;
               }
-              createInfo->statusInfo.doneBytes        = doneBytes;
-              createInfo->statusInfo.archiveBytes     = archiveBytes;
+              createInfo->statusInfo.doneSize         = doneSize;
+              createInfo->statusInfo.archiveSize      = archiveSize;
               createInfo->statusInfo.compressionRatio = compressionRatio;
               updateStatusInfo(createInfo,TRUE);
             }
@@ -4667,8 +4669,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
             percentageDone = 0;
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
             {
-              percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL)
-                                 ? (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes)
+              percentageDone = (createInfo->statusInfo.entryTotalSize > 0LL)
+                                 ? (uint)((createInfo->statusInfo.entryDoneSize*100LL)/createInfo->statusInfo.entryTotalSize)
                                  : 100;
             }
             printInfo(2,"%3d%%\b\b\b\b",percentageDone);
@@ -4746,7 +4748,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   // update done entries
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->statusInfo.doneEntries++;
+    createInfo->statusInfo.doneCount++;
     updateStatusInfo(createInfo,FALSE);
   }
 
@@ -4796,12 +4798,12 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   bool             byteCompressFlag;
   bool             deltaCompressFlag;
   SemaphoreLock    semaphoreLock;
-  uint64           entryDoneBytes;
+  uint64           entryDoneSize;
   uint64           block;
   uint64           blockCount;
   uint             bufferBlockCount;
   uint64           archiveSize;
-  uint64           doneBytes,archiveBytes;
+  uint64           doneSize;
   double           compressionRatio;
   uint             percentageDone;
   ArchiveEntryInfo archiveEntryInfo;
@@ -4823,7 +4825,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(deviceName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       return ERROR_NONE;
     }
@@ -4875,8 +4877,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'\n",String_cString(deviceName));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
-        createInfo->statusInfo.errorBytes += (uint64)deviceInfo.size;
+        createInfo->statusInfo.errorEntryCount++;
+        createInfo->statusInfo.errorEntrySize += (uint64)deviceInfo.size;
       }
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return ERROR_NONE;
@@ -4936,10 +4938,10 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
 
     // write device content to archive
-    block          = 0LL;
-    blockCount     = deviceInfo.size/(uint64)deviceInfo.blockSize;
-    error          = ERROR_NONE;
-    entryDoneBytes = 0LL;
+    block         = 0LL;
+    blockCount    = deviceInfo.size/(uint64)deviceInfo.blockSize;
+    error         = ERROR_NONE;
+    entryDoneSize = 0LL;
     while (   (block < blockCount)
            && !isAborted(createInfo)
            && (createInfo->failError == ERROR_NONE)
@@ -4981,8 +4983,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
         error = Archive_writeData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
         if (error == ERROR_NONE)
         {
-          entryDoneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
-          archiveSize    = Archive_getSize(&createInfo->archiveInfo);
+          entryDoneSize += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
+          archiveSize   = Archive_getSize(&createInfo->archiveInfo);
 
           // try to set status done entry info
           if (!statusEntryDoneLocked)
@@ -4993,21 +4995,21 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           // update status info
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
-            doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
-            archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-            compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneBytes > 0))
-                                 ? 100.0-(archiveBytes*100.0)/doneBytes
+            doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
+            archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
+            compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
+                                 ? 100.0-(archiveSize*100.0)/doneSize
                                  : 0.0;
 
-            createInfo->statusInfo.doneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
+            createInfo->statusInfo.doneSize += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             if (statusEntryDoneLocked)
             {
               String_set(createInfo->statusInfo.entryName,deviceName);
-              createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
-              createInfo->statusInfo.entryTotalBytes = deviceInfo.size;
+              createInfo->statusInfo.entryDoneSize  = entryDoneSize;
+              createInfo->statusInfo.entryTotalSize = deviceInfo.size;
             }
-            createInfo->statusInfo.doneBytes        = doneBytes;
-            createInfo->statusInfo.archiveBytes     = archiveBytes;
+            createInfo->statusInfo.doneSize         = doneSize;
+            createInfo->statusInfo.archiveSize      = archiveSize;
             createInfo->statusInfo.compressionRatio = compressionRatio;
             updateStatusInfo(createInfo,TRUE);
           }
@@ -5018,8 +5020,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           percentageDone = 0;
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
           {
-            percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL)
-                               ? (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes)
+            percentageDone = (createInfo->statusInfo.entryTotalSize > 0LL)
+                               ? (uint)((createInfo->statusInfo.entryDoneSize*100LL)/createInfo->statusInfo.entryTotalSize)
                                : 100;
           }
           printInfo(2,"%3d%%\b\b\b\b",percentageDone);
@@ -5108,7 +5110,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   // update done entries
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->statusInfo.doneEntries++;
+    createInfo->statusInfo.doneCount++;
     updateStatusInfo(createInfo,FALSE);
   }
 
@@ -5158,7 +5160,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       return ERROR_NONE;
     }
@@ -5187,7 +5189,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5259,7 +5261,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
   // update done entries
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->statusInfo.doneEntries++;
+    createInfo->statusInfo.doneCount++;
     updateStatusInfo(createInfo,FALSE);
   }
 
@@ -5315,7 +5317,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       return ERROR_NONE;
     }
@@ -5344,7 +5346,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5376,8 +5378,8 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(linkName));
         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
-          createInfo->statusInfo.errorEntries++;
-          createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+          createInfo->statusInfo.errorEntryCount++;
+          createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
         }
         String_delete(fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5454,7 +5456,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   // update done entries
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->statusInfo.doneEntries++;
+    createInfo->statusInfo.doneCount++;
     updateStatusInfo(createInfo,FALSE);
   }
 
@@ -5500,10 +5502,10 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   bool                      deltaCompressFlag;
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
-  uint64                    entryDoneBytes;
+  uint64                    entryDoneSize;
   ulong                     bufferLength;
   uint64                    archiveSize;
-  uint64                    doneBytes,archiveBytes;
+  uint64                    doneSize;
   double                    compressionRatio;
   uint                      percentageDone;
   const StringNode          *stringNode;
@@ -5526,7 +5528,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries += StringList_count(nameList);
+        createInfo->statusInfo.errorEntryCount += StringList_count(nameList);
       }
       return ERROR_NONE;
     }
@@ -5555,7 +5557,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5584,8 +5586,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s'\n",String_cString(StringList_first(nameList,NULL)));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries += StringList_count(nameList);
-        createInfo->statusInfo.errorBytes += (uint64)StringList_count(nameList)*(uint64)fileInfo.size;
+        createInfo->statusInfo.errorEntryCount += StringList_count(nameList);
+        createInfo->statusInfo.errorEntrySize += (uint64)StringList_count(nameList)*(uint64)fileInfo.size;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5637,8 +5639,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // write hard link content to archive
-    error          = ERROR_NONE;
-    entryDoneBytes = 0LL;
+    error         = ERROR_NONE;
+    entryDoneSize = 0LL;
     do
     {
       // pause
@@ -5654,7 +5656,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
           if (error == ERROR_NONE)
           {
-            entryDoneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+            entryDoneSize += (uint64)StringList_count(nameList)*(uint64)bufferLength;
             archiveSize = Archive_getSize(&createInfo->archiveInfo);
 
             // try to set status done entry info
@@ -5665,21 +5667,21 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
-              doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferLength;
-              archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-              compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneBytes > 0))
-                                   ? 100.0-(archiveBytes*100.0)/doneBytes
+              doneSize         = createInfo->statusInfo.doneSize+(uint64)bufferLength;
+              archiveSize      = createInfo->statusInfo.storageTotalSize+archiveSize;
+              compressionRatio = (!createInfo->jobOptions->dryRunFlag && (doneSize > 0))
+                                   ? 100.0-(archiveSize*100.0)/doneSize
                                    : 0.0;
 
-              createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+              createInfo->statusInfo.doneSize += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               if (statusEntryDoneLocked)
               {
                 String_set(createInfo->statusInfo.entryName,StringList_first(nameList,NULL));
-                createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
-                createInfo->statusInfo.entryTotalBytes = fileInfo.size;
+                createInfo->statusInfo.entryDoneSize  = entryDoneSize;
+                createInfo->statusInfo.entryTotalSize = fileInfo.size;
               }
-              createInfo->statusInfo.doneBytes        = doneBytes;
-              createInfo->statusInfo.archiveBytes     = archiveBytes;
+              createInfo->statusInfo.doneSize         = doneSize;
+              createInfo->statusInfo.archiveSize      = archiveSize;
               createInfo->statusInfo.compressionRatio = compressionRatio;
               updateStatusInfo(createInfo,TRUE);
             }
@@ -5690,8 +5692,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
             percentageDone = 0;
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
             {
-              percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL)
-                                 ? (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes)
+              percentageDone = (createInfo->statusInfo.entryTotalSize > 0LL)
+                                 ? (uint)((createInfo->statusInfo.entryDoneSize*100LL)/createInfo->statusInfo.entryTotalSize)
                                  : 100;
             }
             printInfo(2,"%3d%%\b\b\b\b",percentageDone);
@@ -5772,7 +5774,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   // update done entries
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->statusInfo.doneEntries += StringList_count(nameList);
+    createInfo->statusInfo.doneCount += StringList_count(nameList);
     updateStatusInfo(createInfo,FALSE);
   }
 
@@ -5834,7 +5836,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       return ERROR_NONE;
     }
@@ -5863,7 +5865,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorEntryCount++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5933,7 +5935,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   // update done entries
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->statusInfo.doneEntries++;
+    createInfo->statusInfo.doneCount++;
     updateStatusInfo(createInfo,FALSE);
   }
 
@@ -6119,7 +6121,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        createInfo->statusInfo.skippedEntries++;
+        createInfo->statusInfo.skippedEntryCount++;
       }
     }
 
@@ -6135,7 +6137,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 // NYI: is this really useful? (avoid that sum-collector-thread is slower than file-collector-thread)
     // slow down if too fast
     while (   !createInfo->collectorSumThreadExitedFlag
-           && (createInfo->statusInfo.doneEntries >= createInfo->statusInfo.totalEntries)
+           && (createInfo->statusInfo.doneCount >= createInfo->statusInfo.totalEntryCount)
           )
     {
       Misc_udelay(1000*1000);
@@ -6276,8 +6278,9 @@ Errors Command_create(ConstString                  jobUUID,
                        createInfo.jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
-                       CALLBACK((StorageStatusInfoFunction)updateStorageStatusInfo,&createInfo)
+                       CALLBACK(updateStorageStatusInfo,&createInfo),
+                       CALLBACK(getPasswordFunction,getPasswordUserData),
+                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
                       );
   if (error != ERROR_NONE)
   {
@@ -6536,34 +6539,34 @@ createThreadCode(&createInfo);
   {
     printInfo(1,
               "%lu entries/%.1lf%s (%llu bytes) included\n",
-              createInfo.statusInfo.doneEntries,
-              BYTES_SHORT(createInfo.statusInfo.doneBytes),
-              BYTES_UNIT(createInfo.statusInfo.doneBytes),
-              createInfo.statusInfo.doneBytes
+              createInfo.statusInfo.doneCount,
+              BYTES_SHORT(createInfo.statusInfo.doneSize),
+              BYTES_UNIT(createInfo.statusInfo.doneSize),
+              createInfo.statusInfo.doneSize
              );
     printInfo(2,
               "%lu entries/%.1lf%s (%llu bytes) skipped\n",
-              createInfo.statusInfo.skippedEntries,
-              BYTES_SHORT(createInfo.statusInfo.skippedBytes),
-              BYTES_UNIT(createInfo.statusInfo.skippedBytes),
-              createInfo.statusInfo.skippedBytes
+              createInfo.statusInfo.skippedEntryCount,
+              BYTES_SHORT(createInfo.statusInfo.skippedEntrySize),
+              BYTES_UNIT(createInfo.statusInfo.skippedEntrySize),
+              createInfo.statusInfo.skippedEntrySize
              );
     printInfo(2,
               "%lu entries/%.1lf%s (%llu bytes) with errors\n",
-              createInfo.statusInfo.errorEntries,
-              BYTES_SHORT(createInfo.statusInfo.errorBytes),
-              BYTES_UNIT(createInfo.statusInfo.errorBytes),
-              createInfo.statusInfo.errorBytes
+              createInfo.statusInfo.errorEntryCount,
+              BYTES_SHORT(createInfo.statusInfo.errorEntrySize),
+              BYTES_UNIT(createInfo.statusInfo.errorEntrySize),
+              createInfo.statusInfo.errorEntrySize
              );
     logMessage(logHandle,
                LOG_TYPE_ALWAYS,
                "%lu entries/%.1lf%s (%llu bytes) included, %lu entries skipped, %lu entries with errors\n",
-               createInfo.statusInfo.doneEntries,
-               BYTES_SHORT(createInfo.statusInfo.doneBytes),
-               BYTES_UNIT(createInfo.statusInfo.doneBytes),
-               createInfo.statusInfo.doneBytes,
-               createInfo.statusInfo.skippedEntries,
-               createInfo.statusInfo.errorEntries
+               createInfo.statusInfo.doneCount,
+               BYTES_SHORT(createInfo.statusInfo.doneSize),
+               BYTES_UNIT(createInfo.statusInfo.doneSize),
+               createInfo.statusInfo.doneSize,
+               createInfo.statusInfo.skippedEntryCount,
+               createInfo.statusInfo.errorEntryCount
               );
   }
 

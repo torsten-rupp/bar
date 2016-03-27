@@ -35,17 +35,17 @@
 typedef struct
 {
   String     storageName;                  // current storage name
-  uint64     storageDoneBytes;             // number of bytes processed of current archive
-  uint64     storageTotalBytes;            // total bytes of current archive
-  ulong      doneEntries;                  // number of entries processed
-  uint64     doneBytes;                    // number of bytes processed
-  ulong      skippedEntries;               // number of skipped entries
-  uint64     skippedBytes;                 // sum of skipped bytes
-  ulong      errorEntries;                 // number of entries with errors
-  uint64     errorBytes;                   // sum of byste in entries with errors
+  uint64     storageDoneSize;              // number of bytes processed of current archive
+  uint64     storageTotalSize;             // total bytes of current archive
+  ulong      doneCount;                    // number of entries processed
+  uint64     doneSize;                     // number of bytes processed
+  ulong      skippedEntryCount;            // number of skipped entries
+  uint64     skippedEntrySize;             // sum of skipped bytes
+  ulong      errorEntryCount;              // number of entries with errors
+  uint64     errorEntrySize;               // sum of bytes of entries with errors
   String     entryName;                    // current entry name
-  uint64     entryDoneBytes;               // number of bytes processed of current entry
-  uint64     entryTotalBytes;              // total number of bytes of current entry
+  uint64     entryDoneSize;                // number of bytes processed of current entry
+  uint64     entryTotalSize;               // total number of bytes of current entry
 //TODO remove
   const char *requestPasswordType;         // request password type or NULL
   const char *requestPasswordText;         // request password host name or NULL
@@ -102,16 +102,16 @@ typedef Errors(*RestoreHandleErrorFunction)(Errors                  error,
 *          excludePatternList       - exclude pattern list
 *          deltaSourceList          - delta source list
 *          jobOptions               - job options
-*          getPasswordFunction      - get password call back (can be
-*                                     NULL)
-*          getPasswordUserData      - user data for get password call
-*                                     back
 *          updateStatusInfoFunction - status info call back
 *                                     function (can be NULL)
 *          updateStatusInfoUserData - user data for status info
 *                                     function
 *          handleErrorFunction      - error call back (can be NULL)
 *          handleErrorUserData      - user data for error call back
+*          getPasswordFunction      - get password call back (can be
+*                                     NULL)
+*          getPasswordUserData      - user data for get password call
+*                                     back
 *          pauseRestoreFlag         - pause restore flag (can be NULL)
 *          requestedAbortFlag       - request abort flag (can be NULL)
 *          logHandle                - log handle (can be NULL)
@@ -125,12 +125,12 @@ Errors Command_restore(const StringList                *storageNameList,
                        const PatternList               *excludePatternList,
                        DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
-                       GetPasswordFunction             getPasswordFunction,
-                       void                            *getPasswordUserData,
                        RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
                        void                            *updateStatusInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,
                        void                            *handleErrorUserData,
+                       GetPasswordFunction             getPasswordFunction,
+                       void                            *getPasswordUserData,
                        bool                            *pauseRestoreFlag,
                        bool                            *requestedAbortFlag,
                        LogHandle                       *logHandle

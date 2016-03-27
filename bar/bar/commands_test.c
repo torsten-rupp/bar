@@ -116,8 +116,9 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK(NULL,NULL),
-                       CALLBACK(NULL,NULL)
+                       CALLBACK(NULL,NULL),  // updateStatusInfo
+                       CALLBACK(NULL,NULL),  // getPassword
+                       CALLBACK(NULL,NULL)  // requestVolume
                       );
   if (error != ERROR_NONE)
   {
