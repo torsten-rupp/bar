@@ -216,26 +216,26 @@ typedef struct JobNode
   {
     Errors            error;                            // error code
     ulong             estimatedRestTime;                // estimated rest running time [s]
-    ulong             doneEntries;                      // number of processed entries
-    uint64            doneBytes;                        // sum of processed bytes
-    ulong             totalEntries;                     // number of total entries
-    uint64            totalBytes;                       // sum of total bytes
+    ulong             doneCount;                        // number of processed entries
+    uint64            doneSize;                         // sum of processed bytes
+    ulong             totalEntryCount;                  // total number of entries
+    uint64            totalEntrySize;                   // total size of entries [bytes]
     bool              collectTotalSumDone;              // TRUE if sum of total entries are collected
-    ulong             skippedEntries;                   // number of skipped entries
-    uint64            skippedBytes;                     // sum of skippped bytes
-    ulong             errorEntries;                     // number of entries with errors
-    uint64            errorBytes;                       // sum of bytes of files with errors
+    ulong             skippedEntryCount;                // number of skipped entries
+    uint64            skippedEntrySize;                 // sum of skippped bytes
+    ulong             errorEntryCount;                  // number of entries with errors
+    uint64            errorEntrySize;                   // sum of bytes of files with errors
     double            entriesPerSecond;                 // average processed entries per second last 10s
     double            bytesPerSecond;                   // average processed bytes per second last 10s
     double            storageBytesPerSecond;            // average processed storage bytes per second last 10s
-    uint64            archiveBytes;                     // number of bytes stored in archive
+    uint64            archiveSize;                      // number of bytes stored in archive
     double            compressionRatio;                 // compression ratio: saved "space" [%]
     String            entryName;                        // current entry name
-    uint64            entryDoneBytes;                   // current entry bytes done
-    uint64            entryTotalBytes;                  // current entry bytes total
+    uint64            entryDoneSize;                    // current entry bytes done
+    uint64            entryTotalSize;                   // current entry bytes total
     String            storageName;                      // current storage name
-    uint64            storageDoneBytes;                 // current storage bytes done
-    uint64            storageTotalBytes;                // current storage bytes total
+    uint64            storageDoneSize;                  // current storage bytes done
+    uint64            storageTotalSize;                 // current storage bytes total
     uint              volumeNumber;                     // current volume number
     double            volumeProgress;                   // current volume progress
     String            message;                          // message text
@@ -1574,15 +1574,15 @@ LOCAL ScheduleNode *parseScheduleDateTime(const String date,
 /***********************************************************************\
 * Name   : storageRequestVolume
 * Purpose: request volume call-back
-* Input  : userData     - user data: job node
-*          volumeNumber - volume number
+* Input  : volumeNumber - volume number
+*          userData     - user data: job node
 * Output : -
 * Return : request result; see StorageRequestResults
 * Notes  : -
 \***********************************************************************/
 
-LOCAL StorageRequestResults storageRequestVolume(void *userData,
-                                                 uint volumeNumber
+LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
+                                                 void *userData
                                                 )
 {
   JobNode               *jobNode = (JobNode*)userData;
@@ -1645,21 +1645,21 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 
   jobNode->runningInfo.error               = ERROR_NONE;
   jobNode->runningInfo.estimatedRestTime   = 0L;
-  jobNode->runningInfo.doneEntries         = 0L;
-  jobNode->runningInfo.doneBytes           = 0LL;
-  jobNode->runningInfo.totalEntries        = 0L;
-  jobNode->runningInfo.totalBytes          = 0LL;
+  jobNode->runningInfo.doneCount           = 0L;
+  jobNode->runningInfo.doneSize            = 0LL;
+  jobNode->runningInfo.totalEntryCount     = 0L;
+  jobNode->runningInfo.totalEntrySize      = 0LL;
   jobNode->runningInfo.collectTotalSumDone = FALSE;
-  jobNode->runningInfo.skippedEntries      = 0L;
-  jobNode->runningInfo.skippedBytes        = 0LL;
-  jobNode->runningInfo.errorEntries        = 0L;
-  jobNode->runningInfo.errorBytes          = 0LL;
-  jobNode->runningInfo.archiveBytes        = 0LL;
+  jobNode->runningInfo.skippedEntryCount   = 0L;
+  jobNode->runningInfo.skippedEntrySize    = 0LL;
+  jobNode->runningInfo.errorEntryCount     = 0L;
+  jobNode->runningInfo.errorEntrySize      = 0LL;
+  jobNode->runningInfo.archiveSize         = 0LL;
   jobNode->runningInfo.compressionRatio    = 0.0;
-  jobNode->runningInfo.entryDoneBytes      = 0LL;
-  jobNode->runningInfo.entryTotalBytes     = 0LL;
-  jobNode->runningInfo.storageDoneBytes    = 0LL;
-  jobNode->runningInfo.storageTotalBytes   = 0LL;
+  jobNode->runningInfo.entryDoneSize       = 0LL;
+  jobNode->runningInfo.entryTotalSize      = 0LL;
+  jobNode->runningInfo.storageDoneSize     = 0LL;
+  jobNode->runningInfo.storageTotalSize    = 0LL;
   jobNode->runningInfo.volumeNumber        = 0;
   jobNode->runningInfo.volumeProgress      = 0.0;
 
@@ -2983,52 +2983,52 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // calculate statics values
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     createStatusInfo->doneEntries);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       createStatusInfo->doneBytes);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,createStatusInfo->storageDoneBytes);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     createStatusInfo->doneCount);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       createStatusInfo->doneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,createStatusInfo->storageDoneSize);
     entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
     bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
     storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
 
-    restFiles        = (createStatusInfo->totalEntries      > createStatusInfo->doneEntries     ) ? createStatusInfo->totalEntries     -createStatusInfo->doneEntries      : 0L;
-    restBytes        = (createStatusInfo->totalBytes        > createStatusInfo->doneBytes       ) ? createStatusInfo->totalBytes       -createStatusInfo->doneBytes        : 0LL;
-    restStorageBytes = (createStatusInfo->storageTotalBytes > createStatusInfo->storageDoneBytes) ? createStatusInfo->storageTotalBytes-createStatusInfo->storageDoneBytes : 0LL;
+    restFiles        = (createStatusInfo->totalEntryCount  > createStatusInfo->doneCount      ) ? createStatusInfo->totalEntryCount -createStatusInfo->doneCount       : 0L;
+    restBytes        = (createStatusInfo->totalEntrySize   > createStatusInfo->doneSize       ) ? createStatusInfo->totalEntrySize  -createStatusInfo->doneSize        : 0LL;
+    restStorageBytes = (createStatusInfo->storageTotalSize > createStatusInfo->storageDoneSize) ? createStatusInfo->storageTotalSize-createStatusInfo->storageDoneSize : 0LL;
     estimatedRestTime = 0L;
     if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
     if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
     if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
 
 /*
-fprintf(stderr,"%s,%d: createStatusInfo->doneEntries=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalEntries=%lu jobNode->runningInfo.totalBytes %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
-createStatusInfo->doneEntries,
-createStatusInfo->doneBytes,
-jobNode->runningInfo.totalEntries,
-jobNode->runningInfo.totalBytes,
+fprintf(stderr,"%s,%d: createStatusInfo->doneCount=%lu createStatusInfo->doneSize=%llu jobNode->runningInfo.totalEntryCount=%lu jobNode->runningInfo.totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
+createStatusInfo->doneCount,
+createStatusInfo->doneSize,
+jobNode->runningInfo.totalEntryCount,
+jobNode->runningInfo.totalEntrySize,
 entriesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
     jobNode->runningInfo.error                 = error;
-    jobNode->runningInfo.doneEntries           = createStatusInfo->doneEntries;
-    jobNode->runningInfo.doneBytes             = createStatusInfo->doneBytes;
-    jobNode->runningInfo.totalEntries          = createStatusInfo->totalEntries;
-    jobNode->runningInfo.totalBytes            = createStatusInfo->totalBytes;
+    jobNode->runningInfo.doneCount             = createStatusInfo->doneCount;
+    jobNode->runningInfo.doneSize              = createStatusInfo->doneSize;
+    jobNode->runningInfo.totalEntryCount       = createStatusInfo->totalEntryCount;
+    jobNode->runningInfo.totalEntrySize        = createStatusInfo->totalEntrySize;
     jobNode->runningInfo.collectTotalSumDone   = createStatusInfo->collectTotalSumDone;
-    jobNode->runningInfo.skippedEntries        = createStatusInfo->skippedEntries;
-    jobNode->runningInfo.skippedBytes          = createStatusInfo->skippedBytes;
-    jobNode->runningInfo.errorEntries          = createStatusInfo->errorEntries;
-    jobNode->runningInfo.errorBytes            = createStatusInfo->errorBytes;
+    jobNode->runningInfo.skippedEntryCount     = createStatusInfo->skippedEntryCount;
+    jobNode->runningInfo.skippedEntrySize      = createStatusInfo->skippedEntrySize;
+    jobNode->runningInfo.errorEntryCount       = createStatusInfo->errorEntryCount;
+    jobNode->runningInfo.errorEntrySize        = createStatusInfo->errorEntrySize;
     jobNode->runningInfo.entriesPerSecond      = Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecondFilter     ,10);
     jobNode->runningInfo.bytesPerSecond        = Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecondFilter       ,10);
     jobNode->runningInfo.storageBytesPerSecond = Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecondFilter,10);
-    jobNode->runningInfo.archiveBytes          = createStatusInfo->archiveBytes;
+    jobNode->runningInfo.archiveSize           = createStatusInfo->archiveSize;
     jobNode->runningInfo.compressionRatio      = createStatusInfo->compressionRatio;
     jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
     String_set(jobNode->runningInfo.entryName,createStatusInfo->entryName);
-    jobNode->runningInfo.entryDoneBytes        = createStatusInfo->entryDoneBytes;
-    jobNode->runningInfo.entryTotalBytes       = createStatusInfo->entryTotalBytes;
+    jobNode->runningInfo.entryDoneSize         = createStatusInfo->entryDoneSize;
+    jobNode->runningInfo.entryTotalSize        = createStatusInfo->entryTotalSize;
     String_set(jobNode->runningInfo.storageName,createStatusInfo->storageName);
-    jobNode->runningInfo.storageDoneBytes      = createStatusInfo->storageDoneBytes;
-    jobNode->runningInfo.storageTotalBytes     = createStatusInfo->storageTotalBytes;
+    jobNode->runningInfo.storageDoneSize       = createStatusInfo->storageDoneSize;
+    jobNode->runningInfo.storageTotalSize      = createStatusInfo->storageTotalSize;
     jobNode->runningInfo.volumeNumber          = createStatusInfo->volumeNumber;
     jobNode->runningInfo.volumeProgress        = createStatusInfo->volumeProgress;
     if (error != ERROR_NONE)
@@ -3039,7 +3039,7 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 }
 
 /***********************************************************************\
-* Name   : updateRestoreStatusInfo
+* Name   : restoreUpdateStatusInfo
 * Purpose: update restore status info
 * Input  : restoreStatusInfo - create status info data
 *          userData          - user data: job node
@@ -3048,7 +3048,7 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateRestoreStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
+LOCAL void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
                                    void                    *userData
                                   )
 {
@@ -3064,36 +3064,36 @@ LOCAL void updateRestoreStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // calculate estimated rest time
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     restoreStatusInfo->doneEntries);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       restoreStatusInfo->doneBytes);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,restoreStatusInfo->storageDoneBytes);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     restoreStatusInfo->doneCount);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       restoreStatusInfo->doneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,restoreStatusInfo->storageDoneSize);
 
 /*
-fprintf(stderr,"%s,%d: restoreStatusInfo->doneEntries=%lu restoreStatusInfo->doneBytes=%llu jobNode->runningInfo.totalEntries=%lu jobNode->runningInfo.totalBytes %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
-restoreStatusInfo->doneEntries,
-restoreStatusInfo->doneBytes,
-jobNode->runningInfo.totalEntries,
-jobNode->runningInfo.totalBytes,
+fprintf(stderr,"%s,%d: restoreStatusInfo->doneCount=%lu restoreStatusInfo->doneSize=%llu jobNode->runningInfo.totalEntryCount=%lu jobNode->runningInfo.totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
+restoreStatusInfo->doneCount,
+restoreStatusInfo->doneSize,
+jobNode->runningInfo.totalEntryCount,
+jobNode->runningInfo.totalEntrySize,
 entriesPerSecond,bytesPerSecond,estimatedRestTime);
 */
 
 //TODO
 //    jobNode->runningInfo.error                 = error;
-    jobNode->runningInfo.doneEntries           = restoreStatusInfo->doneEntries;
-    jobNode->runningInfo.doneBytes             = restoreStatusInfo->doneBytes;
-    jobNode->runningInfo.skippedEntries        = restoreStatusInfo->skippedEntries;
-    jobNode->runningInfo.skippedBytes          = restoreStatusInfo->skippedBytes;
-    jobNode->runningInfo.errorEntries          = restoreStatusInfo->errorEntries;
-    jobNode->runningInfo.errorBytes            = restoreStatusInfo->errorBytes;
-    jobNode->runningInfo.archiveBytes          = 0LL;
+    jobNode->runningInfo.doneCount             = restoreStatusInfo->doneCount;
+    jobNode->runningInfo.doneSize              = restoreStatusInfo->doneSize;
+    jobNode->runningInfo.skippedEntryCount     = restoreStatusInfo->skippedEntryCount;
+    jobNode->runningInfo.skippedEntrySize      = restoreStatusInfo->skippedEntrySize;
+    jobNode->runningInfo.errorEntryCount       = restoreStatusInfo->errorEntryCount;
+    jobNode->runningInfo.errorEntrySize        = restoreStatusInfo->errorEntrySize;
+    jobNode->runningInfo.archiveSize           = 0LL;
     jobNode->runningInfo.compressionRatio      = 0.0;
     jobNode->runningInfo.estimatedRestTime     = 0;
     String_set(jobNode->runningInfo.entryName,restoreStatusInfo->entryName);
-    jobNode->runningInfo.entryDoneBytes        = restoreStatusInfo->entryDoneBytes;
-    jobNode->runningInfo.entryTotalBytes       = restoreStatusInfo->entryTotalBytes;
+    jobNode->runningInfo.entryDoneSize         = restoreStatusInfo->entryDoneSize;
+    jobNode->runningInfo.entryTotalSize        = restoreStatusInfo->entryTotalSize;
     String_set(jobNode->runningInfo.storageName,restoreStatusInfo->storageName);
-    jobNode->runningInfo.storageDoneBytes      = restoreStatusInfo->storageDoneBytes;
-    jobNode->runningInfo.storageTotalBytes     = restoreStatusInfo->storageTotalBytes;
+    jobNode->runningInfo.storageDoneSize       = restoreStatusInfo->storageDoneSize;
+    jobNode->runningInfo.storageTotalSize      = restoreStatusInfo->storageTotalSize;
     jobNode->runningInfo.volumeNumber          = 0; // ???
     jobNode->runningInfo.volumeProgress        = 0.0; // ???
   }
@@ -3297,8 +3297,8 @@ LOCAL void jobThreadCode(void)
 
           jobNode->runningInfo.estimatedRestTime=120;
 
-          jobNode->runningInfo.totalEntries += 60;
-          jobNode->runningInfo.totalBytes += 6000;
+          jobNode->runningInfo.totalEntryCount += 60;
+          jobNode->runningInfo.totalEntrySize += 6000;
 
           for (z=0;z<120;z++)
           {
@@ -3308,14 +3308,14 @@ LOCAL void jobThreadCode(void)
             sleep(1);
 
             if (z==40) {
-              jobNode->runningInfo.totalEntries += 80;
-              jobNode->runningInfo.totalBytes += 8000;
+              jobNode->runningInfo.totalEntryCount += 80;
+              jobNode->runningInfo.totalEntrySize += 8000;
             }
 
-            jobNode->runningInfo.doneEntries++;
-            jobNode->runningInfo.doneBytes += 100;
-//            jobNode->runningInfo.totalEntries += 3;
-//            jobNode->runningInfo.totalBytes += 181;
+            jobNode->runningInfo.doneCount++;
+            jobNode->runningInfo.doneSize += 100;
+//            jobNode->runningInfo.totalEntryCount += 3;
+//            jobNode->runningInfo.totalEntrySize += 181;
             jobNode->runningInfo.estimatedRestTime=120-z;
             String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
             String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
@@ -3414,9 +3414,9 @@ NULL,//                                                        scheduleTitle,
                                                          &excludePatternList,
                                                          &deltaSourceList,
                                                          &jobOptions,
+                                                         CALLBACK(restoreUpdateStatusInfo,jobNode),
+                                                         CALLBACK(NULL,NULL),  // restoreHandleError
                                                          CALLBACK(getCryptPassword,jobNode),
-                                                         CALLBACK(updateRestoreStatusInfo,jobNode),
-                                                         CALLBACK(NULL,NULL),  // restoreError
                                                          &pauseFlags.restore,
                                                          &jobNode->requestedAbortFlag,
                                                          &logHandle
@@ -3918,27 +3918,27 @@ LOCAL void remoteThreadCode(void)
           {
             // parse and store
             StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-            StringMap_getULong (resultMap,"doneEntries",          &jobNode->runningInfo.doneEntries,0);
-            StringMap_getUInt64(resultMap,"doneBytes",            &jobNode->runningInfo.doneBytes,0L);
-            StringMap_getULong (resultMap,"totalEntries",         &jobNode->runningInfo.totalEntries,0);
-            StringMap_getUInt64(resultMap,"totalBytes",           &jobNode->runningInfo.totalBytes,0L);
+            StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0);
+            StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0L);
+            StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0);
+            StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0L);
             StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
-            StringMap_getULong (resultMap,"skippedEntries",       &jobNode->runningInfo.skippedEntries,0);
-            StringMap_getUInt64(resultMap,"skippedBytes",         &jobNode->runningInfo.skippedBytes,0L);
-            StringMap_getULong (resultMap,"errorEntries",         &jobNode->runningInfo.errorEntries,0);
-            StringMap_getUInt64(resultMap,"errorBytes",           &jobNode->runningInfo.errorBytes,0L);
+            StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0);
+            StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0L);
+            StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0);
+            StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0L);
             StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
             StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
             StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
-            StringMap_getUInt64(resultMap,"archiveBytes",         &jobNode->runningInfo.archiveBytes,0L);
+            StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0L);
             StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
             StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
             StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
-            StringMap_getUInt64(resultMap,"entryDoneBytes",       &jobNode->runningInfo.entryDoneBytes,0L);
-            StringMap_getUInt64(resultMap,"entryTotalBytes",      &jobNode->runningInfo.entryTotalBytes,0L);
+            StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0L);
+            StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0L);
             StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
-            StringMap_getUInt64(resultMap,"storageDoneBytes",     &jobNode->runningInfo.storageDoneBytes,0L);
-            StringMap_getUInt64(resultMap,"storageTotalBytes",    &jobNode->runningInfo.storageTotalBytes,0L);
+            StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
+            StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
             StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
             StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
             StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
@@ -4032,8 +4032,9 @@ LOCAL Errors deleteStorage(IndexId storageId)
                                      (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
-                                     CALLBACK(NULL,NULL),
-                                     CALLBACK(NULL,NULL)
+                                     CALLBACK(NULL,NULL),  // updateStatusInfo
+                                     CALLBACK(NULL,NULL),  // getPassword
+                                     CALLBACK(NULL,NULL)  // requestVolume
                                     );
           if (resultError != ERROR_NONE)
           {
@@ -4044,8 +4045,9 @@ LOCAL Errors deleteStorage(IndexId storageId)
                                        (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
                                        SERVER_CONNECTION_PRIORITY_HIGH,
-                                       CALLBACK(NULL,NULL),
-                                       CALLBACK(NULL,NULL)
+                                       CALLBACK(NULL,NULL),  // updateStatusInfo
+                                       CALLBACK(NULL,NULL),  // getPassword
+                                       CALLBACK(NULL,NULL)  // requestVolume
                                       );
           }
         }
@@ -4057,8 +4059,9 @@ LOCAL Errors deleteStorage(IndexId storageId)
                                      (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
-                                     CALLBACK(NULL,NULL),
-                                     CALLBACK(NULL,NULL)
+                                     CALLBACK(NULL,NULL),  // updateStatusInfo
+                                     CALLBACK(NULL,NULL),  // getPassword
+                                     CALLBACK(NULL,NULL)  // requestVolume
                                     );
         }
         if (resultError == ERROR_NONE)
@@ -4138,8 +4141,8 @@ LOCAL Errors deleteEntity(IndexId entityId)
                               NULL,  // archiveType
                               NULL,  // storageName
                               NULL,  // createdDateTime
-                              NULL,  // entries
-                              NULL,  // size
+                              NULL,  // totalEntryCount
+                              NULL,  // totalEntrySize
                               NULL,  // indexState
                               NULL,  // indexMode
                               NULL,  // lastCheckedDateTime
@@ -4200,8 +4203,8 @@ LOCAL Errors deleteUUID(const String jobUUID)
                              NULL,  // createdDateTime,
                              NULL,  // archiveType,
                              NULL,  // lastErrorMessage,
-                             NULL,  // totalEntries,
-                             NULL  // totalSize,
+                             NULL,  // totalEntryCount,
+                             NULL  // totalEntrySize,
                             )
         )
   {
@@ -4245,7 +4248,8 @@ LOCAL void purgeExpiredEntities(void)
   const ScheduleNode *scheduleNode;
   uint64             createdDateTime;
   ArchiveTypes       archiveType;
-  uint64             totalEntries,totalSize;
+  ulong              totalEntryCount;
+  uint64             totalEntrySize;
   String             dateTime;
 
   assert(indexHandle != NULL);
@@ -4282,8 +4286,8 @@ LOCAL void purgeExpiredEntities(void)
                                   NULL,  // createdDateTime,
                                   NULL,  // archiveType,
                                   NULL,  // lastErrorMessage
-                                  NULL,  // totalEntries,
-                                  NULL  // totalSize,
+                                  NULL,  // totalEntryCount,
+                                  NULL  // totalEntrySize,
                                  )
           )
     {
@@ -4339,8 +4343,8 @@ LOCAL void purgeExpiredEntities(void)
                                             &createdDateTime,
                                             &archiveType,
                                             NULL,  // lastErrorMessage
-                                            &totalEntries,
-                                            &totalSize
+                                            &totalEntryCount,
+                                            &totalEntrySize
                                            )
                     )
               {
@@ -4357,10 +4361,10 @@ LOCAL void purgeExpiredEntities(void)
                                 String_cString(jobName),
                                 ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                                 String_cString(dateTime),
-                                totalEntries,
-                                BYTES_SHORT(totalSize),
-                                BYTES_UNIT(totalSize),
-                                totalSize
+                                totalEntryCount,
+                                BYTES_SHORT(totalEntrySize),
+                                BYTES_UNIT(totalEntrySize),
+                                totalEntrySize
                                );
                   }
                 }
@@ -4392,8 +4396,8 @@ LOCAL void purgeExpiredEntities(void)
                                             &createdDateTime,
                                             &archiveType,
                                             NULL,  // lastErrorMessage
-                                            &totalEntries,
-                                            &totalSize
+                                            &totalEntryCount,
+                                            &totalEntrySize
                                            )
                     )
               {
@@ -4408,10 +4412,10 @@ LOCAL void purgeExpiredEntities(void)
                               String_cString(jobName),
                               ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                               String_cString(dateTime),
-                              totalEntries,
-                              BYTES_SHORT(totalSize),
-                              BYTES_UNIT(totalSize),
-                              totalSize
+                              totalEntryCount,
+                              BYTES_SHORT(totalEntrySize),
+                              BYTES_UNIT(totalEntrySize),
+                              totalEntrySize
                              );
                 }
               }
@@ -4776,7 +4780,7 @@ LOCAL void indexThreadCode(void)
   JobNode                *jobNode;
   IndexCryptPasswordNode *indexCryptPasswordNode;
   uint64                 totalTimeLastChanged;
-  uint64                 totalEntries,totalSize;
+  uint64                 totalEntryCount,totalEntrySize;
   uint                   sleepTime;
 
   assert(indexHandle != NULL);
@@ -4844,8 +4848,9 @@ LOCAL void indexThreadCode(void)
                            &jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
                            SERVER_CONNECTION_PRIORITY_LOW,
-                           CALLBACK(NULL,NULL),
-                           CALLBACK(NULL,NULL)
+                           CALLBACK(NULL,NULL),  // updateStatusInfo
+                           CALLBACK(NULL,NULL),  // getPassword
+                           CALLBACK(NULL,NULL)  // requestVolume
                           );
       if (error == ERROR_NONE)
       {
@@ -4864,8 +4869,8 @@ LOCAL void indexThreadCode(void)
                                       storageName,
                                       &jobOptions,
                                       &totalTimeLastChanged,
-                                      &totalEntries,
-                                      &totalSize,
+                                      &totalEntryCount,
+                                      &totalEntrySize,
                                       CALLBACK(indexPauseCallback,NULL),
                                       CALLBACK(indexAbortCallback,NULL),
                                       NULL  // logHandle
@@ -4905,10 +4910,10 @@ LOCAL void indexThreadCode(void)
                       "INDEX",
                       "Created index for '%s', %llu entries/%.1f%s (%llu bytes)\n",
                       String_cString(printableStorageName),
-                      totalEntries,
-                      BYTES_SHORT(totalSize),
-                      BYTES_UNIT(totalSize),
-                      totalSize
+                      totalEntryCount,
+                      BYTES_SHORT(totalEntrySize),
+                      BYTES_UNIT(totalEntrySize),
+                      totalEntrySize
                      );
         }
         else if (Error_getCode(error) == ERROR_INTERRUPTED)
@@ -5209,8 +5214,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                      NULL,  // archiveType
                                      storageName,
                                      &createdDateTime,
-                                     NULL,  // entries
-                                     NULL,  // size
+                                     NULL,  // totalEntryCount
+                                     NULL,  // totalEntrySize
                                      &indexState,
                                      &indexMode,
                                      &lastCheckedDateTime,
@@ -5974,7 +5979,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 * Notes  : Arguments:
 *            error=<n>
 *          Result:
-*            errorText=<text>
+*            errorMessage=<text>
 \***********************************************************************/
 
 LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -5995,7 +6000,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
 
   // format result
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                   "errorText=%'s",
+                   "errorMessage=%'s",
                    Error_getText(error)
                   );
 }
@@ -8133,10 +8138,14 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, uint id, const Strin
   error = Misc_executeScript(String_cString(script),
                              CALLBACK_INLINE(void,(ConstString line, void *userData),
                              {
+                               UNUSED_VARIABLE(userData);
+
                                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"line=%'S",line);
                              },NULL),
                              CALLBACK_INLINE(void,(ConstString line, void *userData),
                              {
+                               UNUSED_VARIABLE(userData);
+
                                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"line=%'S",line);
                              },NULL)
                             );
@@ -8477,28 +8486,28 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
 *            jobUUID=<uuid>
 *          Result:
 *            state=<state>
-*            doneEntries=<entries>
-*            doneBytes=<bytes>
-*            totalEntries=< entries>
-*            totalBytes=<bytes>
-*            skippedEntries=<entries>
-*            skippedBytes=<bytes>
-*            errorEntries=<entries>
-*            skippedBytes=<bytes>
-*            entriesPerSecond=<entries/s>
-*            bytesPerSecond=<bytes/s>
-*            storageBytesPerSecond=<bytes/s>
-*            archiveBytes=<bytes>
+*            doneCount=<n>
+*            doneSize=<n [bytes]>
+*            totalEntryCount=<n>
+*            totalEntrySize=<n [bytes]>
+*            skippedEntryCount=<n>
+*            skippedEntrySize=<n [bytes]>
+*            errorEntryCount=<n>
+*            errorEntrySize=<n [bytes]>
+*            entriesPerSecond=<n [1/s]>
+*            bytesPerSecond=<n [bytes/s]>
+*            storageBytesPerSecond=<n [bytes/s]>
+*            archiveSize=<n [bytes]>
 *            compressionRation=<ratio>
 *            entryName=<name>
-*            entryBytes=<bytes>
-*            entryTotalBytes=<bytes>
+*            entryBytes=<n [bytes]>
+*            entryTotalSize=<n [bytes]>
 *            storageName=<name>
-*            storageDoneBytes=<bytes>
-*            storageTotalBytes=<bytes>
+*            storageDoneSize=<n [bytes]>
+*            storageTotalSize=<n [bytes]>
 *            volumeNumber=<number>
-*            volumeProgress=<progress>
-*            requestedVolumeNumber=<number>
+*            volumeProgress=<n [0..100]>
+*            requestedVolumeNumber=<n>
 *            message=<text>
 \***********************************************************************/
 
@@ -8531,29 +8540,29 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
 
     // format and send result
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                    "state=%'s doneEntries=%lu doneBytes=%llu totalEntries=%lu totalBytes=%llu collectTotalSumDone=%y skippedEntries=%lu skippedBytes=%llu errorEntries=%lu errorBytes=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveBytes=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
+                    "state=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveSize=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
                      getJobStateText(jobNode->state,&jobNode->jobOptions),
-                     jobNode->runningInfo.doneEntries,
-                     jobNode->runningInfo.doneBytes,
-                     jobNode->runningInfo.totalEntries,
-                     jobNode->runningInfo.totalBytes,
+                     jobNode->runningInfo.doneCount,
+                     jobNode->runningInfo.doneSize,
+                     jobNode->runningInfo.totalEntryCount,
+                     jobNode->runningInfo.totalEntrySize,
                      jobNode->runningInfo.collectTotalSumDone,
-                     jobNode->runningInfo.skippedEntries,
-                     jobNode->runningInfo.skippedBytes,
-                     jobNode->runningInfo.errorEntries,
-                     jobNode->runningInfo.errorBytes,
+                     jobNode->runningInfo.skippedEntryCount,
+                     jobNode->runningInfo.skippedEntrySize,
+                     jobNode->runningInfo.errorEntryCount,
+                     jobNode->runningInfo.errorEntrySize,
                      jobNode->runningInfo.entriesPerSecond,
                      jobNode->runningInfo.bytesPerSecond,
                      jobNode->runningInfo.storageBytesPerSecond,
-                     jobNode->runningInfo.archiveBytes,
+                     jobNode->runningInfo.archiveSize,
                      jobNode->runningInfo.compressionRatio,
                      jobNode->runningInfo.estimatedRestTime,
                      jobNode->runningInfo.entryName,
-                     jobNode->runningInfo.entryDoneBytes,
-                     jobNode->runningInfo.entryTotalBytes,
+                     jobNode->runningInfo.entryDoneSize,
+                     jobNode->runningInfo.entryTotalSize,
                      jobNode->runningInfo.storageName,
-                     jobNode->runningInfo.storageDoneBytes,
-                     jobNode->runningInfo.storageTotalBytes,
+                     jobNode->runningInfo.storageDoneSize,
+                     jobNode->runningInfo.storageTotalSize,
                      jobNode->runningInfo.volumeNumber,
                      jobNode->runningInfo.volumeProgress,
                      jobNode->requestedVolumeNumber,
@@ -10748,8 +10757,8 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, uint 
 *            noStorage=yes|no \
 *            enabled=yes|no \
 *            totalEntities=<n>|0 \
-*            totalEntries=<n>|0 \
-*            totalSize=<n>|0 \
+*            totalEntryCount=<n>|0 \
+*            totalEntrySize=<n>|0 \
 *            ...
 \***********************************************************************/
 
@@ -10761,13 +10770,14 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   ScheduleNode     *scheduleNode;
   String           date,weekDays,time;
   uint64           lastExecutedDateTime;
-  uint64           totalEntities;
-  uint64           totalEntries;
-  uint64           totalSize;
+  ulong            totalEntities;
+  ulong            totalEntryCount;
+  uint64           totalEntrySize;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   uint64           createdDateTime;
-  uint64           entries,size;
+  ulong            entries;
+  uint64           size;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10864,9 +10874,9 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 
       // get last executed date/time, total entities, entries, size
       lastExecutedDateTime = 0LL;
-      totalEntities        = 0LL;
-      totalEntries         = 0LL;
-      totalSize            = 0LL;
+      totalEntities        = 0L;
+      totalEntryCount      = 0L;
+      totalEntrySize       = 0LL;
       if ((indexHandle != NULL))
       {
         error = Index_initListEntities(&indexQueryHandle,
@@ -10894,16 +10904,16 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
                 )
           {
             if (createdDateTime > lastExecutedDateTime) lastExecutedDateTime = createdDateTime;
-            totalEntities += 1;
-            totalEntries  += entries;
-            totalSize     += size;
+            totalEntities   += 1;
+            totalEntryCount += entries;
+            totalEntrySize  += size;
           }
           Index_doneList(&indexQueryHandle);
         }
       }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "scheduleUUID=%S date=%S weekDays=%S time=%S archiveType=%s interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%llu totalEntries=%llu totalSize=%llu",
+                       "scheduleUUID=%S date=%S weekDays=%S time=%S archiveType=%s interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
                        scheduleNode->uuid,
                        date,
                        weekDays,
@@ -10918,8 +10928,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
                        scheduleNode->enabled,
                        lastExecutedDateTime,
                        totalEntities,
-                       totalEntries,
-                       totalSize
+                       totalEntryCount,
+                       totalEntrySize
                       );
     }
     String_delete(time);
@@ -12162,8 +12172,9 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK(NULL,NULL),
-                       CALLBACK(NULL,NULL)
+                       CALLBACK(NULL,NULL),  // updateStatusInfo
+                       CALLBACK(NULL,NULL),  // getPassword
+                       CALLBACK(NULL,NULL)  // requestVolume
                       );
   if (error != ERROR_NONE)
   {
@@ -12568,6 +12579,88 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 }
 
 /***********************************************************************\
+* Name   : serverCommand_storageList
+* Purpose: list selected storages
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            id=<n> name=<text> totalEntryCount=<n> totalEntrySize=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_storageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  String           storageName;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
+  ulong            totalEntryCount;
+  uint64           totalEntrySize;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  storageName = String_new();
+
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 INDEX_ID_ANY,  // entityId,
+                                 NULL,  // jobUUID
+                                 STORAGE_TYPE_ANY,
+                                 Array_cArray(&clientInfo->storageIdArray),
+                                 Array_length(&clientInfo->storageIdArray),
+                                 INDEX_STATE_SET_ALL,
+                                 NULL,  // pattern
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    String_delete(storageName);
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+    return;
+  }
+  while (Index_getNextStorage(&indexQueryHandle,
+                              NULL,  // uuidId
+                              NULL,  // entityId
+                              &storageId,
+                              NULL,  // jobUUID
+                              NULL,  // scheduleUUID
+                              NULL,  // archiveType
+                              storageName,
+                              NULL,  // createdDateTime
+                              &totalEntryCount,
+                              &totalEntrySize,
+                              NULL,  // indexState
+                              NULL,  // indexMode
+                              NULL,  // lastCheckedDateTime
+                              NULL  // errorMessage
+                             )
+        )
+  {
+    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                     "storageId=%llu name=%'S totalEntryCount=%lu totalEntrySize=%llu",
+                     storageId,
+                     storageName,
+                     totalEntryCount,
+                     totalEntrySize
+                    );
+  }
+  Index_doneList(&indexQueryHandle);
+
+  String_delete(storageName);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : serverCommand_storageListClear
 * Purpose: clear selected storage list
 * Input  : clientInfo    - client info
@@ -12657,8 +12750,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                  NULL, // createdDateTime
                                  NULL, // archive type
                                  NULL, // lastErrorMessage
-                                 NULL, // totalEntries
-                                 NULL // totalSize
+                                 NULL, // totalEntryCount
+                                 NULL // totalEntrySize
                                 )
             )
       {
@@ -12690,8 +12783,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                     NULL,  // archiveType
                                     NULL,  // storageName
                                     NULL,  // createdDateTime
-                                    NULL,  // entries
-                                    NULL,  // size
+                                    NULL,  // totalEntryCount
+                                    NULL,  // totalEntrySize
                                     NULL,  // indexState
                                     NULL,  // indexMode
                                     NULL,  // lastCheckedDateTime
@@ -12734,8 +12827,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                   NULL,  // archiveType
                                   NULL,  // storageName
                                   NULL,  // createdDateTime
-                                  NULL,  // entries
-                                  NULL,  // size
+                                  NULL,  // totalEntryCount
+                                  NULL,  // totalEntrySize
                                   NULL,  // indexState
                                   NULL,  // indexMode
                                   NULL,  // lastCheckedDateTime
@@ -12824,8 +12917,8 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
                                  NULL, // createdDateTime
                                  NULL, // archive type
                                  NULL, // lastErrorMessage
-                                 NULL, // totalEntries
-                                 NULL // totalSize
+                                 NULL, // totalEntryCount
+                                 NULL // totalEntrySize
                                 )
             )
       {
@@ -12857,8 +12950,8 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
                                     NULL,  // archiveType
                                     NULL,  // storageName
                                     NULL,  // createdDateTime
-                                    NULL,  // entries
-                                    NULL,  // size
+                                    NULL,  // totalEntryCount
+                                    NULL,  // totalEntrySize
                                     NULL,  // indexState
                                     NULL,  // indexMode
                                     NULL,  // lastCheckedDateTime
@@ -12901,8 +12994,8 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
                                   NULL,  // archiveType
                                   NULL,  // storageName
                                   NULL,  // createdDateTime
-                                  NULL,  // entries
-                                  NULL,  // size
+                                  NULL,  // totalEntryCount
+                                  NULL,  // totalEntrySize
                                   NULL,  // indexState
                                   NULL,  // indexMode
                                   NULL,  // lastCheckedDateTime
@@ -12937,15 +13030,16 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            entries=<n>
-*            size=<n [bytes]>
+*            storageCount=<n> \
+*            totalEntryCount=<n> \
+*            totalEntrySize=<n [bytes]>
 \***********************************************************************/
 
 LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   Errors error;
-  ulong  count;
-  uint64 size;
+  ulong  storageCount,totalEntryCount;
+  uint64 totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12962,8 +13056,9 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
                                 Array_length(&clientInfo->storageIdArray),
                                 INDEX_STATE_SET_ALL,
                                 NULL,
-                                &count,
-                                &size
+                                &storageCount,
+                                &totalEntryCount,
+                                &totalEntrySize
                                );
   if (error != ERROR_NONE)
   {
@@ -12971,7 +13066,33 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu",storageCount,totalEntryCount,totalEntrySize);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_entryList
+* Purpose: list selected entries
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            name=<text> size=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_entryList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  Array_clear(&clientInfo->entryIdArray);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -13092,15 +13213,15 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, uint id, const 
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            entries=<n>
-*            size=<n [bytes]>
+*            totalEntryCount=<n> \
+*            totalEntrySize=<n [bytes]>
 \***********************************************************************/
 
 LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   Errors error;
-  ulong  count;
-  uint64 size;
+  ulong  totalEntryCount;
+  uint64 totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13120,8 +13241,8 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const St
                                INDEX_TYPE_SET_ANY,
                                NULL,  // pattern,
                                FALSE,  // newestEntriesOnly
-                               &count,
-                               &size
+                               &totalEntryCount,
+                               &totalEntrySize
                               );
   if (error != ERROR_NONE)
   {
@@ -13129,7 +13250,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const St
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu",totalEntryCount,totalEntrySize);
 }
 
 /***********************************************************************\
@@ -13278,7 +13399,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   }
 
   /***********************************************************************\
-  * Name   : updateRestoreStatusInfo
+  * Name   : restoreUpdateStatusInfo
   * Purpose: update restore status info
   * Input  : restoreStatusInfo - create status info data,
   *          userData          - user data
@@ -13287,7 +13408,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   * Notes  : -
   \***********************************************************************/
 
-  bool updateRestoreStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
+  bool restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
                                void                    *userData
                               )
   {
@@ -13302,17 +13423,53 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                      restoreCommandInfo->id,
                      FALSE,
                      ERROR_NONE,
-                     "state=%s storageName=%'S storageDoneBytes=%llu storageTotalBytes=%llu entryName=%'S entryDoneBytes=%llu entryTotalBytes=%llu",
+                     "state=%s storageName=%'S storageDoneSize=%llu storageTotalSize=%llu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu",
                      "running",
                      restoreStatusInfo->storageName,
-                     restoreStatusInfo->storageDoneBytes,
-                     restoreStatusInfo->storageTotalBytes,
+                     restoreStatusInfo->storageDoneSize,
+                     restoreStatusInfo->storageTotalSize,
                      restoreStatusInfo->entryName,
-                     restoreStatusInfo->entryDoneBytes,
-                     restoreStatusInfo->entryTotalBytes
+                     restoreStatusInfo->entryDoneSize,
+                     restoreStatusInfo->entryTotalSize
                     );
 
     return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
+  }
+
+  /***********************************************************************\
+  * Name   : restoreHandleError
+  * Purpose: handle restore error
+  * Input  : error             - error code
+  *          restoreStatusInfo - create status info data,
+  *          userData          - user data
+  * Output : -
+  * Return : ERROR_NONE or error code
+  * Notes  : -
+  \***********************************************************************/
+
+  Errors restoreHandleError(Errors                  error,
+                            const RestoreStatusInfo *restoreStatusInfo,
+                            void                    *userData
+                           )
+  {
+    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
+
+    assert(restoreCommandInfo != NULL);
+
+    // request password
+    error = clientAction(restoreCommandInfo->clientInfo,
+                         restoreCommandInfo->id,
+                         NULL,  // resultMap
+                         "CONFIRM",
+                         60*1000,
+                         "error=%d errorMessage=%'s storage=%'S entry=%'S",
+                         error,
+                         Error_getText(error),
+                         restoreStatusInfo->storageName,
+                         restoreStatusInfo->entryName
+                        );
+
+    return error;
   }
 
   /***********************************************************************\
@@ -13396,42 +13553,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     return ERROR_NONE;
   }
 
-  /***********************************************************************\
-  * Name   : handleRestoreError
-  * Purpose: handle restore error
-  * Input  : error             - error code
-  *          restoreStatusInfo - create status info data,
-  *          userData          - user data
-  * Output : -
-  * Return : ERROR_NONE or error code
-  * Notes  : -
-  \***********************************************************************/
-
-  Errors handleRestoreError(Errors                  error,
-                            const RestoreStatusInfo *restoreStatusInfo,
-                            void                    *userData
-                           )
-  {
-    RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
-
-    assert(restoreCommandInfo != NULL);
-
-    // request password
-    error = clientAction(restoreCommandInfo->clientInfo,
-                         restoreCommandInfo->id,
-                         NULL,  // resultMap
-                         "CONFIRM",
-                         60*1000,
-                         "error=%d errorText=%'s storage=%'S entry=%'S",
-                         error,
-                         Error_getText(error),
-                         restoreStatusInfo->storageName,
-                         restoreStatusInfo->entryName
-                        );
-
-    return error;
-  }
-
   Types              type;
   String             storageName;
   String             entryName;
@@ -13500,8 +13621,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                       NULL,  // archiveType
                                       storageName,
                                       NULL,  // createdDateTime
-                                      NULL,  // entries
-                                      NULL,  // size
+                                      NULL,  // totalEntryCount
+                                      NULL,  // totalEntrySize
                                       NULL,  // indexState,
                                       NULL,  // indexMode,
                                       NULL,  // lastCheckedDateTime,
@@ -13516,6 +13637,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
       }
       break;
     case ENTRIES:
+#if 0
       if (error == ERROR_NONE)
       {
         if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
@@ -13768,6 +13890,47 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
           }
         }
       }
+#else
+      error = Index_initListEntries(&indexQueryHandle,
+                                    indexHandle,
+                                    NULL, // Array_cArray(clientInfo->storageIdArray),
+                                    0, // Array_length(clientInfo->storageIdArray),
+                                    Array_cArray(&clientInfo->entryIdArray),
+                                    Array_length(&clientInfo->entryIdArray),
+                                    INDEX_TYPE_SET_ANY,
+                                    NULL, // pattern
+                                    FALSE,  // newestEntriesOnly,
+                                    0,
+                                    INDEX_UNLIMITED
+                                   );
+      if (error == ERROR_NONE)
+      {
+        while (Index_getNextEntry(&indexQueryHandle,
+                                  NULL, // indexId,
+                                  storageName, // storageName
+                                  NULL, // storageDateTime
+                                  entryName,
+                                  NULL,  // destinationName
+                                  NULL,  // fileSystemType
+                                  NULL,  // size
+                                  NULL,  // timeModified
+                                  NULL,  // userId
+                                  NULL,  // groupId
+                                  NULL,  // permission
+                                  NULL,  // fragmentOrBlockOffset
+                                  NULL // fragmentSizeOrBlockCount
+                                 )
+              )
+        {
+          if (!StringList_contain(&storageNameList,storageName))
+          {
+            StringList_append(&storageNameList,storageName);
+          }
+          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+        }
+        Index_doneList(&indexQueryHandle);
+      }
+#endif
       break;
     default:
       #ifndef NDEBUG
@@ -13780,7 +13943,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     String_delete(entryName);
     String_delete(storageName);
     StringList_done(&storageNameList);
-    sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
     return;
   }
 
@@ -13793,17 +13956,17 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n",__FILE__,__LINE_
                           NULL,  // excludePatternList
                           NULL,  // deltaSourceList
                           &clientInfo->jobOptions,
+                          CALLBACK(restoreUpdateStatusInfo,&restoreCommandInfo),
+                          CALLBACK(restoreHandleError,&restoreCommandInfo),
                           CALLBACK(getPassword,&restoreCommandInfo),
-                          CALLBACK(updateRestoreStatusInfo,&restoreCommandInfo),
-                          CALLBACK(handleRestoreError,&restoreCommandInfo),
                           NULL,  // pauseFlag
 //TODO: callback
                           &restoreCommandInfo.clientInfo->abortFlag,
                           NULL  // logHandle
                          );
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 restoreCommandInfo.clientInfo->abortFlag = FALSE;
-sleep(4);
-  sendClientResult(clientInfo,id,TRUE,error,Error_getText(error));
+  sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
   EntryList_done(&restoreEntryList);
   StringList_done(&storageNameList);
 
@@ -13854,8 +14017,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 *            name=<name> \
 *            lastCreatedDateTime=<created date/time [s]> \
 *            lastErrorMessage=<text> \
-*            totalEntries=<n> \
-*            totalBytes=<n> \
+*            totalEntryCount=<n> \
+*            totalEntrySize=<n> \
 *            ...
 \***********************************************************************/
 
@@ -13871,8 +14034,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     String  name;
     uint64  lastCreatedDateTime;
     String  lastErrorMessage;
-    uint64  totalEntries;
-    uint64  totalSize;
+    uint64  totalEntryCount;
+    uint64  totalEntrySize;
   } UUIDDataNode;
 
   typedef struct
@@ -13962,10 +14125,11 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   IndexId          uuidId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   uint64           lastCreatedDateTime;
-  uint64           totalEntries,totalSize;
-  SemaphoreLock    semaphoreLock;
+  ulong            totalEntryCount;
+  uint64           totalEntrySize;
+//  SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
-  UUIDDataNode     *uuidDataNode;
+//  UUIDDataNode     *uuidDataNode;
   String           name;
 
   assert(clientInfo != NULL);
@@ -14023,8 +14187,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
         uuidDataNode->name                = String_duplicate(jobNode->uuid);
         uuidDataNode->lastCreatedDateTime = 0LL;
         uuidDataNode->lastErrorMessage    = String_new();
-        uuidDataNode->totalEntries        = 0LL;
-        uuidDataNode->totalSize           = 0LL;
+        uuidDataNode->totalEntryCount     = 0LL;
+        uuidDataNode->totalEntrySize      = 0LL;
 
         List_append(&uuidDataList,uuidDataNode);
       }
@@ -14032,8 +14196,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
       // clear uuid data
       uuidDataNode->lastCreatedDateTime = 0LL;
       String_clear(uuidDataNode->lastErrorMessage);
-      uuidDataNode->totalEntries        = 0LL;
-      uuidDataNode->totalSize           = 0LL;
+      uuidDataNode->totalEntryCount     = 0LL;
+      uuidDataNode->totalEntrySize      = 0LL;
     }
   }
 
@@ -14059,8 +14223,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
                               jobUUID,
                               &lastCreatedDateTime,
                               lastErrorMessage,
-                              &totalEntries,
-                              &totalSize
+                              &totalEntryCount,
+                              &totalEntrySize
                              )
         )
   {
@@ -14085,8 +14249,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
       uuidDataNode->name                = String_duplicate(jobUUID);
       uuidDataNode->lastCreatedDateTime = 0LL;
       uuidDataNode->lastErrorMessage    = String_new();
-      uuidDataNode->totalEntries        = 0LL;
-      uuidDataNode->totalSize           = 0LL;
+      uuidDataNode->totalEntryCount     = 0LL;
+      uuidDataNode->totalEntrySize      = 0LL;
 
       List_append(&uuidDataList,uuidDataNode);
     }
@@ -14094,8 +14258,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
     // update uuid data
     uuidDataNode->lastCreatedDateTime = lastCreatedDateTime;
     String_set(uuidDataNode->lastErrorMessage,lastErrorMessage);
-    uuidDataNode->totalEntries        = totalEntries;
-    uuidDataNode->totalSize           = totalSize;
+    uuidDataNode->totalEntryCount     = totalEntryCount;
+    uuidDataNode->totalEntrySize      = totalEntrySize;
   }
   Index_doneList(&indexQueryHandle);
 
@@ -14117,16 +14281,15 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   LIST_ITERATE(&uuidDataList,uuidDataNode)
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
+                     "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
                      uuidDataNode->indexId,
                      uuidDataNode->jobUUID,
                      uuidDataNode->name,
                      uuidDataNode->lastCreatedDateTime,
                      uuidDataNode->lastErrorMessage,
-                     uuidDataNode->totalEntries,
-                     uuidDataNode->totalSize
+                     uuidDataNode->totalEntryCount,
+                     uuidDataNode->totalEntrySize
                     );
-fprintf(stderr,"%s, %d: %llu %s %s\n",__FILE__,__LINE__,uuidDataNode->indexId,String_cString(uuidDataNode->jobUUID),String_cString(uuidDataNode->name));
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -14160,8 +14323,8 @@ fprintf(stderr,"%s, %d: %llu %s %s\n",__FILE__,__LINE__,uuidDataNode->indexId,St
                               jobUUID,
                               &lastCreatedDateTime,
                               lastErrorMessage,
-                              &totalEntries,
-                              &totalSize
+                              &totalEntryCount,
+                              &totalEntrySize
                              )
         )
   {
@@ -14176,14 +14339,14 @@ fprintf(stderr,"%s, %d: %llu %s %s\n",__FILE__,__LINE__,uuidDataNode->indexId,St
     }
 
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
+                     "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
                      uuidId,
                      jobUUID,
                      name,
                      lastCreatedDateTime,
                      lastErrorMessage,
-                     totalEntries,
-                     totalSize
+                     totalEntryCount,
+                     totalEntrySize
                     );
   }
   Index_doneList(&indexQueryHandle);
@@ -14215,8 +14378,8 @@ fprintf(stderr,"%s, %d: %llu %s %s\n",__FILE__,__LINE__,uuidDataNode->indexId,St
 *            archiveType=<type> \
 *            lastCreatedDateTime=<created time stamp> \
 *            lastErrorMessage=<error message>
-*            totalEntries=<n> \
-*            totalSize=<n> \
+*            totalEntryCount=<n> \
+*            totalEntrySize=<n> \
 *            ...
 \***********************************************************************/
 
@@ -14230,7 +14393,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   uint64           createdDateTime;
   ArchiveTypes     archiveType;
   String           lastErrorMessage;
-  uint64           totalEntries,totalSize;
+  ulong            totalEntryCount;
+  uint64           totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14277,21 +14441,21 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
                                 &createdDateTime,
                                 &archiveType,
                                 lastErrorMessage,
-                                &totalEntries,
-                                &totalSize
+                                &totalEntryCount,
+                                &totalEntrySize
                                )
         )
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "entityId=%lld jobUUID=%S scheduleUUID=%S archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntries=%llu totalSize=%llu",
+                     "entityId=%lld jobUUID=%S scheduleUUID=%S archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
                      entityId,
                      jobUUID,
                      scheduleUUID,
                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                      createdDateTime,
                      lastErrorMessage,
-                     totalEntries,
-                     totalSize
+                     totalEntryCount,
+                     totalEntrySize
                     );
   }
   Index_doneList(&indexQueryHandle);
@@ -14446,8 +14610,9 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 *            storagePattern=<pattern>
 *            indexStateSet=<state set>|*
 *          Result:
-*            count=<n>
-*            size=<n>
+*            storageCount=<n> \
+*            totalEntryCount=<n> \
+*            totalEntrySize=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -14456,8 +14621,8 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   bool          indexStateAny;
   IndexStateSet indexStateSet;
   Errors        error;
-  ulong         count;
-  uint64        size;
+  ulong         storageCount,totalEntryCount;
+  uint64        totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14502,8 +14667,9 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
                                 0,  // indexIdCount,
                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                 storagePatternString,
-                                &count,
-                                &size
+                                &storageCount,
+                                &totalEntryCount,
+                                &totalEntrySize
                               );
   if (error != ERROR_NONE)
   {
@@ -14513,7 +14679,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu",storageCount,totalEntryCount,totalEntrySize);
 
   // free resources
   String_delete(storagePatternString);
@@ -14545,8 +14711,8 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 *            archiveType=<type>
 *            name=<name>
 *            dateTime=<date/time>
-*            entries=<n>
-*            size=<n>
+*            totalEntryCount=<n>
+*            totalEntrySize=<n>
 *            indexState=<state>
 *            indexMode=<mode>
 *            lastCheckedDateTime=<date/time>
@@ -14576,7 +14742,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   IndexId          uuidId,storageId;
   ArchiveTypes     archiveType;
   uint64           dateTime;
-  uint64           entries,size;
+  ulong            totalEntryCount;
+  uint64           totalEntrySize;
   IndexStates      indexState;
   IndexModes       indexMode;
   uint64           lastCheckedDateTime;
@@ -14687,8 +14854,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  &archiveType,
                                  storageName,
                                  &dateTime,
-                                 &entries,
-                                 &size,
+                                 &totalEntryCount,
+                                 &totalEntrySize,
                                  &indexState,
                                  &indexMode,
                                  &lastCheckedDateTime,
@@ -14719,7 +14886,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     }
 
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu entityId=%llu storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu entries=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                     "uuidId=%llu entityId=%llu storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu totalEntryCount=%lu totalEntrySize=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                      uuidId,
                      entityId,
                      storageId,
@@ -14729,8 +14896,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                      printableStorageName,
                      dateTime,
-                     entries,
-                     size,
+                     totalEntryCount,
+                     totalEntrySize,
                      Index_stateToString(indexState,"unknown"),
                      Index_modeToString(indexMode,"unknown"),
                      lastCheckedDateTime,
@@ -15214,8 +15381,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL,  // archiveType
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
-                                   NULL,  // entries
-                                   NULL,  // size
+                                   NULL,  // totalEntryCount
+                                   NULL,  // totalEntrySize
                                    &indexState,
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
@@ -15269,8 +15436,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                 NULL,  // archiveType
                                 NULL,  // storageName
                                 NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
+                                NULL,  // totalEntryCount
+                                NULL,  // totalEntrySize
                                 NULL,  // indexState
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
@@ -15324,8 +15491,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                 NULL,  // archiveType
                                 NULL,  // storageName
                                 NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
+                                NULL,  // totalEntryCount
+                                NULL,  // totalEntrySize
                                 NULL,  // indexState
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
@@ -15391,8 +15558,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                 NULL,  // archiveType
                                 NULL,  // storageName
                                 NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
+                                NULL,  // totalEntryCount
+                                NULL,  // totalEntrySize
                                 NULL,  // indexState
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
@@ -15457,8 +15624,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                 NULL,  // archiveType
                                 storageName,
                                 NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
+                                NULL,  // totalEntryCount
+                                NULL,  // totalEntrySize
                                 &indexState,
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
@@ -15594,8 +15761,8 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
                                    NULL,  // archiveType
                                    storageName,
                                    NULL,  // createdDateTime
-                                   NULL,  // entries
-                                   NULL,  // size
+                                   NULL,  // totalEntryCount
+                                   NULL,  // totalEntrySize
                                    &indexState,
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
@@ -15694,8 +15861,8 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 *            indexType=<type>|*
 *            newestEntriesOnly=yes|no
 *          Result:
-*            count=<n>
-*            size=<n [bytes]>
+*            totalEntryCount=<n>
+*            totalEntrySize=<n [bytes]>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
@@ -15705,8 +15872,8 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   IndexTypes indexType;
   bool       newestEntriesOnly;
   Errors     error;
-  ulong      count;
-  uint64     size;
+  ulong      totalEntryCount;
+  uint64     totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -15757,8 +15924,8 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
                                indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
                                entryPattern,
                                newestEntriesOnly,
-                               &count,
-                               &size
+                               &totalEntryCount,
+                               &totalEntrySize
                               );
   if (error != ERROR_NONE)
   {
@@ -15768,7 +15935,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%lu size=%llu",count,size);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu",totalEntryCount,totalEntrySize);
 
   // free resources
   String_delete(entryPattern);
@@ -16186,7 +16353,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
   name            = String_new();
   destinationName = String_new();
 
-fprintf(stderr,"%s, %d: Array_length(&clientInfo->storageIdArray)=%d\n",__FILE__,__LINE__,Array_length(&clientInfo->storageIdArray));
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
                                 Array_cArray(&clientInfo->storageIdArray),
@@ -16210,21 +16376,21 @@ fprintf(stderr,"%s, %d: Array_length(&clientInfo->storageIdArray)=%d\n",__FILE__
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
-         && Index_getNext(&indexQueryHandle,
-                          &indexId,
-                          storageName,
-                          &storageDateTime,
-                          name,
-                          destinationName,
-                          &fileSystemType,
-                          &size,
-                          &timeModified,
-                          &userId,
-                          &groupId,
-                          &permission,
-                          &fragmentOrBlockOffset,
-                          &fragmentOrBlockSize
-                         )
+         && Index_getNextEntry(&indexQueryHandle,
+                               &indexId,
+                               storageName,
+                               &storageDateTime,
+                               name,
+                               destinationName,
+                               &fileSystemType,
+                               &size,
+                               &timeModified,
+                               &userId,
+                               &groupId,
+                               &permission,
+                               &fragmentOrBlockOffset,
+                               &fragmentOrBlockSize
+                              )
         )
   {
 //TODO
@@ -16580,10 +16746,12 @@ SERVER_COMMANDS[] =
 
   { "ARCHIVE_LIST",                serverCommand_archiveList,              AUTHORIZATION_STATE_OK      },
 
+  { "STORAGE_LIST",                serverCommand_storageList,              AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_CLEAR",          serverCommand_storageListClear,         AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_ADD",            serverCommand_storageListAdd,           AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_REMOVE",         serverCommand_storageListRemove,        AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_INFO",           serverCommand_storageListInfo,          AUTHORIZATION_STATE_OK      },
+  { "ENTRY_LIST",                  serverCommand_entryList,                AUTHORIZATION_STATE_OK      },
   { "ENTRY_LIST_CLEAR",            serverCommand_entryListClear,           AUTHORIZATION_STATE_OK      },
   { "ENTRY_LIST_ADD",              serverCommand_entryListAdd,             AUTHORIZATION_STATE_OK      },
   { "ENTRY_LIST_REMOVE",           serverCommand_entryListRemove,             AUTHORIZATION_STATE_OK      },
