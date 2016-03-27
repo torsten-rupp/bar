@@ -2215,7 +2215,7 @@ StringNode *ConfigValue_deleteEntries(StringList *stringList,
     }
 
     // parse and match
-    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL))
+    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,STRING_NO_ASSIGN,string,NULL))
     {
       // keep line: begin section
       stringNode = stringNode->next;
@@ -2240,7 +2240,7 @@ StringNode *ConfigValue_deleteEntries(StringList *stringList,
             stringNode = stringNode->next;
             break;
           }
-          else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
+          else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,STRING_NO_ASSIGN,string,NULL)
                    && String_equalsCString(string,name)
                   )
           {
@@ -2282,7 +2282,7 @@ StringNode *ConfigValue_deleteEntries(StringList *stringList,
         }
       }
     }
-    else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
+    else if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,STRING_NO_ASSIGN,string,NULL)
              && String_equalsCString(string,name)
             )
     {
@@ -2330,7 +2330,7 @@ StringNode *ConfigValue_deleteSections(StringList *stringList,
     }
 
     // parse and match
-    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,NULL,string,NULL)
+    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,STRING_NO_ASSIGN,string,NULL)
         && String_equalsCString(string,section)
        )
     {
