@@ -3097,6 +3097,22 @@ Dprintf.dprintf("");
     WEBDAV,
     CRYPT;
 
+    /** check if login password
+     * @return true iff login password
+     */
+    public boolean isLogin()
+    {
+      return (this == FTP) || (this == SSH) || (this == WEBDAV);
+    }
+
+    /** check if crypt password
+     * @return true iff crypt password
+     */
+    public boolean isCrypt()
+    {
+      return (this == CRYPT);
+    }
+
     /** convert to string
      * @return string
      */
@@ -7751,8 +7767,9 @@ assert storagePattern != null;
                                                        if (valueMap.containsKey("action"))
                                                        {
                                                          Actions             action       = valueMap.getEnum  ("action",Actions.class);
-                                                         final String        passwordText = valueMap.getString("passwordText","");
+                                                         final String        name         = valueMap.getString("name","");
                                                          final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+                                                         final String        passwordText = valueMap.getString("passwordText","");
                                                          final String        volume       = valueMap.getString("volume","");
                                                          final int           error        = valueMap.getInt   ("error",Errors.NONE);
                                                          final String        errorMessage = valueMap.getString("errorMessage","");
@@ -7768,17 +7785,21 @@ assert storagePattern != null;
                                                                @Override
                                                                public void run()
                                                                {
-                                                                 String password = Dialogs.password(shell,
-                                                                                                    BARControl.tr("{0} login password",passwordType),
-                                                                                                    BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
-                                                                                                    BARControl.tr("Password")+":"
-                                                                                                   );
-                                                                 if (password != null)
+                                                                 if (passwordType.isLogin())
                                                                  {
-                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                   String[] data = Dialogs.login(shell,
+                                                                                                 BARControl.tr("{0} login password",passwordType),
+                                                                                                 BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
+                                                                                                 name,
+                                                                                                 BARControl.tr("Password")+":"
+                                                                                                );
+                                                                 if (data != null)
+                                                                 {
+                                                                   BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
                                                                                                                 Errors.NONE,
+                                                                                                                data[0],
                                                                                                                 BARServer.getPasswordEncryptType(),
-                                                                                                                BARServer.encryptPassword(password)
+                                                                                                                BARServer.encryptPassword(data[1])
                                                                                                                ),
                                                                                             0  // debugLevel
                                                                                            );
@@ -7791,11 +7812,38 @@ assert storagePattern != null;
                                                                                             0  // debugLevel
                                                                                            );
                                                                  }
+                                                                 }
+                                                                 else
+                                                                 {
+                                                                   String password = Dialogs.password(shell,
+                                                                                                      BARControl.tr("{0} login password",passwordType),
+                                                                                                      BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                                                                      BARControl.tr("Password")+":"
+                                                                                                     );
+                                                                   if (password != null)
+                                                                   {
+                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                                  Errors.NONE,
+                                                                                                                  BARServer.getPasswordEncryptType(),
+                                                                                                                  BARServer.encryptPassword(password)
+                                                                                                                 ),
+                                                                                              0  // debugLevel
+                                                                                             );
+                                                                   }
+                                                                   else
+                                                                   {
+                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                                  Errors.NO_PASSWORD
+                                                                                                                 ),
+                                                                                              0  // debugLevel
+                                                                                             );
+                                                                   }
+                                                                 }
                                                                }
                                                              });
                                                              break;
                                                            case REQUEST_VOLUME:
-            Dprintf.dprintf("");
+Dprintf.dprintf("");
                                                              break;
                                                            case CONFIRM:
                                                              busyDialog.updateList(!entry.isEmpty() ? entry : storage);
