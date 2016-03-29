@@ -411,7 +411,6 @@ LOCAL bool initSSHLogin(ConstString         hostName,
 
   assert(!String_isEmpty(hostName));
   assert(loginName != NULL);
-  assert(!String_isEmpty(loginName));
   assert(loginPassword != NULL);
 
   initFlag = FALSE;
