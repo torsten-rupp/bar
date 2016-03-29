@@ -1184,8 +1184,8 @@ int ConfigValue_valueIndex(const ConfigValue configValues[],
   assert(name != NULL);
 
   index = ConfigValue_firstValueIndex(configValues,sectionName);
-  assert(index >= 0);
-  while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+  while (   (index >= 0)
+         && (configValues[index].type != CONFIG_VALUE_TYPE_END)
          && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
          && !stringEquals(configValues[index].name,name)
         )
@@ -1193,10 +1193,11 @@ int ConfigValue_valueIndex(const ConfigValue configValues[],
     index = ConfigValue_nextValueIndex(configValues,index);
   }
 
-  return (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+  return (   (index >= 0)
+          && (configValues[index].type != CONFIG_VALUE_TYPE_END)
           && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
          )
-           ? (int)index
+           ? index
            : -1;
 }
 
@@ -1227,8 +1228,10 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
         while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
                && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
               );
-        assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
-        index++;
+        if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
+        {
+          index++;
+        }
       }
       else
       {
@@ -1249,8 +1252,10 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
       while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
              && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
             );
-      assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
-      index++;
+      if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
+      {
+        index++;
+      }
     }
   }
 
@@ -1284,8 +1289,10 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
         while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
                && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
               );
-        assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
-        index++;
+        if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
+        {
+          index++;
+        }
       }
       else
       {
@@ -1314,8 +1321,10 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
         while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
                && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
               );
-        assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
-        index++;
+        if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
+        {
+          index++;
+        }
       }
       if (configValues[index].type != CONFIG_VALUE_TYPE_END) index++;
     }
@@ -1333,8 +1342,10 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
         while (   (index > 0)
                && (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
               );
-        assert(configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION);
-        if (index > 0) index--;
+        if (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION)
+        {
+          if (index > 0) index--;
+        }
       }
     }
   }
@@ -1362,12 +1373,14 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
       while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
              && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
             );
-      assert(configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION);
-      index++;
+      if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
+      {
+        index++;
+      }
     }
   }
 
-  return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? (int)index : -1;
+  return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : -1;
 }
 
 bool ConfigValue_parse(const char        *name,
