@@ -108,7 +108,6 @@ LOCAL bool initWebDAVLogin(ConstString         hostName,
 
   assert(!String_isEmpty(hostName));
   assert(loginName != NULL);
-  assert(!String_isEmpty(loginName));
   assert(loginPassword != NULL);
 
   initFlag = FALSE;
@@ -343,6 +342,8 @@ LOCAL size_t curlWebDAVReadDataCallback(void   *buffer,
   DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
   assert(storageArchiveHandle->webdav.sendBuffer.data != NULL);
 
+//TODO: progress callback?
+
   if (storageArchiveHandle->webdav.sendBuffer.index < storageArchiveHandle->webdav.sendBuffer.length)
   {
     bytesSent = MIN(n,(size_t)(storageArchiveHandle->webdav.sendBuffer.length-storageArchiveHandle->webdav.sendBuffer.index)/size)*size;
@@ -389,6 +390,8 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+
+//TODO: progress callback?
 
   // calculate number of received bytes
   bytesReceived = n*size;
@@ -949,7 +952,6 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
     int             runningHandles;
   #endif /* HAVE_CURL */
 
-fprintf(stderr,"%s, %d: archiveSize=%llu\n",__FILE__,__LINE__,archiveSize);
   assert(storageArchiveHandle != NULL);
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
@@ -1509,7 +1511,6 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(buffer != NULL);
 
-//fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
   #ifdef HAVE_CURL
@@ -1842,8 +1843,6 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
-fprintf(stderr,"%s, %d: wedav seek %llu %llu\n",__FILE__,__LINE__,offset,storageArchiveHandle->webdav.index);
-
   error = ERROR_NONE;
   #ifdef HAVE_CURL
     if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
@@ -1852,6 +1851,8 @@ fprintf(stderr,"%s, %d: wedav seek %llu %llu\n",__FILE__,__LINE__,offset,storage
 
       if      (offset > storageArchiveHandle->webdav.index)
       {
+        // seek forward
+
         // calculate number of bytes to skip
         skip = offset-storageArchiveHandle->webdav.index;
 
@@ -1897,22 +1898,23 @@ fprintf(stderr,"%s, %d: wedav seek %llu %llu\n",__FILE__,__LINE__,offset,storage
             {
               // wait for socket
               error = waitCurlSocket(storageArchiveHandle->webdav.curlMultiHandle);
+              if (error != ERROR_NONE)
+              {
+                break;
+              }
 
               // perform curl action
-              if (error == ERROR_NONE)
+              do
               {
-                do
-                {
-                  curlmCode = curl_multi_perform(storageArchiveHandle->webdav.curlMultiHandle,&runningHandles);
+                curlmCode = curl_multi_perform(storageArchiveHandle->webdav.curlMultiHandle,&runningHandles);
 //fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageArchiveHandle->webdav.receiveBuffer.length,length,runningHandles);
-                }
-                while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                       && (runningHandles > 0)
-                      );
-                if (curlmCode != CURLM_OK)
-                {
-                  error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-                }
+              }
+              while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                     && (runningHandles > 0)
+                    );
+              if (curlmCode != CURLM_OK)
+              {
+                error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
               }
             }
             if (error != ERROR_NONE)
@@ -1947,12 +1949,12 @@ fprintf(stderr,"%s, %d: wedav seek %llu %llu\n",__FILE__,__LINE__,offset,storage
                && (offset < storageArchiveHandle->webdav.receiveBuffer.offset+(uint64)storageArchiveHandle->webdav.receiveBuffer.length)
               )
       {
+        // seek inside receive buffer (backward/forward)
         storageArchiveHandle->webdav.index = offset;
       }
-      else
+      else if (offset < storageArchiveHandle->webdav.index)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+        // seek backward (not supported)
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       }
     }
