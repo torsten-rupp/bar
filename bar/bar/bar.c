@@ -486,7 +486,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,2,jobOptions.archivePartSize,                      0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "approximated archive part size","unlimited"                               ),
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,2,jobOptions.directoryStripCount,                  -1,MAX_INT,NULL,                                       "number of directories to strip on extract",NULL                           ),
-  CMD_OPTION_STRING       ("destination",                  0,  0,2,jobOptions.destination,                                                                                 "destination to restore files/images","path"                               ),
+  CMD_OPTION_STRING       ("destination",                  0,  0,2,jobOptions.destination,                                                                                 "destination to restore entries","path"                                    ),
   CMD_OPTION_SPECIAL      ("owner",                        0,  0,2,&jobOptions.owner,                               cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
   CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,2,&jobOptions.compressAlgorithms,                  cmdOptionParseCompressAlgorithms,NULL,                 "select compress algorithms to use\n"
