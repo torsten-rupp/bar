@@ -488,16 +488,21 @@ public class Settings
   public static String                runJobName                      = null;
   public static ArchiveTypes          archiveType                     = ArchiveTypes.NORMAL;
   public static String                abortJobName                    = null;
-  public static String                indexDatabaseAddStorageName     = null;
-  public static String                indexDatabaseRemoveStorageName  = null;
-  public static String                indexDatabaseRefreshStorageName = null;
-  public static String                indexDatabaseStorageListPattern = null;
-  public static String                indexDatabaseEntriesListPattern = null;
   public static int                   pauseTime                       = 0;
   public static boolean               pingFlag                        = false;
   public static boolean               suspendFlag                     = false;
   public static boolean               continueFlag                    = false;
   public static boolean               listFlag                        = false;
+
+  public static String                indexDatabaseAddStorageName     = null;
+  public static String                indexDatabaseRemoveStorageName  = null;
+  public static String                indexDatabaseRefreshStorageName = null;
+  public static String                indexDatabaseStorageListPattern = null;
+  public static String                indexDatabaseEntriesListPattern = null;
+
+  public static String                restoreStorageName              = null;
+  public static String                destination                     = "";
+  public static boolean               overwriteEntriesFlag            = false;
 
   // flags
 //TODO
