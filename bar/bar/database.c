@@ -1103,7 +1103,6 @@ void Database_lock(DatabaseHandle *databaseHandle)
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   DATABASE_LOCK(databaseHandle,"");
 }
 void Database_unlock(DatabaseHandle *databaseHandle)
@@ -1111,7 +1110,6 @@ void Database_unlock(DatabaseHandle *databaseHandle)
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   DATABASE_UNLOCK(databaseHandle);
 }
 
@@ -2034,6 +2032,7 @@ Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *nam
 {
   String sqlString;
   int    sqliteResult;
+  Errors error;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
@@ -2051,8 +2050,9 @@ Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *nam
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     String_delete(sqlString);
-    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+    return error;
   }
 
   // free resources
@@ -2065,6 +2065,7 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
 {
   String sqlString;
   int    sqliteResult;
+  Errors error;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
@@ -2082,8 +2083,9 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     String_delete(sqlString);
-    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+    return error;
   }
 
   // free resources
@@ -2101,6 +2103,7 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
 {
   String sqlString;
   int    sqliteResult;
+  Errors error;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
@@ -2118,8 +2121,9 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     String_delete(sqlString);
-    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+    return error;
   }
 
   // free resources
