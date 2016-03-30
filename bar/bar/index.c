@@ -1836,7 +1836,16 @@ fprintf(stderr,"%s, %d: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
                              "entities",
                              FALSE,
                              // pre: transfer entity
-                             CALLBACK(NULL,NULL),
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             {
+                               // map type
+                               Database_setTableColumnListInt64(toColumnList,
+                                                                "type",
+                                                                1+Database_getTableColumnListInt64(fromColumnList,"type",DATABASE_ID_NONE)
+                                                               );
+
+                               return ERROR_NONE;
+                             },NULL),
                              // post: transfer storages
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -2650,7 +2659,16 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              "entities",
                              FALSE,
                              // pre: transfer entity
-                             CALLBACK(NULL,NULL),
+                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             {
+                               // map type
+                               Database_setTableColumnListInt64(toColumnList,
+                                                                "type",
+                                                                1+Database_getTableColumnListInt64(fromColumnList,"type",DATABASE_ID_NONE)
+                                                               );
+
+                               return ERROR_NONE;
+                             },NULL),
                              // post: transfer storage
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -6954,6 +6972,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//asm("int3");
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -6964,40 +6984,94 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM directories WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_FILE
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM files WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_FILE
+                          );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_IMAGE
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM images WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_IMAGE
+                          );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_DIRECTORY
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM links WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_DIRECTORY
+                          );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_LINK
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM hardlinks WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_LINK
+                          );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_HARDLINK
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM special WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_HARDLINK
                           );
   if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_SPECIAL
+                          );
+  if (error != ERROR_NONE) return error;
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_SPECIAL
+                          );
+  if (error != ERROR_NONE) return error;
+
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "DELETE FROM storage WHERE id=%lld;",
@@ -7026,39 +7100,93 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   // Note: do in single steps to avoid long-time-locking of database!
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM directories WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_FILE
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM files WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_FILE
+                          );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_IMAGE
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM images WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_IMAGE
+                          );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_DIRECTORY
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM links WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_DIRECTORY
+                          );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_LINK
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM hardlinks WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_LINK
+                          );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_HARDLINK
                           );
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
-                           "DELETE FROM special WHERE storageId=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_HARDLINK
                           );
+  if (error != ERROR_NONE) return error;
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_SPECIAL
+                          );
+  if (error != ERROR_NONE) return error;
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                           INDEX_DATABASE_ID_(storageId),
+                           INDEX_TYPE_SPECIAL
+                          );
+  if (error != ERROR_NONE) return error;
 
   return ERROR_NONE;
 }
@@ -8709,88 +8837,100 @@ Errors Index_addFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // add file entry
-  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO entries \
-                              ( \
-                               storageId, \
-                               type, \
-                               name, \
-                               timeLastAccess, \
-                               timeModified, \
-                               timeLastChanged, \
-                               userId, \
-                               groupId, \
-                               permission \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %'S, \
-                               %llu, \
-                               %llu, \
-                               %llu, \
-                               %u, \
-                               %u, \
-                               %u \
-                              ); \
-                           ",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_FILE,
-                           fileName,
-                           timeLastAccess,
-                           timeModified,
-                           timeLastChanged,
-                           userId,
-                           groupId,
-                           permission
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO fileEntries \
-                              ( \
-                               entryId, \
-                               size, \
-                               fragmentOffset, \
-                               fragmentSize\
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %llu, \
-                               %llu, \
-                               %llu\
-                              ); \
-                           ",
-                           entryId,
-                           size,
-                           fragmentOffset,
-                           fragmentSize
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    // start transaction
+    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    // add file entry
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO entries \
+                                ( \
+                                 storageId, \
+                                 type, \
+                                 name, \
+                                 timeLastAccess, \
+                                 timeModified, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %d, \
+                                 %'S, \
+                                 %llu, \
+                                 %llu, \
+                                 %llu, \
+                                 %u, \
+                                 %u, \
+                                 %u \
+                                ); \
+                             ",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_FILE,
+                             fileName,
+                             timeLastAccess,
+                             timeModified,
+                             timeLastChanged,
+                             userId,
+                             groupId,
+                             permission
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO fileEntries \
+                                ( \
+                                 entryId, \
+                                 size, \
+                                 fragmentOffset, \
+                                 fragmentSize\
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %llu, \
+                                 %llu, \
+                                 %llu\
+                                ); \
+                             ",
+                             entryId,
+                             size,
+                             fragmentOffset,
+                             fragmentSize
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+
+    // end transaction
+    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
 
   #undef TRANSACTION_NAME
 }
@@ -8821,91 +8961,104 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   }
 
   // add image entry
-  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO entries \
-                              ( \
-                               storageId, \
-                               type, \
-                               name, \
-                               timeLastAccess, \
-                               timeModified, \
-                               timeLastChanged, \
-                               userId, \
-                               groupId, \
-                               permission \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %'S, \
-                               %llu, \
-                               %llu, \
-                               %llu, \
-                               %u, \
-                               %u, \
-                               %u \
-                              ); \
-                           ",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_IMAGE,
-                           imageName,
-                           0LL,
-                           0LL,
-                           0LL,
-                           0,
-                           0,
-                           0
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO imageEntries \
-                              ( \
-                               entryId, \
-                               size, \
-                               fragmentOffset, \
-                               fragmentSize\
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %d, \
-                               %llu, \
-                               %u, \
-                               %llu, \
-                               %llu\
-                              ); \
-                           ",
-                           entryId,
-                           fileSystemType,
-                           size,
-                           blockSize,
-                           blockOffset,
-                           blockCount
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    // start transaction
+    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    // add image entry
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO entries \
+                                ( \
+                                 storageId, \
+                                 type, \
+                                 name, \
+                                 timeLastAccess, \
+                                 timeModified, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %d, \
+                                 %'S, \
+                                 %llu, \
+                                 %llu, \
+                                 %llu, \
+                                 %u, \
+                                 %u, \
+                                 %u \
+                                ); \
+                             ",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_IMAGE,
+                             imageName,
+                             0LL,
+                             0LL,
+                             0LL,
+                             0,
+                             0,
+                             0
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO imageEntries \
+                                ( \
+                                 entryId, \
+                                 size, \
+                                 fragmentOffset, \
+                                 fragmentSize\
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %d, \
+                                 %llu, \
+                                 %u, \
+                                 %llu, \
+                                 %llu\
+                                ); \
+                             ",
+                             entryId,
+                             fileSystemType,
+                             size,
+                             blockSize,
+                             blockOffset,
+                             blockCount
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+
+    // end transaction
+    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
 
   #undef TRANSACTION_NAME
 }
@@ -8936,85 +9089,97 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // add directory entry
-  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO entries \
-                              ( \
-                               storageId, \
-                               type, \
-                               name, \
-                               timeLastAccess, \
-                               timeModified, \
-                               timeLastChanged, \
-                               userId, \
-                               groupId, \
-                               permission \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %'S, \
-                               %llu, \
-                               %llu, \
-                               %llu, \
-                               %u, \
-                               %u, \
-                               %u \
-                              ); \
-                           ",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_DIRECTORY,
-                           directoryName,
-                           timeLastAccess,
-                           timeModified,
-                           timeLastChanged,
-                           userId,
-                           groupId,
-                           permission
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO directoryEntries \
-                              ( \
-                               entryId, \
-                               storageId, \
-                               name \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %llu, \
-                               %'S\
-                              ); \
-                           ",
-                           entryId,
-                           INDEX_DATABASE_ID_(storageId),
-                           directoryName
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    // start transaction
+    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    // add directory entry
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO entries \
+                                ( \
+                                 storageId, \
+                                 type, \
+                                 name, \
+                                 timeLastAccess, \
+                                 timeModified, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %d, \
+                                 %'S, \
+                                 %llu, \
+                                 %llu, \
+                                 %llu, \
+                                 %u, \
+                                 %u, \
+                                 %u \
+                                ); \
+                             ",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_DIRECTORY,
+                             directoryName,
+                             timeLastAccess,
+                             timeModified,
+                             timeLastChanged,
+                             userId,
+                             groupId,
+                             permission
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO directoryEntries \
+                                ( \
+                                 entryId, \
+                                 storageId, \
+                                 name \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %llu, \
+                                 %'S\
+                                ); \
+                             ",
+                             entryId,
+                             INDEX_DATABASE_ID_(storageId),
+                             directoryName
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+
+    // end transaction
+    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
 
   #undef TRANSACTION_NAME
 }
@@ -9049,82 +9214,94 @@ Errors Index_addLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // add link entry
-  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO entries \
-                              ( \
-                               storageId, \
-                               type, \
-                               name, \
-                               timeLastAccess, \
-                               timeModified, \
-                               timeLastChanged, \
-                               userId, \
-                               groupId, \
-                               permission \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %'S, \
-                               %llu, \
-                               %llu, \
-                               %llu, \
-                               %u, \
-                               %u, \
-                               %u \
-                              ); \
-                           ",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_LINK,
-                           linkName,
-                           timeLastAccess,
-                           timeModified,
-                           timeLastChanged,
-                           userId,
-                           groupId,
-                           permission
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO linkEntries \
-                              ( \
-                               entryId, \
-                               destinationName, \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %'S \
-                              ); \
-                           ",
-                           entryId,
-                           destinationName
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    // start transaction
+    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    // add link entry
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO entries \
+                                ( \
+                                 storageId, \
+                                 type, \
+                                 name, \
+                                 timeLastAccess, \
+                                 timeModified, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %d, \
+                                 %'S, \
+                                 %llu, \
+                                 %llu, \
+                                 %llu, \
+                                 %u, \
+                                 %u, \
+                                 %u \
+                                ); \
+                             ",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_LINK,
+                             linkName,
+                             timeLastAccess,
+                             timeModified,
+                             timeLastChanged,
+                             userId,
+                             groupId,
+                             permission
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO linkEntries \
+                                ( \
+                                 entryId, \
+                                 destinationName, \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %'S \
+                                ); \
+                             ",
+                             entryId,
+                             destinationName
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+
+    // end transaction
+    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
 
   #undef TRANSACTION_NAME
 }
@@ -9158,88 +9335,100 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // add hard link entry
-  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO entries \
-                              ( \
-                               storageId, \
-                               type, \
-                               name, \
-                               timeLastAccess, \
-                               timeModified, \
-                               timeLastChanged, \
-                               userId, \
-                               groupId, \
-                               permission \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %'S, \
-                               %llu, \
-                               %llu, \
-                               %llu, \
-                               %u, \
-                               %u, \
-                               %u \
-                              ); \
-                           ",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_HARDLINK,
-                           fileName,
-                           timeLastAccess,
-                           timeModified,
-                           timeLastChanged,
-                           userId,
-                           groupId,
-                           permission
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO hardlinkEntries \
-                              ( \
-                               entryId, \
-                               size, \
-                               fragmentOffset, \
-                               fragmentSize\
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %llu, \
-                               %llu, \
-                               %llu\
-                              ); \
-                           ",
-                           entryId,
-                           size,
-                           fragmentOffset,
-                           fragmentSize
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    // start transaction
+    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    // add hard link entry
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO entries \
+                                ( \
+                                 storageId, \
+                                 type, \
+                                 name, \
+                                 timeLastAccess, \
+                                 timeModified, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %d, \
+                                 %'S, \
+                                 %llu, \
+                                 %llu, \
+                                 %llu, \
+                                 %u, \
+                                 %u, \
+                                 %u \
+                                ); \
+                             ",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_HARDLINK,
+                             fileName,
+                             timeLastAccess,
+                             timeModified,
+                             timeLastChanged,
+                             userId,
+                             groupId,
+                             permission
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO hardlinkEntries \
+                                ( \
+                                 entryId, \
+                                 size, \
+                                 fragmentOffset, \
+                                 fragmentSize\
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %llu, \
+                                 %llu, \
+                                 %llu\
+                                ); \
+                             ",
+                             entryId,
+                             size,
+                             fragmentOffset,
+                             fragmentSize
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+
+    // end transaction
+    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
 
   #undef TRANSACTION_NAME
 }
@@ -9273,88 +9462,98 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // add special entry
-  error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO entries \
-                              ( \
-                               storageId, \
-                               type, \
-                               name, \
-                               timeLastAccess, \
-                               timeModified, \
-                               timeLastChanged, \
-                               userId, \
-                               groupId, \
-                               permission \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %'S, \
-                               %llu, \
-                               %llu, \
-                               %llu, \
-                               %u, \
-                               %u, \
-                               %u \
-                              ); \
-                           ",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_SPECIAL,
-                           name,
-                           timeLastAccess,
-                           timeModified,
-                           timeLastChanged,
-                           userId,
-                           groupId,
-                           permission
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO specialEntries \
-                              ( \
-                               entryId, \
-                               specialType, \
-                               major, \
-                               minor \
-                              ) \
-                            VALUES \
-                              ( \
-                               %llu, \
-                               %d, \
-                               %d, \
-                               %d\
-                              ); \
-                           ",
-                           entryId,
-                           specialType,
-                           major,
-                           minor
-                          );
-  if (error != ERROR_NONE)
-  {
-    (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    return error;
-  }
-  error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    // start transaction
+    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    // add special entry
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO entries \
+                                ( \
+                                 storageId, \
+                                 type, \
+                                 name, \
+                                 timeLastAccess, \
+                                 timeModified, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %d, \
+                                 %'S, \
+                                 %llu, \
+                                 %llu, \
+                                 %llu, \
+                                 %u, \
+                                 %u, \
+                                 %u \
+                                ); \
+                             ",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_SPECIAL,
+                             name,
+                             timeLastAccess,
+                             timeModified,
+                             timeLastChanged,
+                             userId,
+                             groupId,
+                             permission
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO specialEntries \
+                                ( \
+                                 entryId, \
+                                 specialType, \
+                                 major, \
+                                 minor \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %llu, \
+                                 %d, \
+                                 %d, \
+                                 %d\
+                                ); \
+                             ",
+                             entryId,
+                             specialType,
+                             major,
+                             minor
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+      return error;
+    }
+
+    // end transaction
+    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
 
   #undef TRANSACTION_NAME
 }
