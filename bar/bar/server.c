@@ -14512,7 +14512,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
         )
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "entityId=%lld jobUUID=%S scheduleUUID=%S archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
+                     "entityId=%lld jobUUID=%S scheduleUUID=%S archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
                      entityId,
                      jobUUID,
                      scheduleUUID,
