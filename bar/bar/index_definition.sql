@@ -345,7 +345,7 @@ CREATE TABLE IF NOT EXISTS entries(
 
   FOREIGN KEY(storageId) REFERENCES storage(id)
 );
-CREATE INDEX ON entries (storageId,name);
+CREATE INDEX ON entries (storageId,type,name);
 CREATE INDEX ON entries (name);
 CREATE INDEX ON entries (type,name);
 
@@ -415,10 +415,10 @@ CREATE TRIGGER BEFORE DELETE ON entries
       WHERE storage.id=OLD.storageId;
 
     // delete/update newest info
-    DELETE FROM entriesNewest WHERE entryId=OLD.entryId;
+    DELETE FROM entriesNewest WHERE entryId=OLD.id;
     INSERT OR IGNORE INTO entriesNewest
         (storageId,name,type,size,timeLastChanged,entryId)
-      SELECT storageId,name,type,size,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.entryId AND name=OLD.name;
+      SELECT storageId,name,type,size,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.id AND name=OLD.name;
 
     // update FTS
     DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
