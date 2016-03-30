@@ -825,7 +825,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
 .PHONY: rundev rundevd rundevd1 rundevd2 rundevddd rundevvalgrind rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl
 rundev: bar@EXEEXT@
 	$(INSTALL) -d jobs
-	nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
+	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundev1 rundevd: bar-debug@EXEEXT@
 	$(INSTALL) -d jobs
