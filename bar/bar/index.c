@@ -6399,39 +6399,47 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO entities \
-                              ( \
-                               jobUUID, \
-                               scheduleUUID, \
-                               created, \
-                               type, \
-                               parentJobUUID, \
-                               bidFlag\
-                              ) \
-                            VALUES \
-                              ( \
-                               %'S, \
-                               %'S, \
-                               DATETIME('now'), \
-                               %u, \
-                               '', \
-                               0\
-                              ); \
-                           ",
-                           jobUUID,
-                           scheduleUUID,
-                           archiveType
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,Database_getLastRowId(&indexHandle->databaseHandle));
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO entities \
+                                ( \
+                                 jobUUID, \
+                                 scheduleUUID, \
+                                 created, \
+                                 type, \
+                                 parentJobUUID, \
+                                 bidFlag\
+                                ) \
+                              VALUES \
+                                ( \
+                                 %'S, \
+                                 %'S, \
+                                 DATETIME('now'), \
+                                 %u, \
+                                 '', \
+                                 0\
+                                ); \
+                             ",
+                             jobUUID,
+                             scheduleUUID,
+                             archiveType
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,Database_getLastRowId(&indexHandle->databaseHandle));
+
+    return ERROR_NONE;
+  });
 fprintf(stderr,"%s, %d: >>>>>>>>>>>>>>>>Index_newEntity %llu\n",__FILE__,__LINE__,(*entityId));
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_deleteEntity(IndexHandle *indexHandle,
@@ -6929,39 +6937,47 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO storage \
-                              ( \
-                               entityId, \
-                               name, \
-                               created, \
-                               state, \
-                               mode, \
-                               lastChecked\
-                              ) \
-                            VALUES \
-                              ( \
-                               %d, \
-                               %'S, \
-                               DATETIME('now'), \
-                               %d, \
-                               %d, \
-                               DATETIME('now')\
-                              ); \
-                           ",
-                           INDEX_DATABASE_ID_(entityId),
-                           storageName,
-                           indexState,
-                           indexMode
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,Database_getLastRowId(&indexHandle->databaseHandle));
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO storage \
+                                ( \
+                                 entityId, \
+                                 name, \
+                                 created, \
+                                 state, \
+                                 mode, \
+                                 lastChecked\
+                                ) \
+                              VALUES \
+                                ( \
+                                 %d, \
+                                 %'S, \
+                                 DATETIME('now'), \
+                                 %d, \
+                                 %d, \
+                                 DATETIME('now')\
+                                ); \
+                             ",
+                             INDEX_DATABASE_ID_(entityId),
+                             storageName,
+                             indexState,
+                             indexMode
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,Database_getLastRowId(&indexHandle->databaseHandle));
+
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_deleteStorage(IndexHandle *indexHandle,
@@ -6972,8 +6988,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7077,6 +7091,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                            "DELETE FROM storage WHERE id=%lld;",
                            INDEX_DATABASE_ID_(storageId)
                           );
+if (error !=  ERROR_NONE) {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+}
+
   if (error != ERROR_NONE) return error;
 
   return ERROR_NONE;
