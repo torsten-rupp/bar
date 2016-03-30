@@ -5616,7 +5616,7 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%llu %llu %llu %d %S %llu %llu",
+                               "%llu %llu %llu %d %S %lu %llu",
                                &uuidId_,
                                &entityId_,
                                createdDateTime,
@@ -6158,18 +6158,8 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
-#if 0
-  return Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                             "%S %llu %S %llu %llu",
-                             jobUUID,
-                             lastCreatedDateTime,
-                             lastErrorMessage,
-                             totalEntryCount,
-                             totalEntrySize
-                            );
-#else
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%llu %S %llu %S %llu %llu",
+                           "%llu %S %llu %S %lu %llu",
                            &databaseId,
                            jobUUID,
                            lastCreatedDateTime,
@@ -6184,7 +6174,6 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
 
   return TRUE;
-#endif
 }
 
 Errors Index_newUUID(IndexHandle *indexHandle,
@@ -6353,7 +6342,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %lld %S %S %llu %u %S %llu %llu",
+                           "%lld %lld %S %S %llu %u %S %lu %llu",
                            &uuidId_,
                            &entityId_,
                            jobUUID,
@@ -6362,7 +6351,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                            archiveType,
                            lastErrorMessage,
                            totalEntryCount,
-                           &totalEntrySize
+                           totalEntrySize
                           )
      )
   {
@@ -6829,7 +6818,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   foundFlag    = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                                "%lld %lld %lld %S %S %d %S %llu %llu %lf %d %d %llu %S",
+                                "%lld %lld %lld %S %S %d %S %llu %lu %llu %d %d %llu %S",
                                 &uuidId_,
                                 &entityId_,
                                 &storageId_,
