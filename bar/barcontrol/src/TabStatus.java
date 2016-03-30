@@ -1140,7 +1140,7 @@ public class TabStatus
       Widgets.layout(label,5,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,5,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntryCount));
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalEntryCount));
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
       {
         public void modified(Control control, WidgetVariable widgetVariable)
@@ -1168,7 +1168,7 @@ public class TabStatus
       Widgets.layout(label,5,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,5,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalEntrySize)
       {
         public String getString(WidgetVariable variable)
         {
@@ -1192,7 +1192,7 @@ public class TabStatus
                                                                                                }
                                                                             )
                     );
-      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalEntrySize)
       {
         public String getString(WidgetVariable variable)
         {
