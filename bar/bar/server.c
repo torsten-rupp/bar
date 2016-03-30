@@ -2998,14 +2998,19 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
     if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
     if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
 
-/*
-fprintf(stderr,"%s,%d: createStatusInfo->doneCount=%lu createStatusInfo->doneSize=%llu jobNode->runningInfo.totalEntryCount=%lu jobNode->runningInfo.totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
+#if 0
+fprintf(stderr,"%s,%d: doneCount=%lu doneSize=%llu skippedEntryCount=%lu skippedEntrySize=%llu totalEntryCount=%lu totalEntrySize %llu -- entriesPerSecond=%lf bytesPerSecond=%lf estimatedRestTime=%lus\n",__FILE__,__LINE__,
 createStatusInfo->doneCount,
 createStatusInfo->doneSize,
-jobNode->runningInfo.totalEntryCount,
-jobNode->runningInfo.totalEntrySize,
-entriesPerSecond,bytesPerSecond,estimatedRestTime);
-*/
+createStatusInfo->skippedEntryCount,
+createStatusInfo->skippedEntrySize,
+createStatusInfo->totalEntryCount,
+createStatusInfo->totalEntrySize,
+jobNode->runningInfo.entriesPerSecond,
+jobNode->runningInfo.bytesPerSecond,
+jobNode->runningInfo.estimatedRestTime
+);
+#endif
 
     jobNode->runningInfo.error                 = error;
     jobNode->runningInfo.doneCount             = createStatusInfo->doneCount;
@@ -3918,24 +3923,24 @@ LOCAL void remoteThreadCode(void)
           {
             // parse and store
             StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-            StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0);
-            StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0L);
-            StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0);
-            StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0L);
+            StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
+            StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
+            StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
+            StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
             StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
-            StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0);
-            StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0L);
-            StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0);
-            StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0L);
+            StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
+            StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
+            StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
+            StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
             StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
             StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
             StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
-            StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0L);
+            StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
             StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
             StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
             StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
-            StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0L);
-            StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0L);
+            StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
+            StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
             StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
             StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
             StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
