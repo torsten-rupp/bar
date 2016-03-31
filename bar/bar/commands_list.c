@@ -2652,29 +2652,20 @@ remoteBarFlag=FALSE;
           if (storageSpecifier->hostPort == 0) storageSpecifier->hostPort = sshServer.port;
           if (String_isEmpty(storageSpecifier->hostName))
           {
-            printError("Cannot connect to '%s:%d' (error: %s)!\n",
-                       String_cString(storageSpecifier->hostName),
-                       storageSpecifier->hostPort,
-                       Error_getText(error)
-                      );
+            printError("No host name given!\n");
+            error = ERROR_NO_HOST_NAME;
             break;
           }
           if (sshServer.publicKey.data == NULL)
           {
-            printError("Cannot connect to '%s:%d' (error: %s)!\n",
-                       String_cString(storageSpecifier->hostName),
-                       storageSpecifier->hostPort,
-                       Error_getText(error)
-                      );
+            printError("Cannot SSH public key given!\n");
+            error = ERROR_NO_SSH_PUBLIC_KEY;
             break;
           }
           if (sshServer.privateKey.data == NULL)
           {
-            printError("Cannot connect to '%s:%d' (error: %s)!\n",
-                       String_cString(storageSpecifier->hostName),
-                       storageSpecifier->hostPort,
-                       Error_getText(error)
-                      );
+            printError("Cannot SSH private key given!\n");
+            error = ERROR_NO_SSH_PRIVATE_KEY;
             break;
           }
 
