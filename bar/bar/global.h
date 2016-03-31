@@ -425,7 +425,7 @@ typedef struct
   while (0)
 
 #define SET_VALUE(element) \
-  (1 << (element))
+  (1U << (element))
 
 #define SET_ADD(set,element) \
   do \
