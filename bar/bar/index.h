@@ -72,6 +72,9 @@ typedef enum
 } IndexModes;
 typedef uint64 IndexModeSet;
 
+#define INDEX_MODE_MIN INDEX_MODE_MANUAL
+#define INDEX_MODE_MAX INDEX_MODE_AUTO
+
 #define INDEX_MODE_SET_NONE 0
 #define INDEX_MODE_SET_ALL  (INDEX_MODE_MANUAL|INDEX_MODE_AUTO)
 
@@ -730,14 +733,11 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 *          entityId         - index id of entity entry id or INDEX_ID_ANY
 *          jobUUID          - unique job id or NULL
 *          storageType      - storage type to find or STORAGE_TYPE_ANY
-*          storageName      - storage name pattern (glob) or NULL
-*          hostName         - host name pattern (glob) or NULL
-*          loginName        - login name pattern (glob) or NULL
-*          deviceName       - device name pattern (glob) or NULL
-*          fileName         - file name pattern (glob) or NULL
-*          indexStateSet    - index state set
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
+*          indexStateSet    - index state set
+*          IndexModeSet     - index mode set
+*          pattern          - name pattern (glob) or NULL
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -755,6 +755,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               const IndexId    indexIds[],
                               uint             indexIdCount,
                               IndexStateSet    indexStateSet,
+                              IndexModeSet     indexModeSet,
                               ConstString      pattern,
                               uint64           offset,
                               uint64           limit

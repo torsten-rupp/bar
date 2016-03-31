@@ -2909,7 +2909,8 @@ LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
 /***********************************************************************\
 * Name   : getCryptPassword
 * Purpose: get crypt password call-back
-* Input  : password      - crypt password variable
+* Input  : loginName     - login name variable (not used)
+*          password      - crypt password variable
 *          passwordType  - password type (not used)
 *          text          - text (not used)
 *          validateFlag  - TRUE to validate input, FALSE otherwise (not
@@ -2923,7 +2924,8 @@ LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getCryptPassword(Password      *password,
+LOCAL Errors getCryptPassword(String        loginName,
+                              Password      *password,
                               PasswordTypes passwordType,
                               const char    *text,
                               bool          validateFlag,
@@ -2935,6 +2937,7 @@ LOCAL Errors getCryptPassword(Password      *password,
 
   assert(jobNode != NULL);
 
+  UNUSED_VARIABLE(loginName);
   UNUSED_VARIABLE(passwordType);
   UNUSED_VARIABLE(text);
   UNUSED_VARIABLE(validateFlag);
@@ -4129,6 +4132,7 @@ LOCAL Errors deleteEntity(IndexId entityId)
                                  NULL,  // storageIds
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // pattern
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -5202,6 +5206,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -12624,6 +12629,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, uint id, const Stri
                                  Array_cArray(&clientInfo->storageIdArray),
                                  Array_length(&clientInfo->storageIdArray),
                                  INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // pattern
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -12771,6 +12777,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                        NULL,  // storageIds
                                        0,  // storageIdCount
                                        INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
                                        NULL,  // pattern
                                        0LL,  // offset
                                        INDEX_UNLIMITED
@@ -12816,6 +12823,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                      NULL,  // storageIds
                                      0,  // storageIdCount
                                      INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
                                      NULL,  // pattern
                                      0LL,  // offset
                                      INDEX_UNLIMITED
@@ -12938,6 +12946,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
                                        NULL,  // storageIds
                                        0,  // storageIdCount
                                        INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
                                        NULL,  // pattern
                                        0LL,  // offset
                                        INDEX_UNLIMITED
@@ -12983,6 +12992,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
                                      NULL,  // storageIds
                                      0,  // storageIdCount
                                      INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
                                      NULL,  // pattern
                                      0LL,  // offset
                                      INDEX_UNLIMITED
@@ -13469,7 +13479,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   * Notes  : -
   \***********************************************************************/
 
-  bool restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
+  void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
                                void                    *userData
                               )
   {
@@ -13493,8 +13503,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                      restoreStatusInfo->entryDoneSize,
                      restoreStatusInfo->entryTotalSize
                     );
-
-    return !isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
   }
 
   /***********************************************************************\
@@ -13676,6 +13684,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                        Array_cArray(&clientInfo->storageIdArray),
                                        Array_length(&clientInfo->storageIdArray),
                                        INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
                                        NULL,  // pattern
                                        0LL,  // offset
                                        INDEX_UNLIMITED
@@ -14019,7 +14028,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   }
 
   // restore
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n",__FILE__,__LINE__,List_count(&storageNameList));
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
   error = Command_restore(&storageNameList,
@@ -14035,6 +14043,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n",__FILE__,__LINE_
                           &restoreCommandInfo.clientInfo->abortFlag,
                           NULL  // logHandle
                          );
+//isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
 restoreCommandInfo.clientInfo->abortFlag = FALSE;
   sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
   EntryList_done(&restoreEntryList);
@@ -14899,6 +14908,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  NULL,  // indexIds
                                  0,  // indexIdCount
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                                 indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                  storagePatternString,
                                  offset,
                                  limit
@@ -15430,6 +15440,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -15486,6 +15497,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -15541,6 +15553,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -15608,6 +15621,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -15673,6 +15687,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -15809,6 +15824,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED

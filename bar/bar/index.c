@@ -3847,6 +3847,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  NULL,  // storageIds
                                  0,  // storageIdCount,
                                  INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // pattern
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -4192,6 +4193,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -4230,6 +4232,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                      NULL,  // storageIds
                                      0,  // storageIdCount
                                      INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
                                      NULL,  // pattern
                                      0LL,  // offset
                                      INDEX_UNLIMITED
@@ -4542,15 +4545,42 @@ LOCAL String getIndexTypeSetString(String string, IndexTypeSet indexTypeSet)
 
 LOCAL String getIndexStateSetString(String string, IndexStateSet indexStateSet)
 {
-  uint i;
+  IndexStates indexState;
 
   String_clear(string);
-  for (i = INDEX_STATE_MIN; i <= INDEX_STATE_MAX; i++)
+  for (indexState = INDEX_STATE_MIN; indexState <= INDEX_STATE_MAX; indexState++)
   {
-    if (IN_SET(indexStateSet,i))
+    if (IN_SET(indexStateSet,indexState))
     {
       if (!String_isEmpty(string)) String_appendCString(string,",");
-      String_format(string,"%d",i);
+      String_format(string,"%d",indexState);
+    }
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : getIndexModeSetString
+* Purpose: get index mode filter string
+* Input  : string       - string variable
+*          indexModeSet - index mode set
+* Output : -
+* Return : string for IN statement
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getIndexModeSetString(String string, IndexModeSet indexModeSet)
+{
+  IndexModes indexMode;
+
+  String_clear(string);
+  for (indexMode = INDEX_MODE_MIN; indexMode <= INDEX_MODE_MAX; indexMode++)
+  {
+    if (IN_SET(indexModeSet,indexMode))
+    {
+      if (!String_isEmpty(string)) String_appendCString(string,",");
+      String_format(string,"%d",indexMode);
     }
   }
 
@@ -4844,6 +4874,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                                  NULL,  // storageIds
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // pattern
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -6525,6 +6556,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               const IndexId    indexIds[],
                               uint             indexIdCount,
                               IndexStateSet    indexStateSet,
+                              IndexModeSet     indexModeSet,
                               ConstString      pattern,
                               uint64           offset,
                               uint64           limit
@@ -6535,6 +6567,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   Errors error;
   String filter;
   String indexStateSetString;
+  String indexModeSetString;
   uint   i;
 
   assert(indexQueryHandle != NULL);
@@ -6584,6 +6617,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   }
 
   indexStateSetString = String_new();
+  indexModeSetString  = String_new();
 
 #if 0
   if (   !String_isEmpty(ftsString)
@@ -6606,12 +6640,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
     filterAppend(unionFilter,indexIds != NULL,"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (%S)",entityIdsString);
     filterAppend(unionFilter,indexIds != NULL,"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S)))",uuidIdsString);
 
-    indexStateSetString = String_new();
-
     filterAppend(filter,TRUE,"AND","storage.id IN (%S)",unionFilter);
     filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
 
-    String_delete(indexStateSetString);
     String_delete(storageFilter);
     String_delete(unionFilter);
   }
@@ -6627,6 +6658,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   filterAppend(filter,(storageType != STORAGE_TYPE_ANY),"AND","entities.type!=%d",storageType);
   filterAppend(filter,!String_isEmpty(regexpStorageName),"AND","REGEXP(%S,0,storage.name)",regexpStorageName);
   filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
+  filterAppend(filter,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
 #endif
 
 //Database_debugEnable(1);
@@ -6664,6 +6696,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   {
     doneIndexQueryHandle(indexQueryHandle);
     String_delete(filter);
+    String_delete(indexModeSetString);
     String_delete(indexStateSetString);
     String_delete(storageIdsString);
     String_delete(entityIdsString);
@@ -6673,6 +6706,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   }
 
   String_delete(filter);
+  String_delete(indexModeSetString);
   String_delete(indexStateSetString);
   String_delete(storageIdsString);
   String_delete(entityIdsString);
@@ -9703,6 +9737,7 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
                                  NULL,   // storageIds
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // pattern
                                  0LL,   // offset
                                  INDEX_UNLIMITED
