@@ -856,8 +856,9 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 *          storageId   - index id of storage index
 * Output:  storageName         - storage name (can be NULL)
 *          createdDateTime     - created date/time (can be NULL)
-*          entries             - number of entries (can be NULL)
-*          size                - size [bytes] (can be NULL)
+-*         size                - size of stroage (can be NULL)
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total size [bytes] (can be NULL)
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
 *          lastCheckedDateTime - last checked date/time (can be NULL)
@@ -870,8 +871,9 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                         IndexId     storageId,
                         String      storageName,
                         uint64      *createdDateTime,
-                        uint64      *entries,
                         uint64      *size,
+                        uint64      *totalEntryCount,
+                        uint64      *totalEntrySize,
                         IndexStates *indexState,
                         IndexModes  *indexMode,
                         uint64      *lastCheckedDateTime,

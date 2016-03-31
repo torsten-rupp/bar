@@ -1711,7 +1711,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
   if (error == ERROR_NONE)
   {
     while (Database_getNextRow(&databaseQueryHandle1,
-                               "%S %S %lld",
+                               "%S %S %llu",
                                uuid,
                                name1,
                                &createdDateTime
@@ -4056,7 +4056,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   if (error == ERROR_NONE)
   {
     while (Database_getNextRow(&databaseQueryHandle1,
-                               "%S %lld",
+                               "%S %llu",
                                uuid,
                                name1,
                                &createdDateTime
@@ -5610,7 +5610,7 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
   filter = String_newCString("1");
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","jobUUID=%'S",scheduleUUID);
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","scheduleUUID=%'S",scheduleUUID);
-//TODO errorMessage
+//TODO get errorMessage
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
@@ -6127,11 +6127,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-//TODO
-//Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-//TODO: usage total*
                            "SELECT id, \
                                    jobUUID, \
                                    lastCreated, \
@@ -6144,7 +6141,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -7215,8 +7211,9 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                         IndexId     storageId,
                         String      storageName,
                         uint64      *createdDateTime,
-                        uint64      *entries,
                         uint64      *size,
+                        uint64      *totalEntryCount,
+                        uint64      *totalEntrySize,
                         IndexStates *indexState,
                         IndexModes  *indexMode,
                         uint64      *lastCheckedDateTime,
@@ -7237,11 +7234,11 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
-#if 0
                            "SELECT storage.name, \
                                    STRFTIME('%%s',storage.created), \
-                                   storage.entries, \
                                    storage.size, \
+                                   storage.totalEntryCount, \
+                                   storage.totalEntrySize, \
                                    storage.state, \
                                    storage.mode, \
                                    STRFTIME('%%s',storage.lastChecked), \
@@ -7249,27 +7246,6 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                             FROM storage \
                             WHERE id=%d \
                            ",
-#else
-#warning TODO replace size
-                           "SELECT storage.name, \
-                                   STRFTIME('%%s',storage.created), \
-                                   ( \
-                                      (SELECT COUNT(id) FROM files       WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM images      WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM directories WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM links       WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM hardlinks   WHERE storageId=storage.id) \
-                                     +(SELECT COUNT(id) FROM special     WHERE storageId=storage.id) \
-                                   ), \
-                                   storage.size, \
-                                   storage.state, \
-                                   storage.mode, \
-                                   STRFTIME('%%s',storage.lastChecked), \
-                                   storage.errorMessage \
-                            FROM storage \
-                            WHERE id=%d \
-                           ",
-#endif
                            INDEX_DATABASE_ID_(storageId)
                           );
   if (error != ERROR_NONE)
@@ -7277,11 +7253,12 @@ Errors Index_getStorage(IndexHandle *indexHandle,
     return error;
   }
   if (!Database_getNextRow(&databaseQueryHandle,
-                           "%S %lld %lld %lld %d %d %lld %S",
+                           "%S %llu %llu %ld %llu %d %d %llu %S",
                            storageName,
                            createdDateTime,
-                           entries,
                            size,
+                           totalEntryCount,
+                           totalEntrySize,
                            indexState,
                            indexMode,
                            lastCheckedDateTime,
