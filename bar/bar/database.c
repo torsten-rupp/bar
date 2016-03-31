@@ -1130,21 +1130,11 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
   {
     return error;
   }
-//TODO
-#warning test
-#if 0
-  error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "PRAGMA journal_mode=%s;",
-                           enabled ? "ON" : "OFF"
-                          );
-#else
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),
                            "PRAGMA journal_mode=%s;",
                            enabled ? "ON" : "WAL"
                           );
-#endif
   if (error != ERROR_NONE)
   {
     return error;
