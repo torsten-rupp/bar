@@ -592,30 +592,60 @@ long Array_findFirst(const Array          *array,
                      void                 *arrayCompareUserData
                     )
 {
-  ulong index;
+  long i;
 
-  index = 0;
-  if (arrayCompareFunction != NULL)
+  switch (arrayFindMode)
   {
-    while (index < array->length)
-    {
-      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
+    case ARRAY_FIND_FORWARD:
+      i = 0;
+      if (arrayCompareFunction != NULL)
       {
-        return (long)index;
+        while (i < (long)array->length)
+        {
+          if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+          {
+            return i;
+          }
+          i++;
+        }
       }
-      index++;
-    }
-  }
-  else
-  {
-    while (index < array->length)
-    {
-      if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
+      else
       {
-        return (long)index;
+        while (i < (long)array->length)
+        {
+          if (memcmp(array->data+i*array->elementSize,data,array->elementSize) == 0)
+          {
+            return i;
+          }
+          i++;
+        }
       }
-      index++;
-    }
+      break;
+    case ARRAY_FIND_BACKWARD:
+      i = array->length-1;
+      if (arrayCompareFunction != NULL)
+      {
+        while (i >= 0)
+        {
+          if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+          {
+            return i;
+          }
+          i--;
+        }
+      }
+      else
+      {
+        while (i >= 0)
+        {
+          if (memcmp(array->data+i*array->elementSize,data,array->elementSize) == 0)
+          {
+            return i;
+          }
+          i--;
+        }
+      }
+      break;
   }
 
   return -1;
@@ -629,27 +659,66 @@ long Array_findNext(const Array          *array,
                     void                 *arrayCompareUserData
                    )
 {
-  if (arrayCompareFunction != NULL)
+  long i;
+
+  switch (arrayFindMode)
   {
-    while (index < array->length)
-    {
-      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
+    case ARRAY_FIND_FORWARD:
+      if (index < array->length)
       {
-        return (long)index;
+        i = (long)index+1;
+        if (arrayCompareFunction != NULL)
+        {
+          while (i < (long)array->length)
+          {
+            if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+            {
+              return i;
+            }
+            i++;
+          }
+        }
+        else
+        {
+          while (i < (long)array->length)
+          {
+            if (memcmp(array->data+i*array->elementSize,data,array->elementSize) == 0)
+            {
+              return i;
+            }
+            i++;
+          }
+        }
       }
-      index++;
-    }
-  }
-  else
-  {
-    while (index < array->length)
-    {
-      if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
+      break;
+    case ARRAY_FIND_BACKWARD:
+      if (index > 0)
       {
-        return (long)index;
+        i = (long)index-1;
+        if (arrayCompareFunction != NULL)
+        {
+          while (i >= 0)
+          {
+            if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+            {
+              return i;
+            }
+            i--;
+          }
+        }
+        else
+        {
+          while (i >= 0)
+          {
+            if (memcmp(array->data+i*array->elementSize,data,array->elementSize) == 0)
+            {
+              return i;
+            }
+            i--;
+          }
+        }
       }
-      index++;
-    }
+      break;
   }
 
   return -1;
@@ -661,6 +730,9 @@ void Array_sort(Array                *array,
                )
 {
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+UNUSED_VARIABLE(array);
+UNUSED_VARIABLE(arrayCompareFunction);
+UNUSED_VARIABLE(arrayCompareUserData);
 }
 
 #ifndef NDEBUG
