@@ -66,16 +66,21 @@ LOCAL void StorageFile_doneAll(void)
 {
 }
 
-LOCAL bool StorageFile_equalNames(const StorageSpecifier *storageSpecifier1,
-                                  const StorageSpecifier *storageSpecifier2
-                                 )
+LOCAL bool StorageFile_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
+                                       ConstString            archiveName1,
+                                       const StorageSpecifier *storageSpecifier2,
+                                       ConstString            archiveName2
+                                      )
 {
   assert(storageSpecifier1 != NULL);
   assert(storageSpecifier1->type == STORAGE_TYPE_FILESYSTEM);
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_FILESYSTEM);
 
-  return String_equals(storageSpecifier1->archiveName,storageSpecifier2->archiveName);
+  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
+  if (archiveName2 == NULL) archiveName1 = storageSpecifier2->archiveName;
+
+  return String_equals(archiveName1,archiveName2);
 }
 
 LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,

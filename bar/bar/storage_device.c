@@ -273,17 +273,22 @@ LOCAL bool StorageDevice_parseSpecifier(ConstString deviceSpecifier,
   return result;
 }
 
-LOCAL bool StorageDevice_equalNames(const StorageSpecifier *storageSpecifier1,
-                                    const StorageSpecifier *storageSpecifier2
-                                   )
+LOCAL bool StorageDevice_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
+                                         ConstString            archiveName1,
+                                         const StorageSpecifier *storageSpecifier2,
+                                         ConstString            archiveName2
+                                        )
 {
   assert(storageSpecifier1 != NULL);
   assert(storageSpecifier1->type == STORAGE_TYPE_DEVICE);
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_DEVICE);
 
+  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
+  if (archiveName2 == NULL) archiveName1 = storageSpecifier2->archiveName;
+
   return    String_equals(storageSpecifier1->deviceName,storageSpecifier2->deviceName)
-         && String_equals(storageSpecifier1->archiveName,storageSpecifier2->archiveName);
+         && String_equals(archiveName1,archiveName2);
 }
 
 LOCAL String StorageDevice_getName(StorageSpecifier *storageSpecifier,

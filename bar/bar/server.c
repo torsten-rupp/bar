@@ -5123,11 +5123,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                          case FILE_TYPE_HARDLINK:
                                            // get index id, request index update
                                            if (Index_findByStorageName(indexHandle,
-                                                                       storageSpecifier.type,
-                                                                       storageSpecifier.hostName,
-                                                                       storageSpecifier.loginName,
-                                                                       storageSpecifier.deviceName,
-                                                                       storageSpecifier.archiveName,
+                                                                       &storageSpecifier,
+                                                                       NULL,  // archiveName
                                                                        NULL,  // uuidId
                                                                        NULL,  // entityId
                                                                        NULL,  // jobUUID
@@ -15062,11 +15059,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                              {
 fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPrintableName(&storageSpecifier,NULL)));
                                if (Index_findByStorageName(indexHandle,
-                                                           storageSpecifier.type,
-                                                           storageSpecifier.hostName,
-                                                           storageSpecifier.loginName,
-                                                           storageSpecifier.deviceName,
-                                                           storageSpecifier.archiveName,
+                                                           &storageSpecifier,
+                                                           NULL,  // archiveName
                                                            NULL,  // uuidId
                                                            NULL,  // entityId
                                                            NULL,  // jobUUID

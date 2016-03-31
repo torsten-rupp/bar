@@ -951,18 +951,23 @@ LOCAL bool StorageFTP_parseSpecifier(ConstString ftpSpecifier,
   return result;
 }
 
-LOCAL bool StorageFTP_equalNames(const StorageSpecifier *storageSpecifier1,
-                                 const StorageSpecifier *storageSpecifier2
-                                )
+LOCAL bool StorageFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
+                                      ConstString            archiveName1,
+                                      const StorageSpecifier *storageSpecifier2,
+                                      ConstString            archiveName2
+                                     )
 {
   assert(storageSpecifier1 != NULL);
   assert(storageSpecifier1->type == STORAGE_TYPE_FTP);
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_FTP);
 
+  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
+  if (archiveName2 == NULL) archiveName1 = storageSpecifier2->archiveName;
+
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
-         && String_equals(storageSpecifier1->archiveName,storageSpecifier2->archiveName);
+         && String_equals(archiveName1,archiveName2);
 }
 
 LOCAL void StorageFTP_getName(StorageSpecifier *storageSpecifier,
