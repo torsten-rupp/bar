@@ -258,7 +258,7 @@ LOCAL void doneAll(void);
 LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+//LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -1958,6 +1958,8 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   return TRUE;
 }
 
+//TODO: remove
+#if 0
 /***********************************************************************\
 * Name   : cmdOptionParseEntryPatternCommand
 * Purpose: command line option call back for parsing include
@@ -2040,6 +2042,7 @@ NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
 
   return TRUE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : cmdOptionParsePattern
@@ -3863,8 +3866,7 @@ Errors initLog(LogHandle *logHandle)
   assert(logHandle != NULL);
 
   logHandle->logFileName = String_new();
-#warning todo: create not in tmp dir?
-  error = File_getTmpFileNameCString(logHandle->logFileName,"log-XXXXXX",tmpDirectory);
+  error = File_getTmpFileNameCString(logHandle->logFileName,"bar-XXXXXX",NULL);
   if (error != ERROR_NONE)
   {
     String_delete(logHandle->logFileName);
@@ -5528,13 +5530,16 @@ Errors getPasswordConsole(String        name,
 
           // input password
           title = String_new();
-          if ((text != NULL) && !stringIsEmpty(text))
+          switch (passwordType)
           {
-            String_format(title,"Crypt password for '%s'",text);
+            case PASSWORD_TYPE_CRYPT : String_format(title,"Crypt password"); break;
+            case PASSWORD_TYPE_FTP   : String_format(title,"FTP password"); break;
+            case PASSWORD_TYPE_SSH   : String_format(title,"SSH password"); break;
+            case PASSWORD_TYPE_WEBDAV: String_format(title,"WebDAV password"); break;
           }
-          else
+          if (!stringIsEmpty(text))
           {
-            String_setCString(title,"Crypt password");
+            String_format(title,"for '%s'",text);
           }
           if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
