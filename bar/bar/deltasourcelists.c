@@ -336,6 +336,7 @@ Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
   assert(storageName != NULL);
 
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+UNUSED_VARIABLE(id);
 
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
