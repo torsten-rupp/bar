@@ -1423,10 +1423,9 @@ Errors File_getTmpFileName(String fileName, ConstString pattern, ConstString dir
 
 Errors File_getTmpFileNameCString(String fileName, const char *pattern, const char *directory)
 {
-  const char *tmpDirectory;
-  char       *s;
-  int        handle;
-  Errors     error;
+  char   *s;
+  int    handle;
+  Errors error;
 
   assert(fileName != NULL);
 
@@ -1440,7 +1439,7 @@ Errors File_getTmpFileNameCString(String fileName, const char *pattern, const ch
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    strcpy(s,String_cString(directory));
+    strcpy(s,directory);
     strcat(s,FILE_SEPARATOR_STRING);
   }
   else
