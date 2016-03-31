@@ -3428,6 +3428,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
                                      INDEX_STATE_SET(INDEX_STATE_OK)
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
+                                   INDEX_MODE_SET(INDEX_MODE_AUTO),
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -3617,6 +3618,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
                                      INDEX_STATE_SET(INDEX_STATE_OK)
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
+                                   INDEX_MODE_SET(INDEX_MODE_AUTO),
                                    NULL,  // pattern
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -4123,6 +4125,7 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
                                        NULL,  // storageIds
                                        0,  // storageIdCount
                                        INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
                                        NULL,  // pattern
                                        0LL,  // offset
                                        INDEX_UNLIMITED
