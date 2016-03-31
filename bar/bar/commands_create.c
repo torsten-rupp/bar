@@ -4070,10 +4070,7 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
     {
       if (   appendFlag
           && Index_findByStorageName(indexHandle,
-                                     createInfo->storageSpecifier->type,
-                                     createInfo->storageSpecifier->hostName,
-                                     createInfo->storageSpecifier->loginName,
-                                     createInfo->storageSpecifier->deviceName,
+                                     createInfo->storageSpecifier,
                                      storageMsg.archiveName,
                                      NULL,  // uuidId
                                      NULL,  // entityId
@@ -4150,7 +4147,7 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
         {
           if (   (oldStorageId != storageMsg.storageId)
               && (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
-              && Storage_equalSpecifiers(createInfo->storageSpecifier,&storageSpecifier)
+              && Storage_equalSpecifiers(createInfo->storageSpecifier,NULL,&storageSpecifier,NULL)
              )
           {
             // delete old storage index
