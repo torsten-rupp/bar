@@ -5630,25 +5630,22 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
   return result;
 }
 
-bool Index_findByStorageName(IndexHandle  *indexHandle,
-                             StorageTypes storageType,
-                             ConstString  hostName,
-                             ConstString  loginName,
-                             ConstString  deviceName,
-                             ConstString  fileName,
-                             IndexId      *uuidId,
-                             IndexId      *entityId,
-                             String       jobUUID,
-                             String       scheduleUUID,
-                             IndexId      *storageId,
-                             IndexStates  *indexState,
-                             uint64       *lastCheckedDateTime
+bool Index_findByStorageName(IndexHandle            *indexHandle,
+                             const StorageSpecifier *storageSpecifier,
+                             ConstString            archiveName,
+                             IndexId                *uuidId,
+                             IndexId                *entityId,
+                             String                 jobUUID,
+                             String                 scheduleUUID,
+                             IndexId                *storageId,
+                             IndexStates            *indexState,
+                             uint64                 *lastCheckedDateTime
                             )
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
-  String              storageName;
-  StorageSpecifier    storageSpecifier;
+  String              tmpStorageName;
+  StorageSpecifier    tmpStorageSpecifier;
   bool                foundFlag;
   DatabaseId          uuidId_,entityId_,storageId_;
 
@@ -5684,8 +5681,8 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
     return FALSE;
   }
 
-  storageName = String_new();
-  Storage_initSpecifier(&storageSpecifier);
+  tmpStorageName = String_new();
+  Storage_initSpecifier(&tmpStorageSpecifier);
   foundFlag   = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&databaseQueryHandle,
@@ -5695,78 +5692,27 @@ bool Index_findByStorageName(IndexHandle  *indexHandle,
                                 &storageId_,
                                 jobUUID,
                                 scheduleUUID,
-                                storageName,
+                                tmpStorageName,
                                 indexState,
                                 lastCheckedDateTime
                                )
         )
   {
-    if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
-    if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
-    if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
-    if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
+    if (Storage_parseName(&tmpStorageSpecifier,tmpStorageName) == ERROR_NONE)
     {
-      switch (storageSpecifier.type)
+      foundFlag = Storage_equalSpecifiers(storageSpecifier,archiveName,
+                                          &tmpStorageSpecifier,NULL
+                                         );
+      if (foundFlag)
       {
-        case STORAGE_TYPE_FILESYSTEM:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_FILESYSTEM))
-                      && ((fileName == NULL) || String_equals(fileName,storageSpecifier.archiveName));
-          break;
-        case STORAGE_TYPE_FTP:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_FTP))
-                      && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName))
-                      && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
-                      && ((fileName  == NULL) || String_equals(fileName, storageSpecifier.archiveName));
-          break;
-        case STORAGE_TYPE_SSH:
-        case STORAGE_TYPE_SCP:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_SSH) || (storageType == STORAGE_TYPE_SCP))
-                      && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName ))
-                      && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
-                      && ((fileName  == NULL) || String_equals(fileName, storageSpecifier.archiveName));
-          break;
-        case STORAGE_TYPE_SFTP:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_SFTP))
-                      && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName))
-                      && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
-                      && ((fileName  == NULL) || String_equals(fileName, storageSpecifier.archiveName));
-          break;
-        case STORAGE_TYPE_WEBDAV:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_WEBDAV))
-                      && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName))
-                      && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
-                      && ((fileName  == NULL) || String_equals(fileName, storageSpecifier.archiveName));
-          break;
-        case STORAGE_TYPE_CD:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_CD))
-                      && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
-                      && ((fileName   == NULL) || String_equals(fileName,  storageSpecifier.archiveName));
-          break;
-        case STORAGE_TYPE_DVD:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_DVD))
-                      && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
-                      && ((fileName   == NULL) || String_equals(fileName,  storageSpecifier.archiveName));
-          break;
-        case STORAGE_TYPE_BD:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_BD))
-                      && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
-                      && ((fileName   == NULL) || String_equals(fileName,  storageSpecifier.archiveName));
-          break;
-        case STORAGE_TYPE_DEVICE:
-          foundFlag =    ((storageType == STORAGE_TYPE_ANY) || (storageType == STORAGE_TYPE_DEVICE))
-                      && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
-                      && ((fileName   == NULL) || String_equals(fileName,  storageSpecifier.archiveName));
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
+        if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
+        if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+        if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
       }
     }
   }
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageName);
+  Storage_doneSpecifier(&tmpStorageSpecifier);
+  String_delete(tmpStorageName);
 
   Database_finalize(&databaseQueryHandle);
 

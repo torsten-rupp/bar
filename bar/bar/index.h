@@ -430,12 +430,9 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_findByStorageName
 * Purpose: find info by storage name
-* Input  : indexHandle     - index handle
-*          findStorageType - storage type to find or STORAGE_TYPE_ANY
-*          findHostName    - host naem to find or NULL
-*          findLoginName   - login name to find or NULL
-*          findDeviceName  - device name to find or NULL
-*          findFileName    - file name to find or NULL
+* Input  : indexHandle      - index handle
+*          storageSpecifier - storage specifier to compare
+*          archiveName      - archive name or NULL
 * Output : entityId            - index id of entity (can be NULL)
 *          jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
@@ -449,19 +446,16 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findByStorageName(IndexHandle  *indexHandle,
-                             StorageTypes findStorageType,
-                             ConstString  findHostName,
-                             ConstString  findLoginName,
-                             ConstString  findDeviceName,
-                             ConstString  findFileName,
-                             IndexId      *uuidId,
-                             IndexId      *entityId,
-                             String       jobUUID,
-                             String       scheduleUUID,
-                             IndexId      *storageId,
-                             IndexStates  *indexState,
-                             uint64       *lastCheckedDateTime
+bool Index_findByStorageName(IndexHandle            *indexHandle,
+                             const StorageSpecifier *storageSpecifier,
+                             ConstString            archiveName,
+                             IndexId                *uuidId,
+                             IndexId                *entityId,
+                             String                 jobUUID,
+                             String                 scheduleUUID,
+                             IndexId                *storageId,
+                             IndexStates            *indexState,
+                             uint64                 *lastCheckedDateTime
                             );
 
 /***********************************************************************\
