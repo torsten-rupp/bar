@@ -1182,16 +1182,15 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
   DatabaseColumnNode *toColumnNode;
   DatabaseId         lastRowId;
 
+uint64 t0 = Misc_getTimestamp();
+ulong xxx=0;
+
   assert(fromDatabaseHandle != NULL);
   assert(fromDatabaseHandle->handle != NULL);
   assert(toDatabaseHandle != NULL);
   assert(toDatabaseHandle->handle != NULL);
   assert(fromTableName != NULL);
   assert(toTableName != NULL);
-
-uint64 t0 = Misc_getTimestamp();
-ulong xxx=0;
-int a,b,r;
 
   // get table columns
   error = getTableColumnList(&fromColumnList,fromDatabaseHandle,fromTableName);
@@ -2081,10 +2080,8 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   // free resources
   String_delete(sqlString);
 
+  // try to execute checkpoint
   sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
-//int a,b;
-//int r=  sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
-//fprintf(stderr,"%s, %d: checkpoint a=%d b=%d r=%d: %s\n",__FILE__,__LINE__,a,b,r,sqlite3_errmsg(databaseHandle->handle));
 
   return ERROR_NONE;
 }
@@ -2119,10 +2116,8 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
   // free resources
   String_delete(sqlString);
 
-//  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
-int a,b;
-  sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,SQLITE_CHECKPOINT_FULL,&a,&b);
-fprintf(stderr,"%s, %d: checkpoint %d %d\n",__FILE__,__LINE__,a,b);
+  // try to execute checkpoint
+  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
 
   return ERROR_NONE;
 }
