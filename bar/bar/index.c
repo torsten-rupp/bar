@@ -6392,28 +6392,25 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   uuidIdsString    = String_new();
   entityIdsString  = String_new();
   storageIdsString = String_new();
-  if (indexIds != NULL)
+  for (i = 0; i < indexIdCount; i++)
   {
-    for (i = 0; i < indexIdCount; i++)
+    switch (Index_getType(indexIds[i]))
     {
-      switch (Index_getType(indexIds[i]))
-      {
-        case INDEX_TYPE_UUID:
-          if (i > 0) String_appendChar(uuidIdsString,',');
-          String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-          break;
-        case INDEX_TYPE_ENTITY:
-          if (i > 0) String_appendChar(entityIdsString,',');
-          String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-          break;
-        case INDEX_TYPE_STORAGE:
-          if (i > 0) String_appendChar(storageIdsString,',');
-          String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-          break;
-        default:
-          // ignore other types
-          break;
-      }
+      case INDEX_TYPE_UUID:
+        if (i > 0) String_appendChar(uuidIdsString,',');
+        String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      case INDEX_TYPE_ENTITY:
+        if (i > 0) String_appendChar(entityIdsString,',');
+        String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      case INDEX_TYPE_STORAGE:
+        if (i > 0) String_appendChar(storageIdsString,',');
+        String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      default:
+        // ignore other types
+        break;
     }
   }
 
@@ -6426,15 +6423,15 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
     storageFilter = String_new();
     if (!String_isEmpty(ftsString) || !String_isEmpty(regexpString) || (indexIds != NULL))
     {
-      filterAppend(storageFilter,indexIds != NULL,"AND","storage.id IN (%S)",storageIdsString);
+      filterAppend(storageFilter,!String_isEmpty(storageIdsString),"AND","storage.id IN (%S)",storageIdsString);
       filterAppend(storageFilter,!String_isEmpty(ftsString),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsString);
 //      filterAppend(storageFilter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,storage.name)",regexpString);
     }
 
     unionFilter = String_new();
     filterAppend(unionFilter,!String_isEmpty(storageFilter),"UNION ALL","SELECT storage.id FROM storage WHERE %S",storageFilter);
-    filterAppend(unionFilter,indexIds != NULL,"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (%S)",entityIdsString);
-    filterAppend(unionFilter,indexIds != NULL,"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S)))",uuidIdsString);
+    filterAppend(unionFilter,!String_isEmpty(entityIdsString),"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (%S)",entityIdsString);
+    filterAppend(unionFilter,!String_isEmpty(uuidIdsString),"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S)))",uuidIdsString);
 
     indexStateSetString = String_new();
 
@@ -6520,6 +6517,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   assert(indexHandle != NULL);
   assert((uuidId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_UUID));
   assert((entityId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
+  assert((indexIdCount == 0) || (indexIds != NULL));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -6537,75 +6535,39 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   uuidIdsString    = String_new();
   entityIdsString  = String_new();
   storageIdsString = String_new();
-  if (indexIds != NULL)
+  for (i = 0; i < indexIdCount; i++)
   {
-    for (i = 0; i < indexIdCount; i++)
+    switch (Index_getType(indexIds[i]))
     {
-      switch (Index_getType(indexIds[i]))
-      {
-        case INDEX_TYPE_UUID:
-          if (i > 0) String_appendChar(uuidIdsString,',');
-          String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-          break;
-        case INDEX_TYPE_ENTITY:
-          if (i > 0) String_appendChar(entityIdsString,',');
-          String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-          break;
-        case INDEX_TYPE_STORAGE:
-          if (i > 0) String_appendChar(storageIdsString,',');
-          String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-          break;
-        default:
-          // ignore other types
-          break;
-      }
+      case INDEX_TYPE_UUID:
+        if (i > 0) String_appendChar(uuidIdsString,',');
+        String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      case INDEX_TYPE_ENTITY:
+        if (i > 0) String_appendChar(entityIdsString,',');
+        String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      case INDEX_TYPE_STORAGE:
+        if (i > 0) String_appendChar(storageIdsString,',');
+        String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      default:
+        // ignore other types
+        break;
     }
   }
 
+  filter              = String_new();
   indexStateSetString = String_new();
   indexModeSetString  = String_new();
 
-#if 0
-  if (   !String_isEmpty(ftsString)
-      || !String_isEmpty(regexpString)
-      || (indexIds != NULL)
-     )
-  {
-    filter = String_newCString("1");
-
-    storageFilter = String_new();
-    if (!String_isEmpty(ftsString) || !String_isEmpty(regexpString) || (indexIds != NULL))
-    {
-      filterAppend(storageFilter,!String_isEmpty(storageIdsString),"AND","storage.id IN (%S)",storageIdsString);
-      filterAppend(storageFilter,!String_isEmpty(ftsString),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsString);
-//      filterAppend(storageFilter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,storage.name)",regexpString);
-    }
-
-    unionFilter = String_new();
-    filterAppend(unionFilter,!String_isEmpty(storageFilter),"UNION ALL","SELECT storage.id FROM storage WHERE %S",storageFilter);
-    filterAppend(unionFilter,indexIds != NULL,"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (%S)",entityIdsString);
-    filterAppend(unionFilter,indexIds != NULL,"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S)))",uuidIdsString);
-
-    filterAppend(filter,TRUE,"AND","storage.id IN (%S)",unionFilter);
-    filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
-
-    String_delete(storageFilter);
-    String_delete(unionFilter);
-  }
-  else
-  {
-    filter = String_newCString("1");
-  }
-#else
-  filter = String_new();
   filterAppend(filter,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",INDEX_DATABASE_ID_(entityId));
   filterAppend(filter,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
-  filterAppend(filter,indexIds != NULL,"AND","storage.id IN (%S)",storageIdsString);
+  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","storage.id IN (%S)",storageIdsString);
   filterAppend(filter,(storageType != STORAGE_TYPE_ANY),"AND","entities.type!=%d",storageType);
-  filterAppend(filter,!String_isEmpty(regexpStorageName),"AND","REGEXP(%S,0,storage.name)",regexpStorageName);
+//  filterAppend(filter,!String_isEmpty(regexpStorageName),"AND","REGEXP(%S,0,storage.name)",regexpStorageName);
   filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
   filterAppend(filter,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
-#endif
 
 //Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
