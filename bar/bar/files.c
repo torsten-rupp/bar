@@ -1174,6 +1174,7 @@ const char *File_getSystemTmpDirectory()
 
   #if   defined(PLATFORM_LINUX)
     tmpDirectory = getenv("TMPDIR");
+    if (tmpDirectory == NULL) getenv("TMP");
     if (tmpDirectory == NULL)
     {
       tmpDirectory = "/tmp";
@@ -1417,10 +1418,10 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
 
 Errors File_getTmpFileName(String fileName, ConstString pattern, ConstString directory)
 {
-  return File_getTmpFileNameCString(fileName,String_cString(pattern),directory);
+  return File_getTmpFileNameCString(fileName,String_cString(pattern),String_cString(directory));
 }
 
-Errors File_getTmpFileNameCString(String fileName, const char *pattern, ConstString directory)
+Errors File_getTmpFileNameCString(String fileName, const char *pattern, const char *directory)
 {
   const char *tmpDirectory;
   char       *s;
@@ -1430,10 +1431,11 @@ Errors File_getTmpFileNameCString(String fileName, const char *pattern, ConstStr
   assert(fileName != NULL);
 
   if (pattern == NULL) pattern = "tmp-XXXXXX";
+  if (directory == NULL) directory = File_getSystemTmpDirectory();
 
-  if (!String_isEmpty(directory))
+  if (!stringIsEmpty(directory))
   {
-    s = (char*)malloc(String_length(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(pattern)+1);
+    s = (char*)malloc(strlen(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(pattern)+1);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
@@ -1443,24 +1445,14 @@ Errors File_getTmpFileNameCString(String fileName, const char *pattern, ConstStr
   }
   else
   {
-    tmpDirectory = getenv("TMP");
-    s = (char*)malloc(((tmpDirectory != NULL) ? strlen(tmpDirectory)+1 : 0)+strlen(pattern)+1);
+    s = (char*)malloc(strlen(pattern)+1);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    if (tmpDirectory != NULL)
-    {
-      strcpy(s,tmpDirectory);
-      strcat(s,FILE_SEPARATOR_STRING);
-    }
-    else
-    {
-      s[0] = '\0';
-    }
+    s[0] = '\0';
   }
   strcat(s,pattern);
-
 
   #ifdef HAVE_MKSTEMP
     handle = mkstemp(s);

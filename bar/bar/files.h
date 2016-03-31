@@ -574,7 +574,7 @@ const char *File_getSystemTmpDirectory(void);
 \***********************************************************************/
 
 Errors File_getTmpFileName(String fileName, ConstString pattern, ConstString directory);
-Errors File_getTmpFileNameCString(String fileName, const char *pattern, ConstString directory);
+Errors File_getTmpFileNameCString(String fileName, const char *pattern, const char *directory);
 
 /***********************************************************************\
 * Name   : File_getTmpDirectoryName, File_getTmpDirectoryNameCString
