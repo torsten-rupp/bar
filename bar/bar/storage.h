@@ -162,6 +162,7 @@ typedef struct
   Password     *loginPassword;                               // login name
   String       deviceName;                                   // device name
   String       archiveName;                                  // archive base name
+
   String       archivePatternString;                         // archive pattern string or NULL if no pattern
   Pattern      archivePattern;
 
@@ -496,96 +497,7 @@ typedef struct
     #endif /* HAVE_SSH2 */
 
     // cd/dvd/bd storage
-    struct// storage specifier data
-
-
-
-
-
-
-
-
-
-
-
-// id of allocated server
-// directory name
-
-
-// last parsed entry
-
-
-
-
-
-
-// TRUE if entry read
-
-
-
-
-// id of allocated server
-// directory name
-
-
-
-
-
-
-// last parsed entry
-
-
-
-
-
-
-// TRUE if entry read
-
-
-
-
-
-// id of allocated server
-// directory name
-
-
-
-
-
-// last parsed entry
-
-
-
-
-
-
-// TRUE if entry read
-
-
-
-
-
-// directory name
-
-
-
-
-
-
-// buffer for reading file names
-
-
-// TRUE if entry read
-
-
-
-
-
-// directory name
-
-// ISO9660 image handle
-// ISO9660 entry list
-// next entry in list
+    struct
     {
       // read cd/dvd/bd
       struct
@@ -842,13 +754,17 @@ void Storage_doneAll(void);
 * Name   : Storage_equalSpecifiers
 * Purpose: compare specifiers if equals
 * Input  : storageSpecifier1,storageSpecifier2 - specifiers
+*          archiveName1,archiveName2           - archive names (can be
+*                                                NULL)
 * Output : -
 * Return : TRUE iff equals
 * Notes  : -
 \***********************************************************************/
 
 bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                             const StorageSpecifier *storageSpecifier2
+                             ConstString            archiveName1,
+                             const StorageSpecifier *storageSpecifier2,
+                             ConstString            archiveName2
                             );
 
 /***********************************************************************\
@@ -1047,7 +963,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 
 /***********************************************************************\
 * Name   : Storage_equalNames
-* Purpose: check if storage names identifty the same archive
+* Purpose: check if storage names identify the same archive
 * Input  : storageName1,storageName2 - storage names
 * Output : -
 * Return : TURE iff storage names identifty the same archive

@@ -773,7 +773,9 @@ void Storage_doneAll(void)
 }
 
 bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                             const StorageSpecifier *storageSpecifier2
+                             ConstString            archiveName1,
+                             const StorageSpecifier *storageSpecifier2,
+                             ConstString            archiveName2
                             )
 {
   bool result;
@@ -788,28 +790,28 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
     switch (storageSpecifier1->type)
     {
       case STORAGE_TYPE_FILESYSTEM:
-        result = StorageFile_equalNames(storageSpecifier1,storageSpecifier2);
+        result = StorageFile_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       case STORAGE_TYPE_FTP:
-        result = StorageFTP_equalNames(storageSpecifier1,storageSpecifier2);
+        result = StorageFTP_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       case STORAGE_TYPE_SSH:
       case STORAGE_TYPE_SCP:
-        result = StorageSCP_equalNames(storageSpecifier1,storageSpecifier2);
+        result = StorageSCP_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       case STORAGE_TYPE_SFTP:
-        result = StorageSFTP_equalNames(storageSpecifier1,storageSpecifier2);
+        result = StorageSFTP_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       case STORAGE_TYPE_WEBDAV:
-        result = StorageWebDAV_equalNames(storageSpecifier1,storageSpecifier2);
+        result = StorageWebDAV_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       case STORAGE_TYPE_CD:
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
-        result = StorageOptical_equalNames(storageSpecifier1,storageSpecifier2);
+        result = StorageOptical_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       case STORAGE_TYPE_DEVICE:
-        result = StorageDevice_equalNames(storageSpecifier1,storageSpecifier2);
+        result = StorageDevice_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
       default:
         break;
@@ -1382,7 +1384,7 @@ bool Storage_equalNames(ConstString storageName1,
       && (Storage_parseName(&storageSpecifier2,storageName2) == ERROR_NONE)
      )
   {
-    result = Storage_equalSpecifiers(&storageSpecifier1,&storageSpecifier2);
+    result = Storage_equalSpecifiers(&storageSpecifier1,NULL,&storageSpecifier2,NULL);
   }
 
   // free resources
