@@ -155,7 +155,10 @@ typedef union
 /****************************** Macros *********************************/
 
 // create index state set value
-#define INDEX_STATE_SET(indexState) (1 << indexState)
+#define INDEX_STATE_SET(indexState) (1U << indexState)
+
+// create index mode set value
+#define INDEX_MODE_SET(indexMode) (1U << indexMode)
 
 // get type, database id from index id
 #define INDEX_TYPE_(indexId)             (((__IndexId)(indexId)).type                   )
