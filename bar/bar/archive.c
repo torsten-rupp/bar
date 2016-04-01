@@ -1486,19 +1486,20 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
+        // write header (if not already written)
+        if (!archiveEntryInfo->file.headerWrittenFlag)
+        {
+          error = writeFileChunks(archiveEntryInfo);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+        assert(archiveEntryInfo->file.headerWrittenFlag);
+
         // write last compressed block (if any)
         if (byteLength > 0L)
         {
-          // write header (if not already written)
-          if (!archiveEntryInfo->file.headerWrittenFlag)
-          {
-            error = writeFileChunks(archiveEntryInfo);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-          }
-
           // encrypt block
           error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
                                      archiveEntryInfo->file.byteBuffer,
@@ -1617,7 +1618,9 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-        assert(archiveEntryInfo->file.headerWrittenFlag);
+
+        // reset header "written"
+        archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
         // create archive file
         error = createArchiveFile(archiveEntryInfo->archiveInfo);
@@ -1644,9 +1647,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-
-        // mark header "not written"
-        archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
         // store fragment offset, count for next fragment
         archiveEntryInfo->file.chunkFileData.fragmentOffset += archiveEntryInfo->file.chunkFileData.fragmentSize;
