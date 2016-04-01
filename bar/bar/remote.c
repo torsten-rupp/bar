@@ -418,18 +418,23 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
   return ERROR_NONE;
 }
 
+#if 0
 void Remote_disconnect(const RemoteHost *remoteHost)
 {
+//TODO
+UNUSED_VARIABLE(remoteHost);
 }
+#endif
 
 bool Remote_isConnected(const RemoteHost *remoteHost)
 {
   SemaphoreLock    semaphoreLock;
-  RemoteServerNode *remoteServerNode;
+//  RemoteServerNode *remoteServerNode;
   bool             isConnected;
 
   assert(remoteHost != NULL);
 
+  isConnected = FALSE;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&remoteServerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     isConnected = (findRemoteServer(remoteHost) != NULL);
@@ -593,8 +598,14 @@ Errors Remote_jobStart(const RemoteHost                *remoteHost,
   const char      *entryTypeText;
   PatternNode     *patternNode;
   DeltaSourceNode *deltaSourceNode;
-  bool            quitFlag;
+//  bool            quitFlag;
 
+UNUSED_VARIABLE(scheduleUUID);
+UNUSED_VARIABLE(archiveType);
+UNUSED_VARIABLE(scheduleTitle);
+UNUSED_VARIABLE(scheduleCustomText);
+UNUSED_VARIABLE(storageRequestVolumeFunction);
+UNUSED_VARIABLE(storageRequestVolumeUserData);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   assert(remoteHost != NULL);
@@ -686,7 +697,8 @@ fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_
     {
       case ENTRY_TYPE_FILE :   entryTypeText = "FILE";    break;
       case ENTRY_TYPE_IMAGE:   entryTypeText = "IMAGE";   break;
-      case ENTRY_TYPE_UNKNOWN: entryTypeText = "UNKNOWN"; break;
+      case ENTRY_TYPE_UNKNOWN:
+      default:                 entryTypeText = "UNKNOWN"; break;
     }
     if (error == ERROR_NONE) error = Remote_executeCommand(remoteHost,
                                                            NULL,
@@ -723,7 +735,7 @@ fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_
   }
 
   if (error == ERROR_NONE) error = Remote_executeCommand(remoteHost,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
-  LIST_ITERATE(compressExcludePatternList,deltaSourceNode)
+  LIST_ITERATE(deltaSourceList,deltaSourceNode)
   {
     if (error == ERROR_NONE) error = Remote_executeCommand(remoteHost,
                                                            NULL,
