@@ -1174,7 +1174,7 @@ const char *File_getSystemTmpDirectory()
 
   #if   defined(PLATFORM_LINUX)
     tmpDirectory = getenv("TMPDIR");
-    if (tmpDirectory == NULL) getenv("TMP");
+    if (tmpDirectory == NULL) tmpDirectory = getenv("TMP");
     if (tmpDirectory == NULL)
     {
       tmpDirectory = "/tmp";
