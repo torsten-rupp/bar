@@ -1818,7 +1818,7 @@ void debugResourceCheck(void);
 *          indent         - indention of output
 *          stackTrace     - stack trace
 *          stackTraceSize - size of stack trace
-*          skipFrameCount - number of frames to skip
+*          skipFrameCount - number of stack frames to skip
 * Output : -
 * Return : -
 * Notes  : -
@@ -1834,8 +1834,9 @@ void debugDumpStackTrace(FILE       *handle,
 /***********************************************************************\
 * Name   : debugDumpStackTrace, debugDumpCurrentStackTrace
 * Purpose: print function names of stack trace of current thread
-* Input  : handle - output stream
-*          indent - indention of output
+* Input  : handle         - output stream
+*          indent         - indention of output
+*          skipFrameCount - number of stack frames to skip
 * Output : -
 * Return : -
 * Notes  : -
