@@ -5038,6 +5038,9 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_DEVICE:
       // nothing to do
       break;
+    case STORAGE_TYPE_ANY:
+      // nothing to do
+      break;
     case STORAGE_TYPE_UNKNOWN:
       // nothing to do
       break;
@@ -5063,6 +5066,7 @@ uint getFileServerSettings(ConstString      directory,
   assert(fileServer != NULL);
 
   UNUSED_VARIABLE(jobOptions);
+  UNUSED_VARIABLE(fileServer);
 
   serverNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
@@ -5513,6 +5517,7 @@ Errors getPasswordConsole(String        name,
   assert(name == NULL);
   assert(password != NULL);
 
+  UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(userData);
 
   error = ERROR_UNKNOWN;
