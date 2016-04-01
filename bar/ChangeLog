@@ -31,6 +31,7 @@
   * moved database file /usr/lib/bar -> /var/lib/bar
   * change option: --stop-on-error -> --no-stop-on-error,
     --stop-on-error is now deprecated
+  * create temporary log file in system temporary directory
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store
