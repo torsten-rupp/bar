@@ -37,12 +37,15 @@
 /***************************** Constants *******************************/
 #define DEBUG_MAX_FREE_LIST 4000
 
-#define DEBUG_TESTCODE_NAME          "TESTCODE"
-#define DEBUG_TESTCODE_LIST_FILENAME "TESTCODE_LIST"
-#define DEBUG_TESTCODE_SKIP_FILENAME "TESTCODE_SKIP"
-#define DEBUG_TESTCODE_NAME_FILENAME "TESTCODE_NAME"
-#define DEBUG_TESTCODE_DONE_FILENAME "TESTCODE_DONE"
-#define DEBUG_TESTCODE_STOP          "TESTCODE_STOP"
+#define DEBUG_TESTCODE_NAME          "TESTCODE"       // testcode to execute
+#define DEBUG_TESTCODE_STOP          "TESTCODE_STOP"  // stop (breakpoint) if test fail
+
+#define DEBUG_TESTCODE_LIST_FILENAME "TESTCODE_LIST"  // file with list with all testcode names
+//#define DEBUG_TESTCODE_LIST_FILENAME "TESTCODE_RUN"   //
+#define DEBUG_TESTCODE_SKIP_FILENAME "TESTCODE_SKIP"  // file with  testcodes to skip
+#define DEBUG_TESTCODE_DONE_FILENAME "TESTCODE_DONE"  // file with  list with done testcode names
+
+#define DEBUG_TESTCODE_NAME_FILENAME "TESTCODE_NAME"  // file with name of current testcode
 
 /**************************** Datatypes ********************************/
 #ifndef NDEBUG
@@ -84,6 +87,7 @@
 
 #ifndef NDEBUG
   pthread_mutex_t debugConsoleLock = PTHREAD_MUTEX_INITIALIZER;
+  char            debugTestCodeName[256];
   const char      *__testCodeName__;
 #endif /* not NDEBUG */
 
@@ -235,7 +239,8 @@ void __cyg_profile_func_exit(void *functionCode, void *callAddress)
 
 bool debugIsTestCodeEnabled(const char *__fileName__,
                             uint       __lineNb__,
-                            const char *name
+                            const char *functionName,
+                            uint       counter
                            )
 {
   bool       isTestCodeEnabledFlag;
@@ -245,23 +250,23 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
   char       line[1024];
   char       *s,*t;
 
-  assert(name != NULL);
+  assert(functionName != NULL);
 
   isTestCodeEnabledFlag = FALSE;
+
+  // get testcode name
+  stringFormat(debugTestCodeName,sizeof(debugTestCodeName),"%s%d",functionName,counter);
 
   // check environment variable
   value = getenv(DEBUG_TESTCODE_NAME);
   if ((value != NULL) && !stringIsEmpty(value))
   {
-    isTestCodeEnabledFlag = stringEquals(name,value);
+    isTestCodeEnabledFlag = stringEquals(debugTestCodeName,value);
   }
   else
   {
-    isInListFileFlag = FALSE;
-    isInSkipFileFlag = FALSE;
-    isInDoneFileFlag = FALSE;
-
     // check test code list file
+    isInListFileFlag = FALSE;
     value = getenv(DEBUG_TESTCODE_LIST_FILENAME);
     if (value != NULL)
     {
@@ -284,15 +289,27 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
           if (((*s) == '\0') || ((*s) == '#')) continue;
 
           // name
-          isInListFileFlag = stringEquals(name,s);
+          isInListFileFlag = stringEquals(debugTestCodeName,strtok(s," "));
         }
 
         // close file
         fclose(file);
       }
+
+      // append to list file (if not exists)
+      if (!isInListFileFlag)
+      {
+        file = fopen(value,"a");
+        if (file != NULL)
+        {
+          fprintf(file,"%s %s %d\n",debugTestCodeName,__fileName__,__lineNb__);
+          fclose(file);
+        }
+      }
     }
 
     // check test code skip file
+    isInSkipFileFlag = FALSE;
     if (isInListFileFlag)
     {
       value = getenv(DEBUG_TESTCODE_SKIP_FILENAME);
@@ -316,7 +333,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
             if (((*s) == '\0') || ((*s) == '#')) continue;
 
             // name
-            isInSkipFileFlag = stringEquals(name,s);
+            isInSkipFileFlag = stringEquals(debugTestCodeName,s);
           }
 
           // close file
@@ -326,11 +343,14 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
     }
 
     // check test code done file
+    isInDoneFileFlag = TRUE;
     if (isInListFileFlag && !isInSkipFileFlag)
     {
       value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
       if (value != NULL)
       {
+        isInDoneFileFlag = FALSE;
+
         // check if name is in done file
         file = fopen(value,"r");
         if (file != NULL)
@@ -349,7 +369,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
             if (((*s) == '\0') || ((*s) == '#')) continue;
 
             // name
-            isInDoneFileFlag = stringEquals(name,s);
+            isInDoneFileFlag = stringEquals(debugTestCodeName,s);
           }
 
           // close file
@@ -363,6 +383,19 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 
   if (isTestCodeEnabledFlag)
   {
+    // append to done-list
+    value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
+    if (value != NULL)
+    {
+      file = fopen(value,"a");
+      if (file != NULL)
+      {
+        fprintf(file,"%s\n",debugTestCodeName);
+        fclose(file);
+      }
+    }
+
+    // create file with name of current testcode
     value = getenv(DEBUG_TESTCODE_NAME_FILENAME);
     if (value != NULL)
     {
@@ -370,17 +403,19 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
       file = fopen(value,"w");
       if (file != NULL)
       {
-        fputs(name,file); fputc('\n',file);
+        fprintf(file,"%s\n",debugTestCodeName);
         fclose(file);
       }
       fprintf(stderr,"DEBUG: -----------------------------------------------------------------\n");
-      fprintf(stderr,"DEBUG: Execute testcode '%s', %s, line %u\n",name,__fileName__,__lineNb__);
+      fprintf(stderr,"DEBUG: Execute testcode '%s', %s, line %u\n",debugTestCodeName,__fileName__,__lineNb__);
     }
 
-    __testCodeName__ = name;
+    // set testcode name
+    __testCodeName__ = debugTestCodeName;
   }
   else
   {
+    // clear testcode name
     __testCodeName__ = NULL;
   }
 
