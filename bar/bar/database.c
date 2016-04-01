@@ -928,6 +928,7 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
 {
   const char *string;
 
+  string = NULL;
   switch (type)
   {
     case DATABASE_TYPE_PRIMARY_KEY:
@@ -1770,6 +1771,7 @@ Errors Database_addColumn(DatabaseHandle *databaseHandle,
   Errors     error;
 
   // get column type name
+  columnTypeString = NULL;
   switch (columnType)
   {
     case DATABASE_TYPE_PRIMARY_KEY:
