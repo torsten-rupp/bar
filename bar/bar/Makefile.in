@@ -104,6 +104,7 @@ CD             = cd
 CHATTR         = chattr
 CHMOD          = chmod
 CP             = cp
+CUT            = cut
 DD             = dd
 DDD            = ddd
 DIFF           = diff
@@ -3855,13 +3856,6 @@ functionTestcodeA = \
    $(call functionTestcode,TESTCODE_COMMAND3); \
    $(call functionTestcode,TESTCODE_COMMAND4); \
    \
-   if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
-     $(ECHO) "ERROR: No more testcode executed!"; \
-     $(ECHO) ""; \
-     $(ECHO) "Available and not executed testcode:"; \
-     $(MAKE) --quiet testcode_diff; \
-   fi; \
-   \
    exit $$rc; \
   )
 
@@ -3939,11 +3933,6 @@ testcode_all: \
             $(call functionTestcodeC); \
             rc=$$?; \
           fi; \
-          \
-          if test $$rc -eq $(TESTCODE_EXITCODE); then \
-            $(CAT) testcode.name >> testcode.done; \
-            $(ECHO_NO_LF) >testcode.name; \
-          fi; \
         done
 
 testcode: \
@@ -3987,8 +3976,8 @@ testcode_list:
 	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) >/dev/null;)
 
 testcode_diff:
-	$(SORT) < testcode.list >testcode.list.sorted
-	$(SORT) < testcode.done >testcode.done.sorted
+	$(CAT) testcode.list | $(CUT) -d " " -f 1 | $(SORT) >testcode.list.sorted
+	$(CAT) testcode.done | $(CUT) -d " " -f 1 | $(SORT) >testcode.done.sorted
 	$(DIFF) testcode.list.sorted testcode.done.sorted | $(GREP) '<' | $(SED) 's/<\s*/  /g'
 	$(RMF) testcode.list.sorted testcode.done.sorted
 
