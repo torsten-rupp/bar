@@ -7579,7 +7579,7 @@ LOCAL Errors bar(int argc, const char *argv[])
       String_debugDone();
       List_debugDone();
     #endif /* not NDEBUG */
-    return errorToExitcode(error);
+    return error;
   }
   globalOptions.barExecutable = argv[0];
 
@@ -7764,7 +7764,7 @@ exit(1);
       String_debugDone();
       List_debugDone();
     #endif /* not NDEBUG */
-    return errorToExitcode(error);
+    return error;
   }
 
   // run
