@@ -3395,10 +3395,10 @@ UNUSED_VARIABLE(archiveType);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors purgeStorageIndex(IndexId                storageId,
-                        const StorageSpecifier *storageSpecifier,
-                        ConstString            archiveName
-                       )
+LOCAL Errors purgeStorageIndex(IndexId          storageId,
+                               StorageSpecifier *storageSpecifier,
+                               ConstString      archiveName
+                              )
 {
   String           oldStorageName;
   StorageSpecifier oldStorageSpecifier;
@@ -3907,7 +3907,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   AutoFreeList               autoFreeList;
   byte                       *buffer;
   StorageSpecifier           storageSpecifier;
-  String                     storageName;
   void                       *autoFreeSavePoint;
   StorageMsg                 storageMsg;
   Errors                     error;
@@ -3924,10 +3923,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   SemaphoreLock              semaphoreLock;
   String                     pattern;
 
-  IndexQueryHandle           indexQueryHandle;
-  IndexId                    oldUUIDId;
-  IndexId                    oldStorageId;
-  IndexId                    oldEntityId;
   IndexId                    entityId;
   IndexId                    storageId;
 
@@ -3944,7 +3939,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   }
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   Storage_initSpecifier(&storageSpecifier);
-  storageName = String_new();
 
   // initial storage pre-processing
   if (!isAborted(createInfo))
