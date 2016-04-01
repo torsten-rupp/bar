@@ -960,7 +960,7 @@ typedef struct
 /***********************************************************************\
 * Name   : DEBUG_TEST_CODE
 * Purpose: execute test code
-* Input  : name - test code name
+* Input  : -
 * Output : -
 * Return : -
 * Notes  : test code is executed if:
@@ -996,7 +996,7 @@ typedef struct
 /***********************************************************************\
 * Name   : DEBUG_TESTCODE_ERROR
 * Purpose: get test code error code
-* Input  : name - test code name
+* Input  : -
 * Output : -
 * Return : test code error code
 * Notes  : -
@@ -1021,7 +1021,7 @@ typedef struct
 
 #ifndef NDEBUG
   #define IS_DEBUG_TESTCODE(name) \
-    ((__testCodeName__ != NULL) && (strcmp(__testCodeName__,name) == 0))
+    ((__testCodeName__ != NULL) && stringEquals(__testCodeName__,name))
 #else /* not NDEBUG */
   #define IS_DEBUG_TESTCODE(name) \
     FALSE

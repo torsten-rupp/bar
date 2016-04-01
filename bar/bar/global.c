@@ -86,9 +86,10 @@
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
-  pthread_mutex_t debugConsoleLock = PTHREAD_MUTEX_INITIALIZER;
-  char            debugTestCodeName[256];
-  const char      *__testCodeName__;
+  pthread_mutex_t debugConsoleLock  = PTHREAD_MUTEX_INITIALIZER;
+  const char      *__testCodeName__ = NULL;
+
+  LOCAL char      debugTestCodeName[256];
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -413,11 +414,6 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
     // set testcode name
     __testCodeName__ = debugTestCodeName;
   }
-  else
-  {
-    // clear testcode name
-    __testCodeName__ = NULL;
-  }
 
   return isTestCodeEnabledFlag;
 }
@@ -426,6 +422,8 @@ Errors debugTestCodeError(const char *__fileName__,
                           uint       __lineNb__
                          )
 {
+  assert(__testCodeName__ != NULL);
+
   if (getenv(DEBUG_TESTCODE_STOP) != NULL)
   {
     __BP();
