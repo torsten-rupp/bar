@@ -3070,6 +3070,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   bool          modified;
 
   Password_clear(password);
+
+  modified = FALSE;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     modified = Semaphore_waitModified(&decryptPasswordList.lock,timeout);
