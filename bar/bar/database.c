@@ -3021,7 +3021,7 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
   return databaseId;
 }
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
 
 void Database_debugEnable(bool enabled)
 {
@@ -3044,7 +3044,7 @@ void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle)
 //  DATABASE_DEBUG_SQLX(databaseQueryHandle->databaseHandle,"SQL query",databaseQueryHandle->sqlString);
 }
 
-//#endif /* not NDEBUG */
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
