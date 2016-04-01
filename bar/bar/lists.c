@@ -1045,6 +1045,7 @@ void *List_findFirst(const void             *list,
   assert(list != NULL);
   assert(listNodeEqualsFunction != NULL);
 
+  node = NULL;
   switch (listFindMode)
   {
     case LIST_FIND_FORWARD:
@@ -1061,6 +1062,11 @@ void *List_findFirst(const void             *list,
         node = node->prev;
       }
       break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; // not reached
+    #endif /* NDEBUG */
   }
 
   return node;
@@ -1096,6 +1102,11 @@ void *List_findNext(const void             *list,
           node = (((Node*)node))->prev;
         }
         break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; // not reached
+      #endif /* NDEBUG */
     }
   }
 
