@@ -1004,7 +1004,7 @@ typedef struct
 
 #ifndef NDEBUG
   #define DEBUG_TESTCODE_ERROR() \
-    debugTestCodeError()
+    debugTestCodeError(__FILE__,__LINE__)
 #else /* not NDEBUG */
   #define DEBUG_TESTCODE_ERROR() \
     ERROR_NONE
@@ -1679,7 +1679,9 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 * Notes  : stop when environment variable TESTCODE_STOP is set
 \***********************************************************************/
 
-Errors debugTestCodeError(void);
+Errors debugTestCodeError(const char *__fileName__,
+                          uint       __lineNb__
+                         );
 
 /***********************************************************************\
 * Name   : debugLocalResource

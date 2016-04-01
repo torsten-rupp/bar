@@ -422,13 +422,16 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
   return isTestCodeEnabledFlag;
 }
 
-Errors debugTestCodeError(void)
+Errors debugTestCodeError(const char *__fileName__,
+                          uint       __lineNb__
+                         )
 {
   if (getenv(DEBUG_TESTCODE_STOP) != NULL)
   {
     __BP();
   }
-  return ERRORX_(TESTCODE,0,__testCodeName__);
+
+  return ERRORX_(TESTCODE,0,"'%s' at %s, %d",__testCodeName__,__fileName__,__lineNb__);
 }
 
 void debugLocalResource(const char *__fileName__,

@@ -630,8 +630,7 @@ ERROR TESTCODE
   strncpy(errorText,"test code",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText," ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
   }
 // end of file
