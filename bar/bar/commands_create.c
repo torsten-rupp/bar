@@ -3198,7 +3198,7 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 }
 
 /***********************************************************************\
-* Name   : getArchiveSize
+* Name   : archiveGetSize
 * Purpose: call back for init archive file
 * Input  : userData    - user data
 *          indexHandle - index handle or NULL if no index
@@ -3210,7 +3210,7 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint64 getArchiveSize(void        *userData,
+LOCAL uint64 archiveGetSize(void        *userData,
                             IndexHandle *indexHandle,
 //                            IndexId     entityId,
                             IndexId     storageId,
@@ -3266,7 +3266,7 @@ UNUSED_VARIABLE(storageId);
 }
 
 /***********************************************************************\
-* Name   : storeArchiveFile
+* Name   : archiveStore
 * Purpose: call back to store archive file
 * Input  : userData     - user data
 *          indexHandle  - index handle or NULL if no index
@@ -3281,17 +3281,17 @@ UNUSED_VARIABLE(storageId);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeArchiveFile(void        *userData,
-                              IndexHandle *indexHandle,
+LOCAL Errors archiveStore(void        *userData,
+                          IndexHandle *indexHandle,
 ConstString jobUUID,
 ConstString scheduleUUID,
 ArchiveTypes archiveType,
 //                              IndexId     entityId,
-                              IndexId     storageId,
-                              int         partNumber,
-                              String      intermediateFileName,
-                              uint64      intermediateFileSize
-                             )
+                          IndexId     storageId,
+                          int         partNumber,
+                          String      intermediateFileName,
+                          uint64      intermediateFileSize
+                         )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
   Errors        error;
@@ -3345,12 +3345,12 @@ UNUSED_VARIABLE(archiveType);
   storageMsg.fileSize    = intermediateFileSize;
   storageMsg.archiveName = archiveName;
   storageInfoIncrement(createInfo,fileInfo.size);
+  DEBUG_TESTCODE() { freeStorageMsg(&storageMsg,NULL); return DEBUG_TESTCODE_ERROR(); }
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
     freeStorageMsg(&storageMsg,NULL);
     return ERROR_NONE;
   }
-  DEBUG_TESTCODE() { return DEBUG_TESTCODE_ERROR(); }
 
   // update status info
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -6473,8 +6473,8 @@ Errors Command_create(ConstString                  jobUUID,
                          archiveType,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
-                         CALLBACK(getArchiveSize,&createInfo),
-                         CALLBACK(storeArchiveFile,&createInfo),
+                         CALLBACK(archiveGetSize,&createInfo),
+                         CALLBACK(archiveStore,&createInfo),
                          CALLBACK(getPasswordFunction,getPasswordUserData),
                          logHandle
                         );
