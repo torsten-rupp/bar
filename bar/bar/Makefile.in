@@ -1518,6 +1518,7 @@ test_all:
 test_parameters: \
   $(TEST_BAR) \
   $(TEST_CONFIGURATION) \
+  $(TEST_KEYS) \
   $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test parameters..."
 	@$(RMRF) $(TEST_FILES_CLEAN)
@@ -3816,6 +3817,14 @@ TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
                     --destination=test/restore \
                     -x test/test-*.bar
 
+TESTCODE_COMMANDS = \
+  TESTCODE_COMMAND1A \
+  TESTCODE_COMMAND1B \
+  TESTCODE_COMMAND1C \
+  TESTCODE_COMMAND2 \
+  TESTCODE_COMMAND3 \
+  TESTCODE_COMMAND4 \
+
 # helper function to execute test code
 # call functionTestcodeA
 # call functionTestcodeB
@@ -4000,12 +4009,21 @@ testcode_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMF) testcode.list testcode.skip testcode.name testcode.done
 
-testcode_init:
-	$(GREP) -e 'DEBUG_TESTCODE\s*(\s*"' $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g' > testcode.list
+testcode_init: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIGURATION) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(ECHO_NO_LF) > testcode.list
 	$(ECHO_NO_LF) > testcode.done
 	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done > testcode.skip
+	$(foreach z,$(TESTCODE_COMMANDS),$($z) > /dev/null;)
 
-testcode_all: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
+testcode_all: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIGURATION) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
 	rc=$(TESTCODE_EXITCODE); \
         while test $$rc -eq $(TESTCODE_EXITCODE); do \
           rc=0; \
@@ -4028,7 +4046,11 @@ testcode_all: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
           fi; \
         done
 
-testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
+testcode: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIGURATION) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
           rc=0; \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
             $(call functionTestcodeA); \
@@ -4043,7 +4065,11 @@ testcode: $(TEST_BAR_DEBUG) $(TEST_KEYS) $(TEST_FILES)
             rc=$$?; \
           fi; \
 
-testcodex: $(TEST_BAR_DEBUG) $(TEST_KEYS)
+testcodex: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIGURATION) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
 	TESTCODE=$(shell $(CAT) testcode.name) \
           $(TESTCODE_COMMAND1)
 	$(TESTCODE_COMMAND1) > /dev/null
@@ -4057,7 +4083,8 @@ testcodex: $(TEST_BAR_DEBUG) $(TEST_KEYS)
           $(TESTCODE_COMMAND4) > /dev/null; \
 
 testcode_list:
-	@$(GREP) -e 'DEBUG_TESTCODE\s*(\s*"' $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g'
+	$(ECHO_NO_LF) > testcode.list
+	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) > /dev/null;)
 
 testcode_diff:
 	$(SORT) < testcode.list > testcode.list.sorted
