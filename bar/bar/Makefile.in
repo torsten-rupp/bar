@@ -585,7 +585,7 @@ depend: Makefile.depend
 
 Makefile.depend:
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE)
-	$(ECHO) > Makefile.depend
+	$(ECHO) >Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES); do \
           $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z | \
             $(SED) 's/\(.*\.o:\)/release\/\1/g' >> Makefile.depend; \
@@ -678,14 +678,14 @@ po/jp/LC_MESSAGES/bar.mo: po/japanese.po
 # create BAR symbol files
 ifeq (@HAVE_BREAKPAD@,1)
 release/bar.sym: bar@EXEEXT@
-	$(DUMP_SYMS) ./bar@EXEEXT@ > $@
+	$(DUMP_SYMS) ./bar@EXEEXT@ >$@
 else
 	@$(ECHO) "ERROR: breakpad not configured - cannot build symbol file."
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
 release/bar.sym.bz2.o: release/bar.sym
-	$(BZIP2) -c < release/bar.sym > release/bar.sym.bz2
+	$(BZIP2) -c < release/bar.sym >release/bar.sym.bz2
 	(format=$(shell $(OBJDUMP) -a release/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
          name=$(subst .,_,$(subst /,_,release/bar.sym.bz2)); \
          $(OBJCOPY) \
@@ -704,14 +704,14 @@ endif
 
 ifeq (@HAVE_BREAKPAD@,1)
 debug/bar.sym: bar-debug@EXEEXT@
-	$(DUMP_SYMS) ./bar-debug@EXEEXT@ > $@
+	$(DUMP_SYMS) ./bar-debug@EXEEXT@ >$@
 else
 	@$(ECHO) "ERROR: breakpad not configured - cannot build symbol file."
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
 debug/bar.sym.bz2.o: debug/bar.sym
-	$(BZIP2) -c < debug/bar.sym > debug/bar.sym.bz2
+	$(BZIP2) -c < debug/bar.sym >debug/bar.sym.bz2
 	(format=$(shell $(OBJDUMP) -a debug/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
          name=$(subst .,_,$(subst /,_,debug/bar.sym.bz2)); \
          $(OBJCOPY) \
@@ -756,7 +756,7 @@ bar-keygen@SHELLEXT@: $(SOURCE_DIR)/bar-keygen.in
               $(ECHO) "$$line"; \
             fi; \
           done; \
-        ) > $@
+        ) >$@
 	$(CHMOD) 775 $@
 
 # error definition
@@ -775,7 +775,7 @@ archive_format.c: $(SOURCE_DIR)/archive_format.def
 
 # index database definition
 index_definition.h: $(SOURCE_DIR)/index_definition.pl $(SOURCE_DIR)/index_definition.sql
-	$(PERL) $(SOURCE_DIR)/index_definition.pl < $(SOURCE_DIR)/index_definition.sql > $@
+	$(PERL) $(SOURCE_DIR)/index_definition.pl < $(SOURCE_DIR)/index_definition.sql >$@
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
@@ -1522,7 +1522,7 @@ test_parameters: \
   $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test parameters..."
 	@$(RMRF) $(TEST_FILES_CLEAN)
-	@$(ECHO) "# test config" > test/test.cfg
+	@$(ECHO) "# test config" >test/test.cfg
 	#
 	# help
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -h 1>/dev/null $(if $(QUIET),</dev/null 1>/dev/null))
@@ -1673,22 +1673,22 @@ $(TEST_DATA_DIR)/data/zero.dat:
 	$(RMF) $0; touch $@
 $(TEST_DATA_DIR)/data/readonly.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@; $(CHMOD) 440 $@
+	$(ECHO) Hello World >$@; $(CHMOD) 440 $@
 $(TEST_DATA_DIR)/data/readonly512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=512 2>/dev/null; $(CHMOD) 440 $@
 $(TEST_DATA_DIR)/data/unreadable.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@; $(CHMOD) 000 $@
+	$(ECHO) Hello World >$@; $(CHMOD) 000 $@
 $(TEST_DATA_DIR)/data/smallfile.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
 $(TEST_DATA_DIR)/data/sub_dir:
 	$(INSTALL) -d $(@D)
-	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World > $@/test.dat
+	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World >$@/test.dat
 $(TEST_DATA_DIR)/data/sub_ignore_dir:
 	$(INSTALL) -d $(@D)
-	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World > $@/test.dat
+	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World >$@/test.dat
 	touch $@/.nobackup
 $(TEST_DATA_DIR)/data/linkdata.dat $(TEST_DATA_DIR)/data/link.dat:
 	$(INSTALL) -d $(@D)
@@ -1753,34 +1753,34 @@ $(TEST_DATA_DIR)/data/fifo:
 	($(CD) $(TEST_DATA_DIR)/data; $(MKFIFO) fifo)
 $(TEST_DATA_DIR)/data/data\'.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@
+	$(ECHO) Hello World >$@
 $(TEST_DATA_DIR)/data/data\".dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@
+	$(ECHO) Hello World >$@
 $(TEST_DATA_DIR)/data/data\\.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@
+	$(ECHO) Hello World >$@
 $(TEST_DATA_DIR)/data/data\\n.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@
+	$(ECHO) Hello World >$@
 $(TEST_DATA_DIR)/data/data%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@
+	$(ECHO) Hello World >$@
 $(TEST_DATA_DIR)/data/data%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World > $@
+	$(ECHO) Hello World >$@
 $(TEST_DATA_DIR)/data/delta1/test.dat:
 	$(INSTALL) -d $(@D)
 	( \
          $(DD) if=$(DEVICE_RANDOM) bs=1k count=512 2>/dev/null; \
-        ) > $@
+        ) >$@
 $(TEST_DATA_DIR)/data/delta2/test.dat: $(TEST_DATA_DIR)/data/delta1/test.dat
 	$(INSTALL) -d $(@D)
 	( \
           $(DD) if=$(TEST_DATA_DIR)/data/delta1/test.dat skip=0 bs=1k count=255 2>/dev/null; \
           $(DD) if=$(DEVICE_RANDOM) bs=1k count=1 2>/dev/null; \
           $(DD) if=$(TEST_DATA_DIR)/data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
-        ) > $@
+        ) >$@
 
 $(TEST_DATA_DIR)/data_large/zero5G.dat:
 	$(INSTALL) -d $(@D)
@@ -1793,7 +1793,7 @@ test/bar.cfg:
 	$(INSTALL) -d $(@D)
 	( \
           echo '# bar test configuration'; \
-        ) > $@
+        ) >$@
 	$(CHMOD) 600 $@
 
 test/key.public test/key.private:
@@ -1945,13 +1945,13 @@ test_file_operations_destroyed: \
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 > $${fileName}_destroyed; done
+	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 >$${fileName}_destroyed; done
 	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
-	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXX > $${fileName}_destroyed; done
+	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXX >$${fileName}_destroyed; done
 	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
-	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:32:XXXX > $${fileName}_destroyed; done
+	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:32:XXXX >$${fileName}_destroyed; done
 	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
-	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 > $${fileName}_destroyed; done
+	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 >$${fileName}_destroyed; done
 	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
 
 # helper function to create test file with data
@@ -2074,7 +2074,7 @@ functionDeviceUmount = \
 functionTestDeviceDump = \
   @( \
     $(ECHO) $(SUDO) $(DD) if=$1 of=- \> $2; \
-    ($(SUDO) $(DD) if=$1 of=-) > $2 2>/dev/null; \
+    ($(SUDO) $(DD) if=$1 of=-) >$2 2>/dev/null; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 .PHONY: test_image_operations
@@ -3477,7 +3477,7 @@ memcheck1: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) --help > /dev/null
+          $(TEST_BAR_VALGRIND) --help >/dev/null
 memcheck2: \
   memcheck2a \
   memcheck2b \
@@ -3493,7 +3493,7 @@ memcheck2a: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 memcheck2b: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -3503,7 +3503,7 @@ memcheck2b: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files >/dev/null
 memcheck2c: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -3513,7 +3513,7 @@ memcheck2c: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --overwrite-archive-files >/dev/null
 memcheck2d: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -3523,7 +3523,7 @@ memcheck2d: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --overwrite-archive-files >/dev/null
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -3533,7 +3533,7 @@ memcheck2e: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test-###.bar $(TEST_FILES) $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test-###.bar $(TEST_FILES) $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files >/dev/null
 memcheck2f: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -3543,67 +3543,67 @@ memcheck2f: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --dry-run > /dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --dry-run >/dev/null
 memcheck3: bar
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -l test/test*.bar $(BAR_OPTIONS) > /dev/null
+          $(TEST_BAR_VALGRIND) -l test/test*.bar $(BAR_OPTIONS) >/dev/null
 memcheck4: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -t test/test*.bar $(BAR_OPTIONS) > /dev/null
+          $(TEST_BAR_VALGRIND) -t test/test*.bar $(BAR_OPTIONS) >/dev/null
 memcheck5: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -d test/test*.bar $(BAR_OPTIONS) > /dev/null
+          $(TEST_BAR_VALGRIND) -d test/test*.bar $(BAR_OPTIONS) >/dev/null
 memcheck6: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore > /dev/null
+          $(TEST_BAR_VALGRIND) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore >/dev/null
 memcheck7: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
+	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	-$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) > /dev/null
+          $(TEST_BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) >/dev/null
 	-$(VALGRIND) $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) dvd:///dev/dvd: $(BAR_OPTIONS) > /dev/null
+          $(TEST_BAR_VALGRIND) dvd:///dev/dvd: $(BAR_OPTIONS) >/dev/null
 memcheck8: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
@@ -3669,14 +3669,14 @@ $(TEST_DATA_DIR)/data/delta1/test100M.dat:
 	$(INSTALL) -d $(@D)
 	( \
          $(DD) if=$(DEVICE_RANDOM) bs=1M count=100 2>/dev/null; \
-        ) > $@
+        ) >$@
 $(TEST_DATA_DIR)/data/delta2/test100M.dat: $(TEST_DATA_DIR)/data/delta1/test100M.dat
 	$(INSTALL) -d $(@D)
 	( \
           $(DD) if=$(TEST_DATA_DIR)/data/delta1/test100M.dat skip=0 bs=1M count=50 2>/dev/null; \
           $(DD) if=$(DEVICE_RANDOM) bs=1M count=1 2>/dev/null; \
           $(DD) if=$(TEST_DATA_DIR)/data/delta1/test100M.dat skip=256 bs=1M count=49 2>/dev/null; \
-        ) > $@
+        ) >$@
 
 # performance tests
 .PHONY: performance
@@ -3762,6 +3762,11 @@ endif
 
 # ----------------------------------------------------------------------------
 
+# testcode runs:
+#   1A+2+3+4: full+list+diff+extract
+#   1B+2+3+4: differentiell+list+diff+extract
+#   1C+2+3+4: incremental+list+diff+extract
+
 TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
@@ -3825,181 +3830,76 @@ TESTCODE_COMMANDS = \
   TESTCODE_COMMAND3 \
   TESTCODE_COMMAND4 \
 
+# call functionTestcode(command)
+functionTestcode = \
+ if test $$rc -ne $(TESTCODE_EXITCODE); then \
+   TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+     $($1) >/dev/null; \
+   rc=$$?; \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     $(ECHO) "Test code fail $1 (exitcode: $$rc):"; \
+     $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $($1)"; \
+   fi; \
+ fi
+
 # helper function to execute test code
 # call functionTestcodeA
 # call functionTestcodeB
 # call functionTestcodeC
 functionTestcodeA = \
   ( \
-   rc=0; rc1=0; rc2=0; rc3=0; rc4=0; \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND1A) > /dev/null; \
-     rc=$$?; \
-     rc1=$$rc; \
+   rc=0; \
+   \
+   $(call functionTestcode,TESTCODE_COMMAND1A); \
+   $(call functionTestcode,TESTCODE_COMMAND2); \
+   $(call functionTestcode,TESTCODE_COMMAND3); \
+   $(call functionTestcode,TESTCODE_COMMAND4); \
+   \
+   if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
+     $(ECHO) "ERROR: No more testcode executed!"; \
+     $(ECHO) ""; \
+     $(ECHO) "Available and not executed testcode:"; \
+     $(MAKE) --quiet testcode_diff; \
    fi; \
    \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND2) > /dev/null; \
-     rc=$$?; \
-     rc2=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND3) > /dev/null; \
-     rc=$$?; \
-     rc3=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND4) > /dev/null; \
-     rc=$$?; \
-     rc4=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND1)"; \
-     fi; \
-     if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND2)"; \
-     fi; \
-     if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND3)"; \
-     fi; \
-     if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND4)"; \
-     fi; \
-     if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
-       $(ECHO) "ERROR: No more testcode executed!"; \
-       $(ECHO) ""; \
-       $(ECHO) "Available and not executed testcode:"; \
-       $(MAKE) --quiet testcode_diff; \
-     fi; \
-   fi; \
    exit $$rc; \
   )
 
 functionTestcodeB = \
   ( \
-   rc=0; rc1=0; rc2=0; rc3=0; rc4=0; \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND1B) > /dev/null; \
-     rc=$$?; \
-     rc1=$$rc; \
+   rc=0; \
+   \
+   $(call functionTestcode,TESTCODE_COMMAND1B); \
+   $(call functionTestcode,TESTCODE_COMMAND2); \
+   $(call functionTestcode,TESTCODE_COMMAND3); \
+   $(call functionTestcode,TESTCODE_COMMAND4); \
+   \
+   if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
+     $(ECHO) "ERROR: No more testcode executed!"; \
+     $(ECHO) ""; \
+     $(ECHO) "Available and not executed testcode:"; \
+     $(MAKE) --quiet testcode_diff; \
    fi; \
    \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND2) > /dev/null; \
-     rc=$$?; \
-     rc2=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND3) > /dev/null; \
-     rc=$$?; \
-     rc3=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND4) > /dev/null; \
-     rc=$$?; \
-     rc4=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND1)"; \
-     fi; \
-     if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND2)"; \
-     fi; \
-     if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND3)"; \
-     fi; \
-     if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND4)"; \
-     fi; \
-     if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
-       $(ECHO) "ERROR: No more testcode executed!"; \
-       $(ECHO) ""; \
-       $(ECHO) "Available and not executed testcode:"; \
-       $(MAKE) --quiet testcode_diff; \
-     fi; \
-   fi; \
    exit $$rc; \
   )
 
 functionTestcodeC = \
   ( \
-   rc=0; rc1=0; rc2=0; rc3=0; rc4=0; \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND1C) > /dev/null; \
-     rc=$$?; \
-     rc1=$$rc; \
+   rc=0; \
+   \
+   $(call functionTestcode,TESTCODE_COMMAND1C); \
+   $(call functionTestcode,TESTCODE_COMMAND2); \
+   $(call functionTestcode,TESTCODE_COMMAND3); \
+   $(call functionTestcode,TESTCODE_COMMAND4); \
+   \
+   if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
+     $(ECHO) "ERROR: No more testcode executed!"; \
+     $(ECHO) ""; \
+     $(ECHO) "Available and not executed testcode:"; \
+     $(MAKE) --quiet testcode_diff; \
    fi; \
    \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND2) > /dev/null; \
-     rc=$$?; \
-     rc2=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND3) > /dev/null; \
-     rc=$$?; \
-     rc3=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
-       $(TESTCODE_COMMAND4) > /dev/null; \
-     rc=$$?; \
-     rc4=$$rc; \
-   fi;\
-   \
-   if test $$rc -ne $(TESTCODE_EXITCODE); then \
-     if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND1)"; \
-     fi; \
-     if test $$rc2 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND2)"; \
-     fi; \
-     if test $$rc3 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND3)"; \
-     fi; \
-     if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
-       $(ECHO) "Test code fail:"; \
-       $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $(TESTCODE_COMMAND4)"; \
-     fi; \
-     if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
-       $(ECHO) "ERROR: No testcode executed!"; \
-       $(ECHO) ""; \
-       $(ECHO) "Available and not executed testcode:"; \
-       $(MAKE) --quiet testcode_diff; \
-     fi; \
-   fi; \
    exit $$rc; \
   )
 
@@ -4014,10 +3914,10 @@ testcode_init: \
   $(TEST_CONFIGURATION) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	$(ECHO_NO_LF) > testcode.list
-	$(ECHO_NO_LF) > testcode.done
-	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done > testcode.skip
-	$(foreach z,$(TESTCODE_COMMANDS),$($z) > /dev/null;)
+	$(ECHO_NO_LF) >testcode.list
+	$(ECHO_NO_LF) >testcode.done
+	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done >testcode.skip
+	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) >/dev/null;)
 
 testcode_all: \
   $(TEST_BAR_DEBUG) \
@@ -4028,7 +3928,7 @@ testcode_all: \
         while test $$rc -eq $(TESTCODE_EXITCODE); do \
           rc=0; \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(call functionTestcodeA); \
+            $(call functionTestcodeA) 1>/dev/null 2>/dev/null; \
             rc=$$?; \
           fi; \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
@@ -4042,7 +3942,7 @@ testcode_all: \
           \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
             $(CAT) testcode.name >> testcode.done; \
-            $(ECHO_NO_LF) > testcode.name; \
+            $(ECHO_NO_LF) >testcode.name; \
           fi; \
         done
 
@@ -4072,23 +3972,23 @@ testcodex: \
   $(TEST_FILES)
 	TESTCODE=$(shell $(CAT) testcode.name) \
           $(TESTCODE_COMMAND1)
-	$(TESTCODE_COMMAND1) > /dev/null
+	$(TESTCODE_COMMAND1) >/dev/null
 	TESTCODE=$(shell $(CAT) testcode.name) \
-          $(TESTCODE_COMMAND2) > /dev/null; \
-	$(TESTCODE_COMMAND1) > /dev/null
+          $(TESTCODE_COMMAND2) >/dev/null; \
+	$(TESTCODE_COMMAND1) >/dev/null
 	TESTCODE=$(shell $(CAT) testcode.name) \
-          $(TESTCODE_COMMAND3) > /dev/null; \
-	$(TESTCODE_COMMAND1) > /dev/null
+          $(TESTCODE_COMMAND3) >/dev/null; \
+	$(TESTCODE_COMMAND1) >/dev/null
 	TESTCODE=$(shell $(CAT) testcode.name) \
-          $(TESTCODE_COMMAND4) > /dev/null; \
+          $(TESTCODE_COMMAND4) >/dev/null; \
 
 testcode_list:
-	$(ECHO_NO_LF) > testcode.list
-	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) > /dev/null;)
+	$(ECHO_NO_LF) >testcode.list
+	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) >/dev/null;)
 
 testcode_diff:
-	$(SORT) < testcode.list > testcode.list.sorted
-	$(SORT) < testcode.done > testcode.done.sorted
+	$(SORT) < testcode.list >testcode.list.sorted
+	$(SORT) < testcode.done >testcode.done.sorted
 	$(DIFF) testcode.list.sorted testcode.done.sorted | $(GREP) '<' | $(SED) 's/<\s*/  /g'
 	$(RMF) testcode.list.sorted testcode.done.sorted
 
