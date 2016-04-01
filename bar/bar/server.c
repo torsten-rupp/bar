@@ -1922,6 +1922,8 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
 * Notes  : -
 \***********************************************************************/
 
+#if 0
+// still not used
 LOCAL void deleteJob(JobNode *jobNode)
 {
   assert(jobNode != NULL);
@@ -1929,6 +1931,7 @@ LOCAL void deleteJob(JobNode *jobNode)
   freeJobNode(jobNode,NULL);
   LIST_DELETE_NODE(jobNode);
 }
+#endif
 
 /***********************************************************************\
 * Name   : triggerJob
@@ -2142,6 +2145,8 @@ LOCAL void jobScheduleChanged(const JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
+#if 0
+// still not used
 LOCAL void jobDeleted(JobNode *jobNode)
 {
   assert(Semaphore_isLocked(&jobList.lock));
@@ -2150,6 +2155,7 @@ LOCAL void jobDeleted(JobNode *jobNode)
                         NULL  // scheduleUUID
                        );
 }
+#endif
 
 /***********************************************************************\
 * Name   : findJobByName
@@ -3586,11 +3592,11 @@ LOCAL void remoteConnectThreadCode(void)
   JobNode           *jobNode;
   RemoteJobInfoNode *remoteJobInfoNode;
   Errors            error;
-  double            entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
-  ulong             restFiles;
-  uint64            restBytes;
-  uint64            restStorageBytes;
-  ulong             estimatedRestTime;
+//  double            entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
+//  ulong             restFiles;
+//  uint64            restBytes;
+//  uint64            restStorageBytes;
+//  ulong             estimatedRestTime;
   uint              sleepTime;
 
   /***********************************************************************\
@@ -3766,13 +3772,13 @@ LOCAL void remoteThreadCode(void)
   SemaphoreLock     semaphoreLock;
   JobNode           *jobNode;
   RemoteJobInfoNode *remoteJobInfoNode;
-  String            jobUUID;
+//  String            jobUUID;
   Errors            error;
-  double            entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
-  ulong             restFiles;
-  uint64            restBytes;
-  uint64            restStorageBytes;
-  ulong             estimatedRestTime;
+//  double            entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
+//  ulong             restFiles;
+//  uint64            restBytes;
+//  uint64            restStorageBytes;
+//  ulong             estimatedRestTime;
   uint              sleepTime;
 
   /***********************************************************************\
@@ -5392,6 +5398,7 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
   assert(clientInfo != NULL);
   assert(actionCommand != NULL);
 
+  error = ERROR_UNKNOWN;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // clear action
@@ -6286,7 +6293,6 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const StringMap ar
 
 LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
   String            name;
   int               i;
   String            s;
@@ -6463,6 +6469,8 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const Strin
     {
       switch (serverNode->server.type)
       {
+        case SERVER_TYPE_NONE:
+          break;
         case SERVER_TYPE_FILE:
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "id=%u name=%'S serverType=%s maxStorageSize=%llu",
@@ -9914,6 +9922,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const Str
     return;
   }
 
+  mountId = 0;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
@@ -11309,7 +11318,9 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
     }
 
     // find config value
+#ifndef WERROR
 #warning todo
+#endif
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     i = 0;
     while (   (JOB_CONFIG_VALUES[i].name != NULL)
@@ -11517,7 +11528,9 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
     }
 
     // find config value
+#ifndef WERROR
 #warning todo
+#endif
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     i = 0;
     while (   (JOB_CONFIG_VALUES[i].name != NULL)
@@ -13058,6 +13071,8 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(argumentMap);
+
   // check if index database is available
   if (indexHandle == NULL)
   {
@@ -13293,6 +13308,8 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const St
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
@@ -14073,6 +14090,8 @@ LOCAL void serverCommand_restoreContinue(ClientInfo *clientInfo, uint id, const 
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
+  UNUSED_VARIABLE(argumentMap);
+
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
@@ -14229,7 +14248,9 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
   }
 
 //TODO: remove
+#ifndef WERROR
 #warning remove
+#endif
 #if 0
   // initialize variables
   List_init(&uuidDataList);
@@ -14630,9 +14651,13 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
   IndexId      entityId;
   Errors       error;
 
+#ifndef WERROR
 #warning TODO
+#endif
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
 
   // get jobUUID, archive type
   String_clear(jobUUID);
@@ -14713,7 +14738,9 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
     String_delete(storagePatternString);
     return;
   }
+#ifndef WERROR
 #warning use storagePatternString
+#endif
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
   {
     indexStateAny = TRUE;
@@ -14728,7 +14755,9 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
     String_delete(storagePatternString);
     return;
   }
+#ifndef WERROR
 #warning use indexStateSet
+#endif
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -15043,7 +15072,9 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
   Storage_initSpecifier(&storageSpecifier);
 
   // create index for matching files
+#ifndef WERROR
 #warning remove
+#endif
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Storage_forAll(patternString,
                          CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
@@ -16193,11 +16224,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
         break;
       case INDEX_TYPE_SPECIAL:
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break;
     }
     String_delete(indexNode->name);
     String_delete(indexNode->storageName);
@@ -16254,11 +16285,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
         break;
       case INDEX_TYPE_SPECIAL:
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break;
     }
 
     // insert into list
@@ -16522,11 +16553,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
         case INDEX_TYPE_SPECIAL:
           SEND_SPECIAL_ENTRY(indexId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
           break;
-        #ifndef NDEBUG
-          default:
+        default:
+          #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break;
-        #endif /* NDEBUG */
+          #endif /* NDEBUG */
+          break;
       }
       entryCount++;
     }
@@ -16615,11 +16646,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
                            indexNode->special.permission
                           );
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break;
     }
     indexNode = indexNode->next;
   }
@@ -17898,7 +17929,9 @@ Errors Server_run(uint             port,
               break;
             case AUTHORIZATION_STATE_OK:
               // remove from authorization fail list
+#ifndef WERROR
 #warning ERRRORRRRRR: two clients from same host, then disconnect: node is deleted twice
+#endif
               authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
               if (authorizationFailNode != NULL)
               {
