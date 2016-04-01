@@ -347,7 +347,7 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
   // set crash flag
   crashFlag = TRUE;
 
-  if (IS_DEBUG_TESTCODE("minidump")) exit(EXITCODE_TESTCODE);
+  if (IS_DEBUG_TESTCODE()) exit(EXITCODE_TESTCODE);
 
   return succeeded;
 
@@ -407,7 +407,7 @@ bool MiniDump_init(void)
     initFlag = TRUE;
   #endif /* HAVE_BREAKPAD */
 
-  DEBUG_TESTCODE("minidump") { volatile int *p = (int*)(NULL); (*p) = 1; }
+  DEBUG_TESTCODE() { volatile int *p = (int*)(NULL); (*p) = 1; }
 
 // test crash
 //{ volatile int *p = (int*)(NULL); (*p) = 1; }

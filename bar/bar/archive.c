@@ -918,7 +918,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
         return error;
       }
       AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileName,{ File_delete(archiveInfo->file.fileName,FALSE); });
-      DEBUG_TESTCODE("createArchiveFile1") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // create file
       error = File_open(&archiveInfo->file.fileHandle,
@@ -931,7 +931,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
         return error;
       }
       AUTOFREE_ADD(&autoFreeList,&archiveInfo->file.fileHandle,{ File_close(&archiveInfo->file.fileHandle); });
-      DEBUG_TESTCODE("createArchiveFile2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // write BAR file info header
       error = writeFileInfo(archiveInfo);
@@ -940,7 +940,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      DEBUG_TESTCODE("createArchiveFile3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // write encrypted key if asymmetric encryption enabled
       if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -951,7 +951,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        DEBUG_TESTCODE("createArchiveFile4") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+        DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
       if (   (archiveInfo->indexHandle != NULL)
@@ -1000,7 +1000,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        DEBUG_TESTCODE("createArchiveFile5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+        DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
       // mark archive file "open"
@@ -1066,7 +1066,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
         Semaphore_unlock(&archiveInfo->chunkIOLock);
         return error;
       }
-      DEBUG_TESTCODE("closeArchiveFile1") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE() { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
     }
 
     // call-back for done archive
@@ -1088,7 +1088,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
         Semaphore_unlock(&archiveInfo->chunkIOLock);
         return error;
       }
-      DEBUG_TESTCODE("closeArchiveFile2") { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE() { Semaphore_unlock(&archiveInfo->chunkIOLock); return DEBUG_TESTCODE_ERROR(); }
     }
 
     // increment part number
@@ -3414,7 +3414,7 @@ fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityI
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageHandle,{ Storage_close(&archiveInfo->storage.storageArchiveHandle); });
-  DEBUG_TESTCODE("Archive_open2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // check if BAR archive file
   error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -3423,7 +3423,7 @@ fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityI
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_open3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (chunkHeader.id != CHUNK_ID_BAR)
   {
     if (!jobOptions->noStopOnErrorFlag)
@@ -3437,7 +3437,7 @@ fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityI
     }
   }
   ungetNextChunkHeader(archiveInfo,&chunkHeader);
-  DEBUG_TESTCODE("Archive_open4") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // free resources
   AutoFree_done(&autoFreeList);
@@ -3875,7 +3875,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry1") { (void)File_close(&archiveEntryInfo->file.intermediateFileHandle); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { (void)File_close(&archiveEntryInfo->file.intermediateFileHandle); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.intermediateFileHandle,{ (void)File_close(&archiveEntryInfo->file.intermediateFileHandle); });
 
   // allocate buffers
@@ -3942,7 +3942,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry2") { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->file.chunkFile.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.byteCompressAlgorithm);
   archiveEntryInfo->file.chunkFile.cryptAlgorithm    = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFile.info,{ Chunk_done(&archiveEntryInfo->file.chunkFile.info); });
@@ -3957,7 +3957,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry3") { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
@@ -3969,7 +3969,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry4") { Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
@@ -3981,7 +3981,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry5") { Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileDelta.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
@@ -3993,7 +3993,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry6") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileData.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
@@ -4005,7 +4005,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry7") { Crypt_done(&archiveEntryInfo->file.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.cryptInfo); });
 
   // init sub-chunks
@@ -4024,7 +4024,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry8") { Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->file.chunkFileEntry.size            = fileInfo->size;
   archiveEntryInfo->file.chunkFileEntry.timeLastAccess  = fileInfo->timeLastAccess;
   archiveEntryInfo->file.chunkFileEntry.timeModified    = fileInfo->timeModified;
@@ -4050,7 +4050,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry9") { Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileExtendedAttribute.info,{ Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info); });
 
   error = Chunk_init(&archiveEntryInfo->file.chunkFileDelta.info,
@@ -4068,7 +4068,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry10") { Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
   {
     assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
@@ -4094,7 +4094,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry11") { Chunk_done(&archiveEntryInfo->file.chunkFileData.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFileData.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->file.chunkFileData.fragmentOffset = 0LL;
   archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileData.info,{ Chunk_done(&archiveEntryInfo->file.chunkFileData.info); });
@@ -4111,7 +4111,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry12") { Compress_done(&archiveEntryInfo->file.deltaCompressInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Compress_done(&archiveEntryInfo->file.deltaCompressInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->file.deltaCompressInfo); });
 
   // init byte compress
@@ -4126,7 +4126,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newFileEntry13") { Compress_done(&archiveEntryInfo->file.byteCompressInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Compress_done(&archiveEntryInfo->file.byteCompressInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.byteCompressInfo,{ Compress_done(&archiveEntryInfo->file.byteCompressInfo); });
 
   // calculate header size
@@ -4254,7 +4254,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry1") { (void)File_close(&archiveEntryInfo->image.intermediateFileHandle); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { (void)File_close(&archiveEntryInfo->image.intermediateFileHandle); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.intermediateFileHandle,{ (void)File_close(&archiveEntryInfo->image.intermediateFileHandle); });
 
   // allocate buffers
@@ -4323,7 +4323,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry2") { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImage.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.byteCompressAlgorithm);
   archiveEntryInfo->image.chunkImage.cryptAlgorithm    = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImage.info,{ Chunk_done(&archiveEntryInfo->image.chunkImage.info); });
@@ -4338,7 +4338,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry3") { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
@@ -4350,7 +4350,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry4") { Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageDelta.cryptInfo,{ Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
@@ -4362,7 +4362,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry5") { Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageData.cryptInfo,{ Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
@@ -4374,7 +4374,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry6") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.cryptInfo,{ Crypt_done(&archiveEntryInfo->image.cryptInfo); });
 
   // init sub-chunks
@@ -4393,7 +4393,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry7") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImageEntry.fileSystemType = fileSystemType;
   archiveEntryInfo->image.chunkImageEntry.size           = deviceInfo->size;
   archiveEntryInfo->image.chunkImageEntry.blockSize      = deviceInfo->blockSize;
@@ -4415,7 +4415,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry8") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
   {
     assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
@@ -4441,7 +4441,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry9") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImageData.blockOffset = 0LL;
   archiveEntryInfo->image.chunkImageData.blockCount  = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageData.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageData.info); });
@@ -4458,7 +4458,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_newImageEntry10") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->image.deltaCompressInfo); });
 
   // init byte compress
@@ -5040,7 +5040,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("__Archive_newHardLinkEntry1") { (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.intermediateFileHandle,{ (void)File_close(&archiveEntryInfo->hardLink.intermediateFileHandle); });
 
   // allocate buffers

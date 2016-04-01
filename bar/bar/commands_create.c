@@ -3247,7 +3247,7 @@ UNUSED_VARIABLE(storageId);
     String_delete(archiveName);
     return 0LL;
   }
-  DEBUG_TESTCODE("getArchiveSize1") { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   // get archive size
   error = Storage_open(&storageArchiveHandle,&createInfo->storageHandle,archiveName);
@@ -3333,7 +3333,7 @@ UNUSED_VARIABLE(archiveType);
     String_delete(archiveName);
     return error;
   }
-  DEBUG_TESTCODE("storeArchiveFile1") { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   // send to storage thread
 //  storageMsg.entityId    = entityId;
@@ -3350,7 +3350,7 @@ UNUSED_VARIABLE(archiveType);
     freeStorageMsg(&storageMsg,NULL);
     return ERROR_NONE;
   }
-  DEBUG_TESTCODE("storeArchiveFile2") { return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { return DEBUG_TESTCODE_ERROR(); }
 
   // update status info
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -3375,6 +3375,134 @@ UNUSED_VARIABLE(archiveType);
   }
 
   // free resources
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : purgeStorageIndex
+* Purpose: call back to store archive file
+* Input  : userData     - user data
+*          indexHandle  - index handle or NULL if no index
+*          entityId     - index id of entity
+*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
+*                         single part
+*          storageId    - index id of storage
+*          tmpFileName  - intermediate archive file name
+*          tmpFileSize  - intermediate archive size [bytes]
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors purgeStorageIndex(IndexId                storageId,
+                        const StorageSpecifier *storageSpecifier,
+                        ConstString            archiveName
+                       )
+{
+  String           oldStorageName;
+  StorageSpecifier oldStorageSpecifier;
+  ConstString      printableStorageName;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId oldUUIDId;
+  IndexId oldEntityId;
+  IndexId oldStorageId;
+
+  // init variables
+  oldStorageName = String_new();
+  Storage_initSpecifier(&oldStorageSpecifier);
+
+  // get printable storage name
+  printableStorageName = Storage_getPrintableName(storageSpecifier,archiveName);
+
+  // delete old indizes for same storage file
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY, // uuidId
+                                 INDEX_ID_ANY, // entityId
+                                 NULL, // jobUUID,
+                                 STORAGE_TYPE_ANY,  // storageType
+#warning TODO
+//                                       NULL, // storageName
+//                                       createInfo->storageSpecifier->hostName,
+//                                       createInfo->storageSpecifier->loginName,
+//                                       createInfo->storageSpecifier->deviceName,
+//                                       storageMsg.archiveName,
+                                 NULL,  // storageIds
+                                 0,  // storageIdCount
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // pattern
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    Storage_doneSpecifier(&oldStorageSpecifier);
+    String_delete(oldStorageName);
+    return error;
+  }
+
+  while (Index_getNextStorage(&indexQueryHandle,
+                              &oldUUIDId,
+                              &oldEntityId,
+                              &oldStorageId,
+                              NULL, // job UUID
+                              NULL, // schedule UUID
+                              NULL, // archive type
+                              oldStorageName,
+                              NULL, // createdDateTime
+                              NULL, // entries
+                              NULL, // size
+                              NULL, // indexState,
+                              NULL, // indexMode,
+                              NULL, // lastCheckedDateTime,
+                              NULL  // errorMessage
+                             )
+        )
+  {
+    if (   (oldStorageId != storageId)
+        && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
+        && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
+       )
+    {
+      // delete old storage index
+      error = Index_deleteStorage(indexHandle,oldStorageId);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+
+      // delete entity if empty
+      error = Index_pruneEntity(indexHandle,oldEntityId);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+
+      // delete uuid if empty
+      error = Index_pruneUUID(indexHandle,oldUUIDId);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+  if (error != ERROR_NONE)
+  {
+    Storage_doneSpecifier(&oldStorageSpecifier);
+    String_delete(oldStorageName);
+    return error;
+  }
+
+  // free resoruces
+  Storage_doneSpecifier(&oldStorageSpecifier);
+  String_delete(oldStorageName);
 
   return ERROR_NONE;
 }
@@ -3878,7 +4006,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
-    DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
+    DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
     // get file info
     error = File_getFileInfo(storageMsg.fileName,&fileInfo);
@@ -3893,7 +4021,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
-    DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
+    DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
     // check storage size, purge old archives
     if (!createInfo->jobOptions->dryRunFlag && (createInfo->jobOptions->maxStorageSize > 0LL))
@@ -3937,7 +4065,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       continue;
     }
     AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
-    DEBUG_TESTCODE("storageThreadCode4") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+    DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
     // write data to storage
     retryCount  = 0;
@@ -3983,7 +4111,7 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
           break;
         }
       }
-      DEBUG_TESTCODE("storageThreadCode5") { Storage_close(&storageArchiveHandle); error = DEBUG_TESTCODE_ERROR(); break; }
+      DEBUG_TESTCODE() { Storage_close(&storageArchiveHandle); error = DEBUG_TESTCODE_ERROR(); break; }
 
       // update status info
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -4010,7 +4138,7 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
                     );
           break;
         }
-        DEBUG_TESTCODE("storageThreadCode6") { error = DEBUG_TESTCODE_ERROR(); break; }
+        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
         // store data
         error = Storage_write(&storageArchiveHandle,buffer,bufferLength);
@@ -4031,7 +4159,7 @@ fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_
             break;
           }
         }
-        DEBUG_TESTCODE("storageThreadCode7") { error = DEBUG_TESTCODE_ERROR(); break; }
+        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
         // update status info, check for abort
         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -4119,93 +4247,20 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
       }
       else
       {
+fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
         // delete old indizes for same storage file
-        error = Index_initListStorages(&indexQueryHandle,
-                                       indexHandle,
-                                       INDEX_ID_ANY, // uuidId
-                                       INDEX_ID_ANY, // entityId
-                                       NULL, // jobUUID,
-                                       STORAGE_TYPE_ANY,  // storageType
-#warning TODO
-//                                       NULL, // storageName
-//                                       createInfo->storageSpecifier->hostName,
-//                                       createInfo->storageSpecifier->loginName,
-//                                       createInfo->storageSpecifier->deviceName,
-//                                       storageMsg.archiveName,
-                                       NULL,  // storageIds
-                                       0,  // storageIdCount
-                                       INDEX_STATE_SET_ALL,
-                                       INDEX_MODE_SET_ALL,
-                                       NULL,  // pattern
-                                       0LL,  // offset
-                                       INDEX_UNLIMITED
-                                      );
-        while (Index_getNextStorage(&indexQueryHandle,
-                                    &oldUUIDId,
-                                    &oldEntityId,
-                                    &oldStorageId,
-                                    NULL, // job UUID
-                                    NULL, // schedule UUID
-                                    NULL, // archive type
-                                    storageName,
-                                    NULL, // createdDateTime
-                                    NULL, // entries
-                                    NULL, // size
-                                    NULL, // indexState,
-                                    NULL, // indexMode,
-                                    NULL, // lastCheckedDateTime,
-                                    NULL  // errorMessage
-                                   )
-              )
+        error = purgeStorageIndex(storageMsg.storageId,
+                                  createInfo->storageSpecifier,
+                                  storageMsg.archiveName
+                                 );
+        if (error != ERROR_NONE)
         {
-          if (   (oldStorageId != storageMsg.storageId)
-              && (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
-              && Storage_equalSpecifiers(createInfo->storageSpecifier,NULL,&storageSpecifier,NULL)
-             )
-          {
-            // delete old storage index
-            error = Index_deleteStorage(indexHandle,oldStorageId);
-            if (error != ERROR_NONE)
-            {
-              printError("Cannot delete old index for storage '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
-                         Error_getText(error)
-                        );
-              createInfo->failError = error;
-              break;
-            }
-            DEBUG_TESTCODE("storageThreadCode8") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+          printError("Cannot delete old index for storage '%s' (error: %s)!\n",
+                     String_cString(printableStorageName),
+                     Error_getText(error)
+                    );
+          createInfo->failError = error;
 
-            // delete entity if empty
-            error = Index_pruneEntity(indexHandle,oldEntityId);
-            if (error != ERROR_NONE)
-            {
-              printError("Cannot delete old entity #%llu for storage '%s' (error: %s)!\n",
-                         oldEntityId,
-                         String_cString(printableStorageName),
-                         Error_getText(error)
-                        );
-              createInfo->failError = error;
-              break;
-            }
-
-            // delete uuid if empty
-            error = Index_pruneUUID(indexHandle,oldUUIDId);
-            if (error != ERROR_NONE)
-            {
-              printError("Cannot delete old uuid #%llu for storage '%s' (error: %s)!\n",
-                         oldEntityId,
-                         String_cString(printableStorageName),
-                         Error_getText(error)
-                        );
-              createInfo->failError = error;
-              break;
-            }
-          }
-        }
-        Index_doneList(&indexQueryHandle);
-        if (createInfo->failError != ERROR_NONE)
-        {
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
@@ -4272,7 +4327,7 @@ fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         continue;
       }
-      DEBUG_TESTCODE("storageThreadCode9") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
 
       // set index database state and time stamp
       error = Index_setState(indexHandle,
@@ -4294,7 +4349,7 @@ fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         continue;
       }
-      DEBUG_TESTCODE("storageThreadCode10") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+      DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
     }
 
     // post-process
@@ -4310,7 +4365,7 @@ fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
-    DEBUG_TESTCODE("storageThreadCode11") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+    DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
     // delete temporary storage file
     error = File_delete(storageMsg.fileName,FALSE);
@@ -6255,7 +6310,7 @@ Errors Command_create(ConstString                  jobUUID,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Command_create1") { Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
   // init create info
@@ -6324,7 +6379,7 @@ Errors Command_create(ConstString                  jobUUID,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Command_create2") { Storage_done(&createInfo.storageHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Storage_done(&createInfo.storageHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&createInfo.storageHandle,{ Storage_done(&createInfo.storageHandle); });
 
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
@@ -6385,7 +6440,7 @@ Errors Command_create(ConstString                  jobUUID,
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      DEBUG_TESTCODE("Command_create3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       printInfo(1,
                 "ok (%lu entries)\n",
                 Dictionary_count(&createInfo.namesDictionary)
@@ -6452,7 +6507,7 @@ Errors Command_create(ConstString                  jobUUID,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("command_create4") { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // start create threads
 #if 1
@@ -6503,7 +6558,7 @@ createThreadCode(&createInfo);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("command_create5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // signal end of data
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
@@ -6547,7 +6602,7 @@ createThreadCode(&createInfo);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    DEBUG_TESTCODE("command_create3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+    DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
     printInfo(1,"ok\n");
     logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));

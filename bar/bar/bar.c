@@ -2981,7 +2981,7 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ String_delete(tmpDirectory); });
 
   Semaphore_init(&consoleLock);
-  DEBUG_TESTCODE("initAll1") { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
 
   // initialize i18n
@@ -3004,7 +3004,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll1") { Password_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Password_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Password_initAll,{ Password_doneAll(); });
 
   error = Compress_initAll();
@@ -3013,7 +3013,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll2") { Compress_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Compress_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Compress_initAll,{ Compress_doneAll(); });
 
   error = Crypt_initAll();
@@ -3022,7 +3022,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll3") { Crypt_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Crypt_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Crypt_initAll,{ Crypt_doneAll(); });
 
   error = EntryList_initAll();
@@ -3031,7 +3031,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll5") { EntryList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { EntryList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,EntryList_initAll,{ EntryList_doneAll(); });
 
   error = Pattern_initAll();
@@ -3040,7 +3040,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll4") { Pattern_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Pattern_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Pattern_initAll,{ Password_doneAll(); });
 
   error = PatternList_initAll();
@@ -3049,7 +3049,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll5") { PatternList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { PatternList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,PatternList_initAll,{ PatternList_doneAll(); });
 
   error = Chunk_initAll();
@@ -3058,7 +3058,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll6") { Chunk_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Chunk_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Chunk_initAll,{ Chunk_doneAll(); });
 
   error = DeltaSource_initAll();
@@ -3067,7 +3067,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll7") { DeltaSource_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { DeltaSource_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,DeltaSource_initAll,{ DeltaSource_doneAll(); });
 
   error = Archive_initAll();
@@ -3076,7 +3076,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll8") { Archive_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Archive_initAll,{ Archive_doneAll(); });
 
   error = Storage_initAll();
@@ -3085,7 +3085,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll9") { Storage_doneAll(), AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Storage_doneAll(), AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Storage_initAll,{ Storage_doneAll(); });
 
   error = Index_initAll();
@@ -3094,7 +3094,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll10") { Index_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Index_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Index_initAll,{ Index_doneAll(); });
 
   error = Continuous_initAll();
@@ -3103,7 +3103,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll11") { Continuous_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Continuous_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Continuous_initAll,{ Continuous_doneAll(); });
 
   error = Network_initAll();
@@ -3112,7 +3112,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll12") { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Network_initAll,{ Network_doneAll(); });
 
   error = Server_initAll();
@@ -3121,7 +3121,7 @@ LOCAL Errors initAll(void)
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("initAll13") { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
 
   // initialize variables
