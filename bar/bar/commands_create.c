@@ -3400,21 +3400,17 @@ LOCAL Errors purgeStorageIndex(IndexId          storageId,
                                ConstString      archiveName
                               )
 {
+  IndexId          oldUUIDId;
+  IndexId          oldEntityId;
+  IndexId          oldStorageId;
   String           oldStorageName;
   StorageSpecifier oldStorageSpecifier;
-  ConstString      printableStorageName;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  IndexId oldUUIDId;
-  IndexId oldEntityId;
-  IndexId oldStorageId;
 
   // init variables
   oldStorageName = String_new();
   Storage_initSpecifier(&oldStorageSpecifier);
-
-  // get printable storage name
-  printableStorageName = Storage_getPrintableName(storageSpecifier,archiveName);
 
   // delete old indizes for same storage file
   error = Index_initListStorages(&indexQueryHandle,
@@ -3422,18 +3418,11 @@ LOCAL Errors purgeStorageIndex(IndexId          storageId,
                                  INDEX_ID_ANY, // uuidId
                                  INDEX_ID_ANY, // entityId
                                  NULL, // jobUUID,
-                                 STORAGE_TYPE_ANY,  // storageType
-#warning TODO
-//                                       NULL, // storageName
-//                                       createInfo->storageSpecifier->hostName,
-//                                       createInfo->storageSpecifier->loginName,
-//                                       createInfo->storageSpecifier->deviceName,
-//                                       storageMsg.archiveName,
                                  NULL,  // storageIds
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
-                                 NULL,  // pattern
+                                 archiveName,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -3443,7 +3432,6 @@ LOCAL Errors purgeStorageIndex(IndexId          storageId,
     String_delete(oldStorageName);
     return error;
   }
-
   while (Index_getNextStorage(&indexQueryHandle,
                               &oldUUIDId,
                               &oldEntityId,
@@ -3563,14 +3551,13 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId
                                    jobUUID,
-                                   STORAGE_TYPE_ANY,  // storageType
                                    NULL,  // storageIds
                                    0,   // storageIdCount
                                      INDEX_STATE_SET(INDEX_STATE_OK)
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    INDEX_MODE_SET(INDEX_MODE_AUTO),
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -3753,14 +3740,13 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId
                                    NULL,  // jobUUID,
-                                   STORAGE_TYPE_ANY,  // storageType
                                    NULL,  // storageIds
                                    0,   // storageIdCount
                                      INDEX_STATE_SET(INDEX_STATE_OK)
                                    | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    INDEX_MODE_SET(INDEX_MODE_AUTO),
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -4080,7 +4066,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       appendFlag =    (createInfo->storageHandle.jobOptions != NULL)
                    && (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
                    && Storage_exists(&createInfo->storageHandle,storageMsg.archiveName);
-fprintf(stderr,"%s, %d: appendFlag=%d %s\n",__FILE__,__LINE__,appendFlag,String_cString(storageMsg.archiveName));
 
       // create/append storage file
       error = Storage_create(&storageArchiveHandle,
