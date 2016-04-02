@@ -5982,7 +5982,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id, \
                                    jobUUID, \
-                                   lastCreated, \
+                                   STRFTIME('%%s',lastCreated), \
                                    lastErrorMessage, \
                                    totalEntryCount, \
                                    totalEntrySize \
