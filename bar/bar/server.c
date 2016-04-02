@@ -4134,12 +4134,11 @@ LOCAL Errors deleteEntity(IndexId entityId)
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
                                  NULL,  // jobUUID
-                                 STORAGE_TYPE_ANY,
                                  NULL,  // storageIds
                                  0,  // storageIdCount
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
-                                 NULL,  // pattern
+                                 NULL,  // name
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -5205,12 +5204,11 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    NULL,  // jobUUID
-                                   STORAGE_TYPE_ANY,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -12635,12 +12633,11 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, uint id, const Stri
                                  INDEX_ID_ANY,  // uuidId
                                  INDEX_ID_ANY,  // entityId,
                                  NULL,  // jobUUID
-                                 STORAGE_TYPE_ANY,
                                  Array_cArray(&clientInfo->storageIdArray),
                                  Array_length(&clientInfo->storageIdArray),
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
-                                 NULL,  // pattern
+                                 NULL,  // name
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -12783,12 +12780,11 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                        INDEX_ID_ANY,  // uuidId
                                        entityId,
                                        NULL,  // jobUUID
-                                       STORAGE_TYPE_ANY,
                                        NULL,  // storageIds
                                        0,  // storageIdCount
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
-                                       NULL,  // pattern
+                                       NULL,  // name
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
@@ -12829,12 +12825,11 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
                                      INDEX_ID_ANY,  // uuidId
                                      indexId,
                                      NULL,  // jobUUID
-                                     STORAGE_TYPE_ANY,
                                      NULL,  // storageIds
                                      0,  // storageIdCount
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
-                                     NULL,  // pattern
+                                     NULL,  // name
                                      0LL,  // offset
                                      INDEX_UNLIMITED
                                     );
@@ -12952,12 +12947,11 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
                                        INDEX_ID_ANY,  // uuidId
                                        entityId,
                                        NULL,  // jobUUID,
-                                       STORAGE_TYPE_ANY,
                                        NULL,  // storageIds
                                        0,  // storageIdCount
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
-                                       NULL,  // pattern
+                                       NULL,  // name
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
@@ -12998,12 +12992,11 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
                                      INDEX_ID_ANY,  // uuidId
                                      indexId,
                                      NULL,  // jobUUID
-                                     STORAGE_TYPE_ANY,
                                      NULL,  // storageIds
                                      0,  // storageIdCount
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
-                                     NULL,  // pattern
+                                     NULL,  // name
                                      0LL,  // offset
                                      INDEX_UNLIMITED
                                     );
@@ -13694,12 +13687,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
                                        INDEX_ID_ANY,  // uuidId
                                        INDEX_ID_ANY,  // entityId
                                        NULL,  // jobUUID
-                                       STORAGE_TYPE_ANY,
                                        Array_cArray(&clientInfo->storageIdArray),
                                        Array_length(&clientInfo->storageIdArray),
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
-                                       NULL,  // pattern
+                                       NULL,  // name
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
@@ -14930,7 +14922,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
                                  NULL,  // jobUUID
-                                 STORAGE_TYPE_ANY,
                                  NULL,  // indexIds
                                  0,  // indexIdCount
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
@@ -15461,12 +15452,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    NULL,  // jobUUID
-                                   STORAGE_TYPE_ANY,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15518,12 +15508,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    uuidId,
                                    INDEX_ID_ANY,  // entityId,
                                    NULL,  // jobUUID
-                                   STORAGE_TYPE_ANY,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15574,12 +15563,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    INDEX_ID_ANY,  // uuidId
                                    entityId,
                                    NULL,  // jobUUID
-                                   STORAGE_TYPE_ANY,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15642,12 +15630,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    jobUUID,
-                                   STORAGE_TYPE_ANY,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15708,12 +15695,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId,
                                    NULL,  // jobUUID
-                                   STORAGE_TYPE_ANY,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15845,12 +15831,11 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY, // entity id
                                    NULL,  // jobUUID
-                                   STORAGE_TYPE_ANY,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // pattern
+                                   NULL,  // name
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
