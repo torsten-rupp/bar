@@ -444,7 +444,7 @@ LOCAL bool StorageOptical_equalSpecifiers(const StorageSpecifier *storageSpecifi
   assert((storageSpecifier2->type == STORAGE_TYPE_CD) || (storageSpecifier2->type == STORAGE_TYPE_DVD) || (storageSpecifier2->type == STORAGE_TYPE_BD));
 
   if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName1 = storageSpecifier2->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   return    String_equals(storageSpecifier1->deviceName,storageSpecifier2->deviceName)
          && String_equals(archiveName1,archiveName2);

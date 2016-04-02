@@ -237,7 +237,7 @@ LOCAL bool StorageSFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1
   assert(storageSpecifier2->type == STORAGE_TYPE_SFTP);
 
   if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName1 = storageSpecifier2->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)

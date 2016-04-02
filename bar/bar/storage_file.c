@@ -78,7 +78,7 @@ LOCAL bool StorageFile_equalSpecifiers(const StorageSpecifier *storageSpecifier1
   assert(storageSpecifier2->type == STORAGE_TYPE_FILESYSTEM);
 
   if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName1 = storageSpecifier2->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   return String_equals(archiveName1,archiveName2);
 }

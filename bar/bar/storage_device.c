@@ -285,7 +285,7 @@ LOCAL bool StorageDevice_equalSpecifiers(const StorageSpecifier *storageSpecifie
   assert(storageSpecifier2->type == STORAGE_TYPE_DEVICE);
 
   if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName1 = storageSpecifier2->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   return    String_equals(storageSpecifier1->deviceName,storageSpecifier2->deviceName)
          && String_equals(archiveName1,archiveName2);
