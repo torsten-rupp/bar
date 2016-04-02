@@ -92,10 +92,6 @@ typedef struct
 {
   IndexHandle         *indexHandle;
   DatabaseQueryHandle databaseQueryHandle;
-  struct
-  {
-    StorageTypes type;
-  } storage;
 } IndexQueryHandle;
 
 // index types
@@ -703,7 +699,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
-*          pattern          - name pattern (glob, can be NULL)
+*          name             - name pattern (glob, can be NULL)
 * Output : storageCount    - number of storage (can be NULL)
 *          totalEntryCount - total entry count (can be NULL)
 *          totalEntrySize  - total size [bytes] (can be NULL)
@@ -715,7 +711,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              const IndexId indexIds[],
                              uint          indexIdCount,
                              IndexStateSet indexStateSet,
-                             ConstString   pattern,
+                             ConstString   name,
                              ulong         *storageCount,
                              ulong         *totalEntryCount,
                              uint64        *totalEntrySize
@@ -729,12 +725,11 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          entityId         - index id of entity entry id or INDEX_ID_ANY
 *          jobUUID          - unique job id or NULL
-*          storageType      - storage type to find or STORAGE_TYPE_ANY
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set
 *          IndexModeSet     - index mode set
-*          pattern          - name pattern (glob) or NULL
+*          name             - name pattern (glob, can be NULL)
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -748,12 +743,11 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexId          uuidId,
                               IndexId          entityId,
                               ConstString      jobUUID,
-                              StorageTypes     storageType,
                               const IndexId    indexIds[],
                               uint             indexIdCount,
                               IndexStateSet    indexStateSet,
                               IndexModeSet     indexModeSet,
-                              ConstString      pattern,
+                              ConstString      name,
                               uint64           offset,
                               uint64           limit
                              );
@@ -906,7 +900,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 *          entryIds          - entry ids or NULL
 *          entryIdCount      - entry id count or 0
 *          indexTypeSet      - index type set or INDEX_TYPE_SET_ANY
-*          pattern           - name pattern (glob, can be NULL)
+*          name              - name pattern (glob, can be NULL)
 *          newestEntriesOnly - TRUE for newest entries only
 * Output : count - entry count (can be NULL)
 *          size  - size [bytes] (can be NULL)
@@ -920,7 +914,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             const IndexId entryIds[],
                             uint          entryIdCount,
                             IndexTypeSet  indexTypeSet,
-                            ConstString   pattern,
+                            ConstString   name,
                             bool          newestEntriesOnly,
                             ulong         *count,
                             uint64        *size
@@ -936,7 +930,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          entryIds          - entry ids or NULL
 *          entryIdCount      - entry id count or 0
 *          indexTypeSet      - index type set or INDEX_TYPE_SET_ANY
-*          pattern           - name pattern (glob, can be NULL)
+*          name              - name pattern (glob, can be NULL)
 *          newestEntriesOnly - TRUE for newest entries only
 *          offset            - offset or 0
 *          limit             - numer of entries to list or
@@ -953,7 +947,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
-                             ConstString      pattern,
+                             ConstString      name,
                              bool             newestEntriesOnly,
                              uint64           offset,
                              uint64           limit
@@ -1008,7 +1002,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
 *          storageIdCount   - storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          pattern          - name pattern (glob, can be NULL)
+*          name             - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1020,7 +1014,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            uint             storageIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
-                           ConstString      pattern
+                           ConstString      name
                           );
 
 /***********************************************************************\
@@ -1076,7 +1070,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 *          storageIdCount - storage id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
-*          pattern        - name pattern (glob, can be NULL)
+*          name           - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1088,7 +1082,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             uint             storageIdCount,
                             const IndexId    entryIds[],
                             uint             entryIdCount,
-                            ConstString      pattern
+                            ConstString      name
                            );
 
 /***********************************************************************\
@@ -1137,7 +1131,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 *          storageIdCount - storage id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
-*          pattern        - name pattern (glob, can be NULL)
+*          name           - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1149,7 +1143,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  uint             storageIdCount,
                                  const IndexId    entryIds[],
                                  uint             entryIdCount,
-                                 ConstString      pattern
+                                 ConstString      name
                                 );
 
 /***********************************************************************\
@@ -1199,7 +1193,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
 *          storageIdCount - storage id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
-*          pattern        - name pattern (glob, can be NULL)
+*          name           - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - inxe query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1211,7 +1205,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            uint             storageIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
-                           ConstString      pattern
+                           ConstString      name
                           );
 
 /***********************************************************************\
@@ -1263,7 +1257,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 *          storageIdCount - storage id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
-*          pattern        - name pattern (glob, can be NULL)
+*          name           - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - indxe query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1275,7 +1269,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                uint             storageIdCount,
                                const IndexId    entryIds[],
                                uint             entryIdCount,
-                               ConstString      pattern
+                               ConstString      name
                                );
 
 /***********************************************************************\
@@ -1332,7 +1326,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 *          storageIdCount - storage id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
-*          pattern        - name pattern (glob, can be NULL)
+*          name           - name pattern (glob, can be NULL)
 * Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1344,7 +1338,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              uint             storageIdCount,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
-                             ConstString      pattern
+                             ConstString      name
                             );
 
 /***********************************************************************\
