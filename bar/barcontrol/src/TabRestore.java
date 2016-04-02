@@ -436,18 +436,18 @@ public class TabRestore
       return 0;
     }
 
-    /** get number of entries
+    /** get total number of entries
      * @return entries
      */
-    public long getEntries()
+    public long getEntryCount()
     {
       return 0;
     }
 
-    /** get size
+    /** get total size of entries
      * @return size [bytes]
      */
-    public long getSize()
+    public long getEntrySize()
     {
       return 0;
     }
@@ -649,8 +649,8 @@ public class TabRestore
           String name2 = indexData2.getName();
           return name1.compareTo(name2);
         case SIZE:
-          long size1 = indexData1.getSize();
-          long size2 = indexData2.getSize();
+          long size1 = indexData1.getEntrySize();
+          long size2 = indexData2.getEntrySize();
           return new Long(size1).compareTo(size2);
         case CREATED_DATETIME:
           long date1 = indexData1.getDateTime();
@@ -903,6 +903,7 @@ public class TabRestore
     /** get date/time
      * @return date/time [s]
      */
+    @Override
     public long getDateTime()
     {
       return lastCreatedDateTime;
@@ -911,7 +912,8 @@ public class TabRestore
     /** get total number of entries
      * @return entries
      */
-    public long getTotalEntryCount()
+    @Override
+    public long getEntryCount()
     {
       return totalEntryCount;
     }
@@ -919,7 +921,8 @@ public class TabRestore
     /** get total size of entries
      * @return size [bytes]
      */
-    public long getTotalEntrySize()
+    @Override
+    public long getEntrySize()
     {
       return totalEntrySize;
     }
@@ -954,7 +957,7 @@ public class TabRestore
      */
     public String toString()
     {
-      return "UUIDIndexData {"+indexId+", jobUUID="+jobUUID+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes}";
+      return "UUIDIndexData {"+indexId+", jobUUID="+jobUUID+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
     }
   }
 
@@ -1022,6 +1025,7 @@ Dprintf.dprintf("");
     /** get date/time
      * @return date/time [s]
      */
+    @Override
     public long getDateTime()
     {
       return lastCreatedDateTime;
@@ -1030,7 +1034,8 @@ Dprintf.dprintf("");
     /** get total number of entries
      * @return entries
      */
-    public long getTotalEntryCount()
+    @Override
+    public long getEntryCount()
     {
       return totalEntryCount;
     }
@@ -1038,7 +1043,8 @@ Dprintf.dprintf("");
     /** get total size of entries
      * @return size [bytes]
      */
-    public long getTotalEntrySize()
+    @Override
+    public long getEntrySize()
     {
       return totalEntrySize;
     }
@@ -1239,6 +1245,7 @@ Dprintf.dprintf("");
     /** get date/time
      * @return date/time [s]
      */
+    @Override
     public long getDateTime()
     {
       return lastCreatedDateTime;
@@ -1247,7 +1254,8 @@ Dprintf.dprintf("");
     /** get total number of entries
      * @return entries
      */
-    public long getTotalEntryCount()
+    @Override
+    public long getEntryCount()
     {
       return totalEntryCount;
     }
@@ -1255,7 +1263,8 @@ Dprintf.dprintf("");
     /** get togal size of entries
      * @return size [bytes]
      */
-    public long getTotalEntrySize()
+    @Override
+    public long getEntrySize()
     {
       return totalEntrySize;
     }
@@ -1263,6 +1272,7 @@ Dprintf.dprintf("");
     /** get index state
      * @return index state
      */
+    @Override
     public IndexStates getState()
     {
       return indexState;
@@ -1951,7 +1961,7 @@ Dprintf.dprintf("cirrect?");
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S",
                                                    storagePattern
                                                   ),
-                               1,  // debugLevel
+                               0,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -3179,7 +3189,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
     /** get number of entries
      * @return entries
      */
-    public long getEntries()
+    public long getEntryCount()
     {
       return 1;
     }
@@ -3187,7 +3197,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
     /** get size
      * @return size [bytes]
      */
-    public long getSize()
+    public long getEntrySize()
     {
       return size;
     }
@@ -3205,7 +3215,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
      */
     public String toString()
     {
-      return "Entry {"+storageName+", "+name+", "+entryType+", dateTime="+dateTime+", "+getSize()+" bytes, checked="+checked+", state="+restoreState+"}";
+      return "Entry {"+storageName+", "+name+", "+entryType+", dateTime="+dateTime+", size="+size+", checked="+checked+", state="+restoreState+"}";
     }
   };
 
@@ -3418,6 +3428,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       {
         for (;;)
         {
+          // update table count, table segment
           boolean updateIndicator = false;
           {
             // set busy cursor, foreground color to inform about update
@@ -3436,31 +3447,28 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           }
           try
           {
-            // update table count, table segment
-            try
+            if (updateTotalEntryCount)
             {
-              if (updateTotalEntryCount)
-              {
-                updateEntryTableTotalEntryCount();
-              }
-              if (!updateOffsets.isEmpty())
-              {
-                updateEntryTable(updateOffsets);
-              }
+              updateEntryTableTotalEntryCount();
             }
-            catch (CommunicationError error)
+            if (!updateOffsets.isEmpty())
             {
-              // ignored
+              updateEntryTable(updateOffsets);
             }
-            catch (Exception exception)
+          }
+          catch (CommunicationError error)
+          {
+Dprintf.dprintf("kkkkkkkkkkkkkk");
+            // ignored
+          }
+          catch (Throwable throwable)
+          {
+            BARServer.disconnect();
+            if (Settings.debugLevel > 0)
             {
-              if (Settings.debugLevel > 0)
-              {
-                BARServer.disconnect();
-                System.err.println("ERROR: "+exception.getMessage());
-                BARControl.printStackTrace(exception);
-                System.exit(1);
-              }
+              System.err.println("ERROR: "+throwable.getMessage());
+              BARControl.printStackTrace(throwable);
+              System.exit(1);
             }
           }
           finally
@@ -4146,6 +4154,310 @@ Dprintf.dprintf("");
 
   // ---------------------------- methods ---------------------------------
 
+  /** show UUID index tool tip
+   * @param entityIndexData entity index data
+   * @param x,y positions
+   */
+  private void showUUIDIndexToolTip(UUIDIndexData uuidIndexData, int x, int y)
+  {
+    Label label;
+Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
+
+    if (widgetStorageTreeToolTip != null)
+    {
+      widgetStorageTreeToolTip.dispose();
+    }
+    widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+    widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
+    widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+    Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
+    widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetStorageTreeToolTip != null)
+        {
+          widgetStorageTreeToolTip.dispose();
+          widgetStorageTreeToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,uuidIndexData.name);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,(uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,uuidIndexData.lastErrorMessage);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",uuidIndexData.getEntryCount()));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,4,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(uuidIndexData.getEntrySize()),uuidIndexData.getEntrySize()));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,4,1,TableLayoutData.WE);
+
+    Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+    widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
+    widgetStorageTreeToolTip.setVisible(true);
+  }
+
+  /** show entity index tool tip
+   * @param entityIndexData entity index data
+   * @param x,y positions
+   */
+  private void showEntityIndexToolTip(EntityIndexData entityIndexData, int x, int y)
+  {
+    Label label;
+
+    if (widgetStorageTreeToolTip != null)
+    {
+      widgetStorageTreeToolTip.dispose();
+    }
+    widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+    widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
+    widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+    Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
+    widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetStorageTreeToolTip != null)
+        {
+          widgetStorageTreeToolTip.dispose();
+          widgetStorageTreeToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.lastErrorMessage);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.getEntryCount()));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entityIndexData.getEntrySize()),entityIndexData.getEntrySize()));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,1,TableLayoutData.WE);
+
+    Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+    widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
+    widgetStorageTreeToolTip.setVisible(true);
+  }
+
+  /** show storage index tool tip
+   * @param storageIndexData storage index data
+   * @param x,y positions
+   */
+  private void showStorageIndexToolTip(StorageIndexData storageIndexData, int x, int y)
+  {
+    Label label;
+
+    if (widgetStorageTableToolTip != null)
+    {
+      widgetStorageTableToolTip.dispose();
+    }
+    widgetStorageTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+    widgetStorageTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
+    widgetStorageTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+    Widgets.layout(widgetStorageTableToolTip,0,0,TableLayoutData.NSWE);
+    widgetStorageTableToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetStorageTableToolTip != null)
+        {
+          widgetStorageTableToolTip.dispose();
+          widgetStorageTableToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Job")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.jobName);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,0,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Name")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.name);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,1,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,2,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Type")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.toString());
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,3,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entries")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,4,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,String.format("%d",storageIndexData.getEntryCount()));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,4,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,5,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(storageIndexData.getEntrySize()),storageIndexData.getEntrySize()));
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,5,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,6,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,6,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,7,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,(storageIndexData.lastCheckedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)) : "-");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,7,1,TableLayoutData.WE);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,8,0,TableLayoutData.W);
+
+    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
+    label.setForeground(COLOR_INFO_FORGROUND);
+    label.setBackground(COLOR_INFO_BACKGROUND);
+    Widgets.layout(label,8,1,TableLayoutData.WE);
+
+    Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+    widgetStorageTableToolTip.setBounds(x,y,size.x,size.y);
+    widgetStorageTableToolTip.setVisible(true);
+  }
+
   /** show entry data tool tip
    * @param entryIndexData entry index data
    * @param x,y positions
@@ -4252,229 +4564,6 @@ Dprintf.dprintf("");
     Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
     widgetEntryTableToolTip.setBounds(x,y,size.x,size.y);
     widgetEntryTableToolTip.setVisible(true);
-  }
-
-  /** show entity index tool tip
-   * @param entityIndexData entity index data
-   * @param x,y positions
-   */
-  private void showEntityIndexToolTip(EntityIndexData entityIndexData, int x, int y)
-  {
-    Label label;
-
-    if (widgetStorageTreeToolTip != null)
-    {
-      widgetStorageTreeToolTip.dispose();
-    }
-    widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-    widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
-    widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
-    Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
-    widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
-    {
-      public void mouseEnter(MouseEvent mouseEvent)
-      {
-      }
-
-      public void mouseExit(MouseEvent mouseEvent)
-      {
-        if (widgetStorageTreeToolTip != null)
-        {
-          widgetStorageTreeToolTip.dispose();
-          widgetStorageTreeToolTip = null;
-        }
-      }
-
-      public void mouseHover(MouseEvent mouseEvent)
-      {
-      }
-    });
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,0,0,TableLayoutData.W);
-
-Dprintf.dprintf("");
-    label = Widgets.newLabel(widgetStorageTreeToolTip,"xxx");//entityIndexData.name);
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,0,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,1,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,1,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,2,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.lastErrorMessage);
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,2,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,3,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format("%d",entityIndexData.getEntries()));
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,3,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,4,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entityIndexData.getSize()),entityIndexData.getSize()));
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,4,1,TableLayoutData.WE);
-
-    Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-    widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
-    widgetStorageTreeToolTip.setVisible(true);
-  }
-
-  /** show storage index tool tip
-   * @param storageIndexData storage index data
-   * @param x,y positions
-   */
-  private void showStorageIndexToolTip(StorageIndexData storageIndexData, int x, int y)
-  {
-    Label label;
-
-    if (widgetStorageTableToolTip != null)
-    {
-      widgetStorageTableToolTip.dispose();
-    }
-    widgetStorageTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-    widgetStorageTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
-    widgetStorageTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
-    Widgets.layout(widgetStorageTableToolTip,0,0,TableLayoutData.NSWE);
-    widgetStorageTableToolTip.addMouseTrackListener(new MouseTrackListener()
-    {
-      public void mouseEnter(MouseEvent mouseEvent)
-      {
-      }
-
-      public void mouseExit(MouseEvent mouseEvent)
-      {
-        if (widgetStorageTableToolTip != null)
-        {
-          widgetStorageTableToolTip.dispose();
-          widgetStorageTableToolTip = null;
-        }
-      }
-
-      public void mouseHover(MouseEvent mouseEvent)
-      {
-      }
-    });
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Job")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,0,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.jobName);
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,0,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Name")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,1,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.name);
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,1,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,2,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)));
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,2,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Type")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,3,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.toString());
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,3,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entries")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,4,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,String.format("%d",storageIndexData.getEntries()));
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,4,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,5,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(storageIndexData.getSize()),storageIndexData.getSize()));
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,5,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,6,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,6,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,7,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,(storageIndexData.lastCheckedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)) : "-");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,7,1,TableLayoutData.WE);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,8,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
-    label.setForeground(COLOR_INFO_FORGROUND);
-    label.setBackground(COLOR_INFO_BACKGROUND);
-    Widgets.layout(label,8,1,TableLayoutData.WE);
-
-    Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
-    widgetStorageTableToolTip.setBounds(x,y,size.x,size.y);
-    widgetStorageTableToolTip.setVisible(true);
   }
 
   /** create restore tab
@@ -4759,7 +4848,10 @@ Dprintf.dprintf("");
           {
             if      (treeItem.getData() instanceof UUIDIndexData)
             {
-              // TODO: show something?
+              UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
+
+              Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              showUUIDIndexToolTip(uuidIndexData,point.x,point.y);
             }
             else if (treeItem.getData() instanceof EntityIndexData)
             {
@@ -7231,8 +7323,8 @@ assert storagePattern != null;
       long size    = 0L;
       for (IndexData indexData : indexDataHashSet)
       {
-        entries += indexData.getEntries();
-        size    += indexData.getSize();
+        entries += indexData.getEntryCount();
+        size    += indexData.getEntrySize();
       }
 
       // confirm
@@ -7839,6 +7931,7 @@ assert storagePattern != null;
                                                              break;
                                                            case REQUEST_VOLUME:
 Dprintf.dprintf("");
+System.exit(1);
                                                              break;
                                                            case CONFIRM:
                                                              busyDialog.updateList(!entry.isEmpty() ? entry : storage);
