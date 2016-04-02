@@ -334,7 +334,7 @@ public class ServerSettings
     WidgetVariable          bdWriteCommand             = new WidgetVariable<String >("bd-write-command",              ""   );
     WidgetVariable          bdWriteImageCommand        = new WidgetVariable<String >("bd-write-image-command",        ""   );
 
-    WidgetVariable          deviceName                 = new WidgetVariable<String >("device-name",                   ""   );
+    WidgetVariable          deviceName                 = new WidgetVariable<String >("device",                        ""   );
     WidgetVariable          deviceRequestVolumeCommand = new WidgetVariable<String >("device-request-volume-command", ""   );
     WidgetVariable          deviceUnloadCommand        = new WidgetVariable<String >("device-unload-volume-command",  ""   );
     WidgetVariable          deviceLoadCommand          = new WidgetVariable<String >("device-load-volume-command",    ""   );
@@ -1151,7 +1151,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,row,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Request volumn command")+":");
