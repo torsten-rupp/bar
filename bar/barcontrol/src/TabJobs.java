@@ -3868,22 +3868,45 @@ Dprintf.dprintf("");
             {
               if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
               {
-                Widgets.invoke(widgetIncludeTableInsert);
+                Widgets.invoke(widgetMountTableInsert);
               }
               else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
               {
-                Widgets.invoke(widgetIncludeTableRemove);
+                Widgets.invoke(widgetMountTableRemove);
               }
               else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
               {
-                Widgets.invoke(widgetIncludeTableEdit);
+                Widgets.invoke(widgetMountTableEdit);
               }
             }
           });
           tableColumn = Widgets.addTableColumn(widgetMountTable,0,BARControl.tr("Name"),          SWT.LEFT,600,true );
-//          tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+          tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
           tableColumn = Widgets.addTableColumn(widgetMountTable,1,BARControl.tr("Always unmount"),SWT.LEFT,100,false);
-//          tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+          tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+          widgetMountTable.addKeyListener(new KeyListener()
+          {
+            @Override
+            public void keyPressed(KeyEvent keyEvent)
+            {
+            }
+            @Override
+            public void keyReleased(KeyEvent keyEvent)
+            {
+              if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+              {
+                Widgets.invoke(widgetExcludeListInsert);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+              {
+                Widgets.invoke(widgetExcludeListRemove);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+              {
+                Widgets.invoke(widgetExcludeListEdit);
+              }
+            }
+          });
 
           menu = Widgets.newPopupMenu(shell);
           {
@@ -9181,7 +9204,6 @@ throw new Error("NYI");
       mountDeviceName.set(BARServer.getStringJobOption(selectedJobData.uuid,"mount-device"));
       maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0));
       BARServer.getJobOption(selectedJobData.uuid,comment);
-Dprintf.dprintf("comment=%s",comment);
 
       updateFileTreeImages();
       updateDeviceImages();
