@@ -1710,23 +1710,11 @@ Dprintf.dprintf("cirrect?");
             }
             catch (CommunicationError error)
             {
-Dprintf.dprintf("");
               // ignored
             }
             catch (ConnectionError error)
             {
-Dprintf.dprintf("");
               // ignored
-            }
-            catch (Throwable throwable)
-            {
-              if (Settings.debugLevel > 0)
-              {
-                BARServer.disconnect();
-                System.err.println("ERROR: "+throwable.getMessage());
-                BARControl.printStackTrace(throwable);
-                System.exit(1);
-              }
             }
 
             // update menues
@@ -1740,18 +1728,7 @@ Dprintf.dprintf("");
             }
             catch (ConnectionError error)
             {
-Dprintf.dprintf("");
               // ignored
-            }
-            catch (Exception exception)
-            {
-              if (Settings.debugLevel > 0)
-              {
-                BARServer.disconnect();
-                System.err.println("ERROR: "+exception.getMessage());
-                BARControl.printStackTrace(exception);
-                System.exit(1);
-              }
             }
           }
           finally
@@ -1806,13 +1783,13 @@ Dprintf.dprintf("");
           }
         }
       }
-      catch (Exception exception)
+      catch (Throwable throwable)
       {
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("ERROR: "+exception.getMessage());
-          BARControl.printStackTrace(exception);
+          System.err.println("ERROR: "+throwable.getMessage());
+          BARControl.printStackTrace(throwable);
           System.exit(1);
         }
       }
@@ -3475,16 +3452,6 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           {
             // ignored
           }
-          catch (Throwable throwable)
-          {
-            BARServer.disconnect();
-            if (Settings.debugLevel > 0)
-            {
-              System.err.println("ERROR: "+throwable.getMessage());
-              BARControl.printStackTrace(throwable);
-              System.exit(1);
-            }
-          }
           finally
           {
             // reset cursor, foreground color
@@ -3536,13 +3503,13 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           }
         }
       }
-      catch (Exception exception)
+      catch (Throwable throwable)
       {
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("ERROR: "+exception.getMessage());
-          BARControl.printStackTrace(exception);
+          System.err.println("ERROR: "+throwable.getMessage());
+          BARControl.printStackTrace(throwable);
           System.exit(1);
         }
       }
@@ -7145,6 +7112,7 @@ assert storagePattern != null;
 
               updateStorageTreeTableThread.triggerUpdate();
             }
+//TODO: pass error to calelr?
             catch (CommunicationError error)
             {
               final String errorMessage = error.getMessage();
@@ -7158,11 +7126,24 @@ assert storagePattern != null;
                  }
               });
             }
-            catch (Exception exception)
+            catch (ConnectionError error)
+            {
+              final String errorMessage = error.getMessage();
+              display.syncExec(new Runnable()
+              {
+                @Override
+                public void run()
+                {
+                  busyDialog.close();
+                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
+                 }
+              });
+            }
+            catch (Throwable throwable)
             {
               BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
+              System.err.println("ERROR: "+throwable.getMessage());
+              BARControl.printStackTrace(throwable);
               System.exit(1);
             }
           }
@@ -7280,6 +7261,7 @@ assert storagePattern != null;
 
                 updateStorageTreeTableThread.triggerUpdate();
               }
+//TODO: pass to caller?
               catch (CommunicationError error)
               {
                 final String errorMessage = error.getMessage();
@@ -7293,11 +7275,24 @@ assert storagePattern != null;
                    }
                 });
               }
-              catch (Exception exception)
+              catch (ConnectionError error)
+              {
+                final String errorMessage = error.getMessage();
+                display.syncExec(new Runnable()
+                {
+                  @Override
+                  public void run()
+                  {
+                    busyDialog.close();
+                    Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
+                   }
+                });
+              }
+              catch (Throwable throwable)
               {
                 BARServer.disconnect();
-                System.err.println("ERROR: "+exception.getMessage());
-                BARControl.printStackTrace(exception);
+                System.err.println("ERROR: "+throwable.getMessage());
+                BARControl.printStackTrace(throwable);
                 System.exit(1);
               }
             }
@@ -7458,6 +7453,7 @@ assert storagePattern != null;
 
               updateStorageTreeTableThread.triggerUpdate();
             }
+//TODO: pass to caller?
             catch (CommunicationError error)
             {
               final String errorMessage = error.getMessage();
@@ -7471,11 +7467,24 @@ assert storagePattern != null;
                  }
               });
             }
-            catch (Exception exception)
+            catch (ConnectionError error)
+            {
+              final String errorMessage = error.getMessage();
+              display.syncExec(new Runnable()
+              {
+                @Override
+                public void run()
+                {
+                  busyDialog.close();
+                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
+                 }
+              });
+            }
+            catch (Throwable throwable)
             {
               BARServer.disconnect();
-              System.err.println("ERROR: "+exception.getMessage());
-              BARControl.printStackTrace(exception);
+              System.err.println("ERROR: "+throwable.getMessage());
+              BARControl.printStackTrace(throwable);
               System.exit(1);
             }
           }
@@ -7930,7 +7939,7 @@ assert storagePattern != null;
                                                              });
                                                              break;
                                                            case REQUEST_VOLUME:
-Dprintf.dprintf("");
+Dprintf.dprintf("REQUEST_VOLUME");
 System.exit(1);
                                                              break;
                                                            case CONFIRM:
@@ -8044,6 +8053,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
               busyDialog.close();
             }
           }
+//TODO: pass to caller?
           catch (CommunicationError error)
           {
             final String errorMessage = error.getMessage();
@@ -8057,11 +8067,24 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                }
             });
           }
-          catch (Exception exception)
+          catch (ConnectionError error)
+          {
+            final String errorMessage = error.getMessage();
+            display.syncExec(new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                busyDialog.close();
+                Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
+               }
+            });
+          }
+          catch (Throwable throwable)
           {
             BARServer.disconnect();
-            System.err.println("ERROR: "+exception.getMessage());
-            BARControl.printStackTrace(exception);
+            System.err.println("ERROR: "+throwable.getMessage());
+            BARControl.printStackTrace(throwable);
             System.exit(1);
           }
           finally
@@ -8941,6 +8964,7 @@ Dprintf.dprintf("");
               busyDialog.close();
             }
           }
+// TODO: pass to caller?
           catch (CommunicationError error)
           {
             final String errorMessage = error.getMessage();
@@ -8954,11 +8978,24 @@ Dprintf.dprintf("");
                }
             });
           }
-          catch (Exception exception)
+          catch (ConnectionError error)
+          {
+            final String errorMessage = error.getMessage();
+            display.syncExec(new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                busyDialog.close();
+                Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
+               }
+            });
+          }
+          catch (Throwable throwable)
           {
             BARServer.disconnect();
-            System.err.println("ERROR: "+exception.getMessage());
-            BARControl.printStackTrace(exception);
+            System.err.println("ERROR: "+throwable.getMessage());
+            BARControl.printStackTrace(throwable);
             System.exit(1);
           }
           finally
