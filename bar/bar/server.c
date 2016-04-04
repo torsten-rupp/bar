@@ -3375,6 +3375,7 @@ LOCAL void jobThreadCode(void)
                                                         &compressExcludePatternList,
                                                         &deltaSourceList,
                                                         &jobOptions,
+                                                        indexHandle,
                                                         archiveType,
 NULL,//                                                        scheduleTitle,
                                                         scheduleCustomText,
@@ -4147,12 +4148,12 @@ LOCAL Errors deleteEntity(IndexId entityId)
     return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // uuidId
-                              NULL,  // entityId
-                              &storageId,
                               NULL,  // jobUUID
                               NULL,  // scheduleUUID
+                              NULL,  // uuidId
+                              NULL,  // entityId
                               NULL,  // archiveType
+                              &storageId,
                               NULL,  // storageName
                               NULL,  // createdDateTime
                               NULL,  // totalEntryCount
@@ -4210,12 +4211,12 @@ LOCAL Errors deleteUUID(const String jobUUID)
     return error;
   }
   while (Index_getNextEntity(&indexQueryHandle,
-                             NULL,  // uudId,
-                             &entityId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
-                             NULL,  // createdDateTime,
+                             NULL,  // uudId,
+                             &entityId,
                              NULL,  // archiveType,
+                             NULL,  // createdDateTime,
                              NULL,  // lastErrorMessage,
                              NULL,  // totalEntryCount,
                              NULL  // totalEntrySize,
@@ -4293,12 +4294,12 @@ LOCAL void purgeExpiredEntities(void)
     }
     while (   !quitFlag
            && Index_getNextEntity(&indexQueryHandle1,
-                                  NULL,  // uudId,
-                                  &entityId,
                                   jobUUID,
                                   scheduleUUID,
-                                  NULL,  // createdDateTime,
+                                  NULL,  // uudId,
+                                  &entityId,
                                   NULL,  // archiveType,
+                                  NULL,  // createdDateTime,
                                   NULL,  // lastErrorMessage
                                   NULL,  // totalEntryCount,
                                   NULL  // totalEntrySize,
@@ -4350,12 +4351,12 @@ LOCAL void purgeExpiredEntities(void)
             {
               while (   !quitFlag
                      && Index_getNextEntity(&indexQueryHandle2,
-                                            NULL,  // uudId,
-                                            &entityId,
                                             NULL,  // jobUUID
                                             NULL,  // scheduleUUID
-                                            &createdDateTime,
+                                            NULL,  // uudId,
+                                            &entityId,
                                             &archiveType,
+                                            &createdDateTime,
                                             NULL,  // lastErrorMessage
                                             &totalEntryCount,
                                             &totalEntrySize
@@ -4403,12 +4404,12 @@ LOCAL void purgeExpiredEntities(void)
             {
               while (   !quitFlag
                      && Index_getNextEntity(&indexQueryHandle2,
-                                            NULL,  // uudId,
-                                            &entityId,
                                             NULL,  // jobUUID
                                             NULL,  // scheduleUUID
-                                            &createdDateTime,
+                                            NULL,  // uudId,
+                                            &entityId,
                                             &archiveType,
+                                            &createdDateTime,
                                             NULL,  // lastErrorMessage
                                             &totalEntryCount,
                                             &totalEntrySize
@@ -5217,12 +5218,12 @@ LOCAL void autoIndexUpdateThreadCode(void)
       now      = Misc_getCurrentDateTime();
       dateTime = String_new();
       while (   Index_getNextStorage(&indexQueryHandle,
-                                     NULL,  // uuidId
-                                     NULL,  // entityId
-                                     &storageId,
                                      NULL,  // jobUUID
                                      NULL,  // scheduleUUID
+                                     NULL,  // uuidId
+                                     NULL,  // entityId
                                      NULL,  // archiveType
+                                     &storageId,
                                      storageName,
                                      &createdDateTime,
                                      NULL,  // totalEntryCount
@@ -8421,9 +8422,9 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
 *          Result:
 *            jobUUID=<uuid> \
 *            name=<name> \
+*            state=<state> \
 *            hostName=<name> \
 *            hostPort=<n> \
-*            state=<state> \
 *            archiveType=<type> \
 *            archivePartSize=<part size> \
 *            deltaCompressAlgorithm=<delta compress algorithm> \
@@ -8453,13 +8454,13 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
           )
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "jobUUID=%S name=%'S remoteHostName=%'S remoteHostPort=%d remoteHostForceSSL=%y state=%'s archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
+                       "jobUUID=%S name=%'S state=%'s remoteHostName=%'S remoteHostPort=%d remoteHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
                        jobNode->uuid,
                        jobNode->name,
+                       getJobStateText(jobNode->state,&jobNode->jobOptions),
                        jobNode->remoteHost.name,
                        jobNode->remoteHost.port,
                        jobNode->remoteHost.forceSSL,
-                       getJobStateText(jobNode->state,&jobNode->jobOptions),
                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
                                                   (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
                                                    || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL )
@@ -10759,10 +10760,10 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, uint 
 *            jobUUID=<uuid>
 *          Result:
 *            scheduleUUID=<uuid> \
+*            archiveType=normal|full|incremental|differential
 *            date=<year>|*-<month>|*-<day>|* \
 *            weekDay=<week day>|* \
 *            time=<hour>|*:<minute>|* \
-*            archiveType=normal|full|incremental|differential
 *            interval=<n>
 *            customText=<text> \
 *            minKeep=<n>|0 \
@@ -10905,12 +10906,12 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
         if (error == ERROR_NONE)
         {
           while (Index_getNextEntity(&indexQueryHandle,
-                                     NULL,  // uudId,
-                                     NULL,  // entityId,
                                      NULL,  // jobUUID,
                                      NULL,  // scheduleUUID,
-                                     &createdDateTime,  // createdDateTime,
+                                     NULL,  // uudId,
+                                     NULL,  // entityId,
                                      NULL,  // archiveType,
+                                     &createdDateTime,  // createdDateTime,
                                      NULL,  // lastErrorMessage
                                      &entries,
                                      &size
@@ -10927,12 +10928,12 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "scheduleUUID=%S date=%S weekDays=%S time=%S archiveType=%s interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
+                       "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
                        scheduleNode->uuid,
+                       (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,scheduleNode->archiveType,NULL) : "*",
                        date,
                        weekDays,
                        time,
-                       (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,scheduleNode->archiveType,NULL) : "*",
                        scheduleNode->interval,
                        scheduleNode->customText,
                        scheduleNode->minKeep,
@@ -10965,10 +10966,10 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
+*            archiveType=normal|full|incremental|differential|continuous
 *            date=<year>|*-<month>|*-<day>|*
 *            weekDays=<week day>,...|*
 *            time=<hour>|*:<minute>|*
-*            archiveType=normal|full|incremental|differential|continuous
 *            interval=<n>
 *            customText=<text>
 *            minKeep=<n>|0
@@ -12648,12 +12649,12 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, uint id, const Stri
     return;
   }
   while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // uuidId
-                              NULL,  // entityId
-                              &storageId,
                               NULL,  // jobUUID
                               NULL,  // scheduleUUID
+                              NULL,  // uuidId
+                              NULL,  // entityId
                               NULL,  // archiveType
+                              &storageId,
                               storageName,
                               NULL,  // createdDateTime
                               &totalEntryCount,
@@ -12763,12 +12764,12 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
         return;
       }
       while (Index_getNextEntity(&indexQueryHandle1,
-                                 NULL,  // uudId,
-                                 &entityId,
                                  NULL, // job UUID
                                  NULL, // schedule UUID
-                                 NULL, // createdDateTime
+                                 NULL,  // uudId,
+                                 &entityId,
                                  NULL, // archive type
+                                 NULL, // createdDateTime
                                  NULL, // lastErrorMessage
                                  NULL, // totalEntryCount
                                  NULL // totalEntrySize
@@ -12795,12 +12796,12 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
           return;
         }
         while (Index_getNextStorage(&indexQueryHandle2,
-                                    NULL,  // uuidId
-                                    NULL,  // entityId
-                                    &storageId,
                                     NULL,  // jobUUID
                                     NULL,  // scheduleUUID
+                                    NULL,  // uuidId
+                                    NULL,  // entityId
                                     NULL,  // archiveType
+                                    &storageId,
                                     NULL,  // storageName
                                     NULL,  // createdDateTime
                                     NULL,  // totalEntryCount
@@ -12839,12 +12840,12 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
         return;
       }
       while (Index_getNextStorage(&indexQueryHandle,
-                                  NULL,  // uuidId
-                                  NULL,  // entityId
-                                  &storageId,
                                   NULL,  // jobUUID
                                   NULL,  // scheduleUUID
+                                  NULL,  // uuidId
+                                  NULL,  // entityId
                                   NULL,  // archiveType
+                                  &storageId,
                                   NULL,  // storageName
                                   NULL,  // createdDateTime
                                   NULL,  // totalEntryCount
@@ -12930,12 +12931,12 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
         return;
       }
       while (Index_getNextEntity(&indexQueryHandle1,
-                                 NULL,  // uudId,
-                                 &entityId,
                                  NULL, // job UUID
                                  NULL, // schedule UUID
-                                 NULL, // createdDateTime
+                                 NULL,  // uudId,
+                                 &entityId,
                                  NULL, // archive type
+                                 NULL, // createdDateTime
                                  NULL, // lastErrorMessage
                                  NULL, // totalEntryCount
                                  NULL // totalEntrySize
@@ -12962,12 +12963,12 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
           return;
         }
         while (Index_getNextStorage(&indexQueryHandle2,
-                                    NULL,  // uuidId
-                                    NULL,  // entityId
-                                    &storageId,
                                     NULL,  // jobUUID
                                     NULL,  // scheduleUUID
+                                    NULL,  // uuidId
+                                    NULL,  // entityId
                                     NULL,  // archiveType
+                                    &storageId,
                                     NULL,  // storageName
                                     NULL,  // createdDateTime
                                     NULL,  // totalEntryCount
@@ -13006,12 +13007,12 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
         return;
       }
       while (Index_getNextStorage(&indexQueryHandle,
-                                  NULL,  // uuidId
-                                  NULL,  // entityId
-                                  &storageId,
                                   NULL,  // jobUUID
                                   NULL,  // scheduleUUID
+                                  NULL,  // uuidId
+                                  NULL,  // entityId
                                   NULL,  // archiveType
+                                  &storageId,
                                   NULL,  // storageName
                                   NULL,  // createdDateTime
                                   NULL,  // totalEntryCount
@@ -13077,6 +13078,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
                                 Array_cArray(&clientInfo->storageIdArray),
                                 Array_length(&clientInfo->storageIdArray),
                                 INDEX_STATE_SET_ALL,
+                                INDEX_MODE_SET_ALL,
                                 NULL,
                                 &storageCount,
                                 &totalEntryCount,
@@ -13698,12 +13700,12 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
         if (error == ERROR_NONE)
         {
           while (Index_getNextStorage(&indexQueryHandle,
-                                      NULL,  // uuidId
-                                      NULL,  // entityId
-                                      NULL,  // storageId
                                       NULL,  // jobUUID
                                       NULL,  // scheduleUUID
+                                      NULL,  // uuidId
+                                      NULL,  // entityId
                                       NULL,  // archiveType
+                                      NULL,  // storageId
                                       storageName,
                                       NULL,  // createdDateTime
                                       NULL,  // totalEntryCount
@@ -14461,9 +14463,9 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 * Notes  : Arguments:
 *            jobUUID=<uuid>|*
 *          Result:
-*            entityId=<id> \
 *            jobUUID=<uuid> \
 *            scheduleUUID=<uuid> \
+*            entityId=<id> \
 *            archiveType=<type> \
 *            lastCreatedDateTime=<created time stamp> \
 *            lastErrorMessage=<error message>
@@ -14523,12 +14525,12 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntity(&indexQueryHandle,
-                                NULL,  // uudId,
-                                &entityId,
                                 jobUUID,
                                 scheduleUUID,
-                                &createdDateTime,
+                                NULL,  // uudId,
+                                &entityId,
                                 &archiveType,
+                                &createdDateTime,
                                 lastErrorMessage,
                                 &totalEntryCount,
                                 &totalEntrySize
@@ -14536,10 +14538,10 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
         )
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "entityId=%lld jobUUID=%S scheduleUUID=%S archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
-                     entityId,
+                     "jobUUID=%S scheduleUUID=%S entityId=%lld archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
                      jobUUID,
                      scheduleUUID,
+                     entityId,
                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                      createdDateTime,
                      lastErrorMessage,
@@ -14631,8 +14633,8 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, uint id, const S
 * Return : -
 * Notes  : Arguments:
 *            entityId=<id>
-*            createDateTime=<time stamp>
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            createDateTime=<time stamp>
 *          Result:
 \***********************************************************************/
 
@@ -14651,7 +14653,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 
   UNUSED_VARIABLE(argumentMap);
 
-  // get jobUUID, archive type
+  // get jobUUID, archive type, created
   String_clear(jobUUID);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
@@ -14664,6 +14666,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
+//TODO: created
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -14702,6 +14705,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 * Notes  : Arguments:
 *            storagePattern=<pattern>
 *            indexStateSet=<state set>|*
+*            indexModeSet=<mode set>|*
 *          Result:
 *            storageCount=<n> \
 *            totalEntryCount=<n> \
@@ -14713,6 +14717,8 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
   String        storagePatternString;
   bool          indexStateAny;
   IndexStateSet indexStateSet;
+  bool          indexModeAny;
+  IndexModeSet  indexModeSet;
   Errors        error;
   ulong         storageCount,totalEntryCount;
   uint64        totalEntrySize;
@@ -14747,9 +14753,20 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
     String_delete(storagePatternString);
     return;
   }
-#ifndef WERROR
-#warning use indexStateSet
-#endif
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
+  {
+    indexModeAny = TRUE;
+  }
+  if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  {
+    indexModeAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    String_delete(storagePatternString);
+    return;
+  }
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -14763,6 +14780,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
                                 NULL,  // indexIds,
                                 0,  // indexIdCount,
                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                                indexModeAny ? INDEX_STATE_SET_ALL : indexModeSet,
                                 storagePatternString,
                                 &storageCount,
                                 &totalEntryCount,
@@ -14799,13 +14817,13 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 *            [offset=<n>]
 *            [limit=<n>]
 *          Result:
-*            uuidId=<id>
-*            entityId=<id>
-*            storageId=<id>
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
 *            jobName=<name>
+*            uuidId=<id>
+*            entityId=<id>
 *            archiveType=<type>
+*            storageId=<id>
 *            name=<name>
 *            dateTime=<date/time>
 *            totalEntryCount=<n>
@@ -14884,7 +14902,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     String_delete(storagePatternString);
     return;
   }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
   {
     indexModeAny = TRUE;
   }
@@ -14943,12 +14961,12 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextStorage(&indexQueryHandle,
-                                 &uuidId,
-                                 &entityId,
-                                 &storageId,
                                  jobUUID,
                                  scheduleUUID,
+                                 &uuidId,
+                                 &entityId,
                                  &archiveType,
+                                 &storageId,
                                  storageName,
                                  &dateTime,
                                  &totalEntryCount,
@@ -14983,14 +15001,14 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     }
 
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu entityId=%llu storageId=%llu jobUUID=%S scheduleUUID=%S jobName=%'S archiveType='%s' name=%'S dateTime=%llu totalEntryCount=%lu totalEntrySize=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
-                     uuidId,
-                     entityId,
-                     storageId,
+                     "jobUUID=%S scheduleUUID=%S jobName=%'S uuidId=%llu entityId=%llu archiveType='%s' storageId=%llu name=%'S dateTime=%llu totalEntryCount=%lu totalEntrySize=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                      jobUUID,
                      scheduleUUID,
                      jobName,
+                     uuidId,
+                     entityId,
                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                     storageId,
                      printableStorageName,
                      dateTime,
                      totalEntryCount,
@@ -15469,12 +15487,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidId
-                                   NULL,  // entityId
-                                   &storageId,
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
+                                   NULL,  // uuidId
+                                   NULL,  // entityId
                                    NULL,  // archiveType
+                                   &storageId,
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // totalEntryCount
@@ -15524,12 +15542,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // entityId
-                                &storageId,
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
+                                NULL,  // uuidId
+                                NULL,  // entityId
                                 NULL,  // archiveType
+                                &storageId,
                                 NULL,  // storageName
                                 NULL,  // createdDateTime
                                 NULL,  // totalEntryCount
@@ -15579,12 +15597,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // entityId
-                                &storageId,
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
+                                NULL,  // uuidId
+                                NULL,  // entityId
                                 NULL,  // archiveType
+                                &storageId,
                                 NULL,  // storageName
                                 NULL,  // createdDateTime
                                 NULL,  // totalEntryCount
@@ -15646,12 +15664,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // entityId
-                                &storageId,
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
+                                NULL,  // uuidId
+                                NULL,  // entityId
                                 NULL,  // archiveType
+                                &storageId,
                                 NULL,  // storageName
                                 NULL,  // createdDateTime
                                 NULL,  // totalEntryCount
@@ -15712,12 +15730,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // entityId
-                                &storageId,
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
+                                NULL,  // uuidId
+                                NULL,  // entityId
                                 NULL,  // archiveType
+                                &storageId,
                                 storageName,
                                 NULL,  // createdDateTime
                                 NULL,  // totalEntryCount
@@ -15849,12 +15867,12 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidId
-                                   NULL,  // entityId
-                                   &storageId,
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
+                                   NULL,  // uuidId
+                                   NULL,  // entityId
                                    NULL,  // archiveType
+                                   &storageId,
                                    storageName,
                                    NULL,  // createdDateTime
                                    NULL,  // totalEntryCount

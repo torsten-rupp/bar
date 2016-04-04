@@ -374,8 +374,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 *          scheduleUUID     - unique schedule id (can be NULL)
 * Output : uuidId           - index id of UUID entry (can be NULL)
 *          entityId         - index id of entity entry (can be NULL)
-*          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          archiveType      - archive type (can be NULL)
+*          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          lastErrorMessage - last error message (can be NULL)
 *          totalEntryCount  - total number of entries (can be NULL)
 *          totalEntrySize   - total size [bytes] (can be NULL)
@@ -388,8 +388,8 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
                          ConstString  scheduleUUID,
                          IndexId      *uuidId,
                          IndexId      *entityId,
-                         uint64       *createdDateTime,
                          ArchiveTypes *archiveType,
+                         uint64       *createdDateTime,
                          String       lastErrorMessage,
                          ulong        *totalEntryCount,
                          uint64       *totalEntrySize
@@ -634,12 +634,12 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextEntity
 * Purpose: get next index entity entry
 * Input  : IndexQueryHandle - index query handle
-* Output : uuidId           - index id of UUID entry (can be NULL)
-*          entityId         - index id of entity entry
-*          jobUUID          - unique job id (can be NULL)
+* Output : jobUUID          - unique job id (can be NULL)
 *          scheduleUUID     - unique schedule id (can be NULL)
-*          createdDateTime  - created date/time stamp [s] (can be NULL)
+*          uuidId           - index id of UUID entry (can be NULL)
+*          entityId         - index id of entity entry
 *          archiveType      - archive type (can be NULL)
+*          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          lastErrorMessage - last storage error message (can be NULL)
 *          totalEntryCount  - total number of entries (can be NULL)
 *          totalEntrySize   - total storage size [bytes] (can be NULL)
@@ -648,12 +648,12 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
-                         IndexId          *uuidId,
-                         IndexId          *entityId,
                          String           jobUUID,
                          String           scheduleUUID,
-                         uint64           *createdDateTime,
+                         IndexId          *uuidId,
+                         IndexId          *entityId,
                          ArchiveTypes     *archiveType,
+                         uint64           *createdDateTime,
                          String           lastErrorMessage,
                          ulong            *totalEntryCount,
                          uint64           *totalEntrySize
@@ -699,8 +699,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
+*          IndexModeSet     - index mode set
 *          name             - name pattern (glob, can be NULL)
-* Output : storageCount    - number of storage (can be NULL)
+* Output : storageCount    - number of storages (can be NULL)
 *          totalEntryCount - total entry count (can be NULL)
 *          totalEntrySize  - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
@@ -711,6 +712,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              const IndexId indexIds[],
                              uint          indexIdCount,
                              IndexStateSet indexStateSet,
+                             IndexModeSet  indexModeSet,
                              ConstString   name,
                              ulong         *storageCount,
                              ulong         *totalEntryCount,
@@ -756,12 +758,12 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextStorage
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
-* Output : uuidId              - index id of UUID entry (can be NULL)
-*          entityId            - index id of entity entry (can be NULL)
-*          storageId           - index id of storage entry (can be NULL)
-*          jobUUID             - unique job UUID (can be NULL)
+* Output : jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
+*          uuidId              - index id of UUID entry (can be NULL)
+*          entityId            - index id of entity entry (can be NULL)
 *          archiveType         - archive type (can be NULL)
+*          storageId           - index id of storage entry (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          totalEntryCount     - total number of entries (can be NULL)
@@ -776,12 +778,12 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          IndexId          *uuidId,
-                          IndexId          *entityId,
-                          IndexId          *storageId,
                           String           jobUUID,
                           String           scheduleUUID,
+                          IndexId          *uuidId,
+                          IndexId          *entityId,
                           ArchiveTypes     *archiveType,
+                          IndexId          *storageId,
                           String           storageName,
                           uint64           *createdDateTime,
                           ulong            *totalEntryCount,
@@ -1586,8 +1588,8 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 *          storageId     - index id of storage index (can be
 *                          INDEX_ID_NONE)
 *          toEntityId    - to entity id (can be INDEX_ID_NONE)
-*          toStorageId   - to storage id (can be INDEX_ID_NONE)
 *          toArchiveType - to archive type (can be ARCHIVE_TYPE_NONE)
+*          toStorageId   - to storage id (can be INDEX_ID_NONE)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1598,8 +1600,8 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                       IndexId      entityId,
                       IndexId      storageId,
                       IndexId      toEntityId,
-                      IndexId      toStorageId,
-                      ArchiveTypes toArchiveType
+                      ArchiveTypes toArchiveType,
+                      IndexId      toStorageId
                      );
 
 /***********************************************************************\

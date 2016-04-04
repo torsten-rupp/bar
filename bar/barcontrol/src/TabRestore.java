@@ -1949,7 +1949,7 @@ Dprintf.dprintf("cirrect?");
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S",
                                                    storagePattern
                                                   ),
-                               0,  // debugLevel
+                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -2506,11 +2506,12 @@ Dprintf.dprintf("******************************************");
       // get storages info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO storagePattern=%'S indexStateSet=%s",
+      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO storagePattern=%'S indexStateSet=%s indexModeSet=%s ",
                                                        storagePattern,
-                                                       storageIndexStateSet.nameList("|")
+                                                       storageIndexStateSet.nameList("|"),
+                                                       "*"
                                                       ),
-                                   1,  // debugLevel
+                                   0,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -2553,7 +2554,7 @@ Dprintf.dprintf("******************************************");
       final int limit = ((offset+PAGE_SIZE) < storageCount) ? PAGE_SIZE : storageCount-offset;
 
 //TODO: sort
-Dprintf.dprintf("/TODO: sort");
+Dprintf.dprintf("/TODO: updateStorageTable sort");
 //IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
 
       // update storage table segment
@@ -2567,7 +2568,7 @@ Dprintf.dprintf("/TODO: sort");
                                                    offset,
                                                    limit
                                                   ),
-                               1,
+                               0,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -2603,6 +2604,7 @@ Dprintf.dprintf("/TODO: sort");
                                                                                                     lastCheckedDateTime,
                                                                                                     errorMessage_
                                                                                                    );
+Dprintf.dprintf("storageIndexData=%s",storageIndexData);
 
                                      display.syncExec(new Runnable()
                                      {

@@ -99,6 +99,8 @@ typedef void(*CreateStatusInfoFunction)(Errors                 error,
 *                                         list
 *          deltaSourceList              - delta soruce list
 *          jobOptions                   - job options
+*          indexHandle                  - index handle or NULL
+*          entityId                     - entityId or INDEX_ID_NONE
 *          archiveType                  - archive type; see
 *                                         ArchiveTypes (normal/full/
 *                                         incremental)
@@ -134,6 +136,7 @@ Errors Command_create(ConstString                  jobUUID,
                       const PatternList            *compressExcludePatternList,
                       DeltaSourceList              *deltaSourceList,
                       JobOptions                   *jobOptions,
+                      IndexHandle                  *indexHandle,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,

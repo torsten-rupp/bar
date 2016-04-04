@@ -622,7 +622,7 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : findNextArchivePart
 * Purpose: find next suitable archive part
-* Input  : -
+* Input  : archiveInfo - archive info
 * Output : -
 * Return : -
 * Notes  : -
@@ -637,12 +637,12 @@ LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo)
   {
     do
     {
-      storageSize = archiveInfo->archiveGetSizeFunction(archiveInfo->archiveGetSizeUserData,
-                                                archiveInfo->indexHandle,
-//                                                archiveInfo->entityId,
-                                                archiveInfo->storageId,
-                                                archiveInfo->partNumber
-                                               );
+      storageSize = archiveInfo->archiveGetSizeFunction(archiveInfo->indexHandle,
+                                                        archiveInfo->entityId,
+                                                        archiveInfo->storageId,
+                                                        archiveInfo->partNumber,
+                                                        archiveInfo->archiveGetSizeUserData
+                                                       );
       if (storageSize > archiveInfo->jobOptions->archivePartSize)
       {
         archiveInfo->partNumber++;
@@ -962,7 +962,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       {
         // create storage index
         error = Index_newStorage(archiveInfo->indexHandle,
-                                 DATABASE_ID_NONE,  // entityId,
+                                 archiveInfo->entityId,
                                  NULL, // storageName
                                  INDEX_STATE_CREATE,
                                  INDEX_MODE_MANUAL,
@@ -984,16 +984,16 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       // call-back for init archive
       if (archiveInfo->archiveInitFunction != NULL)
       {
-        error = archiveInfo->archiveInitFunction(archiveInfo->archiveInitUserData,
-                                                 archiveInfo->indexHandle,
+        error = archiveInfo->archiveInitFunction(archiveInfo->indexHandle,
                                                  archiveInfo->jobUUID,
                                                  archiveInfo->scheduleUUID,
+                                                 archiveInfo->entityId,
                                                  archiveInfo->archiveType,
-//                                                 archiveInfo->entityId,
                                                  archiveInfo->storageId,
                                                  isSplittedArchive(archiveInfo)
                                                    ? (int)archiveInfo->partNumber
-                                                   : ARCHIVE_PART_NUMBER_NONE
+                                                   : ARCHIVE_PART_NUMBER_NONE,
+                                                 archiveInfo->archiveInitUserData
                                                 );
         if (error != ERROR_NONE)
         {
@@ -1048,18 +1048,18 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     // call-back to store archive
     if (archiveInfo->archiveStoreFunction != NULL)
     {
-      error = archiveInfo->archiveStoreFunction(archiveInfo->archiveStoreUserData,
-                                                archiveInfo->indexHandle,
+      error = archiveInfo->archiveStoreFunction(archiveInfo->indexHandle,
                                                 archiveInfo->jobUUID,
                                                 archiveInfo->scheduleUUID,
+                                                archiveInfo->entityId,
                                                 archiveInfo->archiveType,
-//                                                archiveInfo->entityId,
                                                 archiveInfo->storageId,
                                                 isSplittedArchive(archiveInfo)
                                                   ? (int)archiveInfo->partNumber
                                                   : ARCHIVE_PART_NUMBER_NONE,
                                                 archiveInfo->file.fileName,
-                                                Archive_getSize(archiveInfo)
+                                                Archive_getSize(archiveInfo),
+                                                archiveInfo->archiveStoreUserData
                                                );
       if (error != ERROR_NONE)
       {
@@ -1072,16 +1072,16 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     // call-back for done archive
     if (archiveInfo->archiveDoneFunction != NULL)
     {
-      error = archiveInfo->archiveDoneFunction(archiveInfo->archiveDoneUserData,
-                                               archiveInfo->indexHandle,
-                                                archiveInfo->jobUUID,
-                                                archiveInfo->scheduleUUID,
-                                                archiveInfo->archiveType,
-//                                                archiveInfo->entityId,
+      error = archiveInfo->archiveDoneFunction(archiveInfo->indexHandle,
+                                               archiveInfo->jobUUID,
+                                               archiveInfo->scheduleUUID,
+                                               archiveInfo->entityId,
+                                               archiveInfo->archiveType,
                                                archiveInfo->storageId,
                                                isSplittedArchive(archiveInfo)
                                                  ? (int)archiveInfo->partNumber
-                                                 : ARCHIVE_PART_NUMBER_NONE
+                                                 : ARCHIVE_PART_NUMBER_NONE,
+                                               archiveInfo->archiveDoneUserData
                                               );
       if (error != ERROR_NONE)
       {
@@ -3085,46 +3085,48 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 }
 
 #ifdef NDEBUG
-  Errors Archive_create(ArchiveInfo                     *archiveInfo,
-                        DeltaSourceList                 *deltaSourceList,
-                        const JobOptions                *jobOptions,
-                        IndexHandle                     *indexHandle,
-                        ConstString                     jobUUID,
-                        ConstString                     scheduleUUID,
-                        ArchiveTypes                    archiveType,
-                        ArchiveInitFunction             archiveInitFunction,
-                        void                            *archiveInitUserData,
-                        ArchiveDoneFunction             archiveDoneFunction,
-                        void                            *archiveDoneUserData,
-                        ArchiveGetSizeFunction          archiveGetSizeFunction,
-                        void                            *archiveGetSizeUserData,
-                        ArchiveStoreFunction            archiveStoreFunction,
-                        void                            *archiveStoreUserData,
-                        GetPasswordFunction             getPasswordFunction,
-                        void                            *getPasswordUserData,
-                        LogHandle                       *logHandle
+  Errors Archive_create(ArchiveInfo            *archiveInfo,
+                        ConstString            jobUUID,
+                        ConstString            scheduleUUID,
+                        DeltaSourceList        *deltaSourceList,
+                        const JobOptions       *jobOptions,
+                        IndexHandle            *indexHandle,
+                        IndexId                entityId,
+                        ArchiveTypes           archiveType,
+                        ArchiveInitFunction    archiveInitFunction,
+                        void                   *archiveInitUserData,
+                        ArchiveDoneFunction    archiveDoneFunction,
+                        void                   *archiveDoneUserData,
+                        ArchiveGetSizeFunction archiveGetSizeFunction,
+                        void                   *archiveGetSizeUserData,
+                        ArchiveStoreFunction   archiveStoreFunction,
+                        void                   *archiveStoreUserData,
+                        GetPasswordFunction    getPasswordFunction,
+                        void                   *getPasswordUserData,
+                        LogHandle              *logHandle
                        )
 #else /* not NDEBUG */
-  Errors __Archive_create(const char                      *__fileName__,
-                          ulong                           __lineNb__,
-                          ArchiveInfo                     *archiveInfo,
-                          DeltaSourceList                 *deltaSourceList,
-                          const JobOptions                *jobOptions,
-                          IndexHandle                     *indexHandle,
-                          ConstString                     jobUUID,
-                          ConstString                     scheduleUUID,
-                          ArchiveTypes                    archiveType,
-                          ArchiveInitFunction             archiveInitFunction,
-                          void                            *archiveInitUserData,
-                          ArchiveDoneFunction             archiveDoneFunction,
-                          void                            *archiveDoneUserData,
-                          ArchiveGetSizeFunction          archiveGetSizeFunction,
-                          void                            *archiveGetSizeUserData,
-                          ArchiveStoreFunction            archiveStoreFunction,
-                          void                            *archiveStoreUserData,
-                          GetPasswordFunction             getPasswordFunction,
-                          void                            *getPasswordUserData,
-                          LogHandle                       *logHandle
+  Errors __Archive_create(const char             *__fileName__,
+                          ulong                   __lineNb__,
+                          ArchiveInfo            *archiveInfo,
+                          ConstString            jobUUID,
+                          ConstString            scheduleUUID,
+                          DeltaSourceList        *deltaSourceList,
+                          const JobOptions       *jobOptions,
+                          IndexHandle            *indexHandle,
+                          IndexId                entityId,
+                          ArchiveTypes           archiveType,
+                          ArchiveInitFunction    archiveInitFunction,
+                          void                   *archiveInitUserData,
+                          ArchiveDoneFunction    archiveDoneFunction,
+                          void                   *archiveDoneUserData,
+                          ArchiveGetSizeFunction archiveGetSizeFunction,
+                          void                   *archiveGetSizeUserData,
+                          ArchiveStoreFunction   archiveStoreFunction,
+                          void                   *archiveStoreUserData,
+                          GetPasswordFunction    getPasswordFunction,
+                          void                   *getPasswordUserData,
+                          LogHandle              *logHandle
                          )
 #endif /* NDEBUG */
 {
@@ -3136,6 +3138,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   assert(archiveInfo != NULL);
   assert(archiveStoreFunction != NULL);
   assert(jobOptions != NULL);
+  assert((indexHandle == NULL) || (entityId == INDEX_ID_NONE) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -3155,8 +3158,13 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   }
 
   // init archive info
-  archiveInfo->deltaSourceList         = deltaSourceList;
+  archiveInfo->jobUUID                 = String_duplicate(jobUUID);
+  archiveInfo->scheduleUUID            = String_duplicate(scheduleUUID);
   archiveInfo->jobOptions              = jobOptions;
+  archiveInfo->deltaSourceList         = deltaSourceList;
+  archiveInfo->indexHandle             = indexHandle;
+  archiveInfo->entityId                = entityId;
+  archiveInfo->archiveType             = archiveType;
   archiveInfo->archiveInitFunction     = archiveInitFunction;
   archiveInfo->archiveInitUserData     = archiveInitUserData;
   archiveInfo->archiveDoneFunction     = archiveDoneFunction;
@@ -3184,11 +3192,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveInfo->chunkIO                 = &CHUNK_IO_FILE;
   archiveInfo->chunkIOUserData         = &archiveInfo->file.fileHandle;
 
-  archiveInfo->indexHandle             = indexHandle;
-  archiveInfo->jobUUID                 = String_duplicate(jobUUID);
-  archiveInfo->scheduleUUID            = String_duplicate(scheduleUUID);
-  archiveInfo->archiveType             = archiveType;
-//  archiveInfo->entityId                = DATABASE_ID_NONE;
   archiveInfo->storageId               = DATABASE_ID_NONE;
 
   archiveInfo->entries                 = 0LL;

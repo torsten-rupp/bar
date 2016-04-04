@@ -16,6 +16,19 @@ CREATE TABLE IF NOT EXISTS meta(
 INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$version);
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
+// --- history ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS history(
+  id               INTEGER PRIMARY KEY,
+  jobUUID          TEXT UNIQUE NOT NULL,
+  scheduleUUID     TEXT NOT NULL,
+  created          INTEGER,
+  type             INTEGER,
+  totalEntityCount INTEGER DEFAULT 0,
+  totalEntitySize  INTEGER DEFAULT 0
+);
+CREATE INDEX ON history (jobUUID,created,type,created);
+CREATE INDEX ON history (created);
+
 // --- uuids -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uuids(
   id                  INTEGER PRIMARY KEY,
@@ -75,6 +88,7 @@ CREATE TABLE IF NOT EXISTS entities(
 
 //  FOREIGN KEY(storageId) REFERENCES storage(id)
 );
+// default entity
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (0,'','',0,0,0,0);
 CREATE INDEX ON entities (jobUUID,created,type,lastCreated);
 

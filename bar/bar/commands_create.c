@@ -3200,21 +3200,22 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 /***********************************************************************\
 * Name   : archiveGetSize
 * Purpose: call back for init archive file
-* Input  : userData    - user data
-*          indexHandle - index handle or NULL if no index
+* Input  : indexHandle - index handle or NULL if no index
+*          entityId    - index id of entity
 *          storageId   - index id of storage
-*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
-*                         single part
+*          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
+*                        single part
+*          userData    - user data
 * Output : -
 * Return : size or 0
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint64 archiveGetSize(void        *userData,
-                            IndexHandle *indexHandle,
-//                            IndexId     entityId,
+LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
+                            IndexId     entityId,
                             IndexId     storageId,
-                            int         partNumber
+                            int         partNumber,
+                            void        *userData
                            )
 {
   CreateInfo           *createInfo = (CreateInfo*)userData;
@@ -3226,7 +3227,8 @@ LOCAL uint64 archiveGetSize(void        *userData,
   assert(createInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
-//  UNUSED_VARIABLE(entityId);
+//TODO
+UNUSED_VARIABLE(entityId);
 UNUSED_VARIABLE(storageId);
 
   archiveSize = 0LL;
@@ -3268,29 +3270,30 @@ UNUSED_VARIABLE(storageId);
 /***********************************************************************\
 * Name   : archiveStore
 * Purpose: call back to store archive file
-* Input  : userData     - user data
-*          indexHandle  - index handle or NULL if no index
-*          entityId     - index id of entity
-*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
-*                         single part
-*          storageId    - index id of storage
-*          tmpFileName  - intermediate archive file name
-*          tmpFileSize  - intermediate archive size [bytes]
+* Input  : indexHandle          - index handle or NULL if no index
+*          entityId             - index id of entity
+*          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
+*                                 for single part
+*          entityId             - index id of entity
+*          storageId            - index id of storage
+*          intermediateFileName - intermediate archive file name
+*          intermediateFileSize - intermediate archive size [bytes]
+*          userData             - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors archiveStore(void        *userData,
-                          IndexHandle *indexHandle,
-ConstString jobUUID,
-ConstString scheduleUUID,
-ArchiveTypes archiveType,
-//                              IndexId     entityId,
+LOCAL Errors archiveStore(IndexHandle *indexHandle,
+                          ConstString jobUUID,
+                          ConstString scheduleUUID,
+                          IndexId     entityId,
+                          ArchiveTypes archiveType,
                           IndexId     storageId,
                           int         partNumber,
                           String      intermediateFileName,
-                          uint64      intermediateFileSize
+                          uint64      intermediateFileSize,
+                          void        *userData
                          )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
@@ -3305,9 +3308,11 @@ ArchiveTypes archiveType,
   assert(!String_isEmpty(intermediateFileName));
 
 UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(archiveType);
 UNUSED_VARIABLE(jobUUID);
 UNUSED_VARIABLE(scheduleUUID);
-UNUSED_VARIABLE(archiveType);
+//TODO
+UNUSED_VARIABLE(entityId);
 
   // get file info
 // TODO replace by getFileSize()
@@ -3433,12 +3438,12 @@ LOCAL Errors purgeStorageIndex(IndexId          storageId,
     return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
-                              &oldUUIDId,
-                              &oldEntityId,
-                              &oldStorageId,
                               NULL, // job UUID
                               NULL, // schedule UUID
+                              &oldUUIDId,
+                              &oldEntityId,
                               NULL, // archive type
+                              &oldStorageId,
                               oldStorageName,
                               NULL, // createdDateTime
                               NULL, // entries
@@ -3572,12 +3577,12 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                &uuidId,
-                                &entityId,
-                                &storageId,
                                 NULL,  //String           jobUUID,
                                 NULL,  //String           scheduleUUID,
+                                &uuidId,
+                                &entityId,
                                 NULL,  //ArchiveTypes     *archiveType,
+                                &storageId,
                                 storageName,
                                 &createdDateTime,
                                 NULL,  //uint64           *entries,
@@ -3761,12 +3766,12 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                &uuidId,
-                                &entityId,
-                                &storageId,
                                 NULL,  //String           jobUUID,
                                 NULL,  //String           scheduleUUID,
+                                &uuidId,
+                                &entityId,
                                 NULL,  //ArchiveTypes     *archiveType,
+                                &storageId,
                                 storageName,
                                 &createdDateTime,
                                 NULL,  //uint64           *entries,
@@ -3909,7 +3914,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   SemaphoreLock              semaphoreLock;
   String                     pattern;
 
-  IndexId                    entityId;
   IndexId                    storageId;
 
   assert(createInfo != NULL);
@@ -4188,6 +4192,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // update index database and set state
     if (storageMsg.storageId != INDEX_ID_NONE)
     {
+      // check if append, get append storage
       if (   appendFlag
           && Index_findByStorageName(indexHandle,
                                      createInfo->storageSpecifier,
@@ -4226,7 +4231,7 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
         // delete old indizes for same storage file
         error = purgeStorageIndex(storageMsg.storageId,
                                   createInfo->storageSpecifier,
@@ -4244,52 +4249,12 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
           continue;
         }
 
-        // create new entity for storage
-fprintf(stderr,"%s, %d: --- create new enity\n",__FILE__,__LINE__);
-        error = Index_newEntity(indexHandle,
-                                createInfo->jobUUID,
-                                createInfo->scheduleUUID,
-                                createInfo->archiveType,
-                                &entityId
-                               );
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot update index for storage '%s' (error: %s)!\n",
-                     String_cString(printableStorageName),
-                     Error_getText(error)
-                    );
-          createInfo->failError = error;
-
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
-        }
-fprintf(stderr,"%s, %d: crea entityId %llu\n",__FILE__,__LINE__,entityId);
-
-        // assign storage to new entity
-        error = Index_assignTo(indexHandle,
-                               NULL,  // jobUUID
-                               INDEX_ID_NONE,  // enityId
-                               storageMsg.storageId,
-                               entityId,
-                               INDEX_ID_NONE,  // toStorageId
-                               ARCHIVE_TYPE_NONE
-                              );
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot update index for storage '%s' (error: %s)!\n",
-                     String_cString(printableStorageName),
-                     Error_getText(error)
-                    );
-          createInfo->failError = error;
-
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
-        }
-
+        // keep storage
         storageId = storageMsg.storageId;
       }
 
       // update index database archive name and size
+fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_cString(printableStorageName),archiveSize);
       error = Index_storageUpdate(indexHandle,
                                   storageId,
                                   printableStorageName,
@@ -6228,6 +6193,7 @@ Errors Command_create(ConstString                  jobUUID,
                       const PatternList            *compressExcludePatternList,
                       DeltaSourceList              *deltaSourceList,
                       JobOptions                   *jobOptions,
+                      IndexHandle                  *indexHandle,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
@@ -6249,6 +6215,7 @@ Errors Command_create(ConstString                  jobUUID,
   bool             incrementalFileInfoExistFlag;
   StorageSpecifier storageSpecifier;
   CreateInfo       createInfo;
+  IndexId          entityId;
   Thread           collectorSumThread;                 // files collector sum thread
   Thread           collectorThread;                    // files collector thread
   Thread           storageThread;                      // storage thread
@@ -6431,30 +6398,34 @@ Errors Command_create(ConstString                  jobUUID,
                                               || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL);
   }
 
-  // start collectors and storage thread
-  if (!Thread_init(&collectorSumThread,"BAR collector sum",globalOptions.niceLevel,collectorSumThreadCode,&createInfo))
+  // create new entity
+  error = Index_newEntity(indexHandle,
+                          jobUUID,
+                          scheduleUUID,
+                          archiveType,
+                          &entityId
+                         );
+  if (error != ERROR_NONE)
   {
-    HALT_FATAL_ERROR("Cannot initialize collector sum thread!");
+    printError("Cannot create index for '%s' (error: %s)!\n",
+               Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+               Error_getText(error)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return error;
   }
-  if (!Thread_init(&collectorThread,"BAR collector",globalOptions.niceLevel,collectorThreadCode,&createInfo))
-  {
-    HALT_FATAL_ERROR("Cannot initialize collector thread!");
-  }
-  if (!Thread_init(&storageThread,"BAR storage",globalOptions.niceLevel,storageThreadCode,&createInfo))
-  {
-    HALT_FATAL_ERROR("Cannot initialize storage thread!");
-  }
-  AUTOFREE_ADD(&autoFreeList,&collectorSumThread,{ MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue); Thread_join(&collectorSumThread); Thread_done(&collectorSumThread); });
-  AUTOFREE_ADD(&autoFreeList,&collectorThread,{ MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue); Thread_join(&collectorThread); Thread_done(&collectorThread); });
-  AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
+//TODO
+//                      IndexId                      entityId,
+  AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
+                         jobUUID,
+                         scheduleUUID,
                          deltaSourceList,
                          jobOptions,
                          indexHandle,
-                         jobUUID,
-                         scheduleUUID,
+                         entityId,
                          archiveType,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
@@ -6487,6 +6458,24 @@ Errors Command_create(ConstString                  jobUUID,
     return error;
   }
   DEBUG_TESTCODE() { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&createInfo.archiveInfo,{ Archive_close(&createInfo.archiveInfo); });
+
+  // start collectors and storage thread
+  if (!Thread_init(&collectorSumThread,"BAR collector sum",globalOptions.niceLevel,collectorSumThreadCode,&createInfo))
+  {
+    HALT_FATAL_ERROR("Cannot initialize collector sum thread!");
+  }
+  if (!Thread_init(&collectorThread,"BAR collector",globalOptions.niceLevel,collectorThreadCode,&createInfo))
+  {
+    HALT_FATAL_ERROR("Cannot initialize collector thread!");
+  }
+  if (!Thread_init(&storageThread,"BAR storage",globalOptions.niceLevel,storageThreadCode,&createInfo))
+  {
+    HALT_FATAL_ERROR("Cannot initialize storage thread!");
+  }
+  AUTOFREE_ADD(&autoFreeList,&collectorSumThread,{ MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue); Thread_join(&collectorSumThread); Thread_done(&collectorSumThread); });
+  AUTOFREE_ADD(&autoFreeList,&collectorThread,{ MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue); Thread_join(&collectorThread); Thread_done(&collectorThread); });
+  AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
 
   // start create threads
 #if 1
@@ -6559,6 +6548,10 @@ createThreadCode(&createInfo);
 
   // final update of status info
   (void)updateStatusInfo(&createInfo,TRUE);
+
+  // update index history
+//TODO
+//  entityId
 
   // write incremental list
   if (   createInfo.storeIncrementalFileInfoFlag

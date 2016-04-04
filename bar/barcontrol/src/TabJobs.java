@@ -1669,6 +1669,7 @@ public class TabJobs
   private Button       widgetIncludeTableInsert,widgetIncludeTableEdit,widgetIncludeTableRemove;
   private List         widgetExcludeList;
   private Button       widgetExcludeListInsert,widgetExcludeListEdit,widgetExcludeListRemove;
+  private Button       widgetArchivePartSizeLimited;
   private Combo        widgetArchivePartSize;
   private List         widgetCompressExcludeList;
   private Button       widgetCompressExcludeListInsert,widgetCompressExcludeListEdit,widgetCompressExcludeListRemove;
@@ -4176,10 +4177,10 @@ Dprintf.dprintf("");
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("limit to"));
-          button.setToolTipText(BARControl.tr("Limit size of storage files to specified value."));
-          Widgets.layout(button,0,1,TableLayoutData.W);
-          button.addSelectionListener(new SelectionListener()
+          widgetArchivePartSizeLimited = Widgets.newRadio(composite,BARControl.tr("limit to"));
+          widgetArchivePartSizeLimited.setToolTipText(BARControl.tr("Limit size of storage files to specified value."));
+          Widgets.layout(widgetArchivePartSizeLimited,0,1,TableLayoutData.W);
+          widgetArchivePartSizeLimited.addSelectionListener(new SelectionListener()
           {
             @Override
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4192,7 +4193,7 @@ Dprintf.dprintf("");
               archivePartSizeFlag.set(true);
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetArchivePartSizeLimited,archivePartSizeFlag)
           {
             @Override
             public void modified(Control control, WidgetVariable archivePartSizeFlag)
@@ -4326,6 +4327,33 @@ Dprintf.dprintf("");
           label = Widgets.newLabel(composite,BARControl.tr("bytes"));
           Widgets.layout(label,0,3,TableLayoutData.W);
         }
+        composite.addMouseListener(new MouseListener()
+        {
+          @Override
+          public void mouseDoubleClick(final MouseEvent mouseEvent)
+          {
+          }
+          @Override
+          public void mouseDown(final MouseEvent mouseEvent)
+          {
+            Rectangle bounds = widgetArchivePartSize.getBounds();
+
+Dprintf.dprintf("");
+            if (bounds.contains(mouseEvent.x,mouseEvent.y))
+            {
+Dprintf.dprintf("");
+              archivePartSizeFlag.set(true);
+widgetArchivePartSize.setListVisible(true);
+//              widgetArchivePartSizeLimited.setSelection(true);
+//                selectRestoreToEvent.trigger();
+//              Widgets.setFocus(widgetArchivePartSize);
+            }
+          }
+          @Override
+          public void mouseUp(final MouseEvent mouseEvent)
+          {
+          }
+        });
 
         // compress
         label = Widgets.newLabel(tab,BARControl.tr("Compress")+":");

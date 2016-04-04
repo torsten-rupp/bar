@@ -2584,7 +2584,6 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             // Note: first directories to update totalEntryCount/totalEntrySize
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: dir\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "directories",
@@ -2631,7 +2630,6 @@ fprintf(stderr,"%s, %d: dir\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: file\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "files",
@@ -2681,7 +2679,6 @@ fprintf(stderr,"%s, %d: file\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: image\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "images",
@@ -2737,7 +2734,6 @@ fprintf(stderr,"%s, %d: image\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: link\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "links",
@@ -2781,7 +2777,6 @@ fprintf(stderr,"%s, %d: link\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: jhardlink\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "hardlinks",
@@ -2831,7 +2826,6 @@ fprintf(stderr,"%s, %d: jhardlink\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
-fprintf(stderr,"%s, %d: spec\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "special",
@@ -4958,12 +4952,12 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
     return error;
   }
   while (Index_getNextEntity(&indexQueryHandle,
-                             NULL,  // uuidId,
-                             &entityId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
-                             NULL,  // createdDateTime,
+                             NULL,  // uuidId,
+                             &entityId,
                              NULL,  // archiveType,
+                             NULL,  // createdDateTime,
                              NULL,  // lastErrorMessage
                              NULL,  // totalEntryCount,
                              NULL  // totalEntrySize,
@@ -5026,8 +5020,8 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 * Purpose: assign all storage entries of entity to other entity
 * Input  : indexHandle   - index handle
 *          entityId      - entity id
-*          toEntityId    - to entity id
 *          toArchiveType - archive type or ARCHIVE_TYPE_NONE
+*          toEntityId    - to entity id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -5035,8 +5029,8 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 
 LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
                                   IndexId      entityId,
-                                  IndexId      toEntityId,
-                                  ArchiveTypes toArchiveType
+                                  ArchiveTypes toArchiveType,
+                                  IndexId      toEntityId
                                  )
 {
   Errors error;
@@ -5127,12 +5121,12 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
     return error;
   }
   while (Index_getNextEntity(&indexQueryHandle,
-                             NULL,  // uuidId,
-                             &entityId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
-                             NULL,  // createdDateTime,
+                             NULL,  // uuidId,
+                             &entityId,
                              NULL,  // archiveType,
+                             NULL,  // createdDateTime,
                              NULL,  // lastErrorMessage
                              NULL,  // totalEntryCount,
                              NULL  // totalEntrySize,
@@ -5491,8 +5485,8 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
                          ConstString  scheduleUUID,
                          IndexId      *uuidId,
                          IndexId      *entityId,
-                         uint64       *createdDateTime,
                          ArchiveTypes *archiveType,
+                         uint64       *createdDateTime,
                          String       lastErrorMessage,
                          ulong        *totalEntryCount,
                          uint64       *totalEntrySize
@@ -5505,6 +5499,9 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
   DatabaseId          uuidId_,entityId_;
 
   assert(indexHandle != NULL);
+
+//TODO
+UNUSED_VARIABLE(jobUUID);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -6037,7 +6034,6 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
   if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
-fprintf(stderr,"%s, %d: databaseId=%d lastCreatedDateTime=%llu\n",__FILE__,__LINE__,databaseId,*lastCreatedDateTime);
 
   return TRUE;
 }
@@ -6185,12 +6181,12 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
-                         IndexId          *uuidId,
-                         IndexId          *entityId,
                          String           jobUUID,
                          String           scheduleUUID,
-                         uint64           *createdDateTime,
+                         IndexId          *uuidId,
+                         IndexId          *entityId,
                          ArchiveTypes     *archiveType,
+                         uint64           *createdDateTime,
                          String           lastErrorMessage,
                          ulong            *totalEntryCount,
                          uint64           *totalEntrySize
@@ -6347,18 +6343,22 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              const IndexId indexIds[],
                              uint          indexIdCount,
                              IndexStateSet indexStateSet,
-                             ConstString   pattern,
+                             IndexModeSet  indexModeSet,
+                             ConstString   name,
                              ulong         *storageCount,
                              ulong         *totalEntryCount,
                              uint64        *totalEntrySize
                             )
 {
-  String              ftsString;
-  String              regexpString;
-  String              uuidIdsString,entityIdsString,storageIdsString;
+  String              ftsName;
+  String              regexpName;
+//  String              uuidIdsString;
+//  String              entityIdsString;
+  String              storageIdsString;
   uint                i;
   String              filter,unionFilter,storageFilter;
   String              indexStateSetString;
+  String              indexModeSetString;
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
   double              totalEntryCount_,totalEntrySize_;
@@ -6378,27 +6378,25 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   }
 
   // get FTS/regex patterns
-//  ftsHostNameOrDevice    = getFTSString   (String_new(),hostNameOrDevice);
-//  ftsArchiveName         = getFTSString   (String_new(),archiveName);
-  ftsString    = getFTSString   (String_new(),pattern);
-  regexpString = getREGEXPString(String_new(),pattern);
+  ftsName    = getFTSString   (String_new(),name);
+  regexpName = getREGEXPString(String_new(),name);
 
   // get id sets
-  uuidIdsString    = String_new();
-  entityIdsString  = String_new();
+//  uuidIdsString    = String_new();
+//  entityIdsString  = String_new();
   storageIdsString = String_new();
   for (i = 0; i < indexIdCount; i++)
   {
     switch (Index_getType(indexIds[i]))
     {
-      case INDEX_TYPE_UUID:
+/*      case INDEX_TYPE_UUID:
         if (i > 0) String_appendChar(uuidIdsString,',');
         String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
         if (i > 0) String_appendChar(entityIdsString,',');
         String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-        break;
+        break;*/
       case INDEX_TYPE_STORAGE:
         if (i > 0) String_appendChar(storageIdsString,',');
         String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
@@ -6409,18 +6407,22 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
     }
   }
 
-  filter = String_newCString("1");
-  if (   !String_isEmpty(ftsString)
-      || !String_isEmpty(regexpString)
+  filter              = String_newCString("1");
+  indexStateSetString = String_new();
+  indexModeSetString  = String_new();
+
+#if 0
+  if (   !String_isEmpty(ftsName)
+//      || !String_isEmpty(regexpName)
       || (indexIds != NULL)
      )
   {
     storageFilter = String_new();
-    if (!String_isEmpty(ftsString) || !String_isEmpty(regexpString) || (indexIds != NULL))
+    if (!String_isEmpty(ftsName) || !String_isEmpty(regexpName) || (indexIds != NULL))
     {
       filterAppend(storageFilter,!String_isEmpty(storageIdsString),"AND","storage.id IN (%S)",storageIdsString);
-      filterAppend(storageFilter,!String_isEmpty(ftsString),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsString);
-//      filterAppend(storageFilter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,storage.name)",regexpString);
+      filterAppend(storageFilter,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+//      filterAppend(storageFilter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,storage.name)",regexpName);
     }
 
     unionFilter = String_new();
@@ -6428,16 +6430,20 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
     filterAppend(unionFilter,!String_isEmpty(entityIdsString),"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (%S)",entityIdsString);
     filterAppend(unionFilter,!String_isEmpty(uuidIdsString),"UNION ALL","SELECT storage.id FROM storage WHERE storage.entityId IN (SELECT entities.id FROM entities WHERE entities.jobUUID IN (SELECT entities.jobUUID FROM entities WHERE entities.id IN (%S)))",uuidIdsString);
 
-    indexStateSetString = String_new();
-
     filterAppend(filter,TRUE,"AND","storage.id IN (%S)",unionFilter);
-    filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
 
-    String_delete(indexStateSetString);
     String_delete(storageFilter);
     String_delete(unionFilter);
   }
-//Database_debugEnable(1);
+#endif
+  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","storage.id IN (%S)",storageIdsString);
+  filterAppend(filter,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+//  filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
+  filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
+  filterAppend(filter,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
+
+
+Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
 //TODO newest
@@ -6450,15 +6456,17 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                            String_cString(filter)
                           );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
-//Database_debugEnable(0);
+Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
+    String_delete(indexModeSetString);
+    String_delete(indexStateSetString);
     String_delete(filter);
     String_delete(storageIdsString);
-    String_delete(entityIdsString);
-    String_delete(uuidIdsString);
-    String_delete(regexpString);
-    String_delete(ftsString);
+//    String_delete(entityIdsString);
+//    String_delete(uuidIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
     return error;
   }
   if (Database_getNextRow(&databaseQueryHandle,
@@ -6475,12 +6483,14 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   Database_finalize(&databaseQueryHandle);
 
   // free resources
+  String_delete(indexModeSetString);
+  String_delete(indexStateSetString);
   String_delete(filter);
   String_delete(storageIdsString);
-  String_delete(entityIdsString);
-  String_delete(uuidIdsString);
-  String_delete(regexpString);
-  String_delete(ftsString);
+//  String_delete(entityIdsString);
+//  String_delete(uuidIdsString);
+  String_delete(regexpName);
+  String_delete(ftsName);
 
   return ERROR_NONE;
 }
@@ -6501,7 +6511,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 {
   String ftsName;
   String regexpName;
-  String uuidIdsString,entityIdsString,storageIdsString;
+//  String uuidIdsString;
+//  String entityIdsString;
+  String storageIdsString;
   Errors error;
   String filter;
   String indexStateSetString;
@@ -6523,17 +6535,19 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 //TODO required?
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // get FTS/regex patterns
   ftsName    = getFTSString   (String_new(),name);
   regexpName = getREGEXPString(String_new(),name);
 
   // get id sets
-  uuidIdsString    = String_new();
-  entityIdsString  = String_new();
+//  uuidIdsString    = String_new();
+//  entityIdsString  = String_new();
   storageIdsString = String_new();
   for (i = 0; i < indexIdCount; i++)
   {
     switch (Index_getType(indexIds[i]))
     {
+/*
       case INDEX_TYPE_UUID:
         if (i > 0) String_appendChar(uuidIdsString,',');
         String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
@@ -6541,7 +6555,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
       case INDEX_TYPE_ENTITY:
         if (i > 0) String_appendChar(entityIdsString,',');
         String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-        break;
+        break;*/
       case INDEX_TYPE_STORAGE:
         if (i > 0) String_appendChar(storageIdsString,',');
         String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
@@ -6552,7 +6566,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-  filter              = String_new();
+  filter              = String_newCString("1");
   indexStateSetString = String_new();
   indexModeSetString  = String_new();
 
@@ -6598,23 +6612,23 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
-    String_delete(filter);
     String_delete(indexModeSetString);
     String_delete(indexStateSetString);
+    String_delete(filter);
     String_delete(storageIdsString);
-    String_delete(entityIdsString);
-    String_delete(uuidIdsString);
+//    String_delete(entityIdsString);
+//    String_delete(uuidIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
     return error;
   }
 
-  String_delete(filter);
   String_delete(indexModeSetString);
   String_delete(indexStateSetString);
+  String_delete(filter);
   String_delete(storageIdsString);
-  String_delete(entityIdsString);
-  String_delete(uuidIdsString);
+//  String_delete(entityIdsString);
+//  String_delete(uuidIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
 
@@ -6624,12 +6638,12 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          IndexId          *uuidId,
-                          IndexId          *entityId,
-                          IndexId          *storageId,
                           String           jobUUID,
                           String           scheduleUUID,
+                          IndexId          *uuidId,
+                          IndexId          *entityId,
                           ArchiveTypes     *archiveType,
+                          IndexId          *storageId,
                           String           storageName,
                           uint64           *createdDateTime,
                           ulong            *totalEntryCount,
@@ -6853,11 +6867,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            "DELETE FROM storage WHERE id=%lld;",
                            INDEX_DATABASE_ID_(storageId)
                           );
-if (error !=  ERROR_NONE) {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
-}
-
   if (error != ERROR_NONE) return error;
 
   return ERROR_NONE;
@@ -9325,8 +9334,8 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                       IndexId      entityId,
                       IndexId      storageId,
                       IndexId      toEntityId,
-                      IndexId      toStorageId,
-                      ArchiveTypes toArchiveType
+                      ArchiveTypes toArchiveType,
+                      IndexId      toStorageId
                      )
 {
   Errors error;
@@ -9512,13 +9521,13 @@ fprintf(stderr,"%s, %d: try prune uuid %llu\n",__FILE__,__LINE__,uuidId);
     return error;
   }
   while (Index_getNextEntity(&indexQueryHandle,
-                             NULL,  // uuidId,
-                             &entityId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
-                             NULL,  // createdDateTime,
+                             NULL,  // uuidId,
+                             &entityId,
                              NULL,  // archiveType,
-                             NULL,   // lastErrorMessage
+                             NULL,  // createdDateTime,
+                             NULL,  // lastErrorMessage
                              NULL,  // totalEntryCount,
                              NULL  // totalEntrySize,
                             )

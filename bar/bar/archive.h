@@ -67,105 +67,119 @@ typedef enum
 /***********************************************************************\
 * Name   : ArchiveInitFunction
 * Purpose: call back before store archive file
-* Input  : userData     - user data
-*          indexHandle  - index handle or NULL if no index
+* Input  : indexHandle  - index handle or NULL if no index
+*          jobUUID      - job UUID or NULL
+*          scheduleUUID - schedule UUID or NULL
 *          entityId     - database id of entity
+*          archiveType  - archive type
 *          storageId    - database id of storage
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
+*          userData     - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveInitFunction)(void        *userData,
-                                     IndexHandle *indexHandle,
-                                     ConstString jobUUID,
-                                     ConstString scheduleUUID,
+typedef Errors(*ArchiveInitFunction)(IndexHandle  *indexHandle,
+                                     ConstString  jobUUID,
+                                     ConstString  scheduleUUID,
+                                     IndexId      entityId,
                                      ArchiveTypes archiveType,
-//                                     IndexId     entityId,
-                                     IndexId     storageId,
-                                     int         partNumber
+                                     IndexId      storageId,
+                                     int          partNumber,
+                                     void         *userData
                                     );
 
 /***********************************************************************\
 * Name   : ArchiveDoneFunction
 * Purpose: call back after store archive file
-* Input  : userData     - user data
-*          indexHandle  - index handle or NULL if no index
+* Input  : indexHandle  - index handle or NULL if no index
+*          jobUUID      - job UUID or NULL
+*          scheduleUUID - schedule UUID or NULL
 *          entityId     - database id of entity
+*          archiveType  - archive type
 *          storageId    - database id of storage
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
+*          userData     - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveDoneFunction)(void        *userData,
-                                     IndexHandle *indexHandle,
-                                     ConstString jobUUID,
-                                     ConstString scheduleUUID,
+typedef Errors(*ArchiveDoneFunction)(IndexHandle  *indexHandle,
+                                     ConstString  jobUUID,
+                                     ConstString  scheduleUUID,
+                                     IndexId      entityId,
                                      ArchiveTypes archiveType,
-//                                     IndexId     entityId,
-                                     IndexId     storageId,
-                                     int         partNumber
+                                     IndexId      storageId,
+                                     int          partNumber,
+                                     void         *userData
                                     );
 
 /******************************************************************** ***\
 * Name   : ArchiveGetSizeFunction
 * Purpose: call back to get size of archive file
-* Input  : userData     - user data
-*          indexHandle  - index handle or NULL if no index
-*          entityId     - database id of entity
-*          storageId    - database id of storage
-*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
-*                         single part
+* Input  : indexHandle - index handle or NULL if no index
+*          entityId    - database id of entity
+*          storageId   - database id of storage
+*          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
+*                        single part
+*          userData    - user data
 * Output : -
-* Return : archive size or 0 if not exist
+* Return : archive size [bytes] or 0 if not exist
 * Notes  : -
 \***********************************************************************/
 
-typedef uint64(*ArchiveGetSizeFunction)(void        *userData,
-                                        IndexHandle *indexHandle,
-//                                        IndexId     entityId,
+typedef uint64(*ArchiveGetSizeFunction)(IndexHandle *indexHandle,
+                                        IndexId     entityId,
                                         IndexId     storageId,
-                                        int         partNumber
+                                        int         partNumber,
+                                        void        *userData
                                        );
 
 /***********************************************************************\
 * Name   : ArchiveStoreFunction
 * Purpose: call back to store archive
-* Input  : userData     - user data
-*          indexHandle  - index handle or NULL if no index
+* Input  : indexHandle  - index handle or NULL if no index
+*          jobUUID      - job UUID or NULL
+*          scheduleUUID - schedule UUID or NULL
 *          entityId     - database id of entity
+*          archiveType  - archive type
 *          storageId    - database id of storage
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
 *          fileName     - archive file name
 *          fileSize     - archive size [bytes]
+*          userData     - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveStoreFunction)(void        *userData,
-                                      IndexHandle *indexHandle,
-                                      ConstString jobUUID,
-                                      ConstString scheduleUUID,
+typedef Errors(*ArchiveStoreFunction)(IndexHandle  *indexHandle,
+                                      ConstString  jobUUID,
+                                      ConstString  scheduleUUID,
+                                      IndexId      entityId,
                                       ArchiveTypes archiveType,
-//                                      IndexId     entityId,
-                                      IndexId     storageId,
-                                      int         partNumber,
-                                      String      fileName,
-                                      uint64      fileSize
+                                      IndexId      storageId,
+                                      int          partNumber,
+                                      String       fileName,
+                                      uint64       fileSize,
+                                      void         *userData
                                      );
 
 // archive info
 typedef struct
 {
+  String                   jobUUID;
+  String                   scheduleUUID;
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   const JobOptions         *jobOptions;
+  IndexHandle              *indexHandle;                               // index handle
+  IndexId                  entityId;                                   // index id of entity
+  ArchiveTypes             archiveType;
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
   void                     *archiveInitUserData;                       // user data for call back to initialize archive file
   ArchiveDoneFunction      archiveDoneFunction;                        // call back to deinitialize archive file
@@ -213,11 +227,6 @@ typedef struct
   const ChunkIO            *chunkIO;                                   // chunk i/o functions
   void                     *chunkIOUserData;                           // chunk i/o functions data
 
-  IndexHandle              *indexHandle;                               // index handle
-  String                   jobUUID;
-  String                   scheduleUUID;
-  ArchiveTypes             archiveType;
-//  IndexId                  entityId;                                   // index id of entity
   IndexId                  storageId;                                  // index id of storage
 
   uint64                   entries;                                    // number of entries
@@ -510,8 +519,11 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Input  : archiveInfo          - archive info data
 *          jobUUID              - unique job id or NULL
 *          scheduleUUID         - unique schedule id or NULL
-*          archiveType          - archive type
+*          deltaSourceList      - delta source list or NULL
 *          jobOptions           - job option settings
+*          indexHandle          - index handle or NULL
+*          entityId             - entity id or INDEX_ID_NONE
+*          archiveType          - archive type
 *          archiveInitFunction  - call back to initialize archive file
 *          archiveInitUserData  - user data for call back
 *          archiveDoneFunction  - call back to deinitialize archive file
@@ -528,11 +540,12 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo            *archiveInfo,
+                        ConstString            jobUUID,
+                        ConstString            scheduleUUID,
                         DeltaSourceList        *deltaSourceList,
                         const JobOptions       *jobOptions,
                         IndexHandle            *indexHandle,
-                        ConstString            jobUUID,
-                        ConstString            scheduleUUID,
+                        IndexId                entityId,
                         ArchiveTypes           archiveType,
                         ArchiveInitFunction    archiveInitFunction,
                         void                   *archiveInitUserData,
@@ -550,11 +563,12 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
   Errors __Archive_create(const char             *__fileName__,
                           ulong                  __lineNb__,
                           ArchiveInfo            *archiveInfo,
+                          ConstString            jobUUID,
+                          ConstString            scheduleUUID,
                           DeltaSourceList        *deltaSourceList,
                           const JobOptions       *jobOptions,
                           IndexHandle            *indexHandle,
-                          ConstString            jobUUID,
-                          ConstString            scheduleUUID,
+                          IndexId                entityId,
                           ArchiveTypes           archiveType,
                           ArchiveInitFunction    archiveInitFunction,
                           void                   *archiveInitUserData,

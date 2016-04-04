@@ -7236,6 +7236,7 @@ LOCAL Errors runJob(void)
                          &compressExcludePatternList,
                          &deltaSourceList,
                          &jobOptions,
+                         indexHandle,
                          ARCHIVE_TYPE_NORMAL,
                          NULL, // scheduleTitle
                          NULL, // scheduleCustomText
@@ -7343,24 +7344,25 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         {
           // create archive
           error = Command_create(NULL, // job UUID
-                                NULL, // schedule UUID
-                                storageName,
-                                &includeEntryList,
-                                &excludePatternList,
-                                &mountList,
-                                &compressExcludePatternList,
-                                &deltaSourceList,
-                                &jobOptions,
-                                ARCHIVE_TYPE_NORMAL,
-                                NULL, // scheduleTitle
-                                NULL, // scheduleCustomText
-                                CALLBACK(getPasswordConsole,NULL),
-                                CALLBACK(NULL,NULL), // createStatusInfoFunction
-                                CALLBACK(NULL,NULL), // storageRequestVolumeFunction
-                                NULL, // pauseCreateFlag
-                                NULL, // pauseStorageFlag
-                                NULL,  // requestedAbortFlag,
-                                NULL  // logHandle
+                                 NULL, // schedule UUID
+                                 storageName,
+                                 &includeEntryList,
+                                 &excludePatternList,
+                                 &mountList,
+                                 &compressExcludePatternList,
+                                 &deltaSourceList,
+                                 &jobOptions,
+                                 indexHandle,
+                                 ARCHIVE_TYPE_NORMAL,
+                                 NULL, // scheduleTitle
+                                 NULL, // scheduleCustomText
+                                 CALLBACK(getPasswordConsole,NULL),
+                                 CALLBACK(NULL,NULL), // createStatusInfoFunction
+                                 CALLBACK(NULL,NULL), // storageRequestVolumeFunction
+                                 NULL, // pauseCreateFlag
+                                 NULL, // pauseStorageFlag
+                                 NULL,  // requestedAbortFlag,
+                                 NULL  // logHandle
                                 );
         }
 
