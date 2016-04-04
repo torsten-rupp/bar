@@ -1710,15 +1710,21 @@ Dprintf.dprintf("cirrect?");
             }
             catch (CommunicationError error)
             {
+Dprintf.dprintf("");
               // ignored
             }
-            catch (Exception exception)
+            catch (ConnectionError error)
+            {
+Dprintf.dprintf("");
+              // ignored
+            }
+            catch (Throwable throwable)
             {
               if (Settings.debugLevel > 0)
               {
                 BARServer.disconnect();
-                System.err.println("ERROR: "+exception.getMessage());
-                BARControl.printStackTrace(exception);
+                System.err.println("ERROR: "+throwable.getMessage());
+                BARControl.printStackTrace(throwable);
                 System.exit(1);
               }
             }
@@ -1730,6 +1736,11 @@ Dprintf.dprintf("cirrect?");
             }
             catch (CommunicationError error)
             {
+              // ignored
+            }
+            catch (ConnectionError error)
+            {
+Dprintf.dprintf("");
               // ignored
             }
             catch (Exception exception)
@@ -3458,7 +3469,10 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           }
           catch (CommunicationError error)
           {
-Dprintf.dprintf("kkkkkkkkkkkkkk");
+            // ignored
+          }
+          catch (ConnectionError error)
+          {
             // ignored
           }
           catch (Throwable throwable)
@@ -6539,20 +6553,6 @@ assert storagePattern != null;
             }
           }
         });
-      }
-    }
-    catch (CommunicationError error)
-    {
-      // ignored
-    }
-    catch (Exception exception)
-    {
-      if (Settings.debugLevel > 0)
-      {
-        BARServer.disconnect();
-        System.err.println("ERROR: "+exception.getMessage());
-        BARControl.printStackTrace(exception);
-        System.exit(1);
       }
     }
     finally

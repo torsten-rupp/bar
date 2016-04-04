@@ -64,7 +64,7 @@ class ConnectionError extends Error
 
   // ---------------------------- methods ---------------------------------
 
-  /** create new communication error
+  /** create new connection error
    * @param message message
    */
   ConnectionError(String message)
@@ -763,12 +763,18 @@ class ReadThread extends Thread
           {
             for (Command command : commandHashMap.values())
             {
-              command.errorCode     = Errors.NETWORK_RECEIVE;
-              command.errorMessage  = exception.getMessage();
-              command.completedFlag = true;
+              synchronized(command)
+              {
+                command.errorCode     = Errors.NETWORK_RECEIVE;
+                command.errorMessage  = exception.getMessage();
+                command.completedFlag = true;
+                command.notifyAll();
+              }
             }
 
-            try { commandHashMap.wait(); } catch (InterruptedException interruptedException) { /* ignored */ }
+Dprintf.dprintf("lkfasfsdfsfadsfdasadfsdf");
+quitFlag = true;
+//            try { commandHashMap.wait(); } catch (InterruptedException interruptedException) { /* ignored */ }
           }
         }
       }
@@ -794,13 +800,22 @@ class ReadThread extends Thread
    * @return command
    */
   public Command commandAdd(long commandId, int timeout, int debugLevel, ProcessResult processResult)
+    throws ConnectionError
   {
-    Command command = new Command(commandId,timeout,debugLevel,processResult);
+    Command command = null;
 
     synchronized(commandHashMap)
     {
-      commandHashMap.put(commandId,command);
-      commandHashMap.notifyAll();
+      if (!quitFlag)
+      {
+        command = new Command(commandId,timeout,debugLevel,processResult);
+        commandHashMap.put(commandId,command);
+        commandHashMap.notifyAll();
+      }
+      else
+      {
+        throw new ConnectionError("disconnected");
+      }
     }
 
     return command;
@@ -813,6 +828,7 @@ class ReadThread extends Thread
    * @return command
    */
   public Command commandAdd(long commandId, int timeout, int debugLevel)
+    throws ConnectionError
   {
     return commandAdd(commandId,timeout,debugLevel,(ProcessResult)null);
   }
@@ -823,6 +839,7 @@ class ReadThread extends Thread
    * @return command
    */
   public Command commandAdd(long commandId, int debugLevel)
+    throws ConnectionError
   {
     return commandAdd(commandId,0,debugLevel);
   }
@@ -904,8 +921,6 @@ class BARServer
    */
   public static void connect(String name, int port, int tlsPort, String serverPassword, String serverKeyFileName)
   {
-    final int TIMEOUT = 20;
-
     Socket         socket = null;
     BufferedWriter output = null;
     BufferedReader input  = null;
@@ -979,6 +994,7 @@ class BARServer
 
             input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
             output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+Dprintf.dprintf("");
 
 /*
 String[] ss;
@@ -1264,15 +1280,26 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       // flush data (ignore errors)
       executeCommand("JOB_FLUSH",0);
+    }
+    catch (CommunicationError error)
+    {
+      // ignored
+    }
+    catch (ConnectionError error)
+    {
+      // ignored
+    }
 
+    try
+    {
       // close connection, stop read thread
       readThread.quit();
-      socket.close(); socket = null;
+      BARServer.socket.close(); BARServer.socket = null;
       try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }; readThread = null;
 
       // free resources
-      input.close(); input = null;
-      output.close(); output = null;
+      BARServer.input.close(); BARServer.input = null;
+      BARServer.output.close(); BARServer.output = null;
     }
     catch (IOException exception)
     {
@@ -1343,24 +1370,24 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   {
     final int TIMEOUT = 120*1000; // total timeout [ms]
 
-    Command command;
+    Command command = null;
 
     synchronized(output)
     {
-      // add new command
-      commandId++;
-      command = readThread.commandAdd(commandId,TIMEOUT,debugLevel,processResult);
-
-      // send command
-      String line = String.format("%d %s",commandId,commandString);
       try
       {
+        // add new command
+        commandId++;
+        command = readThread.commandAdd(commandId,TIMEOUT,debugLevel,processResult);
+
+        // send command
+        String line = String.format("%d %s",commandId,commandString);
         output.write(line); output.write('\n'); output.flush();
         if (Settings.debugLevel > command.debugLevel) System.err.println("Network: sent '"+line+"'");
       }
       catch (IOException exception)
       {
-        readThread.commandRemove(command);
+        if (command != null) readThread.commandRemove(command);
         throw new CommunicationError(exception.getMessage());
       }
     }
@@ -2996,44 +3023,51 @@ Dprintf.dprintf("");
   {
     final int TIMEOUT = 120*1000; // total timeout [ms]
 
-    Command command;
+    Command command = null;
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        return Errors.ABORTED;
+      }
+    }
 
     // send command
     synchronized(output)
     {
-      if (busyIndicator != null)
-      {
-        busyIndicator.busy(0);
-        if (busyIndicator.isAborted()) return Errors.ABORTED;
-      }
-
-      // add new command
-      commandId++;
-      command = readThread.commandAdd(commandId,TIMEOUT,debugLevel);
-
-      // send command
-      String line = String.format("%d %s",commandId,commandString);
       try
       {
+        // add new command
+        commandId++;
+        command = readThread.commandAdd(commandId,TIMEOUT,debugLevel);
+
+        // send command
+        String line = String.format("%d %s",commandId,commandString);
         output.write(line); output.write('\n'); output.flush();
         if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
       }
       catch (IOException exception)
       {
-        readThread.commandRemove(command);
+        if (command != null) readThread.commandRemove(command);
         if (Settings.debugLevel > 0)
         {
           BARControl.printStackTrace(exception);
         }
         return Errors.NETWORK_SEND;
       }
-      if (busyIndicator != null)
+    }
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
       {
-        if (busyIndicator.isAborted())
-        {
-          abortCommand(command);
-          return command.getErrorCode();
-        }
+        abortCommand(command);
+        return Errors.ABORTED;
       }
     }
 

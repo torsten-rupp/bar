@@ -1119,6 +1119,7 @@ public class BARControl
   private static Cursor  waitCursor;
   private static int     waitCursorCount = 0;
 
+  private LoginData  loginData;
   private Menu       serverMenu;
   private TabFolder  tabFolder;
   private TabStatus  tabStatus;
@@ -1667,10 +1668,10 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           final Settings.Server defaultServer = Settings.getLastServer();
-          LoginData loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
-                                              (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                              (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
-                                             );
+          loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
+                                    (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
+                                    (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
+                                   );
           try
           {
             BARServer.connect(loginData.serverName,
@@ -1715,10 +1716,9 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             final Settings.Server defaultServer = Settings.getLastServer();
-
-            LoginData loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                                (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
-                                               );
+            loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
+                                      (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
+                                     );
             if (getLoginData(loginData))
             {
               try
@@ -2013,12 +2013,66 @@ public class BARControl
     });
 
     // SWT event loop
-    while (!shell.isDisposed())
+    boolean connectOkFlag = true;
+    while (!shell.isDisposed() && connectOkFlag)
     {
 //System.err.print(".");
-      if (!display.readAndDispatch())
+      try
       {
-        display.sleep();
+        if (!display.readAndDispatch())
+        {
+          display.sleep();
+        }
+      }
+      catch (ConnectionError error)
+      {
+        // disconnected -> try to reconnect
+        connectOkFlag = false;
+
+        // try to reconnect
+        if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection lost"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+        {
+          while (   !connectOkFlag
+                 && getLoginData(loginData)
+                 && ((loginData.port != 0) || (loginData.tlsPort != 0))
+                )
+          {
+            // try to connect to server
+            try
+            {
+              BARServer.connect(loginData.serverName,
+                                loginData.port,
+                                loginData.tlsPort,
+                                loginData.password,
+                                Settings.serverKeyFileName
+                               );
+              connectOkFlag = true;
+            }
+            catch (ConnectionError reconnectError)
+            {
+              if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+              {
+                break;
+              }
+            }
+          }
+        }
+
+        // stop if not connected
+        if (!connectOkFlag)
+        {
+          break;
+        }
+      }
+      catch (Throwable throwable)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          System.err.println("ERROR: "+throwable.getMessage());
+          printStackTrace(throwable);
+        }
+        Dialogs.error(new Shell(),BARControl.tr("Internal error"),BARControl.tr("Error: ")+throwable.getMessage(),BARControl.tr("Abort"));
+        break;
       }
     }
   }
@@ -2048,10 +2102,10 @@ public class BARControl
 
       // server login data
       final Settings.Server defaultServer = Settings.getLastServer();
-      LoginData loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
-                                          (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                          (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
-                                         );
+      loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
+                                (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
+                                (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
+                               );
       if (Settings.serverName    != null) loginData.serverName = Settings.serverName;
       if (Settings.serverPort    != -1  ) loginData.port       = Settings.serverPort;
       if (Settings.serverTLSPort != -1  ) loginData.tlsPort    = Settings.serverTLSPort;

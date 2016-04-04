@@ -361,12 +361,18 @@ public class TabStatus
           {
             tabStatus.update();
           }
+          catch (ConnectionError error)
+          {
+            // ignored
+//Dprintf.dprintf("jjjjjjjjdfsfgf");
+          }
           catch (org.eclipse.swt.SWTException exception)
           {
             // ignore SWT exceptions
             if (Settings.debugLevel > 2)
             {
               BARControl.printStackTrace(exception);
+              System.exit(1);
             }
           }
 
@@ -1452,16 +1458,22 @@ public class TabStatus
       {
         // get job list
         HashMap<String,JobData>   newJobDataMap      = new HashMap<String,JobData>();
-        String[]                  resultErrorMessage = new String[1];
+        final String[]            errorMessage = new String[1];
         final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
         int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
                                              3,  // debugLevel
-                                             resultErrorMessage,
+                                             errorMessage,
                                              resultMapList
                                             );
         if (error != Errors.NONE)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n{0}",resultErrorMessage[0]));
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n{0}",errorMessage[0]));
+            }
+          });
           return;
         }
         for (ValueMap resultMap : resultMapList)
