@@ -291,7 +291,7 @@ public class TabRestore
 
   /** index data
    */
-  class IndexData implements Comparable<IndexData>,Serializable
+  class IndexData implements Serializable
   {
     /** tree item update runnable
      */
@@ -488,17 +488,6 @@ public class TabRestore
     public String getInfo()
     {
       return "";
-    }
-
-    /** compare index data
-     * @param
-     * @return
-     */
-    public int compareTo(IndexData otherIndexData)
-    {
-      if      (indexId < otherIndexData.indexId) return -1;
-      else if (indexId > otherIndexData.indexId) return  1;
-      else                                       return  0;
     }
 
     /** write index data object to object stream
@@ -895,6 +884,7 @@ public class TabRestore
     /** get name
      * @return name
      */
+    @Override
     public String getName()
     {
       return name;
@@ -1020,6 +1010,15 @@ Dprintf.dprintf("");
       this.lastErrorMessage    = lastErrorMessage;
       this.totalEntryCount     = totalEntryCount;
       this.totalEntrySize      = totalEntrySize;
+    }
+
+    /** get name
+     * @return name
+     */
+    @Override
+    public String getName()
+    {
+      return archiveType.toString();
     }
 
     /** get date/time
@@ -1237,6 +1236,7 @@ Dprintf.dprintf("");
     /** get name
      * @return name
      */
+    @Override
     public String getName()
     {
       return name;
@@ -1404,6 +1404,7 @@ Dprintf.dprintf("");
 
     return index;
 */
+//TODO
 //Dprintf.dprintf("---------- %d",treeItems.length);
     int index = 0;
 
@@ -2020,11 +2021,12 @@ Dprintf.dprintf("");
         {
           public void run()
           {
+//TODO: remove if? always insert/update?
             if (true ||widgetStorageTree.getItemCount() > 0)
             {
               for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
               {
-                TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexData);
+                TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,indexDataComparator,uuidIndexData);
                 if (uuidTreeItem == null)
                 {
                   // insert tree item
@@ -2037,8 +2039,8 @@ Dprintf.dprintf("");
                                                         (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                                         ""
                                                        );
-  //TODO
-  //uuidIndexData.setTreeItem(uuidTreeItem);
+//TODO
+//uuidIndexData.setTreeItem(uuidTreeItem);
                   uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.indexId));
                 }
                 else
@@ -2056,6 +2058,7 @@ Dprintf.dprintf("");
                 }
                 if (uuidTreeItem.getExpanded())
                 {
+Dprintf.dprintf("fasfsf");
                   uuidTreeItems.add(uuidTreeItem);
                 }
               }
@@ -2122,30 +2125,28 @@ Dprintf.dprintf("");
      */
     private void updateEntityTreeItems(final TreeItem uuidTreeItem, final HashSet<TreeItem> entityTreeItems)
     {
-      // get entity items, UUID index data
+      // get UUID index data, entity items
       final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
       final UUIDIndexData     uuidIndexData[]         = new UUIDIndexData[]{null};
       display.syncExec(new Runnable()
       {
         public void run()
         {
-Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
           if (!uuidTreeItem.isDisposed())
           {
             assert uuidTreeItem.getData() instanceof UUIDIndexData;
+
+            uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
 
             for (TreeItem treeItem : uuidTreeItem.getItems())
             {
               assert treeItem.getData() instanceof EntityIndexData;
               removeEntityTreeItemSet.add(treeItem);
             }
-
-            uuidIndexData[0] = (UUIDIndexData)uuidTreeItem.getData();
           }
         }
       });
       if (isUpdateTriggered()) return;
-
 
       // get entity list
       final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
@@ -2198,6 +2199,7 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
       final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
       final EntityIndexData entityIndexDataArray[] = entityIndexDataList.toArray(new EntityIndexData[entityIndexDataList.size()]);
       Arrays.sort(entityIndexDataArray,indexDataComparator);
+//for (final EntityIndexData entityIndexData : entityIndexDataList) Dprintf.dprintf("entityIndexData=%s",entityIndexData);
 
       // update entity tree
       {
@@ -2218,7 +2220,7 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
           {
             public void run()
             {
-              TreeItem entityTreeItem = Widgets.getTreeItem(uuidTreeItem,entityIndexData);
+              TreeItem entityTreeItem = Widgets.getTreeItem(uuidTreeItem,indexDataComparator,entityIndexData);
               if (entityTreeItem == null)
               {
                 // insert tree item
@@ -2308,20 +2310,25 @@ Dprintf.dprintf("uuidTreeItem.getData()=%s",uuidTreeItem.getData());
      */
     private void updateStorageTreeItem(final TreeItem entityTreeItem)
     {
-      // get storage items, entity index data
+      // get entity index data, storage items
       final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
       final EntityIndexData   entityIndexData[]        = new EntityIndexData[1];
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          for (TreeItem treeItem : entityTreeItem.getItems())
+          if (!entityTreeItem.isDisposed())
           {
-            assert treeItem.getData() instanceof StorageIndexData;
-            removeStorageTreeItemSet.add(treeItem);
-          }
+            assert entityTreeItem.getData() instanceof EntityIndexData;
 
-          entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
+            entityIndexData[0] = (EntityIndexData)entityTreeItem.getData();
+
+            for (TreeItem treeItem : entityTreeItem.getItems())
+            {
+              assert treeItem.getData() instanceof StorageIndexData;
+              removeStorageTreeItemSet.add(treeItem);
+            }
+          }
         }
       });
       if (isUpdateTriggered()) return;
@@ -2558,94 +2565,118 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
 //IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
 
       // update storage table segment
+      {
+        // disable redraw
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            widgetStorageTable.setRedraw(false);
+          }
+        });
+      }
       final String[] errorMessage = new String[1];
       final int[]    n            = new int[1];
-      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=%d limit=%d",
-                                                   (storageEntityState != EntityStates.NONE) ? "*" : "0",
-                                                   storagePattern,
-                                                   storageIndexStateSet.nameList("|"),
-                                                   "*",
-                                                   offset,
-                                                   limit
-                                                  ),
-                               0,  // debugLevel
-                               new CommandResultHandler()
-                               {
-                                 public int handleResult(int i, ValueMap valueMap)
+      try
+      {
+        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=%d limit=%d",
+                                                     (storageEntityState != EntityStates.NONE) ? "*" : "0",
+                                                     storagePattern,
+                                                     storageIndexStateSet.nameList("|"),
+                                                     "*",
+                                                     offset,
+                                                     limit
+                                                    ),
+                                 0,  // debugLevel
+                                 new CommandResultHandler()
                                  {
-                                   final int index = offset+i;
-
-                                   try
+                                   public int handleResult(int i, ValueMap valueMap)
                                    {
-                                     final long                  storageId           = valueMap.getLong  ("storageId");
-                                     final String                jobUUID             = valueMap.getString("jobUUID");
-                                     final String                scheduleUUID        = valueMap.getString("scheduleUUID");
-                                     final String                jobName             = valueMap.getString("jobName");
-                                     final Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class,Settings.ArchiveTypes.NORMAL);
-                                     final String                name                = valueMap.getString("name");
-                                     final long                  dateTime            = valueMap.getLong  ("dateTime");
-                                     final long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount");
-                                     final long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize");
-                                     final IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class);
-                                     final IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class);
-                                     final long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime");
-                                     final String                errorMessage_       = valueMap.getString("errorMessage");
+                                     final int index = offset+i;
 
-                                     // add storage index data
-                                     final StorageIndexData storageIndexData = new StorageIndexData(storageId,
-                                                                                                    jobName,
-                                                                                                    archiveType,
-                                                                                                    name,
-                                                                                                    dateTime,
-                                                                                                    totalEntryCount,
-                                                                                                    totalEntrySize,
-                                                                                                    indexState,
-                                                                                                    indexMode,
-                                                                                                    lastCheckedDateTime,
-                                                                                                    errorMessage_
-                                                                                                   );
-Dprintf.dprintf("storageIndexData=%s",storageIndexData);
-
-                                     display.syncExec(new Runnable()
+                                     try
                                      {
-                                       public void run()
+                                       final long                  storageId           = valueMap.getLong  ("storageId");
+                                       final String                jobUUID             = valueMap.getString("jobUUID");
+                                       final String                scheduleUUID        = valueMap.getString("scheduleUUID");
+                                       final String                jobName             = valueMap.getString("jobName");
+                                       final Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class,Settings.ArchiveTypes.NORMAL);
+                                       final String                name                = valueMap.getString("name");
+                                       final long                  dateTime            = valueMap.getLong  ("dateTime");
+                                       final long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount");
+                                       final long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize");
+                                       final IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class);
+                                       final IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class);
+                                       final long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime");
+                                       final String                errorMessage_       = valueMap.getString("errorMessage");
+
+                                       // add storage index data
+                                       final StorageIndexData storageIndexData = new StorageIndexData(storageId,
+                                                                                                      jobName,
+                                                                                                      archiveType,
+                                                                                                      name,
+                                                                                                      dateTime,
+                                                                                                      totalEntryCount,
+                                                                                                      totalEntrySize,
+                                                                                                      indexState,
+                                                                                                      indexMode,
+                                                                                                      lastCheckedDateTime,
+                                                                                                      errorMessage_
+                                                                                                     );
+  Dprintf.dprintf("storageIndexData=%s",storageIndexData);
+
+                                       display.syncExec(new Runnable()
                                        {
-                                         TableItem tableItem = widgetStorageTable.getItem(index);
+                                         public void run()
+                                         {
+                                           TableItem tableItem = widgetStorageTable.getItem(index);
 
-                                         Widgets.updateTableItem(tableItem,
-                                                                 (Object)storageIndexData,
-                                                                 storageIndexData.name,
-                                                                 Units.formatByteSize(storageIndexData.totalEntrySize),
-                                                                 simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
-                                                                 storageIndexData.indexState.toString()
-                                                                );
-                                         tableItem.setChecked(selectedIndexIdSet.contains(storageIndexData.indexId));
-                                       }
-                                     });
-                                   }
-                                   catch (IllegalArgumentException exception)
-                                   {
-                                     if (Settings.debugLevel > 0)
-                                     {
-                                       System.err.println("ERROR: "+exception.getMessage());
-                                       System.exit(1);
+                                           Widgets.updateTableItem(tableItem,
+                                                                   (Object)storageIndexData,
+                                                                   storageIndexData.name,
+                                                                   Units.formatByteSize(storageIndexData.totalEntrySize),
+                                                                   simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
+                                                                   storageIndexData.indexState.toString()
+                                                                  );
+                                           tableItem.setChecked(selectedIndexIdSet.contains(storageIndexData.indexId));
+                                         }
+                                       });
                                      }
+                                     catch (IllegalArgumentException exception)
+                                     {
+                                       if (Settings.debugLevel > 0)
+                                       {
+                                         System.err.println("ERROR: "+exception.getMessage());
+                                         System.exit(1);
+                                       }
+                                     }
+
+                                     // store number of entries
+                                     n[0] = i+1;
+
+                                     // check if aborted
+                                     if (isUpdateTriggered() || (n[0] >= limit))
+                                     {
+  //TODO
+  //                                     abort();
+                                     }
+
+                                     return Errors.NONE;
                                    }
-
-                                   // store number of entries
-                                   n[0] = i+1;
-
-                                   // check if aborted
-                                   if (isUpdateTriggered() || (n[0] >= limit))
-                                   {
-//TODO
-//                                     abort();
-                                   }
-
-                                   return Errors.NONE;
                                  }
-                               }
-                              );
+                                );
+      }
+      finally
+      {
+        // enable redraw
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            widgetStorageTable.setRedraw(true);
+          }
+        });
+      }
 
       return n[0] >= limit;
     }
