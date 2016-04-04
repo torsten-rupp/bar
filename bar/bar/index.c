@@ -1620,7 +1620,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                            &oldIndexHandle->databaseHandle,
                            "SELECT uuid, \
                                    name, \
-                                   STRFTIME('%%s',created) \
+                                   CASE ceated WHEN 0 THEN 0 ELSE STRFTIME('%%s',created) END \
                             FROM storage \
                             GROUP BY uuid \
                             ORDER BY id,created ASC \
@@ -3924,7 +3924,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                            &indexHandle->databaseHandle,
                            "SELECT uuid, \
                                    name, \
-                                   STRFTIME('%%s',created) \
+                                   CASE created WHEN 0 THEN 0 ELSE STRFTIME('%%s',created) END \
                             FROM storage \
                             WHERE entityId=0 \
                             ORDER BY id,created ASC \
@@ -5520,7 +5520,7 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
                                    entities.id, \
-                                   STRFTIME('%%s',entities.created), \
+                                   CASE entities.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',entities.created) END, \
                                    entities.type, \
                                    '', \
                                    entities.totalEntryCount, \
@@ -5591,7 +5591,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
                                    entities.scheduleUUID, \
                                    storage.name, \
                                    storage.state, \
-                                   STRFTIME('%%s',storage.lastChecked) \
+                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
                             FROM storage \
                               LEFT JOIN entities ON storage.entityId=entities.id \
                               LEFT JOIN uuids ON entitys.jobUUID=uuids.jobUUID \
@@ -5661,7 +5661,7 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
                                    entities.scheduleUUID, \
                                    storage.name, \
                                    storage.state, \
-                                   STRFTIME('%%s',storage.lastChecked) \
+                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
                             FROM storage \
                               LEFT JOIN entities ON storage.entityId=entities.id \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -5751,7 +5751,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
                                    storage.name, \
-                                   STRFTIME('%%s',storage.lastChecked) \
+                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
                             FROM storage \
                               LEFT JOIN entities ON storage.entityId=entities.id \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -5807,7 +5807,7 @@ Errors Index_getState(IndexHandle *indexHandle,
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT state, \
-                                   STRFTIME('%%s',lastChecked), \
+                                   CASE lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',lastChecked) END, \
                                    errorMessage \
                             FROM storage \
                             WHERE id=%lld \
@@ -5982,7 +5982,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id, \
                                    jobUUID, \
-                                   STRFTIME('%%s',lastCreated), \
+                                   CASE lastCreated WHEN 0 THEN 0 ELSE STRFTIME('%%s',lastCreated) END, \
                                    lastErrorMessage, \
                                    totalEntryCount, \
                                    totalEntrySize \
@@ -6037,6 +6037,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
   if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
+fprintf(stderr,"%s, %d: databaseId=%d lastCreatedDateTime=%llu\n",__FILE__,__LINE__,databaseId,*lastCreatedDateTime);
 
   return TRUE;
 }
@@ -6155,7 +6156,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.id, \
                                    entities.jobUUID, \
                                    entities.scheduleUUID, \
-                                   STRFTIME('%%s',entities.created), \
+                                   CASE entities.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',entities.created) END, \
                                    entities.type, \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
                                    entities.totalEntryCount, \
@@ -6574,12 +6575,12 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                                    entities.scheduleUUID, \
                                    entities.type, \
                                    storage.name, \
-                                   STRFTIME('%%s',storage.created), \
+                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                    storage.totalEntryCount, \
                                    storage.totalEntrySize, \
                                    storage.state, \
                                    storage.mode, \
-                                   STRFTIME('%%s',storage.lastChecked), \
+                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END, \
                                    storage.errorMessage \
                             FROM storage \
                               LEFT JOIN entities ON entities.id=storage.entityId \
@@ -7000,13 +7001,13 @@ Errors Index_getStorage(IndexHandle *indexHandle,
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT storage.name, \
-                                   STRFTIME('%%s',storage.created), \
+                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                    storage.size, \
                                    storage.totalEntryCount, \
                                    storage.totalEntrySize, \
                                    storage.state, \
                                    storage.mode, \
-                                   STRFTIME('%%s',storage.lastChecked), \
+                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END, \
                                    storage.errorMessage \
                             FROM storage \
                             WHERE id=%d \
@@ -7431,7 +7432,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT entriesNewest.entryId, \
                                      storage.name, \
-                                     STRFTIME('%%s',storage.created), \
+                                     CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                      entriesNewest.type, \
                                      entriesNewest.name, \
                                      entriesNewest.timeLastChanged, \
@@ -7476,7 +7477,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT entries.id, \
                                      storage.name, \
-                                     STRFTIME('%%s',storage.created), \
+                                     CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                      entries.type, \
                                      entries.name, \
                                      entries.timeLastChanged, \
@@ -7677,7 +7678,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
                                    storage.name, \
-                                   STRFTIME('%%s',storage.created), \
+                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                    entries.name, \
                                    entries.size, \
                                    entries.timeModified, \
@@ -7839,7 +7840,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
                                    storage.name, \
-                                   STRFTIME('%%s',storage.created), \
+                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                    entries.name, \
                                    imageEntries.fileSystemType, \
                                    entries.size, \
@@ -7993,7 +7994,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
                                    storage.name, \
-                                   STRFTIME('%%s',storage.created), \
+                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                    entries.name, \
                                    entries.timeModified, \
                                    entries.userId, \
@@ -8148,7 +8149,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
                                    storage.name, \
-                                   STRFTIME('%%s',storage.created), \
+                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                    entries.name, \
                                    linkEntries.destinationName, \
                                    entries.timeModified, \
@@ -8304,7 +8305,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
                                    storage.name, \
-                                   STRFTIME('%%s',storage.created), \
+                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                    entries.name, \
                                    entries.size, \
                                    entries.timeModified, \
@@ -8466,7 +8467,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
                                    storage.name, \
-                                   STRFTIME('%%s',storage.created), \
+                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
                                    entries.name, \
                                    entries.timeModified, \
                                    entries.userId, \
