@@ -4003,7 +4003,6 @@ Dprintf.dprintf("");
                 Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
-  Dprintf.dprintf("");
                   mountListAdd();
                 }
               }
@@ -4024,7 +4023,6 @@ Dprintf.dprintf("");
                 Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
-  Dprintf.dprintf("");
                   mountListEdit();
                 }
               }
@@ -4045,7 +4043,6 @@ Dprintf.dprintf("");
                 Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
-  Dprintf.dprintf("");
                   mountListClone();
                 }
               }
@@ -4065,7 +4062,6 @@ Dprintf.dprintf("");
               {
                 if (selectedJobData != null)
                 {
-  Dprintf.dprintf("");
                   mountListRemove();
                 }
               }
