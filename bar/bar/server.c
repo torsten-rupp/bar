@@ -559,7 +559,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
   CONFIG_STRUCT_VALUE_SELECT   ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",         JobNode,jobOptions.overwriteFilesFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",         JobNode,jobOptions.overwriteEntriesFlag         ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
@@ -4827,7 +4827,8 @@ LOCAL void indexThreadCode(void)
     }
 
     // update index entries
-    while (   Index_findByState(indexHandle,
+    while (   !quitFlag
+           && Index_findByState(indexHandle,
                                 INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
@@ -4837,12 +4838,11 @@ LOCAL void indexThreadCode(void)
                                 storageName,
                                 NULL  // lastCheckedDateTime
                                )
-           && !quitFlag
           )
     {
       // pause
       pauseIndexUpdate();
-//fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
+fprintf(stderr,"%s, %d: index storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
 
       // parse storage name, get printable name
       error = Storage_parseName(&storageSpecifier,storageName);
@@ -4878,6 +4878,7 @@ LOCAL void indexThreadCode(void)
 #endif
           jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
           jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           error = Archive_updateIndex(indexHandle,
                                       storageId,
                                       &storageHandle,
@@ -4891,7 +4892,7 @@ LOCAL void indexThreadCode(void)
                                       NULL  // logHandle
                                      );
 
-          // stop if done or quit or interrupted
+          // stop if done, interrupted, or quit
           if (   (error == ERROR_NONE)
               || (Error_getCode(error) == ERROR_INTERRUPTED)
               || quitFlag
@@ -4899,6 +4900,7 @@ LOCAL void indexThreadCode(void)
           {
             break;
           }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
 
         // done storage
@@ -4915,6 +4917,7 @@ LOCAL void indexThreadCode(void)
                       );
       }
       doneJobOptions(&jobOptions);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       if (!quitFlag)
       {
@@ -13425,10 +13428,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            type=ARCHIVES|ENTRIES
 *            destination=<name>
-*            isOverwrite=yes|no
-*            [storageName=<name>]
-*            [entryName=<name>]
+*            overwriteEntries=yes|no
 *          Result:
 \***********************************************************************/
 
@@ -13448,7 +13450,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   } RestoreCommandInfo;
 
   /***********************************************************************\
-  * Name   : parseType
+  * Name   : parseRestoreType
   * Purpose: parse restore type
   * Input  : naem - name
   *          type - type variable
@@ -13457,7 +13459,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   * Notes  : -
   \***********************************************************************/
 
-  bool parseType(const char *name, Types *type)
+  bool parseRestoreType(const char *name, Types *type)
   {
     assert(name != NULL);
     assert(type != NULL);
@@ -13652,8 +13654,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get type, destination, overwrite flag, archive, entry name
-  if (!StringMap_getEnum(argumentMap,"type",&type,(StringMapParseEnumFunction)parseType,UNKNOWN))
+  // get type, destination, overwrite flag
+  if (!StringMap_getEnum(argumentMap,"type",&type,(StringMapParseEnumFunction)parseRestoreType,UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=ARCHIVES|ENTRIES");
     return;
@@ -13664,10 +13666,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination=<name>");
     return;
   }
-  if (!StringMap_getBool(argumentMap,"overwriteFiles",&clientInfo->jobOptions.overwriteFilesFlag,FALSE))
+  if (!StringMap_getBool(argumentMap,"overwriteEntries",&clientInfo->jobOptions.overwriteEntriesFlag,FALSE))
   {
     String_delete(clientInfo->jobOptions.destination);
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteFiles=yes|no");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteEntries=yes|no");
     return;
   }
 
