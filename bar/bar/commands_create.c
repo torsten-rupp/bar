@@ -1124,14 +1124,14 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors formatArchiveFileName(String            fileName,
-                                   ConstString       templateFileName,
-                                   ExpandMacroModes  expandMacroMode,
-                                   ArchiveTypes      archiveType,
-                                   ConstString       scheduleTitle,
-                                   ConstString       scheduleCustomText,
-                                   time_t            time,
-                                   int               partNumber
+LOCAL Errors formatArchiveFileName(String           fileName,
+                                   ConstString      templateFileName,
+                                   ExpandMacroModes expandMacroMode,
+                                   ArchiveTypes     archiveType,
+                                   ConstString      scheduleTitle,
+                                   ConstString      scheduleCustomText,
+                                   time_t           time,
+                                   int              partNumber
                                   )
 {
   TextMacro textMacros[5];
@@ -3291,7 +3291,7 @@ LOCAL Errors archiveStore(IndexHandle *indexHandle,
                           ArchiveTypes archiveType,
                           IndexId     storageId,
                           int         partNumber,
-                          String      intermediateFileName,
+                          ConstString intermediateFileName,
                           uint64      intermediateFileSize,
                           void        *userData
                          )
@@ -3577,20 +3577,20 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  //String           jobUUID,
-                                NULL,  //String           scheduleUUID,
+                                NULL,  // jobUUID,
+                                NULL,  // scheduleUUID,
                                 &uuidId,
                                 &entityId,
-                                NULL,  //ArchiveTypes     *archiveType,
+                                NULL,  // archiveType,
                                 &storageId,
                                 storageName,
                                 &createdDateTime,
-                                NULL,  //uint64           *entries,
+                                NULL,  // entries,
                                 &size,
-                                NULL,  //IndexStates      *indexState,
-                                NULL,  //IndexModes       *indexMode,
-                                NULL,  //uint64           *lastCheckedDateTime,
-                                NULL   //String           errorMessage
+                                NULL,  // indexState,
+                                NULL,  // indexMode,
+                                NULL,  // lastCheckedDateTime,
+                                NULL   // errorMessage
                                )
           )
     {
@@ -3766,20 +3766,20 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  //String           jobUUID,
-                                NULL,  //String           scheduleUUID,
+                                NULL,  // jobUUID,
+                                NULL,  // scheduleUUID,
                                 &uuidId,
                                 &entityId,
-                                NULL,  //ArchiveTypes     *archiveType,
+                                NULL,  // archiveType,
                                 &storageId,
                                 storageName,
                                 &createdDateTime,
-                                NULL,  //uint64           *entries,
+                                NULL,  // entries,
                                 &size,
-                                NULL,  //IndexStates      *indexState,
-                                NULL,  //IndexModes       *indexMode,
-                                NULL,  //uint64           *lastCheckedDateTime,
-                                NULL   //String           errorMessage
+                                NULL,  // indexState,
+                                NULL,  // indexMode,
+                                NULL,  // lastCheckedDateTime,
+                                NULL   // errorMessage
                                )
           )
     {

@@ -480,7 +480,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,destinationFileName);
       if (fragmentNode != NULL)
       {
-        if (!restoreInfo->jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+        if (!restoreInfo->jobOptions->overwriteEntriesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
         {
           printInfo(1,
                     "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
@@ -494,7 +494,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
       }
       else
       {
-        if (!restoreInfo->jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+        if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
         {
           printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
           AutoFree_cleanup(&autoFreeList);
@@ -876,7 +876,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
       if (fragmentNode != NULL)
       {
-        if (!restoreInfo->jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
+        if (!restoreInfo->jobOptions->overwriteEntriesFlag && FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
         {
           printInfo(1,
                     "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
@@ -1280,7 +1280,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
 
 
     // check if directory already exists
-    if (!restoreInfo->jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+    if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
     {
       printInfo(1,
                 "  Restore directory '%s'...skipped (file exists)\n",
@@ -1517,7 +1517,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
     }
 
     // check if link areadly exists
-    if (!restoreInfo->jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+    if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
     {
       printInfo(1,
                 "  Restore link '%s'...skipped (file exists)\n",
@@ -1781,7 +1781,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
           fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
           if (fragmentNode != NULL)
           {
-            if (!restoreInfo->jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+            if (!restoreInfo->jobOptions->overwriteEntriesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
             {
               printInfo(1,"skipped (file part %llu..%llu exists)\n",
                         String_cString(destinationFileName),
@@ -1794,7 +1794,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
           }
           else
           {
-            if (!restoreInfo->jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+            if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
             {
               printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
               AutoFree_cleanup(&autoFreeList);
@@ -1991,7 +1991,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
       else
       {
         // check file if exists
-        if (!restoreInfo->jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+        if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
         {
           printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
@@ -2203,7 +2203,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
     }
 
     // check if special file already exists
-    if (!restoreInfo->jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+    if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
     {
       printInfo(1,
                 "  Restore special device '%s'...skipped (file exists)\n",
