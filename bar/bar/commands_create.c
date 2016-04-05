@@ -4011,21 +4011,23 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     if (!createInfo->jobOptions->dryRunFlag && (createInfo->jobOptions->maxStorageSize > 0LL))
     {
       // purge archives by max. job storage size
-      purgeStorageByJobUUID(createInfo->jobUUID,
-                            (createInfo->jobOptions->maxStorageSize > fileInfo.size)
-                              ? createInfo->jobOptions->maxStorageSize-fileInfo.size
-                              : 0LL,
-                            createInfo->logHandle
-                           );
+      if (createInfo->jobOptions->maxStorageSize > fileInfo.size)
+      {
+        purgeStorageByJobUUID(createInfo->jobUUID,
+                              createInfo->jobOptions->maxStorageSize-fileInfo.size,
+                              createInfo->logHandle
+                             );
+      }
 
       // purge archives by max. server storage size
       getServerSettings(createInfo->storageSpecifier,createInfo->jobOptions,&server);
-      purgeStorageByServer(&server,
-                           (server.maxStorageSize > fileInfo.size)
-                             ? server.maxStorageSize-fileInfo.size
-                             : 0LL,
-                           createInfo->logHandle
-                          );
+      if (server.maxStorageSize > fileInfo.size)
+      {
+        purgeStorageByServer(&server,
+                             server.maxStorageSize-fileInfo.size,
+                             createInfo->logHandle
+                            );
+      }
       doneServer(&server);
     }
 
