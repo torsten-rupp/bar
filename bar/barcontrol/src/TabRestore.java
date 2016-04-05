@@ -312,7 +312,7 @@ public class TabRestore
       public abstract void update(MenuItem menuItem, IndexData indexData);
     }
 
-    public long                     indexId;
+    public long                     id;
 
     private TreeItem                treeItem;                 // reference tree item or null
     private TreeItemUpdateRunnable  treeItemUpdateRunnable;
@@ -327,12 +327,11 @@ public class TabRestore
      */
     IndexData(long indexId)
     {
-      this.indexId       = indexId;
-
-      this.treeItem      = null;
-      this.tableItem     = null;
-      this.subMenu       = null;
-      this.menuItem      = null;
+      this.id        = indexId;
+      this.treeItem  = null;
+      this.tableItem = null;
+      this.subMenu   = null;
+      this.menuItem  = null;
     }
 
     /** get tree item reference
@@ -498,7 +497,7 @@ public class TabRestore
     private void writeObject(java.io.ObjectOutputStream out)
       throws IOException
     {
-      out.writeObject(indexId);
+      out.writeObject(id);
     }
 
     /** read index data object from object stream
@@ -510,7 +509,7 @@ public class TabRestore
     private void readObject(java.io.ObjectInputStream in)
       throws IOException, ClassNotFoundException
     {
-      indexId = (Long)in.readObject();
+      id = (Long)in.readObject();
     }
 
     /** convert data to string
@@ -518,7 +517,7 @@ public class TabRestore
      */
     public String toString()
     {
-      return "Index {"+indexId+"}";
+      return "Index {"+id+"}";
     }
   };
 
@@ -529,6 +528,7 @@ public class TabRestore
     // sort modes
     enum SortModes
     {
+      ID,
       NAME,
       SIZE,
       CREATED_DATETIME,
@@ -583,7 +583,16 @@ public class TabRestore
      */
     IndexDataComparator()
     {
-      sortMode = SortModes.NAME;
+      sortMode = SortModes.ID;
+    }
+
+    /** get index data comparator instance
+     * @param tree tree widget
+     * @return index data comparator
+     */
+    static IndexDataComparator getInstance()
+    {
+      return new IndexDataComparator();
     }
 
     /** get index data comparator instance
@@ -633,6 +642,8 @@ public class TabRestore
     {
       switch (sortMode)
       {
+        case ID:
+          return new Long(indexData1.id).compareTo(indexData2.id);
         case NAME:
           String name1 = indexData1.getName();
           String name2 = indexData2.getName();
@@ -947,7 +958,7 @@ public class TabRestore
      */
     public String toString()
     {
-      return "UUIDIndexData {"+indexId+", jobUUID="+jobUUID+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
+      return "UUIDIndexData {"+id+", jobUUID="+jobUUID+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
     }
   }
 
@@ -1070,7 +1081,7 @@ Dprintf.dprintf("");
      */
     public String getInfo()
     {
-      return String.format("%d: %s",indexId,archiveType.toString());
+      return String.format("%d: %s",id,archiveType.toString());
     }
 
     /** write storage index data object to object stream
@@ -1111,7 +1122,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "EntityIndexData {"+indexId+", type="+archiveType.toString()+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes}";
+      return "EntityIndexData {"+id+", type="+archiveType.toString()+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes}";
     }
   }
 
@@ -1308,7 +1319,7 @@ Dprintf.dprintf("");
      */
     public String getInfo()
     {
-      return String.format("%d: %s, %s",indexId,jobName,name);
+      return String.format("%d: %s, %s",id,jobName,name);
     }
 
     /** set index state
@@ -1366,7 +1377,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "StorageIndexData {"+indexId+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
+      return "StorageIndexData {"+id+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+"}";
     }
   };
 
@@ -2026,7 +2037,7 @@ Dprintf.dprintf("");
             {
               for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
               {
-                TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,indexDataComparator,uuidIndexData);
+                TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,indexIdComperator,uuidIndexData);
                 if (uuidTreeItem == null)
                 {
                   // insert tree item
@@ -2041,7 +2052,7 @@ Dprintf.dprintf("");
                                                        );
 //TODO
 //uuidIndexData.setTreeItem(uuidTreeItem);
-                  uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.indexId));
+                  uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.id));
                 }
                 else
                 {
@@ -2058,7 +2069,6 @@ Dprintf.dprintf("");
                 }
                 if (uuidTreeItem.getExpanded())
                 {
-Dprintf.dprintf("fasfsf");
                   uuidTreeItems.add(uuidTreeItem);
                 }
               }
@@ -2078,7 +2088,7 @@ Dprintf.dprintf("fasfsf");
                                                            );
 //TODO
 //uuidIndexData.setTreeItem(uuidTreeItem);
-                uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.indexId));
+                uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.id));
                 if (uuidTreeItem.getExpanded())
                 {
                   uuidTreeItems.add(uuidTreeItem);
@@ -2195,11 +2205,12 @@ Dprintf.dprintf("fasfsf");
                               );
       if (isUpdateTriggered()) return;
 
-      // get pre-sorted array with index data
       final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
+
+      // get pre-sorted array with index data
       final EntityIndexData entityIndexDataArray[] = entityIndexDataList.toArray(new EntityIndexData[entityIndexDataList.size()]);
       Arrays.sort(entityIndexDataArray,indexDataComparator);
-//for (final EntityIndexData entityIndexData : entityIndexDataList) Dprintf.dprintf("entityIndexData=%s",entityIndexData);
+for (final EntityIndexData entityIndexData : entityIndexDataList) Dprintf.dprintf("entityIndexData=%s",entityIndexData);
 
       // update entity tree
       {
@@ -2220,7 +2231,7 @@ Dprintf.dprintf("fasfsf");
           {
             public void run()
             {
-              TreeItem entityTreeItem = Widgets.getTreeItem(uuidTreeItem,indexDataComparator,entityIndexData);
+              TreeItem entityTreeItem = Widgets.getTreeItem(uuidTreeItem,indexIdComperator,entityIndexData);
               if (entityTreeItem == null)
               {
                 // insert tree item
@@ -2235,7 +2246,7 @@ Dprintf.dprintf("fasfsf");
                                                        );
 //TODO
 //entityIndexData.setTreeItem(entityTreeItem);
-                entityTreeItem.setChecked(selectedIndexIdSet.contains(entityIndexData.indexId));
+                entityTreeItem.setChecked(selectedIndexIdSet.contains(entityIndexData.id));
               }
               else
               {
@@ -2270,7 +2281,7 @@ Dprintf.dprintf("fasfsf");
               {
                 IndexData indexData = (IndexData)treeItem.getData();
                 Widgets.removeTreeItem(widgetStorageTree,treeItem);
-                selectedIndexIdSet.set(indexData.indexId,false);
+                selectedIndexIdSet.set(indexData.id,false);
 //TODO: remove?
                 indexData.clearTreeItem();
               }
@@ -2336,7 +2347,7 @@ Dprintf.dprintf("fasfsf");
       // get storage list for entity
       final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
       BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s",
-                                                   entityIndexData[0].indexId,
+                                                   entityIndexData[0].id,
                                                    storagePattern,
                                                    storageIndexStateSet.nameList("|"),
                                                    "*"
@@ -2414,7 +2425,7 @@ Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
             {
               if (!entityTreeItem.isDisposed())
               {
-                TreeItem storageTreeItem = Widgets.getTreeItem(entityTreeItem,storageIndexData);
+                TreeItem storageTreeItem = Widgets.getTreeItem(entityTreeItem,indexIdComperator,storageIndexData);
                 if (storageTreeItem == null)
                 {
                   // insert tree item
@@ -2428,7 +2439,7 @@ Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
                                                            storageIndexData.indexState.toString()
                                                           );
   Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
-                  storageTreeItem.setChecked(selectedIndexIdSet.contains(storageIndexData.indexId));
+                  storageTreeItem.setChecked(selectedIndexIdSet.contains(storageIndexData.id));
                 }
                 else
                 {
@@ -2458,7 +2469,7 @@ Dprintf.dprintf("******************************************");
             {
               IndexData indexData = (IndexData)treeItem.getData();
               Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              selectedIndexIdSet.set(indexData.indexId,false);
+              selectedIndexIdSet.set(indexData.id,false);
 //TODO: remove?
               indexData.clearTreeItem();
             }
@@ -2638,7 +2649,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                    simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                                                    storageIndexData.indexState.toString()
                                                                   );
-                                           tableItem.setChecked(selectedIndexIdSet.contains(storageIndexData.indexId));
+                                           tableItem.setChecked(selectedIndexIdSet.contains(storageIndexData.id));
                                          }
                                        });
                                      }
@@ -3261,7 +3272,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
       EntryData entryData = (reference != null) ? get(hashKey).get() : null;
       if (entryData != null)
       {
-        entryData.indexId         = indexId;
+        entryData.id              = indexId;
         entryData.storageName     = storageName;
         entryData.storageDateTime = storageDateTime;
         entryData.entryType       = entryType;
@@ -3301,7 +3312,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
       EntryData entryData = (reference != null) ? get(hashKey).get() : null;
       if (entryData != null)
       {
-        entryData.indexId         = indexId;
+        entryData.id              = indexId;
         entryData.storageName     = storageName;
         entryData.storageDateTime = storageDateTime;
         entryData.entryType       = entryType;
@@ -3834,7 +3845,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                                        Units.formatByteSize(entryData.size),
                                                                        simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.indexId));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
                                              }
                                            });
                                          }
@@ -3874,7 +3885,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                                        Units.formatByteSize(entryData.size),
                                                                        simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.indexId));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
                                              }
                                            });
                                          }
@@ -3911,7 +3922,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                                        "",
                                                                        simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.indexId));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
                                              }
                                            });
                                          }
@@ -3949,7 +3960,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                                        "",
                                                                        simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.indexId));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
                                              }
                                            });
                                          }
@@ -3990,7 +4001,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                                        Units.formatByteSize(entryData.size),
                                                                        simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.indexId));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
                                              }
                                            });
                                          }
@@ -4027,7 +4038,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                                        Units.formatByteSize(entryData.size),
                                                                        simpleDateFormat.format(new Date(entryData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.indexId));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
                                              }
                                            });
                                          }
@@ -4114,7 +4125,7 @@ Dprintf.dprintf("");
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   // index data comparator
-  final Comparator<IndexData> indexDataComparator = new Comparator<IndexData>()
+  final Comparator<IndexData> indexIdComperator = new Comparator<IndexData>()
   {
     /** compare index data ids
      * @param indexData1,indexData2 index data
@@ -4122,7 +4133,7 @@ Dprintf.dprintf("");
      */
     public int compare(IndexData indexData1, IndexData indexData2)
     {
-      return (indexData1.indexId == indexData2.indexId) ? 0 : 1;
+      return (indexData1.id == indexData2.id) ? 0 : 1;
     }
   };
 
@@ -4788,8 +4799,8 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
             {
               // toggle check
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-              selectedIndexIdSet.set(storageIndexData.indexId,treeItem.getChecked());
-              setStorageList(storageIndexData.indexId,treeItem.getChecked());
+              selectedIndexIdSet.set(storageIndexData.id,treeItem.getChecked());
+              setStorageList(storageIndexData.id,treeItem.getChecked());
 
               checkedStorageEvent.trigger();
             }
@@ -4813,7 +4824,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               boolean   isChecked = treeItem.getChecked();
               IndexData indexData = (IndexData)treeItem.getData();
 
-              selectedIndexIdSet.set(indexData.indexId,isChecked);
+              selectedIndexIdSet.set(indexData.id,isChecked);
               if (treeItem.getExpanded())
               {
                 // check/uncheck all
@@ -4822,7 +4833,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
                   subTreeItem.setChecked(isChecked);
                 }
               }
-              setStorageList(indexData.indexId,treeItem.getChecked());
+              setStorageList(indexData.id,treeItem.getChecked());
 
               // trigger update checked
               checkedStorageEvent.trigger();
@@ -5098,8 +5109,8 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
             if (storageIndexData != null)
             {
-              selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
-              setStorageList(storageIndexData.indexId,tabletem.getChecked());
+              selectedIndexIdSet.set(storageIndexData.id,tabletem.getChecked());
+              setStorageList(storageIndexData.id,tabletem.getChecked());
               checkedStorageEvent.trigger();
             }
           }
@@ -5120,8 +5131,8 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
             if (storageIndexData != null)
             {
-              selectedIndexIdSet.set(storageIndexData.indexId,tabletem.getChecked());
-              setStorageList(storageIndexData.indexId,tabletem.getChecked());
+              selectedIndexIdSet.set(storageIndexData.id,tabletem.getChecked());
+              setStorageList(storageIndexData.id,tabletem.getChecked());
               checkedStorageEvent.trigger();
             }
           }
@@ -5727,7 +5738,7 @@ Dprintf.dprintf("remove");
             tableItem.setChecked(!tableItem.getChecked());
 
             EntryData entryData = (EntryData)tableItem.getData();
-            selectedEntryIdSet.set(entryData.indexId,tableItem.getChecked());
+            selectedEntryIdSet.set(entryData.id,tableItem.getChecked());
 
             checkedEntryEvent.trigger();
           }
@@ -5749,7 +5760,7 @@ Dprintf.dprintf("remove");
             if (entryData != null)
             {
               tableItem.setChecked(!tableItem.getChecked());
-              selectedEntryIdSet.set(entryData.indexId,tableItem.getChecked());
+              selectedEntryIdSet.set(entryData.id,tableItem.getChecked());
             }
           }
 
@@ -6147,8 +6158,8 @@ Dprintf.dprintf("remove");
           uuidTreeItem.setChecked(checked);
 
           UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
-          selectedIndexIdSet.set(uuidIndexData.indexId,checked);
-          if (checked) setStorageList(uuidIndexData.indexId,true);
+          selectedIndexIdSet.set(uuidIndexData.id,checked);
+          if (checked) setStorageList(uuidIndexData.id,true);
 
           if (uuidTreeItem.getExpanded())
           {
@@ -6157,8 +6168,8 @@ Dprintf.dprintf("remove");
               entityTreeItem.setChecked(checked);
 
               EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-              selectedIndexIdSet.set(entityIndexData.indexId,checked);
-              if (checked) setStorageList(entityIndexData.indexId,true);
+              selectedIndexIdSet.set(entityIndexData.id,checked);
+              if (checked) setStorageList(entityIndexData.id,true);
 
               if (entityTreeItem.getExpanded())
               {
@@ -6167,8 +6178,8 @@ Dprintf.dprintf("remove");
                   storageTreeItem.setChecked(checked);
 
                   StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                  selectedIndexIdSet.set(storageIndexData.indexId,checked);
-                  if (checked) setStorageList(storageIndexData.indexId,true);
+                  selectedIndexIdSet.set(storageIndexData.id,checked);
+                  if (checked) setStorageList(storageIndexData.id,true);
                 }
               }
             }
@@ -6383,7 +6394,7 @@ Dprintf.dprintf("remove");
                                          @Override
                                          public void run()
                                          {
-                                           TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,entityIndexData);
+                                           TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,indexIdComperator,entityIndexData);
                                            if (entityTreeItem == null)
                                            {
                                              // insert tree item
@@ -6428,7 +6439,7 @@ Dprintf.dprintf("remove");
             {
               IndexData indexData = (IndexData)treeItem.getData();
               Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              selectedIndexIdSet.set(indexData.indexId,false);
+              selectedIndexIdSet.set(indexData.id,false);
 //TODO: remove?
               indexData.clearTreeItem();
             }
@@ -6457,7 +6468,7 @@ Dprintf.dprintf("remove");
 // TODO
 assert storagePattern != null;
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
-                                                     entityIndexData.indexId,
+                                                     entityIndexData.id,
                                                      -1,
                                                      storagePattern,
                                                      "*",
@@ -6504,7 +6515,7 @@ assert storagePattern != null;
                                          @Override
                                          public void run()
                                          {
-                                           TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,storageIndexData);
+                                           TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,indexIdComperator,storageIndexData);
                                            if (storageTreeItem == null)
                                            {
                                              // insert tree item
@@ -6547,7 +6558,7 @@ assert storagePattern != null;
             {
               IndexData indexData = (IndexData)treeItem.getData();
               Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              selectedIndexIdSet.set(indexData.indexId,false);
+              selectedIndexIdSet.set(indexData.id,false);
 //TODO: remove?
               indexData.clearTreeItem();
             }
@@ -6607,7 +6618,7 @@ assert storagePattern != null;
               error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
                                                                    toUUIDIndexData.jobUUID,
                                                                    archiveType.toString(),
-                                                                   indexData.indexId
+                                                                   indexData.id
                                                                   ),
                                                0,  // debugLevel
                                                errorMessage
@@ -6618,7 +6629,7 @@ assert storagePattern != null;
               error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
                                                                    toUUIDIndexData.jobUUID,
                                                                    archiveType.toString(),
-                                                                   indexData.indexId
+                                                                   indexData.id
                                                                   ),
                                                0,  // debugLevel
                                                errorMessage
@@ -6685,7 +6696,7 @@ assert storagePattern != null;
           if      (indexData instanceof UUIDIndexData)
           {
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld jobUUID=%'S",
-                                                                 toEntityIndexData.indexId,
+                                                                 toEntityIndexData.id,
                                                                  ((UUIDIndexData)indexData).jobUUID
                                                                 ),
                                              0,  // debugLevel
@@ -6695,8 +6706,8 @@ assert storagePattern != null;
           else if (indexData instanceof EntityIndexData)
           {
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld entityId=%lld",
-                                                                 toEntityIndexData.indexId,
-                                                                 indexData.indexId
+                                                                 toEntityIndexData.id,
+                                                                 indexData.id
                                                                 ),
                                              0,  // debugLevel
                                              errorMessage
@@ -6705,8 +6716,8 @@ assert storagePattern != null;
           else if (indexData instanceof StorageIndexData)
           {
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld storageId=%lld",
-                                                                 toEntityIndexData.indexId,
-                                                                 indexData.indexId
+                                                                 toEntityIndexData.id,
+                                                                 indexData.id
                                                                 ),
                                              0,  // debugLevel
                                              errorMessage
@@ -6785,9 +6796,9 @@ assert storagePattern != null;
             EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
-                                                                 entityIndexData.indexId,
+                                                                 entityIndexData.id,
                                                                  archiveType.toString(),
-                                                                 entityIndexData.indexId
+                                                                 entityIndexData.id
                                                                 ),
                                              0,  // debugLevel
                                              errorMessage
@@ -6867,7 +6878,7 @@ assert storagePattern != null;
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s entityId=%d",
                                                                    "*",
-                                                                   indexData.indexId
+                                                                   indexData.id
                                                                   ),
                                                0,  // debugLevel
                                                errorMessage
@@ -6877,7 +6888,7 @@ assert storagePattern != null;
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%d",
                                                                    "*",
-                                                                   indexData.indexId
+                                                                   indexData.id
                                                                   ),
                                                0,  // debugLevel
                                                errorMessage
@@ -7093,7 +7104,7 @@ assert storagePattern != null;
                 else if (indexData instanceof EntityIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%d",
-                                                                        indexData.indexId
+                                                                        indexData.id
                                                                        ),
                                                     0,  // debugLevel
                                                     errorMessage
@@ -7102,7 +7113,7 @@ assert storagePattern != null;
                 else if (indexData instanceof StorageIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%d",
-                                                                        indexData.indexId
+                                                                        indexData.id
                                                                       ),
                                                    0,  // debugLevel
                                                    errorMessage
@@ -7396,7 +7407,7 @@ assert storagePattern != null;
                 else if (indexData instanceof EntityIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%d",
-                                                                       indexData.indexId
+                                                                       indexData.id
                                                                       ),
                                                    0,  // debugLevel
                                                    errorMessage
@@ -7405,7 +7416,7 @@ assert storagePattern != null;
                 else if (indexData instanceof StorageIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%d",
-                                                                        indexData.indexId
+                                                                        indexData.id
                                                                        ),
                                                     0,  // debugLevel
                                                     errorMessage
