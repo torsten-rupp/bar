@@ -2354,7 +2354,7 @@ Dprintf.dprintf("");
                                                    storageIndexStateSet.nameList("|"),
                                                    "*"
                                                   ),
-                               0,
+                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -2438,7 +2438,6 @@ Dprintf.dprintf("");
                                                            (storageIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                                            storageIndexData.indexState.toString()
                                                           );
-  Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
                   storageTreeItem.setChecked(selectedIndexIdSet.contains(storageIndexData.id));
                 }
                 else
@@ -2597,7 +2596,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                      offset,
                                                      limit
                                                     ),
-                                 0,  // debugLevel
+                                 1,  // debugLevel
                                  new CommandResultHandler()
                                  {
                                    public int handleResult(int i, ValueMap valueMap)
@@ -2633,7 +2632,6 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                                                       lastCheckedDateTime,
                                                                                                       errorMessage_
                                                                                                      );
-  Dprintf.dprintf("storageIndexData=%s",storageIndexData);
 
                                        display.syncExec(new Runnable()
                                        {
@@ -2756,8 +2754,9 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
       if (isUpdateTriggered()) return;
 
       // update UUIDs menu items
+Dprintf.dprintf("");
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=*"),
-                               1,  // debugLevel
+                               0,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -2772,6 +2771,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                      long   totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
                                      long   totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
 
+Dprintf.dprintf("");
                                      // add UUID index data
                                      final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
                                                                                            jobUUID,
@@ -7890,7 +7890,7 @@ assert storagePattern != null;
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
+            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteEntries=%y",
                                                                      restoreToDirectory,
                                                                      overwriteEntries
                                                                     ),
@@ -8804,7 +8804,7 @@ Dprintf.dprintf("");
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S overwriteFiles=%y",
+            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S overwriteEntries=%y",
                                                                      restoreToDirectory,
                                                                      overwriteEntries
                                                                     ),
