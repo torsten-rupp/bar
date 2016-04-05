@@ -14736,9 +14736,6 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
     String_delete(storagePatternString);
     return;
   }
-#ifndef WERROR
-#warning use storagePatternString
-#endif
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
   {
     indexStateAny = TRUE;
@@ -14780,7 +14777,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
                                 NULL,  // indexIds,
                                 0,  // indexIdCount,
                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
-                                indexModeAny ? INDEX_STATE_SET_ALL : indexModeSet,
+                                indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                 storagePatternString,
                                 &storageCount,
                                 &totalEntryCount,
