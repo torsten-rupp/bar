@@ -574,6 +574,25 @@ CREATE TRIGGER AFTER UPDATE OF storageId,size ON entriesNewest
 //            AND entries.name=DIRNAME(NEW.name);
   END;
 
+//TODO
+// --- skipped entries ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS skippedEntries(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  type            INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
+);
+CREATE INDEX ON skippedEntries (name);
+CREATE INDEX ON skippedEntries (type);
+
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
   id              INTEGER PRIMARY KEY,
