@@ -2009,8 +2009,10 @@ Dprintf.dprintf("");
                               );
       if (isUpdateTriggered()) return;
 
-      // get pre-sorted array with index data
+      // get comperator
       final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
+
+      // get pre-sorted array with index data
       final UUIDIndexData uuidIndexDataArray[] = uuidIndexDataList.toArray(new UUIDIndexData[uuidIndexDataList.size()]);
       Arrays.sort(uuidIndexDataArray,indexDataComparator);
 
@@ -2205,12 +2207,12 @@ Dprintf.dprintf("");
                               );
       if (isUpdateTriggered()) return;
 
+      // get comperator
       final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
 
       // get pre-sorted array with index data
       final EntityIndexData entityIndexDataArray[] = entityIndexDataList.toArray(new EntityIndexData[entityIndexDataList.size()]);
       Arrays.sort(entityIndexDataArray,indexDataComparator);
-for (final EntityIndexData entityIndexData : entityIndexDataList) Dprintf.dprintf("entityIndexData=%s",entityIndexData);
 
       // update entity tree
       {
@@ -2415,8 +2417,6 @@ for (final EntityIndexData entityIndexData : entityIndexDataList) Dprintf.dprint
       }
       try
       {
-Dprintf.dprintf("-------- storageIndexDataList=%d",storageIndexDataList.size());
-Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
         for (final StorageIndexData storageIndexData : storageIndexDataList)
         {
           display.syncExec(new Runnable()
@@ -2458,7 +2458,6 @@ Dprintf.dprintf("selectedIndexIdSet=%s",selectedIndexIdSet);
             }
           });
         }
-Dprintf.dprintf("******************************************");
 
         // remove not existing entries
         display.syncExec(new Runnable()
