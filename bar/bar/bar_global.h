@@ -511,7 +511,7 @@ struct JobOptions
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
   bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
   ArchiveFileModes             archiveFileMode;               // archive files write mode
-  bool                         overwriteFilesFlag;            // TRUE for overwrite existing files on restore
+  bool                         overwriteEntriesFlag;          // TRUE for overwrite existing files on restore
   bool                         errorCorrectionCodesFlag;      // TRUE iff error correction codes should be added
   bool                         alwaysCreateImageFlag;         // TRUE iff always create image for CD/DVD/BD/device
   bool                         waitFirstVolumeFlag;           // TRUE for wait for first volume
