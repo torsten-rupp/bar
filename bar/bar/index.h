@@ -54,12 +54,12 @@ typedef uint64 IndexStateSet;
 #define INDEX_STATE_MAX INDEX_STATE_ERROR
 
 #define INDEX_STATE_SET_NONE 0
-#define INDEX_STATE_SET_ALL  (1 << INDEX_STATE_NONE|\
-                              1 << INDEX_STATE_OK|\
-                              1 << INDEX_STATE_CREATE|\
-                              1 << INDEX_STATE_UPDATE_REQUESTED|\
-                              1 << INDEX_STATE_UPDATE|\
-                              1 << INDEX_STATE_ERROR\
+#define INDEX_STATE_SET_ALL  (SET_VALUE(INDEX_STATE_NONE) |\
+                              SET_VALUE(INDEX_STATE_OK) |\
+                              SET_VALUE(INDEX_STATE_CREATE) |\
+                              SET_VALUE(INDEX_STATE_UPDATE_REQUESTED) |\
+                              SET_VALUE(INDEX_STATE_UPDATE) |\
+                              SET_VALUE(INDEX_STATE_ERROR) \
                              )
 
 // index modes
@@ -76,7 +76,9 @@ typedef uint64 IndexModeSet;
 #define INDEX_MODE_MAX INDEX_MODE_AUTO
 
 #define INDEX_MODE_SET_NONE 0
-#define INDEX_MODE_SET_ALL  (INDEX_MODE_MANUAL|INDEX_MODE_AUTO)
+#define INDEX_MODE_SET_ALL  (SET_VALUE(INDEX_MODE_MANUAL) | \
+                             SET_VALUE(INDEX_MODE_AUTO) \
+                            )
 
 // index handle
 typedef struct
