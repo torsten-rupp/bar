@@ -686,7 +686,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                                 "archive-file-mode",
                                                                 ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL)
                                                                );
-  if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"overwrite-files",        jobOptions->overwriteFilesFlag          );
+  if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"overwrite-files",        jobOptions->overwriteEntriesFlag        );
   if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
