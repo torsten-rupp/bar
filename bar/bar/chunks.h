@@ -131,10 +131,10 @@ typedef struct ChunkInfo
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Chunk_init(...)   __Chunk_init(__FILE__,__LINE__,__VA_ARGS__)
-  #define Chunk_done(...)   __Chunk_done(__FILE__,__LINE__,__VA_ARGS__)
-  #define Chunk_open(...)   __Chunk_open(__FILE__,__LINE__,__VA_ARGS__)
-  #define Chunk_create(...) __Chunk_create(__FILE__,__LINE__,__VA_ARGS__)
+  #define Chunk_init(...)   __Chunk_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Chunk_done(...)   __Chunk_done(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Chunk_open(...)   __Chunk_open(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Chunk_create(...) __Chunk_create(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/

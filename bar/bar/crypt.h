@@ -127,8 +127,8 @@ typedef struct
   ((uint16)(cryptAlgorithm))
 
 #ifndef NDEBUG
-  #define Crypt_init(...) __Crypt_init(__FILE__,__LINE__,__VA_ARGS__)
-  #define Crypt_done(...) __Crypt_done(__FILE__,__LINE__,__VA_ARGS__)
+  #define Crypt_init(...) __Crypt_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_done(...) __Crypt_done(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/

@@ -321,14 +321,14 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define File_getTmpFile(...)             __File_getTmpFile(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_getTmpFileCString(...)      __File_getTmpFileCString(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_open(...)                   __File_open(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_openCString(...)            __File_openCString(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_openDescriptor(...)         __File_openDescriptor(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_close(...)                  __File_close(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_initExtendedAttributes(...) __File_initExtendedAttributes(__FILE__,__LINE__,__VA_ARGS__)
-  #define File_doneExtendedAttributes(...) __File_doneExtendedAttributes(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_getTmpFile(...)             __File_getTmpFile(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define File_getTmpFileCString(...)      __File_getTmpFileCString(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define File_open(...)                   __File_open(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define File_openCString(...)            __File_openCString(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define File_openDescriptor(...)         __File_openDescriptor(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define File_close(...)                  __File_close(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define File_initExtendedAttributes(...) __File_initExtendedAttributes(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define File_doneExtendedAttributes(...) __File_doneExtendedAttributes(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/

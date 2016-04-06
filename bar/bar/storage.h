@@ -652,14 +652,14 @@ typedef Errors(*StorageFunction)(ConstString    storageName,
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Storage_initSpecifier(...)      __Storage_initSpecifier(__FILE__,__LINE__,__VA_ARGS__)
-  #define Storage_duplicateSpecifier(...) __Storage_duplicateSpecifier(__FILE__,__LINE__,__VA_ARGS__)
-  #define Storage_doneSpecifier(...)      __Storage_doneSpecifier(__FILE__,__LINE__,__VA_ARGS__)
-  #define Storage_init(...)               __Storage_init(__FILE__,__LINE__,__VA_ARGS__)
-  #define Storage_done(...)               __Storage_done(__FILE__,__LINE__,__VA_ARGS__)
-  #define Storage_create(...)             __Storage_create(__FILE__,__LINE__,__VA_ARGS__)
-  #define Storage_open(...)               __Storage_open(__FILE__,__LINE__,__VA_ARGS__)
-  #define Storage_close(...)              __Storage_close(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_initSpecifier(...)      __Storage_initSpecifier(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Storage_duplicateSpecifier(...) __Storage_duplicateSpecifier(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Storage_doneSpecifier(...)      __Storage_doneSpecifier(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Storage_init(...)               __Storage_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Storage_done(...)               __Storage_done(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Storage_create(...)             __Storage_create(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Storage_open(...)               __Storage_open(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Storage_close(...)              __Storage_close(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/

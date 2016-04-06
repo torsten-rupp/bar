@@ -59,17 +59,17 @@ typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define StringList_insert(...)        __StringList_insert(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_insertCString(...) __StringList_insertCString(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_insertChar(...)    __StringList_insertChar(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_insertBuffer(...)  __StringList_insertBuffer(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_append(...)        __StringList_append(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_appendCString(...) __StringList_appendCString(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_appendChar(...)    __StringList_appendChar(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_appendBuffer(...)  __StringList_appendBuffer(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_remove(...)        __StringList_remove(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_getFirst(...)      __StringList_getFirst(__FILE__,__LINE__,__VA_ARGS__)
-  #define StringList_getLast(...)       __StringList_getLast(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_insert(...)        __StringList_insert(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_insertCString(...) __StringList_insertCString(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_insertChar(...)    __StringList_insertChar(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_insertBuffer(...)  __StringList_insertBuffer(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_append(...)        __StringList_append(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_appendCString(...) __StringList_appendCString(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_appendChar(...)    __StringList_appendChar(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_appendBuffer(...)  __StringList_appendBuffer(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_remove(...)        __StringList_remove(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_getFirst(...)      __StringList_getFirst(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_getLast(...)       __StringList_getLast(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***********************************************************************\

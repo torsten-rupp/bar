@@ -89,8 +89,8 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Array_init(...) __Array_init(__FILE__,__LINE__,__VA_ARGS__)
-  #define Array_new(...)  __Array_new(__FILE__,__LINE__,__VA_ARGS__)
+  #define Array_init(...) __Array_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Array_new(...)  __Array_new(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***********************************************************************\

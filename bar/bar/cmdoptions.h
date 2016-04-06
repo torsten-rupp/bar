@@ -805,8 +805,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
   }
 
 #ifndef NDEBUG
-  #define CmdOption_init(...) __CmdOption_init(__FILE__,__LINE__,__VA_ARGS__)
-  #define CmdOption_done(...) __CmdOption_done(__FILE__,__LINE__,__VA_ARGS__)
+  #define CmdOption_init(...) __CmdOption_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define CmdOption_done(...) __CmdOption_done(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Functions ******************************/

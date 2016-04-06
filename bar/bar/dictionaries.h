@@ -129,8 +129,8 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 #define DICTIONARY_BYTE_FREE CALLBACK((DictionaryFreeFunction)Dictionary_byteFree,NULL)
 
 #ifndef NDEBUG
-  #define Dictionary_init(...) __Dictionary_init(__FILE__,__LINE__,__VA_ARGS__)
-  #define Dictionary_done(...) __Dictionary_done(__FILE__,__LINE__,__VA_ARGS__)
+  #define Dictionary_init(...) __Dictionary_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Dictionary_done(...) __Dictionary_done(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/

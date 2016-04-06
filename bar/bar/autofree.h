@@ -62,8 +62,8 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define AutoFree_add(...)    __AutoFree_add(__FILE__,__LINE__,__VA_ARGS__)
-  #define AutoFree_remove(...) __AutoFree_remove(__FILE__,__LINE__,__VA_ARGS__)
+  #define AutoFree_add(...)    __AutoFree_add(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define AutoFree_remove(...) __AutoFree_remove(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /* Note: for these macros a GNU C compiler is required, because

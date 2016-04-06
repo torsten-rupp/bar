@@ -127,12 +127,12 @@ typedef struct
 // debugging
 #ifndef NDEBUG
   #define String_new()           __String_new(__FILE__,__LINE__)
-  #define String_newCString(...) __String_newCString(__FILE__,__LINE__,__VA_ARGS__)
-  #define String_newChar(...)    __String_newChar(__FILE__,__LINE__,__VA_ARGS__)
-  #define String_newBuffer(...)  __String_newBuffer(__FILE__,__LINE__,__VA_ARGS__)
-  #define String_duplicate(...)  __String_duplicate(__FILE__,__LINE__,__VA_ARGS__)
-  #define String_copy(...)       __String_copy(__FILE__,__LINE__,__VA_ARGS__)
-  #define String_delete(...)     __String_delete(__FILE__,__LINE__,__VA_ARGS__)
+  #define String_newCString(...) __String_newCString(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_newChar(...)    __String_newChar(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_newBuffer(...)  __String_newBuffer(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_duplicate(...)  __String_duplicate(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_copy(...)       __String_copy(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define String_delete(...)     __String_delete(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
