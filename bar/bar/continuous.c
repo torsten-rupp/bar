@@ -132,9 +132,9 @@ LOCAL bool           quitFlag;
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define openContinuous(...)  __openContinuous(__FILE__,__LINE__,__VA_ARGS__)
-  #define createContinuous(...) __createContinuous(__FILE__,__LINE__,__VA_ARGS__)
-  #define closeContinuous(...) __closeContinuous(__FILE__,__LINE__,__VA_ARGS__)
+  #define openContinuous(...)  __openContinuous(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define createContinuous(...) __createContinuous(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define closeContinuous(...) __closeContinuous(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
