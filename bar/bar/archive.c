@@ -337,60 +337,71 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
         password = passwordHandle->passwordNode->password;
         passwordHandle->passwordNode = passwordHandle->passwordNode->next;
       }
-      else if (passwordHandle->passwordMode == PASSWORD_MODE_CONFIG)
+      else
       {
-        if (passwordHandle->cryptPassword != NULL)
+fprintf(stderr,"%s, %d: %p %d\n",__FILE__,__LINE__,passwordHandle,passwordHandle->passwordMode);
+        switch (passwordHandle->passwordMode)
         {
-          // get password
-          password = (Password*)passwordHandle->cryptPassword;
-        }
+           case PASSWORD_MODE_NONE:
+             break;
+           case PASSWORD_MODE_CONFIG:
+             password = passwordHandle->cryptPassword;
 
-        // next password mode is: default
-        passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
-      }
-      else if (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
-      {
-        if (globalOptions.cryptPassword != NULL)
-        {
-          // get password
-          password = globalOptions.cryptPassword;
-        }
+             // next password mode is: default
+             passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
+             break;
+           case PASSWORD_MODE_DEFAULT:
+             password = globalOptions.cryptPassword;
 
-        // next password mode is: ask
-        passwordHandle->passwordMode = PASSWORD_MODE_ASK;
-      }
-      else if (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
-               && (passwordHandle->getPasswordFunction != NULL)
-              )
-      {
-        // input password
-        Password_init(&newPassword);
-        error = passwordHandle->getPasswordFunction(NULL,  // loginName
-                                                    &newPassword,
-                                                    PASSWORD_TYPE_CRYPT,
-                                                    (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
-                                                      ? String_cString(Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL))
-                                                      : NULL,
-                                                    FALSE,
-                                                    FALSE,
-                                                    passwordHandle->getPasswordUserData
-                                                   );
-        if (error == ERROR_NONE)
-        {
-          // add to password list
-          password = Archive_appendDecryptPassword(&newPassword);
+             // next password mode is: ask
+             passwordHandle->passwordMode = PASSWORD_MODE_ASK;
+             break;
+           case PASSWORD_MODE_ASK:
+//TODO
+             if (0&&passwordHandle->getPasswordFunction != NULL)
+             {
+               // input password
+               Password_init(&newPassword);
+               error = passwordHandle->getPasswordFunction(NULL,  // loginName
+                                                           &newPassword,
+                                                           PASSWORD_TYPE_CRYPT,
+                                                           (passwordHandle->archiveInfo->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                             ? String_cString(Storage_getPrintableName(&passwordHandle->archiveInfo->storage.storageSpecifier,NULL))
+                                                             : NULL,
+                                                           FALSE,
+                                                           FALSE,
+                                                           passwordHandle->getPasswordUserData
+                                                          );
+               if (error == ERROR_NONE)
+               {
+                 // add to password list
+                 password = Archive_appendDecryptPassword(&newPassword);
 
-          // free resources
-          Password_done(&newPassword);
-        }
-        else
-        {
-          // next password mode is: none
-          passwordHandle->passwordMode = PASSWORD_MODE_NONE;
+                 // free resources
+                 Password_done(&newPassword);
+               }
+               else
+               {
+                 // next password mode is: none
+                 passwordHandle->passwordMode = PASSWORD_MODE_NONE;
+               }
+             }
+             else
+             {
+               // next password mode is: none
+               passwordHandle->passwordMode = PASSWORD_MODE_NONE;
+             }
+             break;
+           default:
+             #ifndef NDEBUG
+               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+             #endif /* NDEBUG */
+             break; /* not reached */
         }
       }
     }
   }
+fprintf(stderr,"%s, %d: %p password=%p\n",__FILE__,__LINE__,passwordHandle,password);
 
   return password;
 }
@@ -633,7 +644,9 @@ LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo)
   uint64 storageSize;
 
   // find next suitable archive name
-  if (isSplittedArchive(archiveInfo))
+  if (   isSplittedArchive(archiveInfo)
+      && (archiveInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+     )
   {
     do
     {
@@ -645,6 +658,7 @@ LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo)
                                                        );
       if (storageSize > archiveInfo->jobOptions->archivePartSize)
       {
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveInfo->partNumber);
         archiveInfo->partNumber++;
       }
     }
@@ -6948,6 +6962,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     error = archiveInfo->pendingError;
     archiveInfo->pendingError = ERROR_NONE;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
@@ -6971,6 +6986,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                     );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
@@ -6983,6 +6999,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return error;
     }
 
@@ -6992,6 +7009,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return error;
       }
       continue;
@@ -7008,6 +7026,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info); });
@@ -7015,6 +7034,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
   archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm);
@@ -7025,6 +7045,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
@@ -7041,13 +7062,15 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     }
     else
     {
+#if 0
       password = getFirstDecryptPassword(&passwordHandle,
                                          archiveInfo,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
-                                         archiveInfo->getPasswordFunction,
-                                         archiveInfo->getPasswordUserData
+                                         CALLBACK(archiveInfo->getPasswordFunction,archiveInfo->getPasswordUserData)
                                         );
+#endif
+password=NULL;
     }
     passwordFlag  = (password != NULL);
     decryptedFlag = FALSE;
@@ -7234,7 +7257,9 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
-        password = getNextDecryptPassword(&passwordHandle);
+//        password = getNextDecryptPassword(&passwordHandle);
+//TODO
+password=NULL;
 
         // reset error and try next password
         if (password != NULL)
@@ -7250,11 +7275,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     }
   }
   while ((error != ERROR_NONE) && (password != NULL));
-  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ fprintf(stderr,"%s, %d: x1\n",__FILE__,__LINE__); AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
@@ -7262,6 +7289,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if      (error != ERROR_NONE)                                                  return error;
     else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
@@ -10454,7 +10482,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            LogHandle                    *logHandle
                           )
 {
-  #define TRANSACTION_NAME "ARCHIVE_INDEX"
+  #define TRANSACTION_NAME "ARCHIVE_INDEXxxx"
 
   StorageSpecifier  storageSpecifier;
   String            printableStorageName;
@@ -10468,6 +10496,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   assert(indexHandle != NULL);
   assert(storageName != NULL);
 
+#if 1
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
@@ -10482,6 +10511,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     String_set(printableStorageName,storageName);
   }
 
+fprintf(stderr,"%s, %d: ----------- start update indz %s\n",__FILE__,__LINE__,String_cString(storageName));
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
   if (storageSpecifier.type == STORAGE_TYPE_SCP)
   {
@@ -10574,11 +10604,24 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
+#if 0
   error = Index_beginTransaction(indexHandle,TRANSACTION_NAME);
   if (error != ERROR_NONE)
   {
+    Archive_close(&archiveInfo);
+    Index_setState(indexHandle,
+                   storageId,
+                   INDEX_STATE_ERROR,
+                   0LL,
+                   "%s (error code: %d)",
+                   Error_getText(error),
+                   Error_getCode(error)
+                  );
+    String_delete(printableStorageName);
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
+#endif
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
@@ -10752,10 +10795,11 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                                                NULL,  // cryptType
                                                directoryName,
                                                &fileInfo,
-                                               NULL   // fileExtendedAttributeList
+                                               NULL  // fileExtendedAttributeList
                                               );
             if (error != ERROR_NONE)
             {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               String_delete(directoryName);
               break;
             }
@@ -10775,6 +10819,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             {
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(directoryName);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               break;
             }
 
@@ -10984,14 +11029,18 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
   }
+#if 0
   if (error == ERROR_NONE)
   {
     error = Index_endTransaction(indexHandle,TRANSACTION_NAME);
   }
   else
   {
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     (void)Index_rollbackTransaction(indexHandle,TRANSACTION_NAME);
   }
+#endif
   if      (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
@@ -11073,6 +11122,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   Storage_doneSpecifier(&storageSpecifier);
 
   return error;
+#endif
 
   #undef TRANSACTION_NAME
 }

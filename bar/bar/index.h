@@ -149,6 +149,7 @@ typedef union
 #define INDEX_ID_ANY  -1LL
 
 /***************************** Variables *******************************/
+extern const char *__databaseFileName;
 
 /****************************** Macros *********************************/
 
@@ -163,7 +164,8 @@ typedef union
 #define INDEX_DATABASE_ID_(indexId)      (((__IndexId)(indexId)).databaseId             )
 
 #ifndef NDEBUG
-  #define Index_done(...) __Index_done(__FILE__,__LINE__,__VA_ARGS__)
+  #define Index_open(...) __Index_open(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Index_close(...) __Index_close(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -256,6 +258,34 @@ bool Index_parseType(const char *name, IndexTypes *indexType);
 /***********************************************************************\
 * Name   : Index_init
 * Purpose: initialize index database
+* Input  : fileName - database file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_init(const char *fileName);
+
+/***********************************************************************\
+* Name   : Index_isAvailable
+* Purpose: deinitialize index database
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Index_isAvailable(void);
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENATION__)
+INLINE bool Index_isAvailable(void)
+{
+  return __databaseFileName != NULL;
+}
+#endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Index_open
+* Purpose: open index database
 * Input  : indexHandle      - index handle variable
 *          databaseFileName - database file name
 * Output : -
@@ -263,13 +293,17 @@ bool Index_parseType(const char *name, IndexTypes *indexType);
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_init(IndexHandle *indexHandle,
-                  const char  *databaseFileName
-                 );
+#ifdef NDEBUG
+IndexHandle *Index_open(void);
+#else /* not NDEBUG */
+IndexHandle *__Index_open(const char  *__fileName__,
+                          uint        __lineNb__
+                         );
+#endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Index_done
-* Purpose: deinitialize index database
+* Name   : Index_close
+* Purpose: close index database
 * Input  : indexHandle - index handle
 * Output : -
 * Return : -
@@ -277,12 +311,12 @@ Errors Index_init(IndexHandle *indexHandle,
 \***********************************************************************/
 
 #ifdef NDEBUG
-void Index_done(IndexHandle *indexHandle);
+void Index_close(IndexHandle *indexHandle);
 #else /* not NDEBUG */
-void __Index_done(const char  *__fileName__,
-                  uint        __lineNb__,
-                  IndexHandle *indexHandle
-                 );
+void __Index_close(const char  *__fileName__,
+                   uint        __lineNb__,
+                   IndexHandle *indexHandle
+                  );
 #endif /* NDEBUG */
 
 /***********************************************************************\

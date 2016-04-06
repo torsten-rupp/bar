@@ -98,7 +98,10 @@ typedef enum
 } IndexOpenModes;
 
 /***************************** Variables *******************************/
+const char *__databaseFileName = NULL;
+
 LOCAL Thread cleanupIndexThread;    // clean-up thread
+LOCAL bool   quitFlag;
 
 /****************************** Macros *********************************/
 
@@ -106,9 +109,9 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
 #define INDEX_ID_(type,databaseId) ((IndexId)((__IndexId){{type,databaseId}}).data)
 
 #ifndef NDEBUG
-  #define openIndex(...)  __openIndex(__FILE__,__LINE__,__VA_ARGS__)
-  #define createIndex(...) __createIndex(__FILE__,__LINE__,__VA_ARGS__)
-  #define closeIndex(...) __closeIndex(__FILE__,__LINE__,__VA_ARGS__)
+  #define createIndex(...) __createIndex(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define openIndex(...)  __openIndex(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define closeIndex(...) __closeIndex(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -118,6 +121,69 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : createIndex
+* Purpose: create new empty index database
+* Input  : databaseFileName - database file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  LOCAL Errors createIndex(const char  *databaseFileName)
+#else /* not NDEBUG */
+  LOCAL Errors __createIndex(const char  *__fileName__,
+                             uint        __lineNb__,
+                             const char  *databaseFileName
+                            )
+#endif /* NDEBUG */
+{
+  Errors         error;
+  DatabaseHandle databaseHandle;
+
+  assert(databaseFileName != NULL);
+
+  // create index database
+  (void)File_deleteCString(databaseFileName,FALSE);
+  #ifdef NDEBUG
+    error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
+  #else /* not NDEBUG */
+    error = __Database_open(__fileName__,__lineNb__,&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
+  #endif /* NDEBUG */
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // disable synchronous mode and journal to increase transaction speed
+  (void)Database_setEnabledSync(&databaseHandle,FALSE);
+
+  // create tables
+  error = Database_execute(&databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           INDEX_TABLE_DEFINITION
+                          );
+  if (error != ERROR_NONE)
+  {
+    #ifdef NDEBUG
+      Database_close(&databaseHandle);
+    #else /* not NDEBUG */
+      __Database_close(__fileName__,__lineNb__,&databaseHandle);
+    #endif /* NDEBUG */
+    return error;
+  }
+
+  // close database
+  #ifdef NDEBUG
+    Database_close(&databaseHandle);
+  #else /* not NDEBUG */
+    __Database_close(__fileName__,__lineNb__,&databaseHandle);
+  #endif /* NDEBUG */
+
+  return ERROR_NONE;
+}
 
 /***********************************************************************\
 * Name   : openIndex
@@ -160,7 +226,6 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
   }
   indexHandle->databaseFileName = databaseFileName;
   indexHandle->upgradeError     = ERROR_NONE;
-  indexHandle->quitFlag         = FALSE;
 
   if (indexOpenMode == INDEX_OPEN_MODE_READ)
   {
@@ -170,71 +235,6 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
     // enable foreign key constrains
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
   }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : createIndex
-* Purpose: create empty index database
-* Input  : databaseFileName - database file name
-* Output : indexHandle - index handle
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-  LOCAL Errors createIndex(IndexHandle *indexHandle,
-                           const char  *databaseFileName
-                          )
-#else /* not NDEBUG */
-  LOCAL Errors __createIndex(const char  *__fileName__,
-                             uint        __lineNb__,
-                             IndexHandle *indexHandle,
-                             const char  *databaseFileName
-                            )
-#endif /* NDEBUG */
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(databaseFileName != NULL);
-
-  // create index database
-  (void)File_deleteCString(databaseFileName,FALSE);
-  #ifdef NDEBUG
-    error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
-  #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
-  #endif /* NDEBUG */
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  indexHandle->databaseFileName = databaseFileName;
-  indexHandle->upgradeError     = ERROR_NONE;
-  indexHandle->quitFlag         = FALSE;
-
-  // disable synchronous mode and journal to increase transaction speed
-  (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
-
-  // create tables
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           INDEX_TABLE_DEFINITION
-                          );
-  if (error != ERROR_NONE)
-  {
-    #ifdef NDEBUG
-      Database_close(&indexHandle->databaseHandle);
-    #else /* not NDEBUG */
-      __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
-    #endif /* NDEBUG */
-    return error;
-  }
-
-  // enable foreign key constrains
-  Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
   return ERROR_NONE;
 }
@@ -376,7 +376,7 @@ return ERROR_NONE;
     return error;
   }
   if (!Database_getNextRow(&databaseQueryHandle,
-                           "%llu %llu %llu %llu",
+                           "%lld %lld %llu %llu",
                            &newestStorageId,
                            &newestEntryId,
                            &newestSize,
@@ -400,7 +400,7 @@ return ERROR_NONE;
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "UPDATE entriesNewest \
-                                 SET entryId=%llu,size=%llu,timeLastChanged=%llu \
+                                 SET entryId=%lld,size=%llu,timeLastChanged=%llu \
                                  WHERE id=%llu",
                                entryId,
                                size,
@@ -422,8 +422,8 @@ return ERROR_NONE;
                                    ) \
                                  VALUES \
                                    ( \
-                                    %llu, \
-                                    %llu, \
+                                    %lld, \
+                                    %lld, \
                                     %'s, \
                                     %llu, \
                                     %llu \
@@ -466,7 +466,7 @@ return ERROR_NONE;
                                         totalEntrySizeNewest =totalEntrySizeNewest -%llu, \
                                         totalImageCountNewest=totalImageCountNewest-1, \
                                         totalImageSizeNewest =totalImageSizeNewest -%llu \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  newestSize,
                                  newestSize,
@@ -478,7 +478,7 @@ return ERROR_NONE;
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
                                     SET totalEntryCountNewest=totalEntryCountNewest-1 \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  newestStorageId
                                 );
@@ -488,7 +488,7 @@ return ERROR_NONE;
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
                                     SET totalEntryCountNewest=totalEntryCountNewest-1 \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  newestStorageId
                                 );
@@ -501,7 +501,7 @@ return ERROR_NONE;
                                         totalEntrySizeNewest    =totalEntrySizeNewest    -%llu, \
                                         totalHardlinkCountNewest=totalHardlinkCountNewest-1, \
                                         totalHardlinkSizeNewest =totalHardlinkSizeNewest -%llu \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  newestSize,
                                  newestSize,
@@ -513,7 +513,7 @@ return ERROR_NONE;
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
                                     SET totalEntryCountNewest=totalEntryCountNewest-1 \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  newestStorageId
                                 );
@@ -537,7 +537,7 @@ return ERROR_NONE;
                                         totalEntrySizeNewest =totalEntrySizeNewest +%llu, \
                                         totalFileCountNewest =totalFileCountNewest +1, \
                                         totalFileSizeNewest  =totalFileSizeNewest  +%llu \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  size,
                                  size,
@@ -552,7 +552,7 @@ return ERROR_NONE;
                                         totalEntrySizeNewest =totalEntrySizeNewest +%llu, \
                                         totalImageCountNewest=totalImageCountNewest+1, \
                                         totalImageSizeNewest =totalImageSizeNewest +%llu \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  size,
                                  size,
@@ -564,7 +564,7 @@ return ERROR_NONE;
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
                                     SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  storageId
                                 );
@@ -574,7 +574,7 @@ return ERROR_NONE;
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
                                     SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  storageId
                                 );
@@ -587,7 +587,7 @@ return ERROR_NONE;
                                         totalEntrySizeNewest    =totalEntrySizeNewest    +%llu, \
                                         totalHardlinkCountNewest=totalHardlinkCountNewest+1, \
                                         totalHardlinkSizeNewest =totalHardlinkSizeNewest +%llu \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  size,
                                  size,
@@ -599,7 +599,7 @@ return ERROR_NONE;
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
                                     SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                    WHERE id=%llu \
+                                    WHERE id=%lld \
                                  ",
                                  storageId
                                 );
@@ -709,8 +709,8 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -754,7 +754,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
@@ -803,20 +803,20 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
+                                                                                          %lld, \
                                                                                           %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %d, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                      (uint64)Database_getTableColumnListInt64(fromColumnList,"size",0LL),
+                                                                                      (int)Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
+                                                                                      (uint64)Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
+                                                                                      (uint64)Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
+                                                                                      (uint64)Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -852,7 +852,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -895,16 +895,16 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu \
+                                                                                          %lld, \
+                                                                                          %d, \
+                                                                                          %u, \
+                                                                                          %u \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                      (int)Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
+                                                                                      (uint)Database_getTableColumnListInt64(fromColumnList,"major",0LL),
+                                                                                      (uint)Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -1012,8 +1012,8 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -1082,16 +1082,16 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -1129,7 +1129,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -1174,16 +1174,16 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -1223,16 +1223,16 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu \
+                                                                                          %lld, \
+                                                                                          %d, \
+                                                                                          %u, \
+                                                                                          %u \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                      Database_getTableColumnListInt(fromColumnList,"specialType",0),
+                                                                                      Database_getTableColumnListUInt(fromColumnList,"major",0),
+                                                                                      Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -1348,8 +1348,8 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -1395,16 +1395,16 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -1446,20 +1446,20 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
+                                                                                          %lld, \
                                                                                           %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %d, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt(fromColumnList,"fileSystemType",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockSize",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -1497,7 +1497,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -1542,16 +1542,16 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -1591,16 +1591,16 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu \
+                                                                                          %lld, \
+                                                                                          %d, \
+                                                                                          %u, \
+                                                                                          %u \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                      Database_getTableColumnListInt(fromColumnList,"specialType",0LL),
+                                                                                      Database_getTableColumnListUInt(fromColumnList,"major",0LL),
+                                                                                      Database_getTableColumnListUInt(fromColumnList,"minor",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -1843,8 +1843,8 @@ fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
+                                                                                                                       %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %'s \
                                                                                                                       ); \
                                                                                                                    ",
@@ -1891,16 +1891,16 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
@@ -1943,20 +1943,20 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Err
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
+                                                                                                                       %d, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                                                   Database_getTableColumnListInt(fromColumnList,"fileSystemType",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockSize",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
@@ -1995,7 +1995,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Err
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
+                                                                                                                       %lld, \
                                                                                                                        %'s \
                                                                                                                       ); \
                                                                                                                    ",
@@ -2041,16 +2041,16 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Err
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
@@ -2091,16 +2091,16 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Err
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu \
+                                                                                                                       %lld, \
+                                                                                                                       %d, \
+                                                                                                                       %u, \
+                                                                                                                       %u \
                                                                                                                       ); \
                                                                                                                    ",
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"major",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                                                   Database_getTableColumnListInt(fromColumnList,"specialType",0),
+                                                                                                                   Database_getTableColumnListUInt(fromColumnList,"major",0),
+                                                                                                                   Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
@@ -2111,7 +2111,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
 
                                                             return error;
                                                           },NULL),
-                                                          "WHERE entityId=%llu",
+                                                          "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
 
@@ -2223,8 +2223,8 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -2270,16 +2270,16 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -2321,20 +2321,20 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
+                                                                                          %lld, \
                                                                                           %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %d, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt(fromColumnList,"fileSystemType",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockSize",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -2372,7 +2372,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -2417,16 +2417,16 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -2466,16 +2466,16 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu \
+                                                                                          %lld, \
+                                                                                          %d, \
+                                                                                          %u, \
+                                                                                          %u \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                      Database_getTableColumnListInt(fromColumnList,"specialType",0LL),
+                                                                                      Database_getTableColumnListUInt(fromColumnList,"major",0LL),
+                                                                                      Database_getTableColumnListUInt(fromColumnList,"minor",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -2613,8 +2613,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
+                                                                                                                       %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %'s \
                                                                                                                       ); \
                                                                                                                    ",
@@ -2660,16 +2660,16 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
@@ -2711,9 +2711,9 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
+                                                                                                                       %d, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
@@ -2721,10 +2721,10 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    ",
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                                                   Database_getTableColumnListInt(fromColumnList,"fileSystemType",0),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockSize",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
@@ -2762,7 +2762,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
+                                                                                                                       %lld, \
                                                                                                                        %'s \
                                                                                                                       ); \
                                                                                                                    ",
@@ -2807,16 +2807,16 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
@@ -2856,16 +2856,16 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu \
+                                                                                                                       %lld, \
+                                                                                                                       %d, \
+                                                                                                                       %u, \
+                                                                                                                       %u \
                                                                                                                       ); \
                                                                                                                    ",
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"major",0LL),
-                                                                                                                   Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                                                   Database_getTableColumnListInt(fromColumnList,"specialType",0),
+                                                                                                                   Database_getTableColumnListUInt(fromColumnList,"major",0),
+                                                                                                                   Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                                                   );
                                                                                          },NULL),
                                                                                          "WHERE storageId=%lld",
@@ -2875,7 +2875,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                                             return error;
                                                           },NULL),
-                                                          "WHERE entityId=%llu",
+                                                          "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
 
@@ -2986,8 +2986,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -3033,16 +3033,16 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -3084,20 +3084,20 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
+                                                                                          %lld, \
                                                                                           %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
+                                                                                          %d, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListInt(fromColumnList,"fileSystemType",0),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockSize",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -3135,7 +3135,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
@@ -3180,16 +3180,16 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"size",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                      Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -3229,16 +3229,16 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu, \
-                                                                                          %llu \
+                                                                                          %lld, \
+                                                                                          %d, \
+                                                                                          %u, \
+                                                                                          %u \
                                                                                          ); \
                                                                                       ",
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"major",0LL),
-                                                                                      Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
+                                                                                      Database_getTableColumnListInt(fromColumnList,"specialType",0),
+                                                                                      Database_getTableColumnListUInt(fromColumnList,"major",0),
+                                                                                      Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                      );
                                                             },NULL),
                                                             "WHERE storageId=%lld",
@@ -3602,7 +3602,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                              );
   if (error == ERROR_NONE)
   {
-    while (   !indexHandle->quitFlag
+    while (   !quitFlag
            && Index_getNextFile(&indexQueryHandle,
                                 &indexId,
                                 storageName,
@@ -3636,7 +3636,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                               );
   if (error == ERROR_NONE)
   {
-    while (   !indexHandle->quitFlag
+    while (   !quitFlag
            && Index_getNextImage(&indexQueryHandle,
                                  &indexId,
                                  storageName,
@@ -3667,7 +3667,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                    );
   if (error == ERROR_NONE)
   {
-    while (   !indexHandle->quitFlag
+    while (   !quitFlag
            && Index_getNextDirectory(&indexQueryHandle,
                                      &indexId,
                                      storageName,
@@ -3698,7 +3698,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                    );
   if (error == ERROR_NONE)
   {
-    while (   !indexHandle->quitFlag
+    while (   !quitFlag
            && Index_getNextLink(&indexQueryHandle,
                                 &indexId,
                                 storageName,
@@ -3730,7 +3730,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                  );
   if (error == ERROR_NONE)
   {
-    while (   !indexHandle->quitFlag
+    while (   !quitFlag
            && Index_getNextHardLink(&indexQueryHandle,
                                     &indexId,
                                     storageName,
@@ -3764,7 +3764,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                );
   if (error == ERROR_NONE)
   {
-    while (   !indexHandle->quitFlag
+    while (   !quitFlag
            && Index_getNextSpecial(&indexQueryHandle,
                                    &indexId,
                                    storageName,
@@ -3848,12 +3848,12 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
   if (error == ERROR_NONE)
   {
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // entityId
-                                &storageId,
                                 NULL,  // jobUUID
                                 NULL,  // schedule UUID
+                                NULL,  // uuidId
+                                NULL,  // entityId
                                 NULL,  // archive type
+                                &storageId,
                                 storageName,
                                 NULL,  // createdDateTime
                                 NULL,  // entries
@@ -4194,15 +4194,15 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     {
       break;
     }
-    while (   !indexHandle->quitFlag
+    while (   !quitFlag
            && !deletedIndexFlag
            && Index_getNextStorage(&indexQueryHandle1,
-                                   NULL,  // uuidId
-                                   NULL,  // entityId
-                                   &storageId,
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
+                                   NULL,  // uuidId
+                                   NULL,  // entityId
                                    NULL,  // archiveType
+                                   &storageId,
                                    storageName,
                                    NULL,  // createdDateTime
                                    NULL,  // entries
@@ -4232,15 +4232,15 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
       {
         continue;
       }
-      while (   !indexHandle->quitFlag
+      while (   !quitFlag
              && !deletedIndexFlag
              && Index_getNextStorage(&indexQueryHandle2,
-                                     NULL,  // uuidId
-                                     NULL,  // entityId
-                                     &duplicateStorageId,
                                      NULL,  // jobUUID
                                      NULL,  // scheduleUUID
+                                     NULL,  // uuidId
+                                     NULL,  // entityId
                                      NULL,  // archiveType
+                                     &duplicateStorageId,
                                      duplicateStorageName,
                                      NULL,  // createdDateTime
                                      NULL,  // entries
@@ -4298,7 +4298,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     }
     Index_doneList(&indexQueryHandle1);
   }
-  while (!indexHandle->quitFlag && deletedIndexFlag);
+  while (!quitFlag && deletedIndexFlag);
   if (n > 0L)
   {
     plogMessage(NULL,  // logHandle
@@ -4327,8 +4327,9 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
+LOCAL void cleanupIndexThreadCode(void)
 {
+  IndexHandle         indexHandle;
   String              absoluteFileName;
   String              pathName;
   Errors              error;
@@ -4337,21 +4338,37 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
   uint                oldDatabaseCount;
   uint                sleepTime;
 
-  // get absolute file name of database
-  absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexHandle->databaseFileName);
+  assert(__databaseFileName != NULL);
 
-  // open directory
+  // open index
+  error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE);
+  if (error != ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_ERROR,
+                "INDEX",
+                "Cannot open index database '$s' fail: %s\n",
+                __databaseFileName,
+                Error_getText(error)
+               );
+    return;
+  }
+
+  // get absolute database file name
+  absoluteFileName = File_getAbsoluteFileNameCString(String_new(),__databaseFileName);
+
+  // open directory where database is located
   pathName = File_getFilePathName(String_new(),absoluteFileName);
   error = File_openDirectoryList(&directoryListHandle,pathName);
   if (error != ERROR_NONE)
   {
     String_delete(pathName);
-    String_delete(absoluteFileName);
+    closeIndex(&indexHandle);
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
                 "Upgrade index database '%s' fail: %s\n",
-                indexHandle->databaseFileName,
+                __databaseFileName,
                 Error_getText(error)
                );
     return;
@@ -4382,7 +4399,7 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
                   String_cString(oldDatabaseFileName)
                  );
 
-      error = importIndex(indexHandle,oldDatabaseFileName);
+      error = importIndex(&indexHandle,oldDatabaseFileName);
       if (error == ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle
@@ -4402,9 +4419,9 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
                     String_cString(oldDatabaseFileName)
                    );
       }
-      if (indexHandle->upgradeError == ERROR_NONE)
+      if (&indexHandle.upgradeError == ERROR_NONE)
       {
-        indexHandle->upgradeError = error;
+        indexHandle.upgradeError = error;
       }
 
       oldDatabaseCount++;
@@ -4432,11 +4449,11 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
               "INDEX",
               "Clean-up index database\n"
              );
-  (void)cleanUpDuplicateMeta(indexHandle);
-  (void)cleanUpIncompleteUpdate(indexHandle);
-  (void)cleanUpIncompleteCreate(indexHandle);
-  (void)cleanUpStorageNoName(indexHandle);
-  (void)cleanUpStorageNoEntity(indexHandle);
+  (void)cleanUpDuplicateMeta(&indexHandle);
+  (void)cleanUpIncompleteUpdate(&indexHandle);
+  (void)cleanUpIncompleteCreate(&indexHandle);
+  (void)cleanUpStorageNoName(&indexHandle);
+  (void)cleanUpStorageNoEntity(&indexHandle);
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -4444,20 +4461,23 @@ LOCAL void cleanupIndexThreadCode(IndexHandle *indexHandle)
              );
 
   // regular clean-ups
-  while (!indexHandle->quitFlag)
+  while (!quitFlag)
   {
     // clean-up database
-    (void)cleanUpOrphanedEntries(indexHandle);
-    (void)cleanUpDuplicateIndizes(indexHandle);
+    (void)cleanUpOrphanedEntries(&indexHandle);
+    (void)cleanUpDuplicateIndizes(&indexHandle);
 
     // sleep, check quit flag
     sleepTime = 0;
-    while ((sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD) && !indexHandle->quitFlag)
+    while ((sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*MISC_US_PER_SECOND);
       sleepTime += 10;
     }
   }
+
+  // free resources
+  closeIndex(&indexHandle);
 }
 
 /***********************************************************************\
@@ -4870,12 +4890,12 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
     return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // uuidId
-                              NULL,  // entityId
-                              &storageId,
                               NULL,  // jobUUID
                               NULL,  // scheduleUUID
+                              NULL,  // uuidId
+                              NULL,  // entityId
                               NULL,  // archiveType
+                              &storageId,
                               NULL,  // storageName
                               NULL,  // createdDateTime
                               NULL,  // entries
@@ -5320,23 +5340,28 @@ bool Index_parseType(const char *name, IndexTypes *indexType)
   }
 }
 
-Errors Index_init(IndexHandle *indexHandle,
-                  const char  *databaseFileName
-                 )
+Errors Index_init(const char *fileName)
 {
-  Errors error;
-  int64  indexVersion;
-  String oldDatabaseFileName;
-  uint   n;
+  Errors      error;
+  int64       indexVersion;
+  String      oldDatabaseFileName;
+  uint        n;
+  IndexHandle indexHandle;
 
-  assert(indexHandle != NULL);
-  assert(databaseFileName != NULL);
+  assert(fileName != NULL);
+
+  // get database file name
+  __databaseFileName = strdup(fileName);
+  if (__databaseFileName == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
 
   // check if index exists
-  if (File_existsCString(databaseFileName))
+  if (File_existsCString(__databaseFileName))
   {
     // get index version
-    error = getIndexVersion(databaseFileName,&indexVersion);
+    error = getIndexVersion(__databaseFileName,&indexVersion);
     if (error != ERROR_NONE)
     {
       return error;
@@ -5349,43 +5374,27 @@ Errors Index_init(IndexHandle *indexHandle,
       n = 0;
       do
       {
-        oldDatabaseFileName = String_newCString(databaseFileName);
+        oldDatabaseFileName = String_newCString(__databaseFileName);
         String_appendCString(oldDatabaseFileName,".old");
         String_format(oldDatabaseFileName,"%03d",n);
         n++;
       }
       while (File_exists(oldDatabaseFileName));
-      (void)File_renameCString(databaseFileName,
+      (void)File_renameCString(__databaseFileName,
                                String_cString(oldDatabaseFileName),
                                NULL
                               );
       String_delete(oldDatabaseFileName);
 
       // create new index
-      error = createIndex(indexHandle,databaseFileName);
+      error = createIndex(__databaseFileName);
       if (error != ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
                     "Create new index database '$s' fail: %s\n",
-                    databaseFileName,
-                    Error_getText(error)
-                   );
-        return error;
-      }
-    }
-    else
-    {
-      // open index
-      error = openIndex(indexHandle,databaseFileName,INDEX_OPEN_MODE_READ_WRITE);
-      if (error != ERROR_NONE)
-      {
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_ERROR,
-                    "INDEX",
-                    "Cannot open index database '$s' fail: %s\n",
-                    databaseFileName,
+                    __databaseFileName,
                     Error_getText(error)
                    );
         return error;
@@ -5394,14 +5403,14 @@ Errors Index_init(IndexHandle *indexHandle,
   }
   else
   {
-    error = createIndex(indexHandle,databaseFileName);
+    error = createIndex(__databaseFileName);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
                   "Create index database '$s' fail: %s\n",
-                  databaseFileName,
+                  __databaseFileName,
                   Error_getText(error)
                  );
       return error;
@@ -5409,7 +5418,8 @@ Errors Index_init(IndexHandle *indexHandle,
   }
 
   // start clean-up thread
-  if (!Thread_init(&cleanupIndexThread,"Index clean-up",0,cleanupIndexThreadCode,indexHandle))
+  quitFlag = FALSE;
+  if (!Thread_init(&cleanupIndexThread,"Index clean-up",0,cleanupIndexThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize index clean-up thread!");
   }
@@ -5417,31 +5427,71 @@ Errors Index_init(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
+void Index_done(void)
+{
+  // stop threads
+  quitFlag = TRUE;
+  Thread_join(&cleanupIndexThread);
+
+  // free resources
+  free(__databaseFileName);
+}
+
 #ifdef NDEBUG
-  void Index_done(IndexHandle *indexHandle)
+IndexHandle *Index_open(void);
 #else /* not NDEBUG */
-  void __Index_done(const char  *__fileName__,
-                    uint        __lineNb__,
-                    IndexHandle *indexHandle
-                   )
+IndexHandle *__Index_open(const char  *__fileName__,
+                          uint        __lineNb__
+                         )
 #endif /* NDEBUG */
 {
-  assert(indexHandle != NULL);
+  IndexHandle *indexHandle;
+  Errors error;
 
-  indexHandle->quitFlag = TRUE;
-  Thread_join(&cleanupIndexThread);
-//  Thread_join(&cleanupIndexThread);
+  indexHandle = NULL;
 
-  #ifdef NDEBUG
-    (void)closeIndex(indexHandle);
-  #else /* not NDEBUG */
-    (void)__closeIndex(__fileName__,__lineNb__,indexHandle);
-  #endif /* NDEBUG */
+  if (Index_isAvailable())
+  {
+    indexHandle = (IndexHandle*)malloc(sizeof(IndexHandle));
+    if (indexHandle == NULL)
+    {
+      return NULL;
+    }
+
+    error = openIndex(indexHandle,
+                      __databaseFileName,
+                      DATABASE_OPENMODE_READWRITE
+                     );
+    if (error != ERROR_NONE)
+    {
+      free(indexHandle);
+      return NULL;
+    }
+  }
+
+  return indexHandle;
+}
+
+#ifdef NDEBUG
+void Index_close(IndexHandle *indexHandle);
+#else /* not NDEBUG */
+void __Index_close(const char  *__fileName__,
+                   uint        __lineNb__,
+                   IndexHandle *indexHandle
+                  )
+#endif /* NDEBUG */
+{
+  if (indexHandle != NULL)
+  {
+    closeIndex(indexHandle);
+    free(indexHandle);
+  }
 }
 
 Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name)
 {
   assert(indexHandle != NULL);
+fprintf(stderr,"%s, %d: begin tras %s \n",__FILE__,__LINE__,name);
 
   return Database_beginTransaction(&indexHandle->databaseHandle,name);
 }
@@ -5449,6 +5499,7 @@ Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name)
 Errors Index_endTransaction(IndexHandle *indexHandle, const char *name)
 {
   assert(indexHandle != NULL);
+fprintf(stderr,"%s, %d: end tras %s \n",__FILE__,__LINE__,name);
 
   return Database_endTransaction(&indexHandle->databaseHandle,name);
 }
@@ -5456,6 +5507,7 @@ Errors Index_endTransaction(IndexHandle *indexHandle, const char *name)
 Errors Index_rollbackTransaction(IndexHandle *indexHandle, const char *name)
 {
   assert(indexHandle != NULL);
+fprintf(stderr,"%s, %d: rollback tras %s \n",__FILE__,__LINE__,name);
 
   return Database_rollbackTransaction(&indexHandle->databaseHandle,name);
 }
@@ -5536,7 +5588,7 @@ UNUSED_VARIABLE(jobUUID);
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%llu %llu %llu %d %S %lu %llu",
+                               "%lld %lld %lld %d %S %lu %llu",
                                &uuidId_,
                                &entityId_,
                                createdDateTime,
@@ -5603,7 +5655,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%llu %llu %S %S %S %d %llu",
+                               "%lld %lld %S %S %S %d %llu",
                                &uuidId_,
                                &entityId_,
                                jobUUID,
@@ -5675,7 +5727,7 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
   foundFlag   = FALSE;
   while (   !foundFlag
          && Database_getNextRow(&databaseQueryHandle,
-                                "%llu %llu %lld %S %S %S %d %llu",
+                                "%lld %lld %lld %S %S %S %d %llu",
                                 &uuidId_,
                                 &entityId_,
                                 &storageId_,
@@ -5764,7 +5816,7 @@ bool Index_findByState(IndexHandle   *indexHandle,
   }
   String_delete(indexStateSetString);
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%llu %llu %lld %S %S %S %llu",
+                               "%lld %lld %lld %S %S %S %llu",
                                &uuidId_,
                                &entityId_,
                                &storageId_,
@@ -6021,7 +6073,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%llu %S %llu %S %lu %llu",
+                           "%lld %S %llu %S %lu %llu",
                            &databaseId,
                            jobUUID,
                            lastCreatedDateTime,
@@ -6352,6 +6404,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 {
   String              ftsName;
   String              regexpName;
+//TODO
 //  String              uuidIdsString;
 //  String              entityIdsString;
   String              storageIdsString;
@@ -6443,7 +6496,6 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   filterAppend(filter,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
 
 
-Database_debugEnable(1);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
 //TODO newest
@@ -6456,7 +6508,6 @@ Database_debugEnable(1);
                            String_cString(filter)
                           );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
-Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     String_delete(indexModeSetString);
@@ -6778,6 +6829,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_DATABASE_ID_(storageId),
                            INDEX_TYPE_FILE
                           );
+fprintf(stderr,"%s, %d: eeee %s\n",__FILE__,__LINE__,Error_getText(error));
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -8634,7 +8686,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %d, \
                                  %'S, \
                                  %llu, \
@@ -8672,7 +8724,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %llu, \
                                  %llu, \
                                  %llu\
@@ -8758,7 +8810,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %d, \
                                  %'S, \
                                  %llu, \
@@ -8796,7 +8848,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %d, \
                                  %llu, \
                                  %u, \
@@ -8886,7 +8938,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %d, \
                                  %'S, \
                                  %llu, \
@@ -8923,8 +8975,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
-                                 %llu, \
+                                 %lld, \
+                                 %lld, \
                                  %'S\
                                 ); \
                              ",
@@ -9011,7 +9063,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %d, \
                                  %'S, \
                                  %llu, \
@@ -9047,7 +9099,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %'S \
                                 ); \
                              ",
@@ -9132,7 +9184,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %d, \
                                  %'S, \
                                  %llu, \
@@ -9170,7 +9222,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %llu, \
                                  %llu, \
                                  %llu\
@@ -9259,7 +9311,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %d, \
                                  %'S, \
                                  %llu, \
@@ -9297,7 +9349,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                 ) \
                               VALUES \
                                 ( \
-                                 %llu, \
+                                 %lld, \
                                  %d, \
                                  %d, \
                                  %d\
@@ -9608,12 +9660,12 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
     return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // uuidId
-                              NULL,  // entityId
-                              &storageId,
                               NULL,  // jobUUID
                               NULL,  // scheduleUUID
+                              NULL,  // uuidId
+                              NULL,  // entityId
                               NULL,  // archiveType
+                              &storageId,
                               NULL,  // storageName,
                               NULL,  // createdDateTime
                               NULL,  // entries

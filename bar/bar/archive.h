@@ -142,17 +142,17 @@ typedef uint64(*ArchiveGetSizeFunction)(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : ArchiveStoreFunction
 * Purpose: call back to store archive
-* Input  : indexHandle  - index handle or NULL if no index
-*          jobUUID      - job UUID or NULL
-*          scheduleUUID - schedule UUID or NULL
-*          entityId     - database id of entity
-*          archiveType  - archive type
-*          storageId    - database id of storage
-*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
-*                         single part
-*          fileName     - archive file name
-*          fileSize     - archive size [bytes]
-*          userData     - user data
+* Input  : indexHandle          - index handle or NULL if no index
+*          jobUUID              - job UUID or NULL
+*          scheduleUUID         - schedule UUID or NULL
+*          entityId             - database id of entity
+*          archiveType          - archive type
+*          storageId            - database id of storage
+*          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
+*                                 for single part
+*          intermediateFileName - intermediate archive file name
+*          intermediateFileSize - intermediate archive size [bytes]
+*          userData             - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -165,8 +165,8 @@ typedef Errors(*ArchiveStoreFunction)(IndexHandle  *indexHandle,
                                       ArchiveTypes archiveType,
                                       IndexId      storageId,
                                       int          partNumber,
-                                      String       fileName,
-                                      uint64       fileSize,
+                                      ConstString  intermediateFileName,
+                                      uint64       intermediateFileSize,
                                       void         *userData
                                      );
 
@@ -408,23 +408,23 @@ typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Archive_create(...) __Archive_create(__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_open(...)   __Archive_open  (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_close(...)  __Archive_close (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_create(...) __Archive_create(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_open(...)   __Archive_open  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_close(...)  __Archive_close (__FILE__,__LINE__, ## __VA_ARGS__)
 
-  #define Archive_newFileEntry(...)       __Archive_newFileEntry      (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_newImageEntry(...)      __Archive_newImageEntry     (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_newDirectoryEntry(...)  __Archive_newDirectoryEntry (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_newLinkEntry(...)       __Archive_newLinkEntry      (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_newHardLinkEntry(...)   __Archive_newHardLinkEntry  (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_newSpecialEntry(...)    __Archive_newSpecialEntry   (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_readFileEntry(...)      __Archive_readFileEntry     (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_readImageEntry(...)     __Archive_readImageEntry    (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_readDirectoryEntry(...) __Archive_readDirectoryEntry(__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_readLinkEntry(...)      __Archive_readLinkEntry     (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_readHardLinkEntry(...)  __Archive_readHardLinkEntry (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_readSpecialEntry(...)   __Archive_readSpecialEntry  (__FILE__,__LINE__,__VA_ARGS__)
-  #define Archive_closeEntry(...)         __Archive_closeEntry        (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_newFileEntry(...)       __Archive_newFileEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_newImageEntry(...)      __Archive_newImageEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_newDirectoryEntry(...)  __Archive_newDirectoryEntry (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_newLinkEntry(...)       __Archive_newLinkEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_newHardLinkEntry(...)   __Archive_newHardLinkEntry  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_newSpecialEntry(...)    __Archive_newSpecialEntry   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_readFileEntry(...)      __Archive_readFileEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_readImageEntry(...)     __Archive_readImageEntry    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_readDirectoryEntry(...) __Archive_readDirectoryEntry(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_readLinkEntry(...)      __Archive_readLinkEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_readHardLinkEntry(...)  __Archive_readHardLinkEntry (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_readSpecialEntry(...)   __Archive_readSpecialEntry  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_closeEntry(...)         __Archive_closeEntry        (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/

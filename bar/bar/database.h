@@ -140,10 +140,10 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
 #define DATABASE_TRANSFER_OPERATION_END()                      DATABASE_TRANSFER_OPERATION_NONE,NULL,    0,     0
 
 #ifndef NDEBUG
-  #define Database_open(...)     __Database_open(__FILE__,__LINE__,__VA_ARGS__)
-  #define Database_close(...)    __Database_close(__FILE__,__LINE__,__VA_ARGS__)
-  #define Database_prepare(...)  __Database_prepare(__FILE__,__LINE__,__VA_ARGS__)
-  #define Database_finalize(...) __Database_finalize(__FILE__,__LINE__,__VA_ARGS__)
+  #define Database_open(...)     __Database_open(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_close(...)    __Database_close(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_prepare(...)  __Database_prepare(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_finalize(...) __Database_finalize(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -289,7 +289,10 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
 * Notes  : -
 \***********************************************************************/
 
+int Database_getTableColumnListInt(const DatabaseColumnList *columnList, const char *columnName, int defaultValue);
+uint Database_getTableColumnListUInt(const DatabaseColumnList *columnList, const char *columnName, uint defaultValue);
 int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 defaultValue);
+uint64 Database_getTableColumnListUInt64(const DatabaseColumnList *columnList, const char *columnName, uint64 defaultValue);
 double Database_getTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double defaultValue);
 uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 defaultValue);
 String Database_getTableColumnList(const DatabaseColumnList *columnList, const char *columnName, String value, const char *defaultValue);
