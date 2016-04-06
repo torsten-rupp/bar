@@ -32,8 +32,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define THREAD_LOCAL_STOAGE_HASHTABLE_SIZE      15
-#define THREAD_LOCAL_STOAGE_HASHTABLE_INCREMENT 16
+#define THREAD_LOCAL_STORAGE_HASHTABLE_SIZE      15
+#define THREAD_LOCAL_STORAGE_HASHTABLE_INCREMENT 16
 
 #ifndef NDEBUG
 #endif /* NDEBUG */
