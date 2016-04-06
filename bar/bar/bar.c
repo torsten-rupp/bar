@@ -180,7 +180,6 @@ typedef enum
 
 GlobalOptions         globalOptions;
 String                tmpDirectory;
-IndexHandle           *indexHandle;
 Semaphore             consoleLock;
 locale_t              POSIXLocale;
 
@@ -229,8 +228,6 @@ LOCAL const char      *pidFileName;
 
 LOCAL String          keyFileName;
 LOCAL uint            keyBits;
-
-LOCAL IndexHandle     __indexHandle;
 
 /*---------------------------------------------------------------------*/
 
@@ -3181,8 +3178,6 @@ LOCAL Errors initAll(void)
 
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                         = NULL;
-
-  indexHandle                            = NULL;
 
   // initialize default ssh keys
   fileName = String_new();
@@ -7102,7 +7097,7 @@ LOCAL Errors runDaemon(void)
   {
     // open index database
     printInfo(1,"Opening index database '%s'...",indexDatabaseFileName);
-    error = Index_init(&__indexHandle,indexDatabaseFileName);
+    error = Index_init(indexDatabaseFileName);
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
@@ -7115,7 +7110,6 @@ LOCAL Errors runDaemon(void)
       deletePIDFile();
       return error;
     }
-    indexHandle = &__indexHandle;
     printInfo(1,"ok\n");
   }
 
@@ -7134,7 +7128,6 @@ LOCAL Errors runDaemon(void)
                     );
   if (error != ERROR_NONE)
   {
-    if (indexHandle != NULL) Index_done(indexHandle);
     closeLog();
     Continuous_done();
     deletePIDFile();
@@ -7142,7 +7135,6 @@ LOCAL Errors runDaemon(void)
   }
 
   // close index database
-  if (indexHandle != NULL) Index_done(indexHandle);
 
   // close log file
   closeLog();
@@ -7236,7 +7228,6 @@ LOCAL Errors runJob(void)
                          &compressExcludePatternList,
                          &deltaSourceList,
                          &jobOptions,
-                         indexHandle,
                          ARCHIVE_TYPE_NORMAL,
                          NULL, // scheduleTitle
                          NULL, // scheduleCustomText
@@ -7352,7 +7343,6 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &compressExcludePatternList,
                                  &deltaSourceList,
                                  &jobOptions,
-                                 indexHandle,
                                  ARCHIVE_TYPE_NORMAL,
                                  NULL, // scheduleTitle
                                  NULL, // scheduleCustomText
