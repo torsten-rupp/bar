@@ -3387,20 +3387,17 @@ UNUSED_VARIABLE(entityId);
 /***********************************************************************\
 * Name   : purgeStorageIndex
 * Purpose: call back to store archive file
-* Input  : userData     - user data
-*          indexHandle  - index handle or NULL if no index
-*          entityId     - index id of entity
-*          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
-*                         single part
-*          storageId    - index id of storage
-*          tmpFileName  - intermediate archive file name
-*          tmpFileSize  - intermediate archive size [bytes]
+* Input  : indexHandle      - index handle or NULL if no index
+*          storageId        - index id of storage
+*          storageSpecifier - storage specifier
+*          archiveName      - storage archive name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors purgeStorageIndex(IndexId          storageId,
+LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
+                               IndexId          storageId,
                                StorageSpecifier *storageSpecifier,
                                ConstString      archiveName
                               )
@@ -3503,7 +3500,8 @@ LOCAL Errors purgeStorageIndex(IndexId          storageId,
 /***********************************************************************\
 * Name   : purgeStorageByJobUUID
 * Purpose: purge old storages by job UUID
-* Input  : jobUUID        - job UUID
+* Input  : indexHandle    - index handle
+*          jobUUID        - job UUID
 *          maxStorageSize - max. storage size [bytes] or 0
 *          logHandle      - log handle (can be NULL)
 * Output : -
@@ -3511,7 +3509,11 @@ LOCAL Errors purgeStorageIndex(IndexId          storageId,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void purgeStorageByJobUUID(ConstString jobUUID, uint64 maxStorageSize, LogHandle *logHandle)
+LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
+                                 ConstString jobUUID,
+                                 uint64      maxStorageSize,
+                                 LogHandle   *logHandle
+                                )
 {
   String           storageName;
   StorageSpecifier storageSpecifier;
@@ -3690,7 +3692,8 @@ fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
 /***********************************************************************\
 * Name   : purgeStorageByServer
 * Purpose: purge old storages by serer
-* Input  : jobUUID        - job UUID
+* Input  : indexHandle    - index handle
+*          jobUUID        - job UUID
 *          maxStorageSize - max. storage size [bytes] or 0
 *          logHandle      - log handle (can be NULL)
 * Output : -
@@ -3698,7 +3701,11 @@ fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void purgeStorageByServer(const Server *server, uint64 maxStorageSize, LogHandle *logHandle)
+LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
+                                const Server *server,
+                                uint64       maxStorageSize,
+                                LogHandle    *logHandle
+                               )
 {
   String           storageName;
   StorageSpecifier storageSpecifier;
@@ -3898,6 +3905,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   AutoFreeList               autoFreeList;
   byte                       *buffer;
   StorageSpecifier           storageSpecifier;
+  IndexHandle                *indexHandle;
   void                       *autoFreeSavePoint;
   StorageMsg                 storageMsg;
   Errors                     error;
@@ -3929,6 +3937,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   }
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   Storage_initSpecifier(&storageSpecifier);
+
+  // init index
+  indexHandle = Index_open();
 
   // initial storage pre-processing
   if (!isAborted(createInfo))
@@ -4013,7 +4024,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // purge archives by max. job storage size
       if (createInfo->jobOptions->maxStorageSize > fileInfo.size)
       {
-        purgeStorageByJobUUID(createInfo->jobUUID,
+        purgeStorageByJobUUID(indexHandle,
+                              createInfo->jobUUID,
                               createInfo->jobOptions->maxStorageSize-fileInfo.size,
                               createInfo->logHandle
                              );
@@ -4023,7 +4035,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       getServerSettings(createInfo->storageSpecifier,createInfo->jobOptions,&server);
       if (server.maxStorageSize > fileInfo.size)
       {
-        purgeStorageByServer(&server,
+        purgeStorageByServer(indexHandle,
+                             &server,
                              server.maxStorageSize-fileInfo.size,
                              createInfo->logHandle
                             );
@@ -4235,7 +4248,8 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
       {
 fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
         // delete old indizes for same storage file
-        error = purgeStorageIndex(storageMsg.storageId,
+        error = purgeStorageIndex(indexHandle,
+                                  storageMsg.storageId,
                                   createInfo->storageSpecifier,
                                   storageMsg.archiveName
                                  );
@@ -4406,6 +4420,9 @@ fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_
       String_delete(pattern);
     }
   }
+
+  // done index
+  Index_close(indexHandle);
 
   // free resoures
   Storage_doneSpecifier(&storageSpecifier);
@@ -6195,7 +6212,6 @@ Errors Command_create(ConstString                  jobUUID,
                       const PatternList            *compressExcludePatternList,
                       DeltaSourceList              *deltaSourceList,
                       JobOptions                   *jobOptions,
-                      IndexHandle                  *indexHandle,
                       ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
@@ -6215,6 +6231,7 @@ Errors Command_create(ConstString                  jobUUID,
   String           incrementalListFileName;
   bool             useIncrementalFileInfoFlag;
   bool             incrementalFileInfoExistFlag;
+  IndexHandle      *indexHandle;
   StorageSpecifier storageSpecifier;
   CreateInfo       createInfo;
   IndexId          entityId;
@@ -6400,25 +6417,32 @@ Errors Command_create(ConstString                  jobUUID,
                                               || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL);
   }
 
-  // create new entity
-  error = Index_newEntity(indexHandle,
-                          jobUUID,
-                          scheduleUUID,
-                          archiveType,
-                          &entityId
-                         );
-  if (error != ERROR_NONE)
+  // open index
+  indexHandle = Index_open();
+  if (indexHandle != NULL)
   {
-    printError("Cannot create index for '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
-               Error_getText(error)
-              );
-    AutoFree_cleanup(&autoFreeList);
-    return error;
+    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+
+    // create new entity
+    error = Index_newEntity(indexHandle,
+                            jobUUID,
+                            scheduleUUID,
+                            archiveType,
+                            &entityId
+                           );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create index for '%s' (error: %s)!\n",
+                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+  //TODO
+  //                      IndexId                      entityId,
+    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
   }
-//TODO
-//                      IndexId                      entityId,
-  AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
@@ -6533,6 +6557,12 @@ createThreadCode(&createInfo);
   // signal end of data
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
+
+  // close index
+  if (indexHandle != NULL)
+  {
+    Index_close(indexHandle);
+  }
 
   // wait for threads
   if (!Thread_join(&storageThread))
