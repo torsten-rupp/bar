@@ -464,6 +464,7 @@ typedef struct
 * Name   : ServerCommandFunction
 * Purpose: server command function
 * Input  : clientInfo  - client info
+*          indexHandle - index handle or NULL
 *          id          - command id
 *          argumentMap - argument map
 * Output : -
@@ -472,6 +473,7 @@ typedef struct
 \***********************************************************************/
 
 typedef void(*ServerCommandFunction)(ClientInfo      *clientInfo,
+                                     IndexHandle     *indexHandle,
                                      uint            id,
                                      const StringMap argumentMap
                                     );
@@ -3375,7 +3377,6 @@ LOCAL void jobThreadCode(void)
                                                         &compressExcludePatternList,
                                                         &deltaSourceList,
                                                         &jobOptions,
-                                                        indexHandle,
                                                         archiveType,
 NULL,//                                                        scheduleTitle,
                                                         scheduleCustomText,
@@ -3982,13 +3983,14 @@ LOCAL void remoteThreadCode(void)
 /***********************************************************************\
 * Name   : deleteStorage
 * Purpose: delete storage
-* Input  : storageId - storage to delete
+* Input  : indexHandle - index handle
+*          storageId   - storage to delete
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors deleteStorage(IndexId storageId)
+LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
 {
   Errors           resultError;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -4115,13 +4117,16 @@ LOCAL Errors deleteStorage(IndexId storageId)
 /***********************************************************************\
 * Name   : deleteEntity
 * Purpose: delete entity index and all attached storage files
-* Input  : entityId - database id of entity
+* Input  : indexHandle - index handle
+*          entityId    - database id of entity
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : No error is reported if a storage file cannot be deleted
 \***********************************************************************/
 
-LOCAL Errors deleteEntity(IndexId entityId)
+LOCAL Errors deleteEntity(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         )
 {
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -4165,7 +4170,7 @@ LOCAL Errors deleteEntity(IndexId entityId)
                              )
         )
   {
-    (void)deleteStorage(storageId);
+    (void)deleteStorage(indexHandle,storageId);
   }
   Index_doneList(&indexQueryHandle);
 
@@ -4182,13 +4187,16 @@ LOCAL Errors deleteEntity(IndexId entityId)
 /***********************************************************************\
 * Name   : deleteUUID
 * Purpose: delete all entities of UUID and all attached storage files
-* Input  : entityId - database id of entity
+* Input  : indexHandle - index handle
+*          entityId    - database id of entity
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : No error is reported if a storage file cannot be deleted
 \***********************************************************************/
 
-LOCAL Errors deleteUUID(const String jobUUID)
+LOCAL Errors deleteUUID(IndexHandle *indexHandle,
+                        const String jobUUID
+                       )
 {
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -4223,7 +4231,7 @@ LOCAL Errors deleteUUID(const String jobUUID)
                             )
         )
   {
-    (void)deleteEntity(entityId);
+    (void)deleteEntity(indexHandle,entityId);
   }
   Index_doneList(&indexQueryHandle);
 
@@ -4240,13 +4248,13 @@ LOCAL Errors deleteUUID(const String jobUUID)
 /***********************************************************************\
 * Name   : purgeExpiredEntities
 * Purpose: purge expired/surplus entities
-* Input  : -
+* Input  : indexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void purgeExpiredEntities(void)
+LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
 {
   const uint64 SECONDS_PER_DAY = 24*60*60;
 
@@ -4365,7 +4373,7 @@ LOCAL void purgeExpiredEntities(void)
               {
                 if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
                 {
-                  error = deleteEntity(entityId);
+                  error = deleteEntity(indexHandle,entityId);
                   if (error == ERROR_NONE)
                   {
                     Misc_formatDateTime(dateTime,createdDateTime,NULL);
@@ -4416,7 +4424,7 @@ LOCAL void purgeExpiredEntities(void)
                                            )
                     )
               {
-                error = deleteEntity(entityId);
+                error = deleteEntity(indexHandle,entityId);
                 if (error == ERROR_NONE)
                 {
                   Misc_formatDateTime(dateTime,createdDateTime,NULL);
@@ -4469,6 +4477,8 @@ LOCAL void schedulerThreadCode(void)
   bool         pendingFlag;
   uint         sleepTime;
 
+IndexHandle *indexHandle;
+
   while (!quitFlag)
   {
     // update job files
@@ -4480,7 +4490,7 @@ LOCAL void schedulerThreadCode(void)
     if (indexHandle != NULL)
     {
       // clean-up expired/surplus entities
-      purgeExpiredEntities();
+      purgeExpiredEntities(indexHandle);
     }
 
     // check for jobs triggers
@@ -4784,6 +4794,7 @@ LOCAL void pauseIndexUpdate(void)
 
 LOCAL void indexThreadCode(void)
 {
+  IndexHandle            *indexHandle;
   IndexId                storageId;
   StorageSpecifier       storageSpecifier;
   String                 storageName,printableStorageName;
@@ -4798,13 +4809,28 @@ LOCAL void indexThreadCode(void)
   uint64                 totalEntryCount,totalEntrySize;
   uint                   sleepTime;
 
-  assert(indexHandle != NULL);
-
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
   List_init(&indexCryptPasswordList);
+
+  // init index
+  indexHandle = Index_open();
+  if (indexHandle == NULL)
+  {
+    List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
+    String_delete(printableStorageName);
+    String_delete(storageName);
+    Storage_doneSpecifier(&storageSpecifier);
+
+    plogMessage(NULL,  // logHandle,
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Open index fail - disabled index update\n"
+               );
+    return;
+  }
 
   // add/update index database
   while (!quitFlag)
@@ -4842,7 +4868,6 @@ LOCAL void indexThreadCode(void)
     {
       // pause
       pauseIndexUpdate();
-fprintf(stderr,"%s, %d: index storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
 
       // parse storage name, get printable name
       error = Storage_parseName(&storageSpecifier,storageName);
@@ -4878,7 +4903,6 @@ fprintf(stderr,"%s, %d: index storageName=%s\n",__FILE__,__LINE__,String_cString
 #endif
           jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
           jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           error = Archive_updateIndex(indexHandle,
                                       storageId,
                                       &storageHandle,
@@ -4900,7 +4924,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           {
             break;
           }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
 
         // done storage
@@ -4917,7 +4940,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       );
       }
       doneJobOptions(&jobOptions);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       if (!quitFlag)
       {
@@ -4974,6 +4996,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
   }
 
+  // done index
+  Index_done(indexHandle);
+
   // free resources
   List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
   String_delete(printableStorageName);
@@ -5026,6 +5051,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
 LOCAL void autoIndexUpdateThreadCode(void)
 {
+  IndexHandle                *indexHandle;
   StringList                 storageDirectoryList;
   StorageSpecifier           storageSpecifier;
   String                     baseName;
@@ -5046,8 +5072,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
   IndexModes                 indexMode;
   uint                       sleepTime;
 
-  assert(indexHandle != NULL);
-
   // initialize variables
   StringList_init(&storageDirectoryList);
   Storage_initSpecifier(&storageSpecifier);
@@ -5055,6 +5079,25 @@ LOCAL void autoIndexUpdateThreadCode(void)
   pattern              = String_new();
   printableStorageName = String_new();
   storageName          = String_new();
+
+  // init index
+  indexHandle = Index_open();
+  if (indexHandle == NULL)
+  {
+    String_delete(storageName);
+    String_delete(printableStorageName);
+    String_delete(pattern);
+    String_delete(baseName);
+    Storage_doneSpecifier(&storageSpecifier);
+    StringList_done(&storageDirectoryList);
+
+    plogMessage(NULL,  // logHandle,
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Open index fail - disabled auto-index\n"
+               );
+    return;
+  }
 
   // run continous check for index updates
   while (!quitFlag)
@@ -5987,6 +6030,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 * Name   : serverCommand_errorInfo
 * Purpose: get error info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -5998,13 +6042,15 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 *            errorMessage=<text>
 \***********************************************************************/
 
-LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint64 n;
   Errors error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get error code
   if (!StringMap_getUInt64(argumentMap,"error",&n,0))
@@ -6025,6 +6071,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
 * Name   : serverCommand_startSSL
 * Purpose: start SSL connection
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6034,7 +6081,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   #ifdef HAVE_GNU_TLS
     Errors error;
@@ -6043,6 +6090,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, uint id, const StringM
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   #ifdef HAVE_GNU_TLS
@@ -6068,6 +6116,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, uint id, const StringM
 * Name   : serverCommand_authorize
 * Purpose: user authorization: check password
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6079,7 +6128,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, uint id, const StringM
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String encryptType;
   String encryptedPassword;
@@ -6087,6 +6136,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
   encryptType = String_new();
@@ -6131,6 +6182,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 * Name   : serverCommand_version
 * Purpose: get protocol version
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6142,12 +6194,13 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 *            minor=<minor version>
 \***********************************************************************/
 
-LOCAL void serverCommand_version(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"major=%d minor=%d",SERVER_PROTOCOL_VERSION_MAJOR,SERVER_PROTOCOL_VERSION_MINOR);
@@ -6157,6 +6210,7 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, uint id, const StringMa
 * Name   : serverCommand_quit
 * Purpose: quit server
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6166,12 +6220,13 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, uint id, const StringMa
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_quit(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   if (globalOptions.serverDebugFlag)
@@ -6189,6 +6244,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, uint id, const StringMap a
 * Name   : serverCommand_quit
 * Purpose: quit server
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6200,7 +6256,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, uint id, const StringMap a
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   SemaphoreLock  semaphoreLock;
   uint           stringMapIterator;
@@ -6213,6 +6269,7 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, uint id, const Str
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -6238,6 +6295,7 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, uint id, const Str
 * Name   : serverCommand_get
 * Purpose: get setting from server
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6249,12 +6307,14 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, uint id, const Str
 *            value=<value>
 \***********************************************************************/
 
-LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String name;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get name
   name = String_new();
@@ -6282,6 +6342,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const StringMap ar
 * Name   : serverCommand_serverOptionGet
 * Purpose: get server option
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6293,7 +6354,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const StringMap ar
 *            value=<value>
 \***********************************************************************/
 
-LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String            name;
   int               i;
@@ -6302,6 +6363,8 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, uint id, const 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get name
   name = String_new();
@@ -6340,6 +6403,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_serverOptionSet
 * Purpose: set server option
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6351,12 +6415,14 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, uint id, const 
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String name,value;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get name, value
   name = String_new();
@@ -6403,6 +6469,7 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_serverOptionFlush
 * Purpose: flush server options to config file
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6412,13 +6479,14 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, uint id, const 
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   error = updateConfig();
@@ -6437,6 +6505,7 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_serverList
 * Purpose: get job server list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6455,7 +6524,7 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, uint id, cons
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   SemaphoreLock semaphoreLock;
   ServerNode    *serverNode;
@@ -6463,6 +6532,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const Strin
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
@@ -6532,6 +6602,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const Strin
 * Name   : serverCommand_serverListAdd
 * Purpose: add entry to server list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6550,7 +6621,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, uint id, const Strin
 *            id=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String        name;
   ServerTypes   serverType;
@@ -6567,6 +6638,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get name, server type, login name, port, password, public/private key, max. connections, max. storage size
   name = String_new();
@@ -6743,6 +6816,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
 * Name   : serverCommand_serverListUpdate
 * Purpose: update entry in server list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6761,7 +6835,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, uint id, const St
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint          serverId;
   String        name;
@@ -6779,6 +6853,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get id, name, server type, login name, port, password, public/private key, max. connections, max. storage size
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
@@ -6968,6 +7044,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_serverListRemove
 * Purpose: delete entry in server list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -6978,7 +7055,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, uint id, const
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint          serverId;
   SemaphoreLock semaphoreLock;
@@ -6987,6 +7064,8 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, uint id, const
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get storage server id
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
@@ -7028,6 +7107,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_abort
 * Purpose: abort command execution
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7038,12 +7118,14 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, uint id, const
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint commandId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get command id
   if (!StringMap_getUInt(argumentMap,"commandId",&commandId,0))
@@ -7065,6 +7147,7 @@ clientInfo->abortFlag = TRUE;
 * Name   : serverCommand_status
 * Purpose: get status
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7076,13 +7159,14 @@ clientInfo->abortFlag = TRUE;
 *            time=<pause time [s]>
 \***********************************************************************/
 
-LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint64 nowTimestamp;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   // format result
@@ -7109,6 +7193,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const StringMap
 * Name   : serverCommand_pause
 * Purpose: pause job execution
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7120,7 +7205,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const StringMap
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint            pauseTime;
   String          modeMask;
@@ -7130,6 +7215,8 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get pause time
   if (!StringMap_getUInt(argumentMap,"time",&pauseTime,0))
@@ -7211,6 +7298,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
 * Name   : serverCommand_suspend
 * Purpose: suspend job execution
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7221,7 +7309,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String          modeMask;
   SemaphoreLock   semaphoreLock;
@@ -7231,6 +7319,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const StringMa
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   // get mode
@@ -7292,6 +7381,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const StringMa
 * Name   : serverCommand_continue
 * Purpose: continue job execution
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7301,13 +7391,14 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const StringMa
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   // clear pause/suspend
@@ -7331,6 +7422,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const StringM
 * Name   : serverCommand_deviceList
 * Purpose: get device list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7343,7 +7435,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const StringM
 *            mounted=yes|no
 \***********************************************************************/
 
-LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors           error;
   DeviceListHandle deviceListHandle;
@@ -7353,6 +7445,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   // open device list
@@ -7412,6 +7505,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 * Name   : serverCommand_rootList
 * Purpose: root list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7422,7 +7516,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 *            name=<name> size=<n [bytes]>
 \***********************************************************************/
 
-LOCAL void serverCommand_rootList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors         error;
   RootListHandle rootListHandle;
@@ -7433,6 +7527,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, uint id, const StringM
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   // open root list
@@ -7485,6 +7580,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, uint id, const StringM
 * Name   : serverCommand_fileList
 * Purpose: file list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7504,7 +7600,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, uint id, const StringM
 *            fileType=SPECIAL name=<name> dateTime=<time stamp> noDump=yes|no
 \***********************************************************************/
 
-LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String              directory;
   Errors              error;
@@ -7516,6 +7612,8 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get directory
   directory = String_new();
@@ -7669,6 +7767,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
 * Name   : serverCommand_fileAttributeGet
 * Purpose: get file attribute
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7682,7 +7781,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
 *            value=<value>
 \***********************************************************************/
 
-LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        attribute;
@@ -7696,6 +7795,8 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, uint id, const
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -7772,6 +7873,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_fileAttributeSet
 * Purpose: set file attribute
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7785,7 +7887,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, uint id, const
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        attribute;
@@ -7799,6 +7901,8 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, uint id, const
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name, value
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -7914,6 +8018,7 @@ UNUSED_VARIABLE(value);
 * Name   : serverCommand_fileAttributeClear
 * Purpose: clear file attribute
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -7926,7 +8031,7 @@ UNUSED_VARIABLE(value);
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        attribute;
@@ -7939,6 +8044,8 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, con
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -8047,6 +8154,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, con
 * Name   : serverCommand_directoryInfo
 * Purpose: get directory info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8059,7 +8167,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, uint id, con
 *            count=<file count> size=<total file size> timedOut=yes|no
 \***********************************************************************/
 
-LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String            name;
   int64             timeout;
@@ -8071,6 +8179,8 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get path/file name
   name = String_new();
@@ -8123,6 +8233,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 * Name   : serverCommand_testScript
 * Purpose: test script
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8134,13 +8245,15 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 *            line=<text>
 \***********************************************************************/
 
-LOCAL void serverCommand_testScript(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String script;
   Errors error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get script
   script = String_new();
@@ -8177,6 +8290,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, uint id, const Strin
 * Name   : serverCommand_jobOptionGet
 * Purpose: get job option
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8189,7 +8303,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, uint id, const Strin
 *            value=<value>
 \***********************************************************************/
 
-LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
   String            name;
@@ -8201,6 +8315,8 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -8258,6 +8374,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
 * Name   : serverCommand_jobOptionSet
 * Purpose: set job option
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8270,7 +8387,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, uint id, const Str
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        name,value;
@@ -8279,6 +8396,8 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name, value
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -8344,6 +8463,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
 * Name   : serverCommand_jobOptionDelete
 * Purpose: delete job option
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8355,7 +8475,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, uint id, const Str
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        name;
@@ -8365,6 +8485,8 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -8416,6 +8538,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_jobList
 * Purpose: get job list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8439,7 +8562,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, uint id, const 
 *            estimatedRestTime=<estimated rest time>
 \***********************************************************************/
 
-LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
@@ -8447,6 +8570,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
@@ -8494,6 +8618,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
 * Name   : serverCommand_jobInfo
 * Purpose: get job info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8528,7 +8653,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const StringMa
 *            message=<text>
 \***********************************************************************/
 
-LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -8536,6 +8661,8 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -8592,6 +8719,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
 * Name   : serverCommand_jobNew
 * Purpose: create new job
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8605,7 +8733,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const StringMa
 *            jobUUID=<uuid>
 \***********************************************************************/
 
-LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String        name;
   StaticString  (uuid,MISC_UUID_STRING_LENGTH);
@@ -8618,6 +8746,8 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get uuid, name, master
   name = String_new();
@@ -8704,6 +8834,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 * Name   : serverCommand_jobClone
 * Purpose: copy job
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8716,7 +8847,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const StringMap
 *            jobUUID=<new uuid>
 \***********************************************************************/
 
-LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        name;
@@ -8729,6 +8860,8 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -8808,6 +8941,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
 * Name   : serverCommand_jobRename
 * Purpose: rename job
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8819,7 +8953,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, uint id, const StringM
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        newName;
@@ -8830,6 +8964,8 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -8895,6 +9031,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
 * Name   : serverCommand_jobDelete
 * Purpose: delete job
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8905,7 +9042,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -8915,6 +9052,8 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -8975,6 +9114,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
 * Name   : serverCommand_jobStart
 * Purpose: start job execution
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -8987,7 +9127,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes  archiveType;
@@ -8997,6 +9137,8 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, archive type, dry-run
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9047,6 +9189,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
 * Name   : serverCommand_jobAbort
 * Purpose: abort job execution
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9057,7 +9200,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const StringM
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -9065,6 +9208,8 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const StringM
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9120,6 +9265,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const StringM
 * Name   : serverCommand_jobFlush
 * Purpose: flush job data (write to disk)
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9129,11 +9275,12 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const StringM
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   // update all job files
@@ -9146,6 +9293,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const StringM
 * Name   : serverCommand_includeList
 * Purpose: get job include list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9158,7 +9306,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const StringM
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -9167,6 +9315,8 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9206,6 +9356,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_includeListClear
 * Purpose: clear job include list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9216,7 +9367,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -9224,6 +9375,8 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9260,6 +9413,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_includeListAdd
 * Purpose: add entry to job include list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9274,7 +9428,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 *            id=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   EntryTypes    entryType;
@@ -9286,6 +9440,8 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, entry type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9339,6 +9495,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_includeListUpdate
 * Purpose: update entry to job include list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9353,7 +9510,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          entryId;
@@ -9365,6 +9522,8 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, uint id, cons
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, entry type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9423,6 +9582,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_includeListRemove
 * Purpose: remove entry from job include list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9434,7 +9594,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, uint id, cons
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          entryId;
@@ -9443,6 +9603,8 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, uint id, cons
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9489,6 +9651,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_excludeList
 * Purpose: get job exclude list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9501,7 +9664,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, uint id, cons
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -9510,6 +9673,8 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9548,6 +9713,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_excludeListClear
 * Purpose: clear job exclude list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9558,7 +9724,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -9566,6 +9732,8 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9602,6 +9770,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_excludeListAdd
 * Purpose: add entry to job exclude list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9615,7 +9784,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 *            id=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   PatternTypes  patternType;
@@ -9626,6 +9795,8 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9674,6 +9845,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_excludeListUpdate
 * Purpose: update entry in job exclude list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9687,7 +9859,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          patternId;
@@ -9698,6 +9870,8 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, uint id, cons
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, pattern id, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9751,6 +9925,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_excludeListRemove
 * Purpose: remove entry from job exclude list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9762,7 +9937,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, uint id, cons
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          patternId;
@@ -9771,6 +9946,8 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, uint id, cons
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9819,6 +9996,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_mountList
 * Purpose: get job mount list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9831,7 +10009,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, uint id, cons
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -9840,6 +10018,8 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const String
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9878,6 +10058,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const String
 * Name   : serverCommand_mountListAdd
 * Purpose: add entry to job mountlist
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9891,7 +10072,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, uint id, const String
 *            id=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        name;
@@ -9903,6 +10084,8 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const Str
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get jobUUID, name, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -9959,6 +10142,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const Str
 * Name   : serverCommand_mountListUpdate
 * Purpose: update entry to job mount list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -9971,7 +10155,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, uint id, const Str
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          mountId;
@@ -9983,6 +10167,8 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get jobUUID, mount id, name, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10049,6 +10235,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_mountListRemove
 * Purpose: remove entry from job mount list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10060,7 +10247,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, uint id, const 
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          mountId;
@@ -10070,6 +10257,8 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, uint id, const 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, mount id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10117,6 +10306,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_sourceList
 * Purpose: get soource list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10129,7 +10319,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, uint id, const 
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock   semaphoreLock;
@@ -10138,6 +10328,8 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10177,6 +10369,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
 * Name   : serverCommand_sourceListClear
 * Purpose: clear source list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10187,7 +10380,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -10195,6 +10388,8 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10228,6 +10423,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_sourceListAdd
 * Purpose: add entry to source list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10241,7 +10437,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 *            id=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   PatternTypes  patternType;
@@ -10252,6 +10448,8 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10297,6 +10495,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 * Name   : serverCommand_sourceListUpdate
 * Purpose: update entry in source list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10310,7 +10509,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          deltaSourceId;
@@ -10321,6 +10520,8 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, uint id, const
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10371,6 +10572,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_sourceListRemove
 * Purpose: remove entry from source list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10382,7 +10584,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, uint id, const
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          deltaSourceId;
@@ -10391,6 +10593,8 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, uint id, const
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10436,6 +10640,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_excludeCompressList
 * Purpose: get job exclude compress list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10448,7 +10653,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, uint id, const
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -10457,6 +10662,8 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10494,6 +10701,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
 * Name   : serverCommand_excludeCompressListClear
 * Purpose: clear job exclude compress list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10504,7 +10712,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -10512,6 +10720,8 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10545,6 +10755,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 * Name   : serverCommand_excludeCompressListAdd
 * Purpose: add entry to job exclude compress list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10558,7 +10769,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 *            id=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   PatternTypes  patternType;
@@ -10569,6 +10780,8 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10614,6 +10827,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 * Name   : serverCommand_excludeCompressListUpdate
 * Purpose: update entry in job exclude compress list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10627,7 +10841,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          patternId;
@@ -10638,6 +10852,8 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, uint 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10688,6 +10904,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, uint 
 * Name   : serverCommand_excludeCompressListAdd
 * Purpose: add entry to job exclude compress list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10699,7 +10916,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, uint 
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          patternId;
@@ -10708,6 +10925,8 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, uint 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10754,6 +10973,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, uint 
 * Name   : serverCommand_scheduleList
 * Purpose: get job schedule list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10780,7 +11000,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, uint 
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock    semaphoreLock;
@@ -10799,6 +11019,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -10962,6 +11184,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 * Name   : serverCommand_scheduleAdd
 * Purpose: add entry to job schedule list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -10984,7 +11207,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 *            scheduleUUID=<uuid>
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        title;
@@ -11004,6 +11227,8 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, date, weekday, time, archive type, custome text, min./max keep, max. age, enabled
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -11182,6 +11407,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_scheduleRemove
 * Purpose: remove entry from job schedule list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11193,7 +11419,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -11203,6 +11429,8 @@ LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, uint id, const S
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -11252,6 +11480,7 @@ LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_scheduleOptionGet
 * Purpose: get schedule options
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11265,7 +11494,7 @@ LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, uint id, const S
 *            value=<value>
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -11279,6 +11508,8 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -11360,6 +11591,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_scheduleOptionSet
 * Purpose: set schedule option
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11373,7 +11605,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, uint id, cons
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -11384,6 +11616,8 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, cons
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name, value
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -11465,6 +11699,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_scheduleOptionDelete
 * Purpose: delete schedule option
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11477,7 +11712,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, uint id, cons
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -11489,6 +11724,8 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -11567,6 +11804,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
 * Name   : serverCommand_scheduleTrigger
 * Purpose: trigger job schedule
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11578,7 +11816,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, uint id, c
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -11588,6 +11826,8 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, uint id, const 
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -11646,6 +11886,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_decryptPasswordsClear
 * Purpose: clear decrypt passwords in internal list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11655,11 +11896,12 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, uint id, const 
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   // clear decrypt password list
@@ -11672,6 +11914,7 @@ LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, 
 * Name   : serverCommand_decryptPasswordAdd
 * Purpose: add password to internal list of decrypt passwords
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11683,7 +11926,7 @@ LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, 
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String   encryptType;
   String   encryptedPassword;
@@ -11692,6 +11935,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   // get encrypt type, encrypted password
@@ -11736,6 +11980,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
 * Name   : serverCommand_ftpPassword
 * Purpose: set job FTP password
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11747,13 +11992,15 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String encryptType;
   String encryptedPassword;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
   encryptType = String_new();
@@ -11792,6 +12039,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_sshPassword
 * Purpose: set job SSH password
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11803,13 +12051,15 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String encryptType;
   String encryptedPassword;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
   encryptType = String_new();
@@ -11848,6 +12098,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_webdavPassword
 * Purpose: set job Webdav password
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11859,13 +12110,15 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String encryptType;
   String encryptedPassword;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
   encryptType = String_new();
@@ -11904,6 +12157,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_cryptPassword
 * Purpose: set job encryption password
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -11916,7 +12170,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const S
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        encryptType;
@@ -11926,6 +12180,8 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, get encrypt type, encrypted password
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -11998,6 +12254,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
 * Name   : serverCommand_passwordsClear
 * Purpose: clear ssh/ftp/crypt passwords stored in memory
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -12007,11 +12264,12 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   if (clientInfo->jobOptions.ftpServer.password != NULL) Password_clear(clientInfo->jobOptions.ftpServer.password);
@@ -12025,6 +12283,7 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_volumeLoad
 * Purpose: set number of loaded volume
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -12036,7 +12295,7 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const S
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          volumeNumber;
@@ -12045,6 +12304,8 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, volume number
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -12080,6 +12341,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
 * Name   : serverCommand_volumeUnload
 * Purpose: unload volumne
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -12090,7 +12352,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
@@ -12098,6 +12360,8 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
@@ -12128,6 +12392,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 * Name   : serverCommand_archiveList
 * Purpose: list content of archive
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -12156,7 +12421,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String            storageName;
   StorageSpecifier  storageSpecifier;
@@ -12168,6 +12433,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get storage name, pattern
   storageName = String_new();
@@ -12604,6 +12871,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_storageList
 * Purpose: list selected storages
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -12614,7 +12882,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 *            id=<n> name=<text> totalEntryCount=<n> totalEntrySize=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_storageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String           storageName;
   Errors           error;
@@ -12688,6 +12956,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_storageListClear
 * Purpose: clear selected storage list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -12697,11 +12966,12 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, uint id, const Stri
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   Array_clear(&clientInfo->storageIdArray);
@@ -12713,6 +12983,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_storageListAdd
 * Purpose: add to selected storage list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -12723,7 +12994,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId          indexId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -12880,6 +13151,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_storageListRemove
 * Purpose: remove from selected storage list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -12890,7 +13162,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId          indexId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -13047,6 +13319,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_storageListInfo
 * Purpose: get selected storage list info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -13059,7 +13332,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, uint id, cons
 *            totalEntrySize=<n [bytes]>
 \***********************************************************************/
 
-LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors error;
   ulong  storageCount,totalEntryCount;
@@ -13100,6 +13373,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_entryList
 * Purpose: list selected entries
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -13110,7 +13384,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, uint id, const 
 *            name=<text> size=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_entryList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String           entryName;
   Errors           error;
@@ -13180,6 +13454,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, uint id, const String
 * Name   : serverCommand_entryListClear
 * Purpose: clear selected entry list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -13189,11 +13464,12 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, uint id, const String
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   Array_clear(&clientInfo->entryIdArray);
@@ -13205,6 +13481,7 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_entryListAdd
 * Purpose: add to selected entry list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -13215,7 +13492,7 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, uint id, const S
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId entryId;
 
@@ -13246,6 +13523,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
 * Name   : serverCommand_entryListRemove
 * Purpose: remove from selected entry list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -13256,7 +13534,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, uint id, const Str
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId entryId;
 
@@ -13287,6 +13565,7 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_entryListInfo
 * Purpose: get restore entry list info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -13298,7 +13577,7 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, uint id, const 
 *            totalEntrySize=<n [bytes]>
 \***********************************************************************/
 
-LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors error;
   ulong  totalEntryCount;
@@ -13340,6 +13619,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const St
 * Name   : serverCommand_storageDelete
 * Purpose: delete storage and remove database index
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -13352,7 +13632,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, uint id, const St
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   IndexId      entityId;
@@ -13385,7 +13665,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   if (!String_isEmpty(jobUUID))
   {
     // delete all storage files with job UUID
-    error = deleteUUID(jobUUID);
+    error = deleteUUID(indexHandle,jobUUID);
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"delete entities fail: %s",Error_getText(error));
@@ -13396,7 +13676,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   if (entityId != INDEX_ID_NONE)
   {
     // delete all storage files of entity
-    error = deleteEntity(entityId);
+    error = deleteEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"delete entity fail: %s",Error_getText(error));
@@ -13407,7 +13687,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
   if (storageId != INDEX_ID_NONE)
   {
     // delete storage file
-    error = deleteStorage(storageId);
+    error = deleteStorage(indexHandle,storageId);
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,error,"delete storage fail: %s",Error_getText(error));
@@ -13422,6 +13702,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 * Name   : serverCommand_restore
 * Purpose: restore archives/files
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -13434,7 +13715,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   typedef enum
   {
@@ -14070,6 +14351,7 @@ restoreCommandInfo.clientInfo->abortFlag = FALSE;
 * Name   : serverCommand_restoreContinue
 * Purpose: continue restore archives/files
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -14079,13 +14361,14 @@ restoreCommandInfo.clientInfo->abortFlag = FALSE;
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_restoreContinue(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_restoreContinue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -14095,6 +14378,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Name   : serverCommand_indexUUIDList
 * Purpose: get index database UUID list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -14113,7 +14397,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   // UUID data list
   typedef struct UUIDDataNode
@@ -14457,6 +14741,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 * Name   : serverCommand_indexEntityList
 * Purpose: get index database entity list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -14476,7 +14761,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, uint id, const St
 *            ...
 \***********************************************************************/
 
-LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   Errors           error;
@@ -14563,6 +14848,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
 * Name   : serverCommand_indexEntityAdd
 * Purpose: add entity to index database
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -14575,7 +14861,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, uint id, const 
 *            entityId=<id>
 \***********************************************************************/
 
-LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes archiveType;
@@ -14628,6 +14914,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_indexEntitySet
 * Purpose: set entity in index database
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -14640,7 +14927,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, uint id, const S
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes archiveType;
@@ -14699,6 +14986,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_indexStoragesInfo
 * Purpose: get index database storage info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -14714,7 +15002,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, uint id, const S
 *            totalEntrySize=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String        storagePatternString;
   bool          indexStateAny;
@@ -14803,6 +15091,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 * Name   : serverCommand_indexStorageList
 * Purpose: get index database storage list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -14833,7 +15122,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, uint id, cons
 *            errorMessage=<text>
 \***********************************************************************/
 
-LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint64           n;
   IndexId          entityId;
@@ -15035,6 +15324,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_indexStorageAdd
 * Purpose: add storage to index database
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -15047,7 +15337,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 *            storageId=<id>
 \***********************************************************************/
 
-LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   PatternTypes     patternType;
   String           patternString;
@@ -15159,6 +15449,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
 * Name   : serverCommand_indexAssign
 * Purpose: assign index database for storage; create entity if requested
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -15178,7 +15469,7 @@ fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPr
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString     (toJobUUID,MISC_UUID_STRING_LENGTH);
   IndexId          toEntityId;
@@ -15388,6 +15679,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_indexRefresh
 * Purpose: refresh index database for storage
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -15404,7 +15696,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, uint id, const Stri
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   bool             stateAny;
   IndexStates      state;
@@ -15774,6 +16066,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
 * Name   : serverCommand_indexRemove
 * Purpose: remove job/entity/storage from index database
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -15785,7 +16078,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, uint id, const Str
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   bool             stateAny;
   IndexStates      state;
@@ -15964,6 +16257,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 * Name   : serverCommand_indexEntriesInfo
 * Purpose: get index database entries info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -15978,7 +16272,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, uint id, const Stri
 *            totalEntrySize=<n [bytes]>
 \***********************************************************************/
 
-LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String     entryPattern;
   bool       indexTypeAny;
@@ -16058,6 +16352,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
 * Name   : serverCommand_indexEntryList
 * Purpose: get index database entry list
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments
 *          argumentCount - command arguments count
@@ -16089,7 +16384,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, uint id, const
 *            userId=<n> groupId=<n> permission=<n>
 \***********************************************************************/
 
-LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   #define SEND_FILE_ENTRY(entryId,storageName,storageDateTime,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
@@ -16673,6 +16968,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
 * Name   : serverCommand_debugPrintStatistics
 * Purpose: print array/string/file statistics info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments (not used)
 *          argumentCount - command arguments count (not used)
@@ -16683,10 +16979,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, uint id, const S
 *            <error text>
 \***********************************************************************/
 
-LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   Array_debugPrintStatistics();
@@ -16700,6 +16997,7 @@ LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, uint id, c
 * Name   : serverCommand_debugPrintMemoryInfo
 * Purpose: print array/string debug info
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments (not used)
 *          argumentCount - command arguments count (not used)
@@ -16712,10 +17010,11 @@ LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, uint id, c
 *            <error text>
 \***********************************************************************/
 
-LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   assert(clientInfo != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   Array_debugPrintInfo();
@@ -16729,6 +17028,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, uint id, c
 * Name   : serverCommand_debugDumpMemoryInfo
 * Purpose: dump array/string/file debug info into file "bar-memory.dump"
 * Input  : clientInfo    - client info
+*          indexHandle   - index handle
 *          id            - command id
 *          arguments     - command arguments (not used)
 *          argumentCount - command arguments count (not used)
@@ -16739,12 +17039,13 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, uint id, c
 *            <error text>
 \***********************************************************************/
 
-LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   FILE *handle;
 
   assert(clientInfo != NULL);
 
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
   handle = fopen("bar-memory.dump","w");
@@ -17008,15 +17309,21 @@ LOCAL bool parseCommand(CommandMsg  *commandMsg,
 
 LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 {
-  CommandMsg commandMsg;
-  String     result;
+  String      result;
+  IndexHandle *indexHandle;
+  CommandMsg  commandMsg;
   #ifdef SERVER_DEBUG
     uint64 t0,t1;
   #endif /* SERVER_DEBUG */
 
   assert(clientInfo != NULL);
 
+  // init variables
   result = String_new();
+
+  // init index
+  indexHandle = Index_open();
+
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
         )
@@ -17029,6 +17336,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         t0 = Misc_getTimestamp();
       #endif /* SERVER_DEBUG */
       commandMsg.serverCommandFunction(clientInfo,
+                                       indexHandle,
                                        commandMsg.id,
                                        commandMsg.argumentMap
                                       );
@@ -17047,6 +17355,11 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     // free resources
     freeCommandMsg(&commandMsg,NULL);
   }
+
+  // done index
+  Index_close(indexHandle);
+
+  // free resources
   String_delete(result);
 }
 
@@ -17460,6 +17773,7 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
 * Name   : processCommand
 * Purpose: process client command
 * Input  : clientNode - client node
+*          commadn    - command to process
 * Output : -
 * Return : -
 * Notes  : -
@@ -17490,6 +17804,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
       {
         // execute
         commandMsg.serverCommandFunction(clientInfo,
+                                         NULL,  // indexHandle,
                                          commandMsg.id,
                                          commandMsg.argumentMap
                                         );
@@ -17513,6 +17828,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
           {
             // execute command
             commandMsg.serverCommandFunction(clientInfo,
+                                             NULL,  // indexHandle,
                                              commandMsg.id,
                                              commandMsg.argumentMap
                                             );
@@ -17746,7 +18062,7 @@ Errors Server_run(uint             port,
   {
     HALT_FATAL_ERROR("Cannot initialize remote thread!");
   }
-  if (indexHandle != NULL)
+  if (Index_isAvailable())
   {
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
     {
@@ -18070,7 +18386,7 @@ Errors Server_run(uint             port,
 
   // wait for thread exit
   Semaphore_setEnd(&jobList.lock);
-  if (indexHandle != NULL)
+  if (Index_isAvailable())
   {
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
@@ -18089,7 +18405,7 @@ Errors Server_run(uint             port,
   if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
 
   // free resources
-  if (indexHandle != NULL)
+  if (Index_isAvailable())
   {
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
@@ -18174,6 +18490,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     File_readLine(&inputFileHandle,commandString);
 
     // process
+//TODO
     processCommand(&clientInfo,commandString);
   }
 #else /* 0 */
