@@ -1520,6 +1520,25 @@ static inline char* stringCopy(char *destination, const char *source, size_t n)
 }
 
 /***********************************************************************\
+* Name   : stringTrim
+* Purpose: trim spaces at beginning of string
+* Input  : string - string
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+static inline const char* stringTrim(const char *string)
+{
+  while (isspace(*string))
+  {
+    string++;
+  }
+
+  return string;
+}
+
+/***********************************************************************\
 * Name   : stringFormat
 * Purpose: format string
 * Input  : string - string
