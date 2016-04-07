@@ -740,6 +740,97 @@ LOCAL int unlockCallback(void)
 {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 xxx=1;
+
+return 1;
+}
+
+LOCAL bool sqliteStep(sqlite3_stmt *handle)
+{
+  int sqliteResult;
+
+  assert(handle != NULL);
+
+  do
+  {
+    sqliteResult = sqlite3_step(handle);
+    if (sqliteResult == SQLITE_LOCKED)
+    {
+      xxx=0;
+      do
+      {
+        sqlite3_unlock_notify(handle,unlockCallback,0);
+        usleep(100);
+      }
+      while (xxx==0);
+    }
+  }
+  while (sqliteResult == SQLITE_LOCKED);
+
+  return (sqliteResult == SQLITE_ROW);
+}
+
+LOCAL Errors sqliteExecute(sqlite3             *handle,
+                           ConstString         sqlString,
+                           DatabaseRowFunction databaseRowFunction,
+                           void                *databaseRowUserData
+                            )
+{
+  DatabaseRowCallback databaseRowCallback;
+  Errors              error;
+  int                 sqliteResult;
+  sqlite3_stmt        *statementHandle;
+
+  assert(handle != NULL);
+
+  sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                    String_cString(sqlString),
+                                    -1,
+                                    &statementHandle,
+                                    NULL
+                                   );
+  if (sqliteResult != SQLITE_OK)
+  {
+    return ERRORX_(DATABASE,sqlite3_errcode(handle),"%s: %s",sqlite3_errmsg(handle),String_cString(sqlString));
+  }
+
+  databaseRowCallback.function = databaseRowFunction;
+  databaseRowCallback.userData = databaseRowUserData;
+  do
+  {
+    sqliteResult = sqlite3_exec(statementHandle,
+                                String_cString(sqlString),
+                                (databaseRowFunction != NULL) ? executeCallback : NULL,
+                                (databaseRowFunction != NULL) ? &databaseRowCallback : NULL,
+                                NULL
+                               );
+    if (sqliteResult == SQLITE_LOCKED)
+    {
+      xxx=0;
+      do
+      {
+        sqlite3_unlock_notify(handle,unlockCallback,0);
+        usleep(100);
+      }
+      while (xxx==0);
+    }
+  }
+  while (sqliteResult == SQLITE_LOCKED);
+  if      (sqliteResult == SQLITE_OK)
+  {
+    error = ERROR_NONE;
+  }
+  else if (sqliteResult == SQLITE_MISUSE)
+  {
+    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(handle));
+  }
+  else
+  {
+    error = ERRORX_(DATABASE,sqlite3_errcode(handle),"%s: %s",sqlite3_errmsg(handle),String_cString(sqlString));
+  }
+
+  sqlite3_finalize(statementHandle);
+
+  return error;
 }
 
 /***********************************************************************\
