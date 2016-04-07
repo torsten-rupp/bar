@@ -16,11 +16,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <semaphore.h>
 #include <assert.h>
 
 #include "global.h"
 #include "strings.h"
-#include "semaphores.h"
 #include "errors.h"
 
 #include "sqlite3.h"
@@ -70,7 +70,8 @@ typedef enum
 // database handle
 typedef struct
 {
-  sqlite3    *handle;
+  sqlite3   *handle;
+  sem_t     wakeUp;
   #ifndef NDEBUG
     char fileName[256];
     struct
@@ -86,7 +87,7 @@ typedef struct
 typedef struct
 {
   DatabaseHandle *databaseHandle;
-  sqlite3_stmt   *handle;
+  sqlite3_stmt   *statementHandle;
   #ifndef NDEBUG
     String sqlString;
     uint64 t0,t1;

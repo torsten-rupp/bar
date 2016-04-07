@@ -5469,6 +5469,12 @@ IndexHandle *__Index_open(const char  *__fileName__,
     }
   }
 
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(indexHandle,sizeof(IndexHandle));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,indexHandle,sizeof(IndexHandle));
+  #endif /* NDEBUG */
+
   return indexHandle;
 }
 
@@ -5483,6 +5489,8 @@ void __Index_close(const char  *__fileName__,
 {
   if (indexHandle != NULL)
   {
+    DEBUG_REMOVE_RESOURCE_TRACE(indexHandle,sizeof(IndexHandle));
+
     closeIndex(indexHandle);
     free(indexHandle);
   }
@@ -6528,6 +6536,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                          )
         )
   {
+    assert(totalEntryCount_ >= 0.0);
+    assert(totalEntrySize_ >= 0.0);
     if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
     if (totalEntrySize != NULL) (*totalEntrySize) = (uint64)totalEntrySize_;
   }
@@ -7244,6 +7254,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                )
            )
         {
+          assert(count_ >= 0.0);
+          assert(size_ >= 0.0);
           if (count != NULL) (*count) += (uint64)count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -7271,6 +7283,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                )
            )
         {
+          assert(count_ >= 0.0);
+          assert(size_ >= 0.0);
           if (count != NULL) (*count) += (uint64)count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -7296,6 +7310,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                )
            )
         {
+          assert(count_ >= 0.0);
           if (count != NULL) (*count) += (uint64)count_;
         }
         Database_finalize(&databaseQueryHandle);
@@ -7320,6 +7335,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                )
            )
         {
+          assert(count_ >= 0.0);
           if (count != NULL) (*count) += (uint64)count_;
         }
         Database_finalize(&databaseQueryHandle);
@@ -7346,6 +7362,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                )
            )
         {
+          assert(count_ >= 0.0);
+          assert(size_ >= 0.0);
           if (count != NULL) (*count) += (uint64)count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -7371,6 +7389,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                )
            )
         {
+          assert(count_ >= 0.0);
           if (count != NULL) (*count) += (uint64)count_;
         }
         Database_finalize(&databaseQueryHandle);
@@ -7405,6 +7424,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                )
            )
         {
+          assert(count_ >= 0.0);
+          assert(size_ >= 0.0);
           if (count != NULL) (*count) += (uint64)count_;
           if (size != NULL) (*size) += (uint64)size_;
         }
@@ -7644,6 +7665,12 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   {
     return FALSE;
   }
+  assert(fileSize_ >= 0.0);
+  assert(fragmentOffset_ >= 0.0);
+  assert(fragmentSize_ >= 0.0);
+  assert(blockOffset_ >= 0.0);
+  assert(blockCount_ >= 0.0);
+  assert(hardlinkSize_ >= 0.0);
   if (indexId != NULL) (*indexId) = INDEX_ID_(indexType,databaseId);
   if (size != NULL)
   {
@@ -7823,6 +7850,8 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
                         IndexId     indexId
                        )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_FILE);
 
@@ -7832,11 +7861,27 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "DELETE FROM files WHERE id=%lld;",
-                          INDEX_DATABASE_ID_(indexId)
-                         );
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM fileEntries WHERE entryId=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE id=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
@@ -7976,6 +8021,8 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
                          IndexId     indexId
                         )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_IMAGE);
 
@@ -7985,11 +8032,26 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "DELETE FROM files WHERE id=%lld;",
-                          INDEX_DATABASE_ID_(indexId)
-                         );
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM imageEntries WHERE entryId=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE id=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
@@ -8131,6 +8193,8 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
                              IndexId     indexId
                             )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_DIRECTORY);
 
@@ -8140,11 +8204,26 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "DELETE FROM directories WHERE id=%lld;",
-                          INDEX_DATABASE_ID_(indexId)
-                         );
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM directoryEntries WHERE entryId=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE id=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
@@ -8288,6 +8367,8 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
                         IndexId     indexId
                        )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_LINK);
 
@@ -8297,11 +8378,26 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "DELETE FROM links WHERE id=%lld;",
-                          INDEX_DATABASE_ID_(indexId)
-                         );
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM linkEntries WHERE entryId=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE id=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
@@ -8450,6 +8546,8 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
                             IndexId     indexId
                            )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_HARDLINK);
 
@@ -8459,11 +8557,26 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "DELETE FROM hardlinks WHERE id=%lld;",
-                          INDEX_DATABASE_ID_(indexId)
-                         );
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE id=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
@@ -8603,6 +8716,8 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
                            IndexId     indexId
                           )
 {
+  Errors error;
+
   assert(indexHandle != NULL);
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_SPECIAL);
 
@@ -8612,11 +8727,26 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "DELETE FROM special WHERE id=%lld;",
-                          INDEX_DATABASE_ID_(indexId)
-                         );
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM specialEntries WHERE entryId=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE id=%lld;",
+                           INDEX_DATABASE_ID_(indexId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 void Index_doneList(IndexQueryHandle *indexQueryHandle)
