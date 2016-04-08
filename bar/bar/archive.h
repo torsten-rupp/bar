@@ -177,7 +177,7 @@ typedef struct
   String                   scheduleUUID;
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   const JobOptions         *jobOptions;
-//  IndexHandle              *indexHandle;                               // index handle
+  IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
   IndexId                  entityId;                                   // index id of entity
   ArchiveTypes             archiveType;
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
@@ -250,7 +250,7 @@ typedef struct ArchiveEntryInfo
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
 
   ArchiveInfo                         *archiveInfo;                    // archive info
-  IndexHandle                         *indexHandle;                    // index handle or NULL
+  IndexHandle                         *indexHandle;                    // index handle or NULL  (owned by entry opener/creator)
 
   enum
   {

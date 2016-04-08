@@ -713,10 +713,10 @@ LOCAL int executeCallback(void *userData,
 
   assert(databaseRowCallback != NULL);
 
-  return databaseRowCallback->function(databaseRowCallback->userData,
-                                       (int)count,
+  return databaseRowCallback->function((int)count,
                                        (const char**)names,
-                                       (const char**)values
+                                       (const char**)values,
+                                       databaseRowCallback->userData
                                       )
           ? 0
           : 1;
@@ -736,10 +736,6 @@ LOCAL int busyHandlerCallback(void *userData, int n)
 {
   #define SLEEP_TIME 250L
 
-  #ifdef HAVE_NANOSLEEP
-    struct timespec ts;
-  #endif /* HAVE_NANOSLEEP */
-
   UNUSED_VARIABLE(userData);
 
   #ifndef NDEBUG
@@ -747,10 +743,8 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   #endif /* not NDEBUG */
 
   delay(SLEEP_TIME);
-fprintf(stderr,"%s, %d: n=%d\n",__FILE__,__LINE__,n);
 
-//  return (n < 5*10) ? 1 : 0;
-return 1;
+  return (n < 3*10*4) ? 1 : 0;
 
   #undef SLEEP_TIME
 }
@@ -764,15 +758,17 @@ return 1;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int unlockNotifyCallback(void *userData)
+LOCAL void unlockNotifyCallback(void *argv[], int argc)
 {
-  sem_t *semaphore = (sem_t*)userData;
+  sem_t *semaphore;
+  assert(argv != NULL);
+  assert(argc >= 1);
+
+  semaphore = (sem_t*)argv[0];
 
   assert(semaphore != NULL);
 fprintf(stderr,"%s, %d: jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj\n",__FILE__,__LINE__);
   sem_post(semaphore);
-
-return 1;
 }
 
 /***********************************************************************\
@@ -870,6 +866,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
 {
   #define SLEEP_TIME 250L
 
+  const char          *nextSqlCommand;
   DatabaseRowCallback databaseRowCallback;
   Errors              error;
   int                 sqliteResult;
@@ -918,9 +915,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = ERRORX_(DATABASE,sqlite3_errcode(handle),"%s: %s",sqlite3_errmsg(handle),String_cString(sqlString));
   }
 #else
-  const char *nextSqlCommand = stringTrim(sqlString);
-
-  error = ERROR_NONE;
+  nextSqlCommand = stringTrim(sqlString);
+  error          = ERROR_NONE;
   while (   (error == ERROR_NONE)
          && !stringIsEmpty(nextSqlCommand)
         )
@@ -983,7 +979,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             for (i = 0; i < count; i++)
             {
               names[i]  = sqlite3_column_name(statementHandle,i);
-              values[i] = sqlite3_column_text(statementHandle,i);
+              values[i] = (const char*)sqlite3_column_text(statementHandle,i);
             }
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 asm("int3");
@@ -1012,8 +1008,7 @@ fprintf(stderr,"%s, %d: %d %s\n",__FILE__,__LINE__,sqliteResult,Error_getText(er
     }
     else
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
     }
 
     nextSqlCommand = stringTrim(nextSqlCommand);
@@ -2400,7 +2395,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 #endif /* NDEBUG */
 {
   String sqlString;
-  int    sqliteResult;
   Errors error;
 
   assert(databaseHandle != NULL);
@@ -2443,7 +2437,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   // format SQL command string
   sqlString = String_format(String_new(),"BEGIN TRANSACTION;");
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-fprintf(stderr,"%s, %d: begin tras \n",__FILE__,__LINE__);
 
   error = sqliteExecute(databaseHandle,
                         String_cString(sqlString),
@@ -2452,8 +2445,6 @@ fprintf(stderr,"%s, %d: begin tras \n",__FILE__,__LINE__);
 #endif
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
     String_delete(sqlString);
     return error;
   }
@@ -2462,7 +2453,6 @@ asm("int3");
   String_delete(sqlString);
 
   #ifndef NDEBUG
-fprintf(stderr,"%s, %d: beg %s %d\n",__FILE__,__LINE__,__fileName__,__lineNb__);
     databaseHandle->transaction.threadId = pthread_self();
     databaseHandle->transaction.fileName = __fileName__;
     databaseHandle->transaction.lineNb   = __lineNb__;
@@ -2477,7 +2467,6 @@ fprintf(stderr,"%s, %d: beg %s %d\n",__FILE__,__LINE__,__fileName__,__lineNb__);
 Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
 {
   String sqlString;
-  int    sqliteResult;
   Errors error;
 
   assert(databaseHandle != NULL);
@@ -2536,7 +2525,6 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
 Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *name)
 {
   String sqlString;
-  int    sqliteResult;
   Errors error;
 
   assert(databaseHandle != NULL);
@@ -2601,7 +2589,6 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   va_list             arguments;
   Errors              error;
   DatabaseRowCallback databaseRowCallback;
-  int                 sqliteResult;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
@@ -3196,7 +3183,6 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   String  sqlString;
   va_list arguments;
   Errors  error;
-  int     sqliteResult;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);

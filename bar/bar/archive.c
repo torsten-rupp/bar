@@ -3179,7 +3179,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveInfo->scheduleUUID            = String_duplicate(scheduleUUID);
   archiveInfo->jobOptions              = jobOptions;
   archiveInfo->deltaSourceList         = deltaSourceList;
-//  archiveInfo->indexHandle             = indexHandle;
+  archiveInfo->indexHandle             = indexHandle;
   archiveInfo->entityId                = entityId;
   archiveInfo->archiveType             = archiveType;
   archiveInfo->archiveInitFunction     = archiveInitFunction;
@@ -3499,9 +3499,7 @@ fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityI
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
-//      error = closeArchiveFile(archiveInfo,archiveInfo->indexHandle);
+      error = closeArchiveFile(archiveInfo,archiveInfo->indexHandle);
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
       Storage_close(&archiveInfo->storage.storageArchiveHandle);
