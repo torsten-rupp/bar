@@ -177,7 +177,7 @@ typedef struct
   String                   scheduleUUID;
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   const JobOptions         *jobOptions;
-  IndexHandle              *indexHandle;                               // index handle
+//  IndexHandle              *indexHandle;                               // index handle
   IndexId                  entityId;                                   // index id of entity
   ArchiveTypes             archiveType;
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
@@ -250,6 +250,7 @@ typedef struct ArchiveEntryInfo
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
 
   ArchiveInfo                         *archiveInfo;                    // archive info
+  IndexHandle                         *indexHandle;                    // index handle or NULL
 
   enum
   {
@@ -702,6 +703,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveInfo                     *archiveInfo,
+                              IndexHandle                     *indexHandle,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -713,6 +715,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveInfo                     *archiveInfo,
+                                IndexHandle                     *indexHandle,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -740,6 +743,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveInfo      *archiveInfo,
+                               IndexHandle      *indexHandle,
                                ConstString      deviceName,
                                const DeviceInfo *deviceInfo,
                                FileSystemTypes  fileSystemType,
@@ -751,6 +755,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
                                  ArchiveInfo      *archiveInfo,
+                                 IndexHandle      *indexHandle,
                                  ConstString      deviceName,
                                  const DeviceInfo *deviceInfo,
                                  FileSystemTypes  fileSystemType,
@@ -775,6 +780,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveInfo                     *archiveInfo,
+                                   IndexHandle                     *indexHandle,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -784,6 +790,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveInfo                     *archiveInfo,
+                                     IndexHandle                     *indexHandle,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -807,8 +814,9 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveInfo                     *archiveInfo,
+                              IndexHandle                     *indexHandle,
                               ConstString                     linkName,
-                              ConstString                   destinationName,
+                              ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList
                              );
@@ -817,6 +825,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveInfo                     *archiveInfo,
+                                IndexHandle                     *indexHandle,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -845,6 +854,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                   ArchiveInfo                     *archiveInfo,
+                                  IndexHandle                     *indexHandle,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -856,6 +866,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                     ulong                           __lineNb__,
                                     ArchiveEntryInfo                *archiveEntryInfo,
                                     ArchiveInfo                     *archiveInfo,
+                                    IndexHandle                     *indexHandle,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -880,6 +891,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveInfo                     *archiveInfo,
+                                 IndexHandle                     *indexHandle,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -889,6 +901,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveInfo                     *archiveInfo,
+                                   IndexHandle                     *indexHandle,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList

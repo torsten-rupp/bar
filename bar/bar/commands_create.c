@@ -4485,16 +4485,18 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 /***********************************************************************\
 * Name   : storeFileEntry
 * Purpose: store a file entry into archive
-* Input  : createInfo - create info structure
-*          fileName   - file name to store
-*          buffer     - buffer for temporary data
-*          bufferSize - size of data buffer
+* Input  : createInfo  - create info structure
+*          indexHandle - index handle or NULL
+*          fileName    - file name to store
+*          buffer      - buffer for temporary data
+*          bufferSize  - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
+                            IndexHandle *indexHandle,
                             ConstString fileName,
                             byte        *buffer,
                             uint        bufferSize
@@ -4631,6 +4633,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
                                  &createInfo->archiveInfo,
+                                 indexHandle,
                                  fileName,
                                  &fileInfo,
                                  &fileExtendedAttributeList,
@@ -4808,16 +4811,18 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 /***********************************************************************\
 * Name   : storeImageEntry
 * Purpose: store an image entry into archive
-* Input  : createInfo - create info structure
-*          deviceName - device name
-*          buffer     - buffer for temporary data
-*          bufferSize - size of data buffer
+* Input  : createInfo  - create info structure
+*          indexHandle - index handle or NULL
+*          deviceName  - device name
+*          buffer      - buffer for temporary data
+*          bufferSize  - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
+                             IndexHandle *indexHandle,
                              ConstString deviceName,
                              byte        *buffer,
                              uint        bufferSize
@@ -4956,6 +4961,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
                                   &createInfo->archiveInfo,
+                                  indexHandle,
                                   deviceName,
                                   &deviceInfo,
                                   fileSystemHandle.type,
@@ -5165,6 +5171,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 * Name   : storeDirectoryEntry
 * Purpose: store a directory entry into archive
 * Input  : createInfo    - create info structure
+*          indexHandle   - index handle or NULL
 *          directoryName - directory name to store
 * Output : -
 * Return : ERROR_NONE or error code
@@ -5172,6 +5179,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 \***********************************************************************/
 
 LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
+                                 IndexHandle *indexHandle,
                                  ConstString directoryName
                                 )
 {
@@ -5253,6 +5261,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     // new directory
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveInfo,
+                                      indexHandle,
                                       directoryName,
                                       &fileInfo,
                                       &fileExtendedAttributeList
@@ -5323,14 +5332,16 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
 /***********************************************************************\
 * Name   : storeLinkEntry
 * Purpose: store a link entry into archive
-* Input  : createInfo - create info structure
-*          linkName   - link name to store
+* Input  : createInfo  - create info structure
+*          indexHandle - index handle or NULL
+*          linkName    - link name to store
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
+                            IndexHandle *indexHandle,
                             ConstString linkName
                            )
 {
@@ -5447,6 +5458,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     // new link
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveInfo,
+                                 indexHandle,
                                  linkName,
                                  fileName,
                                  &fileInfo,
@@ -5523,6 +5535,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 * Name   : storeHardLinkEntry
 * Purpose: store a hard link entry into archive
 * Input  : createInfo  - create info structure
+*          indexHandle - index handle or NULL
 *          nameList    - hard link name list to store
 *          buffer      - buffer for temporary data
 *          bufferSize  - size of data buffer
@@ -5532,6 +5545,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 \***********************************************************************/
 
 LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
+                                IndexHandle      *indexHandle,
                                 const StringList *nameList,
                                 byte             *buffer,
                                 uint             bufferSize
@@ -5667,6 +5681,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
                                      &createInfo->archiveInfo,
+                                     indexHandle,
                                      nameList,
                                      &fileInfo,
                                      &fileExtendedAttributeList,
@@ -5850,14 +5865,16 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 /***********************************************************************\
 * Name   : storeSpecialEntry
 * Purpose: store a special entry into archive
-* Input  : createInfo - create info structure
-*          fileName   - file name to store
+* Input  : createInfo  - create info structure
+*          indexHandle - index handle or NULL
+*          fileName    - file name to store
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
+                               IndexHandle *indexHandle,
                                ConstString fileName
                               )
 {
@@ -5939,6 +5956,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     // new special
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveInfo,
+                                    indexHandle,
                                     fileName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
@@ -6016,6 +6034,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
 LOCAL void createThreadCode(CreateInfo *createInfo)
 {
   byte             *buffer;
+  IndexHandle      *indexHandle;
   EntryMsg         entryMsg;
   bool             ownFileFlag;
   const StringNode *stringNode;
@@ -6031,6 +6050,9 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+
+  // open index
+  indexHandle = Index_open();
 
   // store entries
   while (   (createInfo->failError == ERROR_NONE)
@@ -6063,6 +6085,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeFileEntry(createInfo,
+                                     indexHandle,
                                      entryMsg.name,
                                      buffer,
                                      BUFFER_SIZE
@@ -6083,6 +6106,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeDirectoryEntry(createInfo,
+                                          indexHandle,
                                           entryMsg.name
                                          );
               if (error != ERROR_NONE) createInfo->failError = error;
@@ -6101,6 +6125,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeLinkEntry(createInfo,
+                                     indexHandle,
                                      entryMsg.name
                                     );
               if (error != ERROR_NONE) createInfo->failError = error;
@@ -6119,6 +6144,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeHardLinkEntry(createInfo,
+                                         indexHandle,
                                          &entryMsg.nameList,
                                          buffer,
                                          BUFFER_SIZE
@@ -6139,12 +6165,14 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeSpecialEntry(createInfo,
+                                        indexHandle,
                                         entryMsg.name
                                        );
               if (error != ERROR_NONE) createInfo->failError = error;
               break;
             case ENTRY_TYPE_IMAGE:
               error = storeImageEntry(createInfo,
+                                      indexHandle,
                                       entryMsg.name,
                                       buffer,
                                       BUFFER_SIZE
@@ -6194,6 +6222,9 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
       Misc_udelay(1000*1000);
     }
   }
+
+  // close index
+  Index_close(indexHandle);
 
   // free resources
   free(buffer);

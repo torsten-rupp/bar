@@ -634,12 +634,13 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
 * Name   : findNextArchivePart
 * Purpose: find next suitable archive part
 * Input  : archiveInfo - archive info
+*          indexHandle - indexHandle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo)
+LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo, IndexHandle *indexHandle)
 {
   uint64 storageSize;
 
@@ -650,7 +651,7 @@ LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo)
   {
     do
     {
-      storageSize = archiveInfo->archiveGetSizeFunction(archiveInfo->indexHandle,
+      storageSize = archiveInfo->archiveGetSizeFunction(indexHandle,
                                                         archiveInfo->entityId,
                                                         archiveInfo->storageId,
                                                         archiveInfo->partNumber,
@@ -905,7 +906,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
+LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo, IndexHandle *indexHandle)
 {
   AutoFreeList  autoFreeList;
   SemaphoreLock semaphoreLock;
@@ -968,14 +969,14 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
         DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
-      if (   (archiveInfo->indexHandle != NULL)
+      if (   (indexHandle != NULL)
           && !archiveInfo->jobOptions->noIndexDatabaseFlag
           && !archiveInfo->jobOptions->dryRunFlag
           && !archiveInfo->jobOptions->noStorageFlag
          )
       {
         // create storage index
-        error = Index_newStorage(archiveInfo->indexHandle,
+        error = Index_newStorage(indexHandle,
                                  archiveInfo->entityId,
                                  NULL, // storageName
                                  INDEX_STATE_CREATE,
@@ -987,7 +988,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(archiveInfo->indexHandle,archiveInfo->storageId); });
+        AUTOFREE_ADD(&autoFreeList,&archiveInfo->storageId,{ Index_deleteStorage(indexHandle,archiveInfo->storageId); });
       }
       else
       {
@@ -998,7 +999,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
       // call-back for init archive
       if (archiveInfo->archiveInitFunction != NULL)
       {
-        error = archiveInfo->archiveInitFunction(archiveInfo->indexHandle,
+        error = archiveInfo->archiveInitFunction(indexHandle,
                                                  archiveInfo->jobUUID,
                                                  archiveInfo->scheduleUUID,
                                                  archiveInfo->entityId,
@@ -1031,13 +1032,14 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
 /***********************************************************************\
 * Name   : closeArchiveFile
 * Purpose: close archive file
-* Input  : archiveInfo  - archive info data
+* Input  : archiveInfo - archive info data
+*          indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo)
+LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo, IndexHandle *indexHandle)
 {
   SemaphoreLock semaphoreLock;
   Errors        error;
@@ -1062,7 +1064,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     // call-back to store archive
     if (archiveInfo->archiveStoreFunction != NULL)
     {
-      error = archiveInfo->archiveStoreFunction(archiveInfo->indexHandle,
+      error = archiveInfo->archiveStoreFunction(indexHandle,
                                                 archiveInfo->jobUUID,
                                                 archiveInfo->scheduleUUID,
                                                 archiveInfo->entityId,
@@ -1086,7 +1088,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     // call-back for done archive
     if (archiveInfo->archiveDoneFunction != NULL)
     {
-      error = archiveInfo->archiveDoneFunction(archiveInfo->indexHandle,
+      error = archiveInfo->archiveDoneFunction(indexHandle,
                                                archiveInfo->jobUUID,
                                                archiveInfo->scheduleUUID,
                                                archiveInfo->entityId,
@@ -1127,6 +1129,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
 \***********************************************************************/
 
 LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
+                                IndexHandle *indexHandle,
                                 ulong       minBytes
                                )
 {
@@ -1145,7 +1148,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
     // split needed -> close archive file
     if (archiveInfo->file.openFlag)
     {
-      error = closeArchiveFile(archiveInfo);
+      error = closeArchiveFile(archiveInfo,indexHandle);
       if (error != ERROR_NONE)
       {
         return error;
@@ -1154,7 +1157,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
   }
 
   // create new archive
-  error = createArchiveFile(archiveInfo);
+  error = createArchiveFile(archiveInfo,indexHandle);
   if (error != ERROR_NONE)
   {
     return error;
@@ -1637,7 +1640,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
         // create archive file
-        error = createArchiveFile(archiveEntryInfo->archiveInfo);
+        error = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -1655,7 +1658,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveInfo);
+        error = closeArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -1682,7 +1685,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
 
         // find next suitable archive part
-        findNextArchivePart(archiveEntryInfo->archiveInfo);
+        findNextArchivePart(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2179,7 +2182,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         assert(archiveEntryInfo->image.headerWrittenFlag);
 
         // create archive file
-        error = createArchiveFile(archiveEntryInfo->archiveInfo);
+        error = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2197,7 +2200,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveInfo);
+        error = closeArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2227,7 +2230,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
 
         // find next suitable archive part
-        findNextArchivePart(archiveEntryInfo->archiveInfo);
+        findNextArchivePart(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2762,7 +2765,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         assert(archiveEntryInfo->hardLink.headerWrittenFlag);
 
         // create archive file
-        error = createArchiveFile(archiveEntryInfo->archiveInfo);
+        error = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2780,7 +2783,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
-        error = closeArchiveFile(archiveEntryInfo->archiveInfo);
+        error = closeArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -2810,7 +2813,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
 
         // find next suitable archive part
-        findNextArchivePart(archiveEntryInfo->archiveInfo);
+        findNextArchivePart(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
@@ -3176,7 +3179,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveInfo->scheduleUUID            = String_duplicate(scheduleUUID);
   archiveInfo->jobOptions              = jobOptions;
   archiveInfo->deltaSourceList         = deltaSourceList;
-  archiveInfo->indexHandle             = indexHandle;
+//  archiveInfo->indexHandle             = indexHandle;
   archiveInfo->entityId                = entityId;
   archiveInfo->archiveType             = archiveType;
   archiveInfo->archiveInitFunction     = archiveInitFunction;
@@ -3403,7 +3406,7 @@ fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityI
   archiveInfo->chunkIO                 = &CHUNK_IO_STORAGE_FILE;
   archiveInfo->chunkIOUserData         = &archiveInfo->storage.storageArchiveHandle;
 
-  archiveInfo->indexHandle             = NULL;
+//  archiveInfo->indexHandle             = NULL;
   archiveInfo->jobUUID                 = NULL;
   archiveInfo->scheduleUUID            = NULL;
 //  archiveInfo->entityId                = DATABASE_ID_NONE;
@@ -3496,7 +3499,9 @@ fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityI
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      error = closeArchiveFile(archiveInfo);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+//      error = closeArchiveFile(archiveInfo,archiveInfo->indexHandle);
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
       Storage_close(&archiveInfo->storage.storageArchiveHandle);
@@ -3823,6 +3828,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveInfo                     *archiveInfo,
+                              IndexHandle                     *indexHandle,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -3834,6 +3840,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveInfo                     *archiveInfo,
+                                IndexHandle                     *indexHandle,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -3865,6 +3872,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init archive entry info
   archiveEntryInfo->archiveInfo                    = archiveInfo;
+  archiveEntryInfo->indexHandle                    = indexHandle;
   archiveEntryInfo->mode                           = ARCHIVE_MODE_WRITE;
 
   archiveEntryInfo->cryptAlgorithm                 = archiveInfo->jobOptions->cryptAlgorithm;
@@ -4174,7 +4182,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveEntryInfo->archiveInfo);
+  findNextArchivePart(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
@@ -4202,6 +4210,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveInfo      *archiveInfo,
+                               IndexHandle      *indexHandle,
                                ConstString      deviceName,
                                const DeviceInfo *deviceInfo,
                                FileSystemTypes  fileSystemType,
@@ -4213,6 +4222,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
                                  ArchiveInfo      *archiveInfo,
+                                 IndexHandle      *indexHandle,
                                  ConstString      deviceName,
                                  const DeviceInfo *deviceInfo,
                                  FileSystemTypes  fileSystemType,
@@ -4244,6 +4254,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init archive entry info
   archiveEntryInfo->archiveInfo                  = archiveInfo;
+  archiveEntryInfo->indexHandle                    = indexHandle;
   archiveEntryInfo->mode                         = ARCHIVE_MODE_WRITE;
 
   archiveEntryInfo->cryptAlgorithm               = archiveInfo->jobOptions->cryptAlgorithm;
@@ -4511,7 +4522,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveEntryInfo->archiveInfo);
+  findNextArchivePart(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
@@ -4525,7 +4536,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveEntryInfo->archiveInfo);
+  findNextArchivePart(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -4542,6 +4553,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveInfo                     *archiveInfo,
+                                   IndexHandle                     *indexHandle,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -4551,6 +4563,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveInfo                     *archiveInfo,
+                                     IndexHandle                     *indexHandle,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -4581,6 +4594,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init archive entry info
   archiveEntryInfo->archiveInfo      = archiveInfo;
+  archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
   archiveEntryInfo->cryptAlgorithm   = archiveInfo->jobOptions->cryptAlgorithm;
@@ -4686,7 +4700,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveEntryInfo->archiveInfo);
+  findNextArchivePart(archiveEntryInfo->archiveInfo,indexHandle);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
@@ -4695,6 +4709,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
+                               indexHandle,
                                headerLength
                               );
     if (error != ERROR_NONE)
@@ -4763,6 +4778,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveInfo                     *archiveInfo,
+                              IndexHandle                     *indexHandle,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -4773,6 +4789,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveInfo                     *archiveInfo,
+                                IndexHandle                     *indexHandle,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -4804,6 +4821,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init archive entry info
   archiveEntryInfo->archiveInfo      = archiveInfo;
+  archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
   archiveEntryInfo->cryptAlgorithm   = archiveInfo->jobOptions->cryptAlgorithm;
@@ -4917,6 +4935,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
+                               indexHandle,
                                headerLength
                               );
     if (error != ERROR_NONE)
@@ -4985,6 +5004,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                   ArchiveInfo                     *archiveInfo,
+                                  IndexHandle                     *indexHandle,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -4996,6 +5016,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                     ulong                           __lineNb__,
                                     ArchiveEntryInfo                *archiveEntryInfo,
                                     ArchiveInfo                     *archiveInfo,
+                                    IndexHandle                     *indexHandle,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -5029,6 +5050,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init archive entry info
   archiveEntryInfo->archiveInfo                        = archiveInfo;
+  archiveEntryInfo->indexHandle                        = indexHandle;
   archiveEntryInfo->mode                               = ARCHIVE_MODE_WRITE;
 
   archiveEntryInfo->cryptAlgorithm                     = archiveInfo->jobOptions->cryptAlgorithm;
@@ -5367,7 +5389,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveEntryInfo->archiveInfo);
+  findNextArchivePart(archiveEntryInfo->archiveInfo,indexHandle);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
@@ -5395,6 +5417,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveInfo                     *archiveInfo,
+                                 IndexHandle                     *indexHandle,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -5404,6 +5427,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveInfo                     *archiveInfo,
+                                   IndexHandle                     *indexHandle,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -5434,6 +5458,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init archive entry info
   archiveEntryInfo->archiveInfo      = archiveInfo;
+  archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
   archiveEntryInfo->cryptAlgorithm   = archiveInfo->jobOptions->cryptAlgorithm;
@@ -5542,7 +5567,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   }
 
   // find next suitable archive part
-  findNextArchivePart(archiveEntryInfo->archiveInfo);
+  findNextArchivePart(archiveEntryInfo->archiveInfo,indexHandle);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
@@ -5551,6 +5576,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
+                               indexHandle,
                                headerLength
                               );
     if (error != ERROR_NONE)
@@ -8811,7 +8837,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file
-                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -8831,14 +8857,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
               }
 
-              if (   (archiveEntryInfo->archiveInfo->indexHandle != NULL)
+              if (   (archiveEntryInfo->indexHandle != NULL)
                   && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
-                  error = Index_addFile(archiveEntryInfo->archiveInfo->indexHandle,
+                  error = Index_addFile(archiveEntryInfo->indexHandle,
                                         archiveEntryInfo->archiveInfo->storageId,
                                         archiveEntryInfo->file.chunkFileEntry.name,
                                         archiveEntryInfo->file.chunkFileEntry.size,
@@ -8962,7 +8988,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
-                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -8982,14 +9008,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
               }
 
-              if (   (archiveEntryInfo->archiveInfo->indexHandle != NULL)
+              if (   (archiveEntryInfo->indexHandle != NULL)
                   && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
-                  error = Index_addImage(archiveEntryInfo->archiveInfo->indexHandle,
+                  error = Index_addImage(archiveEntryInfo->indexHandle,
                                          archiveEntryInfo->archiveInfo->storageId,
                                          archiveEntryInfo->image.chunkImageEntry.name,
                                          archiveEntryInfo->image.chunkImageEntry.fileSystemType,
@@ -9042,14 +9068,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               // unlock archive
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
-              if (   (archiveEntryInfo->archiveInfo->indexHandle != NULL)
+              if (   (archiveEntryInfo->indexHandle != NULL)
                   && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
-                  error = Index_addDirectory(archiveEntryInfo->archiveInfo->indexHandle,
+                  error = Index_addDirectory(archiveEntryInfo->indexHandle,
                                              archiveEntryInfo->archiveInfo->storageId,
                                              archiveEntryInfo->directory.chunkDirectoryEntry.name,
                                              archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess,
@@ -9086,14 +9112,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               // unlock archive
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
-              if (   (archiveEntryInfo->archiveInfo->indexHandle != NULL)
+              if (   (archiveEntryInfo->indexHandle != NULL)
                   && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
-                  error = Index_addLink(archiveEntryInfo->archiveInfo->indexHandle,
+                  error = Index_addLink(archiveEntryInfo->indexHandle,
                                         archiveEntryInfo->archiveInfo->storageId,
                                         archiveEntryInfo->link.chunkLinkEntry.name,
                                         archiveEntryInfo->link.chunkLinkEntry.destinationName,
@@ -9197,7 +9223,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
-                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                tmpError = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -9217,7 +9243,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 }
               }
 
-              if (   (archiveEntryInfo->archiveInfo->indexHandle != NULL)
+              if (   (archiveEntryInfo->indexHandle != NULL)
                   && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
@@ -9226,7 +9252,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 {
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
-                    error = Index_addFile(archiveEntryInfo->archiveInfo->indexHandle,
+                    error = Index_addFile(archiveEntryInfo->indexHandle,
                                           archiveEntryInfo->archiveInfo->storageId,
                                           fileName,
                                           archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
@@ -9289,14 +9315,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               // unlock archive
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
-              if (   (archiveEntryInfo->archiveInfo->indexHandle != NULL)
+              if (   (archiveEntryInfo->indexHandle != NULL)
                   && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
                 if (error == ERROR_NONE)
                 {
-                  error = Index_addSpecial(archiveEntryInfo->archiveInfo->indexHandle,
+                  error = Index_addSpecial(archiveEntryInfo->indexHandle,
                                            archiveEntryInfo->archiveInfo->storageId,
                                            archiveEntryInfo->special.chunkSpecialEntry.name,
                                            archiveEntryInfo->special.chunkSpecialEntry.specialType,
