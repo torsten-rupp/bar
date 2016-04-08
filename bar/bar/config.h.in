@@ -505,6 +505,9 @@
 /* uselocale() available */
 #undef HAVE_USELOCALE
 
+/* usleep() available */
+#undef HAVE_USLEEP
+
 /* uuid_generate() available */
 #undef HAVE_UUID_GENERATE
 
