@@ -80,6 +80,14 @@ typedef struct
       uint   lineNb;
       uint64 t0,t1;
     } locked;
+    struct
+    {
+      pthread_t  threadId;
+      const char *fileName;
+      uint       lineNb;
+      void const *stackTrace[16];
+      int        stackTraceSize;
+    } transaction;
   #endif /* not NDEBUG */
 } DatabaseHandle;
 
@@ -95,8 +103,20 @@ typedef struct
   #endif /* not NDEBUG */
 } DatabaseQueryHandle;
 
-// execute row callback function
-typedef bool(*DatabaseRowFunction)(void *userData, uint count, const char* names[], const char* vales[]);
+//
+/***********************************************************************\
+* Name   : DatabaseRowFunction
+* Purpose: execute row callback function
+* Input  : count    - number of columns
+*          names    - column names
+*          values   - column values
+*          userData - user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*DatabaseRowFunction)(uint count, const char* names[], const char* values[], void *userData);
 
 // database id
 typedef int64 DatabaseId;
@@ -141,10 +161,11 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
 #define DATABASE_TRANSFER_OPERATION_END()                      DATABASE_TRANSFER_OPERATION_NONE,NULL,    0,     0
 
 #ifndef NDEBUG
-  #define Database_open(...)     __Database_open(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Database_close(...)    __Database_close(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Database_prepare(...)  __Database_prepare(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Database_finalize(...) __Database_finalize(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_open(...)             __Database_open(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_close(...)            __Database_close(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_beginTransaction(...) __Database_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_prepare(...)          __Database_prepare(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_finalize(...)         __Database_finalize(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -361,7 +382,17 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *name);
+#ifdef NDEBUG
+  Errors Database_beginTransaction(DatabaseHandle *databaseHandle,
+                                   const char *name
+                                  );
+#else /* not NDEBUG */
+  Errors __Database_beginTransaction(const char     *__fileName__,
+                                     uint           __lineNb__,
+                                     DatabaseHandle *databaseHandle,
+                                     const char     *name
+                                    );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_endTransaction

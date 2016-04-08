@@ -658,8 +658,42 @@ LOCAL void dirname(sqlite3_context *context, int argc, sqlite3_value *argv[])
 }
 
 /***********************************************************************\
+* Name   : delay
+* Purpose: delay program execution
+* Input  : time - delay time [ms]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delay(ulong time)
+{
+  #if   defined(USLEEP)
+  #elif defined(HAVE_NANOSLEEP)
+    struct timespec ts;
+  #endif /* HAVE_NANOSLEEP */
+
+  #if   defined(USLEEP)
+    usleep(time*1000L);
+  #elif defined(HAVE_NANOSLEEP)
+    ts.tv_sec  = time/1000L;
+    ts.tv_nsec = (time%1000L)*1000000L;
+    while (   (nanosleep(&ts,&ts) == -1)
+           && (errno == EINTR)
+          )
+    {
+      // nothing to do
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    Sleep(time);
+  #else
+    #error usleep()/nanosleep() not available nor Windows system!
+  #endif
+}
+
+/***********************************************************************\
 * Name   : executeCallback
-* Purpose: SQLite3 callback wrapper
+* Purpose: SQLite3 call-back wrapper
 * Input  : userData - user data
 *          count    - number of columns
 *          values   - value array
@@ -700,7 +734,7 @@ LOCAL int executeCallback(void *userData,
 
 LOCAL int busyHandlerCallback(void *userData, int n)
 {
-  #define SLEEP_TIME 100LL
+  #define SLEEP_TIME 250L
 
   #ifdef HAVE_NANOSLEEP
     struct timespec ts;
@@ -712,25 +746,11 @@ LOCAL int busyHandlerCallback(void *userData, int n)
     fprintf(stderr,"Warning: database busy handler called (%d)\n",n);
   #endif /* not NDEBUG */
 
-  #if defined(PLATFORM_LINUX)
-    #if   defined(HAVE_NANOSLEEP)
-      ts.tv_sec  = (ulong)(SLEEP_TIME/1000ULL);
-      ts.tv_nsec = (ulong)((SLEEP_TIME%1000ULL)*1000000);
-      while (   (nanosleep(&ts,&ts) == -1)
-             && (errno == EINTR)
-            )
-     {
-        // nothing to do
-      }
-    #else
-      sleep(1);
-    #endif
-  #elif defined(PLATFORM_WINDOWS)
-    Sleep(SLEEP_TIME);
-  #endif
+  delay(SLEEP_TIME);
 fprintf(stderr,"%s, %d: n=%d\n",__FILE__,__LINE__,n);
 
-  return (n < 5*10) ? 1 : 0;
+//  return (n < 5*10) ? 1 : 0;
+return 1;
 
   #undef SLEEP_TIME
 }
@@ -754,6 +774,15 @@ fprintf(stderr,"%s, %d: jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj\n",__FILE__,__LINE__);
 
 return 1;
 }
+
+/***********************************************************************\
+* Name   : waitUnlockNotify
+* Purpose: SQLite3 busy handler callback
+* Input  : statementHandle - statement ahndle
+* Output : -
+* Return : SQLite result code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL int waitUnlockNotify(sqlite3 *handle)
 {
@@ -780,7 +809,6 @@ LOCAL int waitUnlockNotify(sqlite3 *handle)
   return SQLITE_OK;
 }
 
-
 /***********************************************************************\
 * Name   : sqliteStep
 * Purpose: SQLite3 busy handler callback
@@ -792,6 +820,8 @@ LOCAL int waitUnlockNotify(sqlite3 *handle)
 
 LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle)
 {
+  #define SLEEP_TIME 250L
+
   int sqliteResult;
 
   assert(handle != NULL);
@@ -806,11 +836,18 @@ fprintf(stderr,"%s, %d: lllllllllllllllllll\n",__FILE__,__LINE__);
       waitUnlockNotify(handle);
       sqlite3_reset(statementHandle);
     }
+    else if (sqliteResult == SQLITE_BUSY)
+    {
+      delay(SLEEP_TIME);
+      sqlite3_reset(statementHandle);
+    }
   }
-  while (sqliteResult == SQLITE_LOCKED);
+  while ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY));
 fprintf(stderr,"%s, %d: mmmmmmmmmmmmmmmmmmmmmmmmmmm\n",__FILE__,__LINE__);
 
   return sqliteResult;
+
+  #undef SLEEP_TIME
 }
 
 /***********************************************************************\
@@ -831,10 +868,15 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
                            void                *databaseRowUserData
                           )
 {
+  #define SLEEP_TIME 250L
+
   DatabaseRowCallback databaseRowCallback;
   Errors              error;
   int                 sqliteResult;
   sqlite3_stmt        *statementHandle;
+  uint                count;
+  const char          **names,**values;
+  uint                i;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
@@ -857,7 +899,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       do
       {
         sqlite3_unlock_notify(databaseHandle->handle,unlockCallback,0);
-        usleep(100);
+        delay(SLEEP_TIME);
       }
       while (xxx==0);
     }
@@ -878,9 +920,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 #else
   const char *nextSqlCommand = stringTrim(sqlString);
 
-  sqliteResult = SQLITE_OK;
-  while (   !stringIsEmpty(nextSqlCommand)
-         && (sqliteResult == SQLITE_OK)
+  error = ERROR_NONE;
+  while (   (error == ERROR_NONE)
+         && !stringIsEmpty(nextSqlCommand)
         )
   {
 //fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,sqlCommands);
@@ -890,50 +932,99 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                       &statementHandle,
                                       &nextSqlCommand
                                      );
-    if ((sqliteResult != SQLITE_OK) || (statementHandle == NULL))
+    if (sqliteResult == SQLITE_OK)
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
-    }
-
-    do
-    {
-      do
+      // allocate call-back data
+      if (databaseRowFunction != NULL)
       {
-        sqliteResult = sqlite3_step(statementHandle);
-        if (sqliteResult == SQLITE_LOCKED)
+        count = sqlite3_column_count(statementHandle);
+        names = (const char**)malloc(count*sizeof(const char*));
+        if (names == NULL)
         {
-fprintf(stderr,"%s, %d:gsdgsdfgdfg \n",__FILE__,__LINE__);
-          waitUnlockNotify(databaseHandle->handle);
-          sqlite3_reset(statementHandle);
+          HALT_INSUFFICIENT_MEMORY();
+        }
+        values = (const char**)malloc(count*sizeof(const char*));
+        if (values == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
         }
       }
-      while (sqliteResult == SQLITE_LOCKED);
-//TODO callback
+
+      // step and process rows
+      do
+      {
+        // step
+        do
+        {
+          sqliteResult = sqlite3_step(statementHandle);
+          if      (sqliteResult == SQLITE_LOCKED)
+          {
+  fprintf(stderr,"%s, %d:gsdgsdfgdfg \n",__FILE__,__LINE__);
+            waitUnlockNotify(databaseHandle->handle);
+            sqlite3_reset(statementHandle);
+          }
+          else if (sqliteResult == SQLITE_BUSY)
+          {
+            delay(SLEEP_TIME);
+            sqlite3_reset(statementHandle);
+          }
+          else if (sqliteResult == SQLITE_MISUSE)
+          {
+            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+          }
+        }
+        while ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY));
+
+        // process row
+        if      (sqliteResult == SQLITE_ROW)
+        {
+          if (databaseRowFunction != NULL)
+          {
+            for (i = 0; i < count; i++)
+            {
+              names[i]  = sqlite3_column_name(statementHandle,i);
+              values[i] = sqlite3_column_text(statementHandle,i);
+            }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+            error = databaseRowFunction(count,names,values,databaseRowUserData);
+  //TODO callback
+          }
+        }
+      }
+      while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
+      if (sqliteResult != SQLITE_DONE)
+      {
+        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
+fprintf(stderr,"%s, %d: %d %s\n",__FILE__,__LINE__,sqliteResult,Error_getText(error));
+      }
+
+      // free call-back data
+      if (databaseRowFunction != NULL)
+      {
+        free(values);
+        free(names);
+      }
+    else if (sqliteResult == SQLITE_MISUSE)
+    {
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
     }
-    while (sqliteResult == SQLITE_ROW);
+    }
+    else
+    {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+    }
 
     nextSqlCommand = stringTrim(nextSqlCommand);
   }
 
   sqlite3_finalize(statementHandle);
-
-  if      ((sqliteResult == SQLITE_ROW) || (sqliteResult == SQLITE_DONE))
-  {
-    error = ERROR_NONE;
-  }
-  else if (sqliteResult == SQLITE_MISUSE)
-  {
-    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
-  }
-  else
-  {
-fprintf(stderr,"%s, %d: %d %s : %s\n",__FILE__,__LINE__,sqliteResult,sqlite3_errmsg(databaseHandle->handle),sqlString);
-asm("int3");
-    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
-  }
 #endif
 
   return error;
+
+  #undef SLEEP_TIME
 }
 
 /***********************************************************************\
@@ -1190,9 +1281,12 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   sem_init(&databaseHandle->wakeUp,0,0);
   #ifndef NDEBUG
     stringClear(databaseHandle->fileName);
-    databaseHandle->locked.lineNb = 0;
-    databaseHandle->locked.t0     = 0ULL;
-    databaseHandle->locked.t1     = 0ULL;
+    databaseHandle->locked.lineNb              = 0;
+    databaseHandle->locked.t0                  = 0ULL;
+    databaseHandle->locked.t1                  = 0ULL;
+    databaseHandle->transaction.fileName       = NULL;
+    databaseHandle->transaction.lineNb         = 0;
+    databaseHandle->transaction.stackTraceSize = 0;
   #endif /* not NDEBUG */
 
   if (fileName != NULL)
@@ -2293,7 +2387,17 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
-Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *name)
+#ifdef NDEBUG
+  Errors Database_beginTransaction(DatabaseHandle *databaseHandle,
+                                   const char *name
+                                  )
+#else /* not NDEBUG */
+  Errors __Database_beginTransaction(const char   *__fileName__,
+                                     uint         __lineNb__,
+                                     DatabaseHandle *databaseHandle,
+                                     const char *name
+                                    )
+#endif /* NDEBUG */
 {
   String sqlString;
   int    sqliteResult;
@@ -2301,6 +2405,24 @@ Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *nam
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
+
+  #ifndef NDEBUG
+    if (databaseHandle->transaction.fileName != NULL)
+    {
+      fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread %p at %s, %ld and previously thread %p at %s, %ld!\n",
+              pthread_self(),
+              __fileName__,
+              __lineNb__,
+              databaseHandle->transaction.threadId,
+              databaseHandle->transaction.fileName,
+              databaseHandle->transaction.lineNb
+             );
+      #ifdef HAVE_BACKTRACE
+        debugDumpStackTrace(stderr,4,databaseHandle->transaction.stackTrace,databaseHandle->transaction.stackTraceSize,0);
+      #endif /* HAVE_BACKTRACE */
+      HALT_INTERNAL_ERROR("begin transactions fail");
+    }
+  #endif /* NDEBUG */
 
 #if 0
   // format SQL command string
@@ -2321,21 +2443,33 @@ Errors Database_beginTransaction(DatabaseHandle *databaseHandle, const char *nam
   // format SQL command string
   sqlString = String_format(String_new(),"BEGIN TRANSACTION;");
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+fprintf(stderr,"%s, %d: begin tras \n",__FILE__,__LINE__);
 
   error = sqliteExecute(databaseHandle,
                         String_cString(sqlString),
                         CALLBACK(NULL,NULL)
                        );
 #endif
-assert(error == ERROR_NONE);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
     String_delete(sqlString);
     return error;
   }
 
   // free resources
   String_delete(sqlString);
+
+  #ifndef NDEBUG
+fprintf(stderr,"%s, %d: beg %s %d\n",__FILE__,__LINE__,__fileName__,__lineNb__);
+    databaseHandle->transaction.threadId = pthread_self();
+    databaseHandle->transaction.fileName = __fileName__;
+    databaseHandle->transaction.lineNb   = __lineNb__;
+    #ifdef HAVE_BACKTRACE
+      databaseHandle->transaction.stackTraceSize = backtrace((void*)databaseHandle->transaction.stackTrace,SIZE_OF_ARRAY(databaseHandle->transaction.stackTrace));
+    #endif /* HAVE_BACKTRACE */
+  #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
@@ -2348,6 +2482,15 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->transaction.fileName != NULL);
+
+  #ifndef NDEBUG
+    databaseHandle->transaction.fileName = NULL;
+    databaseHandle->transaction.lineNb   = 0;
+    #ifdef HAVE_BACKTRACE
+      databaseHandle->transaction.stackTraceSize = 0;
+    #endif /* HAVE_BACKTRACE */
+  #endif /* NDEBUG */
 
 #if 0
   // format SQL command string
@@ -2398,6 +2541,15 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->transaction.fileName != NULL);
+
+  #ifndef NDEBUG
+    databaseHandle->transaction.fileName = NULL;
+    databaseHandle->transaction.lineNb   = 0;
+    #ifdef HAVE_BACKTRACE
+      databaseHandle->transaction.stackTraceSize = 0;
+    #endif /* HAVE_BACKTRACE */
+  #endif /* NDEBUG */
 
 #if 0
   // format SQL command string
