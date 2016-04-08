@@ -852,11 +852,14 @@ uint64 Misc_makeDateTime(uint year,
 
 void Misc_udelay(uint64 time)
 {
-  #ifdef HAVE_NANOSLEEP
+  #if   defined(HAVE_USLEEP)
+  #elif defined(HAVE_NANOSLEEP)
     struct timespec ts;
   #endif /* HAVE_NANOSLEEP */
 
-  #if   defined(HAVE_NANOSLEEP)
+  #if   defined(HAVE_USLEEP)
+    usleep(time);
+  #elif defined(HAVE_NANOSLEEP)
     ts.tv_sec  = (ulong)(time/1000000LL);
     ts.tv_nsec = (ulong)((time%1000000LL)*1000);
     while (   (nanosleep(&ts,&ts) == -1)
@@ -868,7 +871,7 @@ void Misc_udelay(uint64 time)
   #elif defined(PLATFORM_WINDOWS)
     Sleep(time/1000LL);
   #else
-    #error nanosleep() not available nor Windows system!
+    #error usleep()/nanosleep() not available nor Windows system!
   #endif
 }
 
