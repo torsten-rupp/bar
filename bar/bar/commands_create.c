@@ -3500,7 +3500,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
 /***********************************************************************\
 * Name   : purgeStorageByJobUUID
 * Purpose: purge old storages by job UUID
-* Input  : indexHandle    - index handle
+* Input  : indexHandle    - index handle or NULL if no index
 *          jobUUID        - job UUID
 *          maxStorageSize - max. storage size [bytes] or 0
 *          logHandle      - log handle (can be NULL)
@@ -3692,7 +3692,7 @@ fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
 /***********************************************************************\
 * Name   : purgeStorageByServer
 * Purpose: purge old storages by serer
-* Input  : indexHandle    - index handle
+* Input  : indexHandle    - index handle or NULL if no index
 *          jobUUID        - job UUID
 *          maxStorageSize - max. storage size [bytes] or 0
 *          logHandle      - log handle (can be NULL)
@@ -4486,7 +4486,7 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 * Name   : storeFileEntry
 * Purpose: store a file entry into archive
 * Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL
+*          indexHandle - index handle or NULL if no index
 *          fileName    - file name to store
 *          buffer      - buffer for temporary data
 *          bufferSize  - size of data buffer
@@ -4812,7 +4812,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 * Name   : storeImageEntry
 * Purpose: store an image entry into archive
 * Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL
+*          indexHandle - index handle or NULL if no index
 *          deviceName  - device name
 *          buffer      - buffer for temporary data
 *          bufferSize  - size of data buffer
@@ -5171,7 +5171,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 * Name   : storeDirectoryEntry
 * Purpose: store a directory entry into archive
 * Input  : createInfo    - create info structure
-*          indexHandle   - index handle or NULL
+*          indexHandle - index handle or NULL if no index
 *          directoryName - directory name to store
 * Output : -
 * Return : ERROR_NONE or error code
@@ -5333,7 +5333,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
 * Name   : storeLinkEntry
 * Purpose: store a link entry into archive
 * Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL
+*          indexHandle - index handle or NULL if no index
 *          linkName    - link name to store
 * Output : -
 * Return : ERROR_NONE or error code
@@ -5535,7 +5535,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 * Name   : storeHardLinkEntry
 * Purpose: store a hard link entry into archive
 * Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL
+*          indexHandle - index handle or NULL if no index
 *          nameList    - hard link name list to store
 *          buffer      - buffer for temporary data
 *          bufferSize  - size of data buffer
@@ -5866,7 +5866,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 * Name   : storeSpecialEntry
 * Purpose: store a special entry into archive
 * Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL
+*          indexHandle - index handle or NULL if no index
 *          fileName    - file name to store
 * Output : -
 * Return : ERROR_NONE or error code
@@ -6450,11 +6450,12 @@ Errors Command_create(ConstString                  jobUUID,
 
   // open index
   indexHandle = Index_open();
+
+  // create new entity
   if (indexHandle != NULL)
   {
     AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
-    // create new entity
     error = Index_newEntity(indexHandle,
                             jobUUID,
                             scheduleUUID,
@@ -6470,8 +6471,8 @@ Errors Command_create(ConstString                  jobUUID,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-  //TODO
-  //                      IndexId                      entityId,
+//TODO
+//                      IndexId                      entityId,
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
   }
 
@@ -6589,12 +6590,6 @@ createThreadCode(&createInfo);
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
 
-  // close index
-  if (indexHandle != NULL)
-  {
-    Index_close(indexHandle);
-  }
-
   // wait for threads
   if (!Thread_join(&storageThread))
   {
@@ -6612,9 +6607,8 @@ createThreadCode(&createInfo);
   // final update of status info
   (void)updateStatusInfo(&createInfo,TRUE);
 
-  // update index history
-//TODO
-//  entityId
+  // close index
+  Index_close(indexHandle);
 
   // write incremental list
   if (   createInfo.storeIncrementalFileInfoFlag
