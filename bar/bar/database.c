@@ -837,10 +837,11 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle)
     {
       delay(SLEEP_TIME);
       sqlite3_reset(statementHandle);
+      n++;
     }
   }
   while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-         && (n < 4*10)
+         && (n < 10*(1000/SLEEP_TIME))
         );
 
   return sqliteResult;
@@ -975,7 +976,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
         }
         while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-               && (n < 4*10)
+               && (n < 10*(1000/SLEEP_TIME))
               );
 
         // process row
