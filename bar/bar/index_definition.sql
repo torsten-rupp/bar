@@ -18,15 +18,17 @@ INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
-  id               INTEGER PRIMARY KEY,
-  jobUUID          TEXT UNIQUE NOT NULL,
-  scheduleUUID     TEXT NOT NULL,
-  created          INTEGER,
-  type             INTEGER,
-  totalEntityCount INTEGER DEFAULT 0,
-  totalEntitySize  INTEGER DEFAULT 0
+  id              INTEGER PRIMARY KEY,
+  jobUUID         TEXT NOT NULL,
+  scheduleUUID    TEXT,
+  type            INTEGER,
+  created         INTEGER,
+  errorMessage    TEXT,
+  totalEntryCount INTEGER,
+  totalEntrySize  INTEGER,
+  duration        INTEGER
 );
-CREATE INDEX ON history (jobUUID,created,type,created);
+CREATE INDEX ON history (jobUUID,created,type);
 CREATE INDEX ON history (created);
 
 // --- uuids -----------------------------------------------------------

@@ -101,6 +101,7 @@ typedef enum
 {
   INDEX_TYPE_NONE,
 
+  INDEX_TYPE_HISTORY,
   INDEX_TYPE_UUID,
   INDEX_TYPE_ENTITY,
   INDEX_TYPE_STORAGE,
@@ -165,7 +166,6 @@ extern const char *__databaseFileName;
 
 #ifndef NDEBUG
   #define Index_open(...) __Index_open(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Index_close(...) __Index_close(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -310,14 +310,7 @@ IndexHandle *__Index_open(const char  *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
-#ifdef NDEBUG
 void Index_close(IndexHandle *indexHandle);
-#else /* not NDEBUG */
-void __Index_close(const char  *__fileName__,
-                   uint        __lineNb__,
-                   IndexHandle *indexHandle
-                  );
-#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Index_beginTransaction
@@ -575,6 +568,96 @@ long Index_countState(IndexHandle *indexHandle,
                      );
 
 /***********************************************************************\
+* Name   : Index_initListHistory
+* Purpose: list history
+* Input  : IndexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          jobUUID          - unique job id (can be NULL)
+*          offset           - offset or 0
+*          limit            - numer of entries to list or
+*                             INDEX_UNLIMITED
+* Output : IndexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
+                             IndexHandle      *indexHandle,
+                             ConstString      jobUUID,
+                             uint64           offset,
+                             uint64           limit
+                            );
+
+/***********************************************************************\
+* Name   : Index_getNextHistory
+* Purpose: get next history entry
+* Input  : IndexQueryHandle - index query handle
+* Output : uuidId              - index id of UUID entry
+*          jobUUID             - unique job id (can be NULL)
+*          scheduleUUID        - unique schedule id (can be NULL)
+*          lastCreatedDateTime - create date/time stamp [s] (can be NULL)
+*          lastErrorMessage    - last storage error message (can be NULL)
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total storage size [bytes] (can be NULL)
+*          duration            - duration [s]
+* Return : TRUE if entry read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
+                          IndexId          *historyId,
+                          String           jobUUID,
+                          String           scheduleUUID,
+                          uint64           *createdDateTime,
+                          String           errorMessage,
+                          ulong            *totalEntryCount,
+                          uint64           *totalEntrySize,
+                          uint64           *duration
+                         );
+
+/***********************************************************************\
+* Name   : Index_newHistory
+* Purpose: create new history entry
+* Input  : indexHandle  - index handle
+*          jobUUID         - unique job id (can be NULL)
+*          scheduleUUID    - unique schedule id (can be NULL)
+*          archiveType     - archive type (can be NULL)
+*          createdDateTime - create date/time stamp [s] (can be NULL)
+*          errorMessage    - last storage error message (can be NULL)
+*          totalEntryCount - total number of entries (can be NULL)
+*          totalEntrySize  - total storage size [bytes] (can be NULL)
+*          duration        - duration [s]
+* Output : uuidId - index id of new UUID entry (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_newHistory(IndexHandle  *indexHandle,
+                        ConstString  jobUUID,
+                        ConstString  scheduleUUID,
+                        ArchiveTypes archiveType,
+                        uint64       createdDateTime,
+                        const char   *errorMessage,
+                        ulong        totalEntryCount,
+                        uint64       totalEntrySize,
+                        uint64       duration,
+                        IndexId      *historyId
+                       );
+
+/***********************************************************************\
+* Name   : Index_deleteHistory
+* Purpose: delete history entry
+* Input  : indexQueryHandle - index query handle
+*          jobUUID          - unique job id
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteHistory(IndexHandle *indexHandle,
+                           IndexId     historyId
+                          );
+
+/***********************************************************************\
 * Name   : Index_initListUUIDs
 * Purpose: list uuid entries and aggregated data of entities
 * Input  : IndexQueryHandle - index query handle variable
@@ -651,6 +734,11 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 *          indexHandle      - index handle
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          jobUUID          - job UUID or NULL
+*          scheduleUUID     - unique schedule id (can be NULL)
+*          ordering         - ordering
+*          offset           - offset or 0
+*          limit            - numer of entries to list or
+*                             INDEX_UNLIMITED
 * Output : IndexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -

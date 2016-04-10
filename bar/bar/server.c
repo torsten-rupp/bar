@@ -613,7 +613,7 @@ LOCAL struct
         bool restore;
         bool indexUpdate;
       } pauseFlags;                                // TRUE iff pause
-LOCAL uint64                pauseEndTimestamp;
+LOCAL uint64                pauseEndDateTime;      // pause end date/time [s]
 LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
@@ -3143,7 +3143,8 @@ LOCAL void jobThreadCode(void)
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String           scheduleCustomText;
   String           script;
-  time_t           startTime;
+  IndexHandle      *indexHandle;
+  uint64           startDateTime;
   StringList       archiveFileNameList;
   TextMacro        textMacros[4];
   StaticString     (s,64);
@@ -3161,6 +3162,9 @@ LOCAL void jobThreadCode(void)
   DeltaSourceList_init(&deltaSourceList);
   scheduleCustomText = String_new();
   script             = String_new();
+
+  // open index
+  indexHandle = Index_open();
 
   while (!quitFlag)
   {
@@ -3212,13 +3216,15 @@ LOCAL void jobThreadCode(void)
       String_clear(scheduleCustomText);
       jobOptions.noStorageFlag = FALSE;
     }
-    startTime = time(NULL);
 
     // unlock (Note: job is now protected by running state)
     Semaphore_unlock(&jobList.lock);
 
     // init log
     initLog(&logHandle);
+
+    // get start date/time
+    startDateTime = Misc_getCurrentDateTime();
 
     logMessage(&logHandle,LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
 
@@ -3273,7 +3279,7 @@ LOCAL void jobThreadCode(void)
         TEXT_MACRO_N_STRING (textMacros[3],"%file",     storageSpecifier.archiveName,NULL);
         script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
-                                startTime,
+                                startDateTime,
                                 TRUE,
                                 textMacros,
                                 SIZE_OF_ARRAY(textMacros)
@@ -3391,29 +3397,80 @@ NULL,//                                                        scheduleTitle,
                                                        );
             if (jobNode->requestedAbortFlag)
             {
+              // aborted
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
                          "Aborted job '%s'\n",
                          String_cString(jobNode->name)
                         );
+
+              // create history entry
+              if (indexHandle != NULL)
+              {
+                Index_newHistory(indexHandle,
+                                 jobUUID,
+                                 scheduleUUID,
+                                 archiveType,
+                                 Misc_getTimestamp(),
+                                 "aborted",
+                                 jobNode->runningInfo.totalEntryCount,
+                                 jobNode->runningInfo.totalEntrySize,
+                                 Misc_getCurrentDateTime()-startDateTime,
+                                 NULL  // historyId
+                                );
+              }
             }
             else if (jobNode->runningInfo.error != ERROR_NONE)
             {
+              // error
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
                          "Done job '%s' (error: %s)\n",
                          String_cString(jobNode->name),
                          Error_getText(jobNode->runningInfo.error)
                         );
+
+              // create history entry
+              if (indexHandle != NULL)
+              {
+                Index_newHistory(indexHandle,
+                                 jobUUID,
+                                 scheduleUUID,
+                                 archiveType,
+                                 Misc_getTimestamp(),
+                                 Error_getText(jobNode->runningInfo.error),
+                                 jobNode->runningInfo.totalEntryCount,
+                                 jobNode->runningInfo.totalEntrySize,
+                                 Misc_getCurrentDateTime()-startDateTime,
+                                 NULL  // historyId
+                                );
+              }
             }
             else
             {
+              // success
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
                          "Done job '%s'\n",
                          String_cString(jobNode->name),
                          Error_getText(jobNode->runningInfo.error)
                         );
+
+              // create history entry
+              if (indexHandle != NULL)
+              {
+                Index_newHistory(indexHandle,
+                                 jobUUID,
+                                 scheduleUUID,
+                                 archiveType,
+                                 Misc_getTimestamp(),
+                                 NULL,
+                                 jobNode->runningInfo.totalEntryCount,
+                                 jobNode->runningInfo.totalEntrySize,
+                                 Misc_getCurrentDateTime()-startDateTime,
+                                 NULL  // historyId
+                                );
+              }
             }
             break;
           case JOB_TYPE_RESTORE:
@@ -3478,7 +3535,7 @@ NULL,//                                                        scheduleTitle,
         TEXT_MACRO_N_STRING (textMacros[3],"%file",     storageSpecifier.archiveName,NULL);
         script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
-                                startTime,
+                                startDateTime,
                                 TRUE,
                                 textMacros,
                                 SIZE_OF_ARRAY(textMacros)
@@ -3541,6 +3598,9 @@ NULL,//                                                        scheduleTitle,
     // unlock
     Semaphore_unlock(&jobList.lock);
   }
+
+  // close index
+  Index_close(indexHandle);
 
   // free resources
   String_delete(script);
@@ -4653,7 +4713,6 @@ IndexHandle *indexHandle;
 LOCAL void pauseThreadCode(void)
 {
   SemaphoreLock semaphoreLock;
-  uint64        nowTimestamp;
   uint          sleepTime;
 
   while (!quitFlag)
@@ -4663,8 +4722,7 @@ LOCAL void pauseThreadCode(void)
     {
       if (serverState == SERVER_STATE_PAUSE)
       {
-        nowTimestamp = Misc_getCurrentDateTime();
-        if (nowTimestamp > pauseEndTimestamp)
+        if (Misc_getCurrentDateTime() > pauseEndDateTime)
         {
           serverState = SERVER_STATE_RUNNING;
           pauseFlags.create      = FALSE;
@@ -7161,7 +7219,7 @@ clientInfo->abortFlag = TRUE;
 
 LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint64 nowTimestamp;
+  uint64 now;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7178,8 +7236,8 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
         sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=running");
         break;
       case SERVER_STATE_PAUSE:
-        nowTimestamp = Misc_getCurrentDateTime();
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=pause time=%llu",(pauseEndTimestamp > nowTimestamp) ? pauseEndTimestamp-nowTimestamp : 0LL);
+        now = Misc_getCurrentDateTime();
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=pause time=%llu",(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
         break;
       case SERVER_STATE_SUSPENDED:
         sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=suspended");
@@ -7273,7 +7331,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
       }
       String_doneTokenizer(&stringTokenizer);
     }
-    pauseEndTimestamp = Misc_getCurrentDateTime()+(uint64)pauseTime;
+    pauseEndDateTime = Misc_getCurrentDateTime()+(uint64)pauseTime;
 
     String_clear(modeMask);
     if (pauseFlags.create     ) String_joinCString(modeMask,"create",',');
@@ -17919,7 +17977,7 @@ Errors Server_run(uint             port,
   pauseFlags.create       = FALSE;
   pauseFlags.restore      = FALSE;
   pauseFlags.indexUpdate  = FALSE;
-  pauseEndTimestamp       = 0LL;
+  pauseEndDateTime        = 0LL;
   quitFlag                = FALSE;
   AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
   AUTOFREE_ADD(&autoFreeList,&jobList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });

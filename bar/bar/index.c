@@ -5342,11 +5342,10 @@ bool Index_parseType(const char *name, IndexTypes *indexType)
 
 Errors Index_init(const char *fileName)
 {
-  Errors      error;
-  int64       indexVersion;
-  String      oldDatabaseFileName;
-  uint        n;
-  IndexHandle indexHandle;
+  Errors error;
+  int64  indexVersion;
+  String oldDatabaseFileName;
+  uint   n;
 
   assert(fileName != NULL);
 
@@ -5478,14 +5477,7 @@ IndexHandle *__Index_open(const char  *__fileName__,
   return indexHandle;
 }
 
-#ifdef NDEBUG
-void Index_close(IndexHandle *indexHandle);
-#else /* not NDEBUG */
-void __Index_close(const char  *__fileName__,
-                   uint        __lineNb__,
-                   IndexHandle *indexHandle
-                  )
-#endif /* NDEBUG */
+void Index_close(IndexHandle *indexHandle)
 {
   if (indexHandle != NULL)
   {
@@ -6014,6 +6006,192 @@ long Index_countState(IndexHandle *indexHandle,
   Database_finalize(&databaseQueryHandle);
 
   return count;
+}
+
+Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
+                             IndexHandle      *indexHandle,
+                             ConstString      jobUUID,
+                             uint64           offset,
+                             uint64           limit
+                            )
+{
+  Errors error;
+
+  assert(indexQueryHandle != NULL);
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
+
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT id, \
+                                   jobUUID, \
+                                   scheduleUUID, \
+                                   CASE lastCreated WHEN 0 THEN 0 ELSE STRFTIME('%%s',lastCreated) END, \
+                                   errorMessage, \
+                                   totalEntryCount, \
+                                   totalEntrySize, \
+                                   duration \
+                            FROM uuids \
+                            LIMIT %llu,%llu \
+                           ",
+                           offset,
+                           limit
+                          );
+  if (error != ERROR_NONE)
+  {
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
+
+  return ERROR_NONE;
+}
+
+bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
+                          IndexId          *historyId,
+                          String           jobUUID,
+                          String           scheduleUUID,
+                          uint64           *createdDateTime,
+                          String           errorMessage,
+                          ulong            *totalEntryCount,
+                          uint64           *totalEntrySize,
+                          uint64           *duration
+                         )
+{
+  DatabaseId databaseId;
+
+  assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+
+  // check init error
+  if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexQueryHandle->indexHandle->upgradeError;
+  }
+
+  if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
+                           "%lld %S %S %llu %S %lu %llu %llu",
+                           &databaseId,
+                           jobUUID,
+                           scheduleUUID,
+                           createdDateTime,
+                           errorMessage,
+                           totalEntryCount,
+                           totalEntrySize,
+                           duration
+                          )
+     )
+  {
+    return FALSE;
+  }
+  if (historyId != NULL) (*historyId) = INDEX_ID_(INDEX_TYPE_HISTORY,databaseId);
+
+  return ERROR_NONE;
+}
+
+Errors Index_newHistory(IndexHandle  *indexHandle,
+                        ConstString  jobUUID,
+                        ConstString  scheduleUUID,
+                        ArchiveTypes archiveType,
+                        uint64       createdDateTime,
+                        const char   *errorMessage,
+                        ulong        totalEntryCount,
+                        uint64       totalEntrySize,
+                        uint64       duration,
+                        IndexId      *historyId
+                       )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "INSERT INTO history \
+                              ( \
+                               jobUUID, \
+                               scheduleUUID, \
+                               type, \
+                               created, \
+                               errorMessage, \
+                               totalEntryCount, \
+                               totalEntrySize, \
+                               duration \
+                              ) \
+                            VALUES \
+                              ( \
+                               %'S, \
+                               %'S, \
+                               %d, \
+                               %llu, \
+                               %'s, \
+                               %lu, \
+                               %llu, \
+                               %llu \
+                              ); \
+                           ",
+                           jobUUID,
+                           scheduleUUID,
+                           archiveType,
+                           createdDateTime,
+                           errorMessage,
+                           totalEntryCount,
+                           totalEntrySize,
+                           duration
+                          );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+    return error;
+  }
+  if (historyId != NULL) (*historyId) = INDEX_ID_(INDEX_TYPE_HISTORY,Database_getLastRowId(&indexHandle->databaseHandle));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  return ERROR_NONE;
+}
+
+Errors Index_deleteHistory(IndexHandle *indexHandle,
+                           IndexId     historyId
+                          )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  // delete history entry
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM history WHERE id=%lld;",
+                           INDEX_DATABASE_ID_(historyId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
