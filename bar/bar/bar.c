@@ -3698,7 +3698,7 @@ void printInfo(uint verboseLevel, const char *format, ...)
 
 bool lockConsole(void)
 {
-  return Semaphore_lock(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
+  return Semaphore_lock(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 }
 
 void unlockConsole(void)
