@@ -148,7 +148,7 @@
 #define GB (1024L*1024L*1024L)
 
 // special constants
-#define NO_WAIT      0
+#define NO_WAIT      0L
 #define WAIT_FOREVER -1L
 
 // exit codes
