@@ -32,8 +32,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define SEMAPHORE_NO_WAIT      0L
-#define SEMAPHORE_WAIT_FOREVER -1L
 
 /***************************** Datatypes *******************************/
 
@@ -121,7 +119,7 @@ typedef bool SemaphoreLock;
 \***********************************************************************/
 
 #define SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType) \
-  for (semaphoreLock = Semaphore_lock(semaphore,semaphoreLockType,SEMAPHORE_WAIT_FOREVER); \
+  for (semaphoreLock = Semaphore_lock(semaphore,semaphoreLockType,WAIT_FOREVER); \
        semaphoreLock; \
        Semaphore_unlock(semaphore), semaphoreLock = FALSE \
       )
@@ -210,7 +208,7 @@ void Semaphore_delete(Semaphore *semaphore);
 * Purpose: lock semaphore
 * Input  : semaphore         - semaphore
 *          semaphoreLockType - lock type: READ, READ/WRITE
-*          timeout           - timeout [ms] or SEMAPHORE_WAIT_FOREVER
+*          timeout           - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : TRUE if locked, FALSE on timeout
 * Notes  : -
@@ -252,7 +250,7 @@ INLINE void Semaphore_forceLock(Semaphore          *semaphore,
 {
   assert(semaphore != NULL);
 
-  if (!Semaphore_lock(semaphore,semaphoreLockType,SEMAPHORE_WAIT_FOREVER))
+  if (!Semaphore_lock(semaphore,semaphoreLockType,WAIT_FOREVER))
   {
     HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %u",__FILE__,__LINE__);
   }
@@ -273,7 +271,7 @@ INLINE void __Semaphore_forceLock(const char         *fileName,
 {
   assert(semaphore != NULL);
 
-  if (!__Semaphore_lock(fileName,lineNb,semaphore,semaphoreLockType,SEMAPHORE_WAIT_FOREVER))
+  if (!__Semaphore_lock(fileName,lineNb,semaphore,semaphoreLockType,WAIT_FOREVER))
   {
     HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %lu",fileName,lineNb);
   }
@@ -341,7 +339,7 @@ INLINE bool Semaphore_isOwned(const Semaphore *semaphore)
 * Name   : Semaphore_waitModified
 * Purpose: wait until semaphore is modified
 * Input  : semaphore - semaphore
-*          timeout   - timeout [ms] or SEMAPHORE_WAIT_FOREVER
+*          timeout   - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : TRUE if modified, FALSE on timeout
 * Notes  : -

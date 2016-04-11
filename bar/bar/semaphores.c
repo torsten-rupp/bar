@@ -134,7 +134,7 @@ typedef struct
       { \
         struct timespec __tp; \
         \
-        assert(timeout != SEMAPHORE_WAIT_FOREVER); \
+        assert(timeout != WAIT_FOREVER); \
         \
         pthread_once(&debugSemaphoreInitFlag,debugInit); \
         pthread_mutex_lock(&debugSemaphoreLock); \
@@ -184,7 +184,7 @@ typedef struct
       { \
         struct timespec __tp; \
         \
-        assert(timeout != SEMAPHORE_WAIT_FOREVER); \
+        assert(timeout != WAIT_FOREVER); \
         \
         clock_gettime(CLOCK_REALTIME,&__tp); \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
@@ -479,7 +479,7 @@ LOCAL void checkUnlocked(Semaphore *semaphore)
 * Purpose: lock semaphore
 * Input  : semaphore         - semaphore
 *          semaphoreLockType - lock type; see SemaphoreLockTypes
-*          timeout           - timeout [ms] or SEMAPHORE_WAIT_FOREVER
+*          timeout           - timeout [ms]
 * Output : -
 * Return : -
 * Notes  : -
@@ -523,7 +523,7 @@ LOCAL bool lock(const char         *fileName,
       __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
       // read: aquire lock temporary and increment read-lock counter
-      if (timeout != SEMAPHORE_WAIT_FOREVER)
+      if (timeout != WAIT_FOREVER)
       {
         __SEMAPHORE_LOCK_TIMEOUT(DEBUG_FLAG_READ,DEBUG_LOCK_TYPE_READ,"R",semaphore,timeout,lockedFlag);
         if (!lockedFlag)
@@ -587,7 +587,7 @@ LOCAL bool lock(const char         *fileName,
 #if 0
 //Note: read-lock requests will not wait for running read/write-locks, because aquiring a read/write lock is waiting for running read-locks (see below)
         // wait until no more other read/write-locks
-        if      (timeout != SEMAPHORE_WAIT_FOREVER)
+        if      (timeout != WAIT_FOREVER)
         {
           while (semaphore->readWriteLockCount > 0)
           {
@@ -644,7 +644,7 @@ LOCAL bool lock(const char         *fileName,
       __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
       // write: aquire lock permanent
-      if (timeout != SEMAPHORE_WAIT_FOREVER)
+      if (timeout != WAIT_FOREVER)
       {
         __SEMAPHORE_LOCK_TIMEOUT(DEBUG_FLAG_READ_WRITE,DEBUG_LOCK_TYPE_READ_WRITE,"RW",semaphore,timeout,lockedFlag);
         if (!lockedFlag)
@@ -685,7 +685,7 @@ LOCAL bool lock(const char         *fileName,
       #endif /* not NDEBUG */
 
       // wait until no more read-locks
-      if (timeout != SEMAPHORE_WAIT_FOREVER)
+      if (timeout != WAIT_FOREVER)
       {
         while (semaphore->readLockCount > 0)
         {
@@ -878,7 +878,7 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
 * Name   : waitModified
 * Purpose: wait until semaphore is modified
 * Input  : semaphore - semaphore
-*          timeout   - timeout [ms] or SEMAPHORE_WAIT_FOREVER
+*          timeout   - timeout [ms]
 * Output : -
 * Return : -
 * Notes  : -
@@ -933,7 +933,7 @@ LOCAL bool waitModified(const char *fileName,
         }
         __SEMAPHORE_SIGNAL(DEBUG_FLAG_READ_WRITE,"MODIFIED",&semaphore->modified);
 
-        if (timeout != SEMAPHORE_WAIT_FOREVER)
+        if (timeout != WAIT_FOREVER)
         {
           // wait for modification
           __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
@@ -974,7 +974,7 @@ LOCAL bool waitModified(const char *fileName,
       __SEMAPHORE_SIGNAL(DEBUG_FLAG_READ_WRITE,"MODIFIED",&semaphore->modified);
 
       // wait for modification
-      if (timeout != SEMAPHORE_WAIT_FOREVER)
+      if (timeout != WAIT_FOREVER)
       {
         __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ_WRITE,"MODIFIED",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
       }
@@ -991,7 +991,7 @@ LOCAL bool waitModified(const char *fileName,
       __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
       // wait until no more read-locks
-      if (timeout != SEMAPHORE_WAIT_FOREVER)
+      if (timeout != WAIT_FOREVER)
       {
         while (semaphore->readLockCount > 0)
         {
@@ -1280,9 +1280,9 @@ void Semaphore_setEnd(Semaphore *semaphore)
 
   // lock
   #ifdef NDEBUG
-    lock(semaphore,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER);
+    lock(semaphore,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
   #else /* not NDEBUG */
-    lock(__FILE__,__LINE__,semaphore,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER);
+    lock(__FILE__,__LINE__,semaphore,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
   #endif /* NDEBUG */
 
   // set end flag
