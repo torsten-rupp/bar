@@ -1609,7 +1609,7 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
     storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
     do
     {
-      Semaphore_waitModified(&jobList.lock,SEMAPHORE_WAIT_FOREVER);
+      Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
 
       if      (jobNode->volumeUnloadFlag)
       {
@@ -3164,12 +3164,12 @@ LOCAL void jobThreadCode(void)
   script             = String_new();
 
   // open index
-  indexHandle = Index_open();
+  indexHandle = Index_open(WAIT_FOREVER);
 
   while (!quitFlag)
   {
     // lock
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER);
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
 
     // wait for and get next job to execute
     do
@@ -3179,7 +3179,7 @@ LOCAL void jobThreadCode(void)
       {
         jobNode = jobNode->next;
       }
-      if (jobNode == NULL) Semaphore_waitModified(&jobList.lock,SEMAPHORE_WAIT_FOREVER);
+      if (jobNode == NULL) Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
     }
     while (!quitFlag && (jobNode == NULL));
     if (quitFlag)
@@ -3576,7 +3576,7 @@ NULL,//                                                        scheduleTitle,
     doneLog(&logHandle);
 
     // lock
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
     // free resources
     doneJobOptions(&jobOptions);
@@ -4555,7 +4555,7 @@ IndexHandle *indexHandle;
 
     // check for jobs triggers
     pendingFlag = FALSE;
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER);
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
     {
       currentDateTime = Misc_getCurrentDateTime();
       jobNode         = jobList.head;
@@ -4874,7 +4874,7 @@ LOCAL void indexThreadCode(void)
   List_init(&indexCryptPasswordList);
 
   // init index
-  indexHandle = Index_open();
+  indexHandle = Index_open(WAIT_FOREVER);
   if (indexHandle == NULL)
   {
     List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
@@ -5139,7 +5139,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   storageName          = String_new();
 
   // init index
-  indexHandle = Index_open();
+  indexHandle = Index_open(WAIT_FOREVER);
   if (indexHandle == NULL)
   {
     String_delete(storageName);
@@ -5482,7 +5482,7 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
 *          id            - command id
 *          resultMap     - result map variable
 *          actionCommand - action command
-*          timeout       - timeout or SEMAPHORE_WAIT_FOREVER
+*          timeout       - timeout or WAIT_FOREVER
 *          format        - arguments format string
 *          ...           - optional arguments
 * Output : resultMap - results
@@ -7228,7 +7228,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
   UNUSED_VARIABLE(argumentMap);
 
   // format result
-  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER);
+  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
   {
     switch (serverState)
     {
@@ -9295,7 +9295,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
       {
         while (IS_JOB_RUNNING(jobNode))
         {
-          Semaphore_waitModified(&jobList.lock,SEMAPHORE_WAIT_FOREVER);
+          Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
         }
       }
       else
@@ -17380,7 +17380,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   result = String_new();
 
   // init index
-  indexHandle = Index_open();
+  indexHandle = Index_open(WAIT_FOREVER);
 
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)

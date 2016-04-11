@@ -3415,6 +3415,9 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
   Storage_initSpecifier(&oldStorageSpecifier);
 
   // delete old indizes for same storage file
+fprintf(stderr,"%s, %d: purgeStorageIndex\n",__FILE__,__LINE__);
+error = Index_beginTransaction(indexHandle,"purge");
+assert(error == ERROR_NONE);
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
                                  INDEX_ID_ANY, // uuidId
@@ -3430,6 +3433,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                 );
   if (error != ERROR_NONE)
   {
+Index_rollbackTransaction(indexHandle,"purge");
     Storage_doneSpecifier(&oldStorageSpecifier);
     String_delete(oldStorageName);
     return error;
@@ -3485,10 +3489,12 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
   Index_doneList(&indexQueryHandle);
   if (error != ERROR_NONE)
   {
+Index_rollbackTransaction(indexHandle,"purge");
     Storage_doneSpecifier(&oldStorageSpecifier);
     String_delete(oldStorageName);
     return error;
   }
+Index_endTransaction(indexHandle,"purge");
 
   // free resoruces
   Storage_doneSpecifier(&oldStorageSpecifier);
@@ -3939,7 +3945,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   Storage_initSpecifier(&storageSpecifier);
 
   // init index
-  indexHandle = Index_open();
+//TODO timeout?
+  indexHandle = Index_open(WAIT_FOREVER);
 
   // initial storage pre-processing
   if (!isAborted(createInfo))
@@ -4449,7 +4456,7 @@ LOCAL bool setStatusEntryDoneInfo(CreateInfo *createInfo, ConstString name, uint
   bool          locked;
   SemaphoreLock semaphoreLock;
 
-  locked = Semaphore_lock(&createInfo->statusInfoNameLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_NO_WAIT);
+  locked = Semaphore_lock(&createInfo->statusInfoNameLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,NO_WAIT);
   if (locked)
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -6052,7 +6059,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
   }
 
   // open index
-  indexHandle = Index_open();
+//TODO timeout?
+  indexHandle = Index_open(WAIT_FOREVER);
 
   // store entries
   while (   (createInfo->failError == ERROR_NONE)
@@ -6419,20 +6427,6 @@ Errors Command_create(ConstString                  jobUUID,
                    String_cString(incrementalListFileName),
                    Error_getText(error)
                   );
-#if 0
-// NYI: must index be deleted on error?
-        // wait for index init
-        waitIndexInit(createInfo);
-
-        if (   (indexHandle != NULL)
-            && !archiveInfo->jobOptions->noIndexDatabaseFlag
-            && !archiveInfo->jobOptions->dryRunFlag
-            && !archiveInfo->jobOptions->noStorageFlag
-           )
-        {
-          Storage_indexDiscard(&createInfo.storageIndexHandle);
-        }
-#endif /* 0 */
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -6449,12 +6443,13 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // open index
-  indexHandle = Index_open();
+  indexHandle = Index_open(WAIT_FOREVER);
 
   // create new entity
   if (indexHandle != NULL)
   {
-    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+#warning TODO
+//    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
     error = Index_newEntity(indexHandle,
                             jobUUID,
@@ -6473,8 +6468,10 @@ Errors Command_create(ConstString                  jobUUID,
     }
 //TODO
 //                      IndexId                      entityId,
-    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
+//    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
   }
+Index_close(indexHandle);
+indexHandle=NULL;
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
@@ -6482,7 +6479,7 @@ Errors Command_create(ConstString                  jobUUID,
                          scheduleUUID,
                          deltaSourceList,
                          jobOptions,
-                         indexHandle,
+NULL,//                         indexHandle,
                          entityId,
                          archiveType,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
