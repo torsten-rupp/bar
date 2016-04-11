@@ -42,12 +42,16 @@
 
 /***************************** Constants *******************************/
 #if 1
-#define DEBUG_WARNING_LOCK_TIME  2ULL*1000ULL    // DEBUG only: warning lock time [ms]
-#define DEBUG_MAX_LOCK_TIME     60ULL*1000ULL    // DEBUG only: max. lock time [ms]
+  #define DEBUG_WARNING_LOCK_TIME  2ULL*1000ULL    // DEBUG only: warning lock time [ms]
+  #define DEBUG_MAX_LOCK_TIME     60ULL*1000ULL    // DEBUG only: max. lock time [ms]
 #else
-#define DEBUG_WARNING_LOCK_TIME MAX_UINT64
-#define DEBUG_MAX_LOCK_TIME     MAX_UINT64
+  #define DEBUG_WARNING_LOCK_TIME MAX_UINT64
+  #define DEBUG_MAX_LOCK_TIME     MAX_UINT64
 #endif
+
+#ifndef NDEBUG
+  #define MAX_THREADS 64
+#endif /* not NDEBUG */
 
 /***************************** Datatypes *******************************/
 
@@ -77,10 +81,32 @@ typedef union
   String     string;
 } Value;
 
+#ifndef NDEBUG
+  typedef struct
+  {
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      int        stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+    void  *(*startCode)(void*);
+    void  *argument;
+  } StackTraceThreadInfo;
+#endif /* not NDEBUG */
+
 /***************************** Variables *******************************/
 
 #ifndef NDEBUG
   LOCAL uint  databaseDebugCounter = 0;
+
+  LOCAL pthread_mutex_t databaseThreadInfoLock = PTHREAD_MUTEX_INITIALIZER;
+  LOCAL struct
+  {
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      int        stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+  }                     databaseThreadInfo[MAX_THREADS];
+  LOCAL uint            databaseThreadInfoCount = 0;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -808,15 +834,17 @@ LOCAL int waitUnlockNotify(sqlite3 *handle)
 /***********************************************************************\
 * Name   : sqliteStep
 * Purpose: SQLite3 busy handler callback
-* Input  : statementHandle - statement ahndle
+* Input  : handle          - database handle
+*          statementHandle - statement handle
+*          timeout         - timeout [ms]
 * Output : -
 * Return : SQLite result code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle)
+LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeout)
 {
-  #define SLEEP_TIME 250L
+  #define SLEEP_TIME 1000L
 
   uint n;
   int  sqliteResult;
@@ -841,7 +869,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle)
     }
   }
   while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-         && (n < 10*(1000/SLEEP_TIME))
+         && ((timeout == WAIT_FOREVER) || (n < (timeout+SLEEP_TIME-1L)/SLEEP_TIME))
         );
 
   return sqliteResult;
@@ -856,6 +884,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle)
 *          sqlString           - SQL string
 *          databaseRowFunction - row call-back function
 *          databaseRowUserData - user data for row call-back
+*          timeout             - timeout [ms]
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -864,10 +893,11 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle)
 LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
                            const char          *sqlString,
                            DatabaseRowFunction databaseRowFunction,
-                           void                *databaseRowUserData
+                           void                *databaseRowUserData,
+                           long                timeout
                           )
 {
-  #define SLEEP_TIME 250L
+  #define SLEEP_TIME 1000L
 
   const char          *nextSqlCommand;
   DatabaseRowCallback databaseRowCallback;
@@ -957,10 +987,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         n = 0;
         do
         {
-          sqliteResult = sqliteStep(databaseHandle->handle,statementHandle);
+          sqliteResult = sqlite3_step(statementHandle);
           if      (sqliteResult == SQLITE_LOCKED)
           {
-  fprintf(stderr,"%s, %d:gsdgsdfgdfg \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d:gsdgsdfgdfg \n",__FILE__,__LINE__);
             waitUnlockNotify(databaseHandle->handle);
             sqlite3_reset(statementHandle);
           }
@@ -976,8 +1006,16 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
         }
         while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-               && (n < 10*(1000/SLEEP_TIME))
+               && ((timeout == WAIT_FOREVER) || (n < (timeout+SLEEP_TIME-1L)/SLEEP_TIME))
               );
+if (sqliteResult == SQLITE_BUSY)
+{
+fprintf(stderr,"%s, %d: still SQLITE_BUSY %d \n",__FILE__,__LINE__,n);
+debugDumpCurrentStackTrace(stderr,0,0);
+asm("int3");
+sqlite3_reset(statementHandle);
+sqliteResult = sqlite3_step(statementHandle);
+}
 
         // process row
         if      (sqliteResult == SQLITE_ROW)
@@ -1258,17 +1296,36 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
 
 /*---------------------------------------------------------------------*/
 
+Errors Database_initAll(void)
+{
+  int sqliteResult;
+
+  sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
+  if (sqliteResult != SQLITE_OK)
+  {
+    return ERRORX_(DATABASE,sqliteResult,"enable multi-threading");
+  }
+
+  return ERROR_NONE;
+}
+
+void Database_doneAll(void)
+{
+}
+
 #ifdef NDEBUG
   Errors Database_open(DatabaseHandle    *databaseHandle,
                        const char        *fileName,
-                       DatabaseOpenModes databaseOpenMode
+                       DatabaseOpenModes databaseOpenMode,
+                       long              timeout
                       )
 #else /* not NDEBUG */
   Errors __Database_open(const char        *__fileName__,
                          uint              __lineNb__,
                          DatabaseHandle    *databaseHandle,
                          const char        *fileName,
-                         DatabaseOpenModes databaseOpenMode
+                         DatabaseOpenModes databaseOpenMode,
+                         long              timeout
                         )
 #endif /* NDEBUG */
 {
@@ -1280,7 +1337,8 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   assert(databaseHandle != NULL);
 
   // init variables
-  databaseHandle->handle = NULL;
+  databaseHandle->handle  = NULL;
+  databaseHandle->timeout = timeout;
   sem_init(&databaseHandle->wakeUp,0,0);
   #ifndef NDEBUG
     stringClear(databaseHandle->fileName);
@@ -1323,6 +1381,7 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
     case DATABASE_OPENMODE_READ:      sqliteMode = SQLITE_OPEN_READONLY;                     break;
     case DATABASE_OPENMODE_READWRITE: sqliteMode = SQLITE_OPEN_READWRITE;                    break;
   }
+//sqliteMode |= SQLITE_OPEN_PRIVATECACHE;
 
   // open database
   if (fileName == NULL) fileName = ":memory:";
@@ -1338,27 +1397,30 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
   #endif /* not NDEBUG */
 
   // set busy timeout handler
-  sqlite3_busy_handler(databaseHandle->handle,busyHandlerCallback,NULL);
+  sqliteResult = sqlite3_busy_handler(databaseHandle->handle,busyHandlerCallback,NULL);
+  assert(sqliteResult == SQLITE_OK);
 
   // register special functions
-  sqlite3_create_function(databaseHandle->handle,
-                          "regexp",
-                          3,
-                          SQLITE_ANY,
-                          NULL,
-                          regexpMatch,
-                          NULL,
-                          NULL
-                         );
-  sqlite3_create_function(databaseHandle->handle,
-                          "dirname",
-                          1,
-                          SQLITE_ANY,
-                          NULL,
-                          dirname,
-                          NULL,
-                          NULL
-                         );
+  sqliteResult = sqlite3_create_function(databaseHandle->handle,
+                                         "regexp",
+                                         3,
+                                         SQLITE_ANY,
+                                         NULL,
+                                         regexpMatch,
+                                         NULL,
+                                         NULL
+                                        );
+  assert(sqliteResult == SQLITE_OK);
+  sqliteResult = sqlite3_create_function(databaseHandle->handle,
+                                         "dirname",
+                                         1,
+                                         SQLITE_ANY,
+                                         NULL,
+                                         dirname,
+                                         NULL,
+                                         NULL
+                                        );
+  assert(sqliteResult == SQLITE_OK);
 
   #ifdef DATABASE_DEBUG
     fprintf(stderr,"Database debug: open '%s'\n",fileName);
@@ -1577,7 +1639,7 @@ fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
     }
 
     // copy rows
-    while ((sqliteResult = sqliteStep(fromDatabaseHandle->handle,fromStatementHandle)) == SQLITE_ROW)
+    while ((sqliteResult = sqliteStep(fromDatabaseHandle->handle,fromStatementHandle,fromDatabaseHandle->timeout)) == SQLITE_ROW)
     {
 xxx++;
       // reset to data
@@ -1762,7 +1824,7 @@ fprintf(stderr,"%s, %d: 3\n",__FILE__,__LINE__);
       }
 
       // insert row
-      if (sqliteStep(toDatabaseHandle->handle,toStatementHandle) != SQLITE_DONE)
+      if (sqliteStep(toDatabaseHandle->handle,toStatementHandle,toDatabaseHandle->timeout) != SQLITE_DONE)
       {
 fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
@@ -2245,7 +2307,8 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
-                          CALLBACK(NULL,NULL)
+                          CALLBACK(NULL,NULL),
+                          databaseHandle->timeout
                          );
     if (error != ERROR_NONE)
     {
@@ -2266,7 +2329,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     }
 
     // copy table rows
-    while (sqliteStep(databaseHandle->handle,statementHandle) == SQLITE_ROW)
+    while (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       // create SQL command string
       String_setCString(sqlString,"INSERT INTO __new__ (");
@@ -2321,7 +2384,8 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       DATABASE_DEBUG_SQL(databaseHandle,sqlString);
       error = sqliteExecute(databaseHandle,
                             String_cString(sqlString),
-                            CALLBACK(NULL,NULL)
+                            CALLBACK(NULL,NULL),
+                            databaseHandle->timeout
                            );
       if (error != ERROR_NONE)
       {
@@ -2438,17 +2502,19 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   {
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
-                         CALLBACK(NULL,NULL)
+                         CALLBACK(NULL,NULL),
+                         databaseHandle->timeout
                         );
   });
 #else
   // format SQL command string
-  sqlString = String_format(String_new(),"BEGIN TRANSACTION;");
+  sqlString = String_format(String_new(),"BEGIN TRANSACTION EXCLUSIVE;");
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
 
   error = sqliteExecute(databaseHandle,
                         String_cString(sqlString),
-                        CALLBACK(NULL,NULL)
+                        CALLBACK(NULL,NULL),
+                        databaseHandle->timeout
                        );
 #endif
   if (error != ERROR_NONE)
@@ -2501,7 +2567,8 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   {
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
-                         CALLBACK(NULL,NULL)
+                         CALLBACK(NULL,NULL),
+                         databaseHandle->timeout
                         );
   });
 #else
@@ -2512,7 +2579,8 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   // end transaction
   error = sqliteExecute(databaseHandle,
                         String_cString(sqlString),
-                        CALLBACK(NULL,NULL)
+                        CALLBACK(NULL,NULL),
+                        databaseHandle->timeout
                        );
 #endif
   if (error != ERROR_NONE)
@@ -2560,7 +2628,8 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
-                         CALLBACK(NULL,NULL)
+                         CALLBACK(NULL,NULL),
+                         databaseHandle->timeout
                         );
   });
 #else
@@ -2571,7 +2640,8 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
   error = sqliteExecute(databaseHandle,
                         String_cString(sqlString),
-                        CALLBACK(NULL,NULL)
+                        CALLBACK(NULL,NULL),
+                        databaseHandle->timeout
                        );
 #endif
   if (error != ERROR_NONE)
@@ -2623,7 +2693,8 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
                           String_cString(sqlString),
 //TODO:
                           (databaseRowFunction != NULL) ? executeCallback : NULL,
-                          (databaseRowFunction != NULL) ? &databaseRowCallback : NULL
+                          (databaseRowFunction != NULL) ? &databaseRowCallback : NULL,
+                          databaseHandle->timeout
                          );
 //    return sqliteResult;
 //  });
@@ -2768,7 +2839,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 //    bool result;
 
     DATABASE_DEBUG_TIME_START(databaseQueryHandle);
-    if (sqliteStep(databaseQueryHandle->databaseHandle->handle,databaseQueryHandle->statementHandle) == SQLITE_ROW)
+    if (sqliteStep(databaseQueryHandle->databaseHandle->handle,databaseQueryHandle->statementHandle,databaseQueryHandle->databaseHandle->timeout) == SQLITE_ROW)
     {
       // get data
       column = 0;
@@ -3081,7 +3152,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
                                      );
     if (sqliteResult == SQLITE_OK)
     {
-      if (sqliteStep(databaseHandle->handle,statementHandle) == SQLITE_ROW)
+      if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
       {
         existsFlag = TRUE;
       }
@@ -3159,7 +3230,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
-    if (sqliteStep(databaseHandle->handle,statementHandle) == SQLITE_ROW)
+    if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       (*value) = (int64)sqlite3_column_int64(statementHandle,0);
     }
@@ -3226,7 +3297,8 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
-                         CALLBACK(NULL,NULL)
+                         CALLBACK(NULL,NULL),
+                         databaseHandle->timeout
                         );
   });
   if (error != ERROR_NONE)
@@ -3248,7 +3320,8 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
       DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
       return sqliteExecute(databaseHandle,
                            String_cString(sqlString),
-                           CALLBACK(NULL,NULL)
+                           CALLBACK(NULL,NULL),
+                           databaseHandle->timeout
                           );
     });
 
@@ -3324,7 +3397,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
 
-    if (sqliteStep(databaseHandle->handle,statementHandle) == SQLITE_ROW)
+    if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       String_setCString(value,(const char*)sqlite3_column_text(statementHandle,0));
     }
@@ -3391,7 +3464,8 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
     DATABASE_DEBUG_SQLX(databaseHandle,"set string",sqlString);
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
-                         CALLBACK(NULL,NULL)
+                         CALLBACK(NULL,NULL),
+                         databaseHandle->timeout
                         );
   });
   if (error != ERROR_NONE)

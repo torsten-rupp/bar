@@ -288,6 +288,7 @@ INLINE bool Index_isAvailable(void)
 * Purpose: open index database
 * Input  : indexHandle      - index handle variable
 *          databaseFileName - database file name
+*          timeout          - timeout [ms]
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -296,8 +297,9 @@ INLINE bool Index_isAvailable(void)
 #ifdef NDEBUG
 IndexHandle *Index_open(void);
 #else /* not NDEBUG */
-IndexHandle *__Index_open(const char  *__fileName__,
-                          uint        __lineNb__
+IndexHandle *__Index_open(const char *__fileName__,
+                          uint       __lineNb__,
+                          long       timeout
                          );
 #endif /* NDEBUG */
 

@@ -88,7 +88,9 @@ const char *ENTRY_TABLE_NAMES[] =
 };
 
 // sleep time [s]
-#define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
+#warning remove
+//#define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
+#define SLEEP_TIME_INDEX_CLEANUP_THREAD (2*60)
 
 /***************************** Datatypes *******************************/
 typedef enum
@@ -148,9 +150,9 @@ LOCAL bool   quitFlag;
   // create index database
   (void)File_deleteCString(databaseFileName,FALSE);
   #ifdef NDEBUG
-    error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
+    error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,0);
   #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE);
+    error = __Database_open(__fileName__,__lineNb__,&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,0);
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
@@ -198,14 +200,16 @@ LOCAL bool   quitFlag;
 #ifdef NDEBUG
   LOCAL Errors openIndex(IndexHandle    *indexHandle,
                          const char     *databaseFileName,
-                         IndexOpenModes indexOpenMode
+                         IndexOpenModes indexOpenMode,
+                         long           timeout
                         )
 #else /* not NDEBUG */
   LOCAL Errors __openIndex(const char     *__fileName__,
                            uint           __lineNb__,
                            IndexHandle    *indexHandle,
                            const char     *databaseFileName,
-                           IndexOpenModes indexOpenMode
+                           IndexOpenModes indexOpenMode,
+                           long           timeout
                           )
 #endif /* NDEBUG */
 {
@@ -216,9 +220,9 @@ LOCAL bool   quitFlag;
 
   // open index database
   #ifdef NDEBUG
-    error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE);
+    error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
   #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE);
+    error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
@@ -283,7 +287,7 @@ LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
   IndexHandle indexHandle;
 
   // open index database
-  error = openIndex(&indexHandle,databaseFileName,INDEX_OPEN_MODE_READ);
+  error = openIndex(&indexHandle,databaseFileName,INDEX_OPEN_MODE_READ,0);
   if (error != ERROR_NONE)
   {
     return error;
@@ -3275,7 +3279,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   int64       indexVersion;
 
   // open old index
-  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ);
+  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ,0);
   if (error != ERROR_NONE)
   {
     return error;
@@ -3590,6 +3594,10 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   // initialize variables
   storageName = String_new();
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//error = Index_beginTransaction(indexHandle,"purge3");
+//assert(error == ERROR_NONE);
+
   // clean-up
   n = 0L;
   error = Index_initListFiles(&indexQueryHandle,
@@ -3792,10 +3800,12 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                           n
                          );
 
+//Index_endTransaction(indexHandle,"purge2");
+
   // free resources
   String_delete(storageName);
 
-  return ERROR_NONE;
+  return error;
 }
 
 /***********************************************************************\
@@ -4341,7 +4351,7 @@ LOCAL void cleanupIndexThreadCode(void)
   assert(__databaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE);
+  error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE,0);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
@@ -4463,9 +4473,11 @@ LOCAL void cleanupIndexThreadCode(void)
   // regular clean-ups
   while (!quitFlag)
   {
+fprintf(stderr,"%s, %d: start clean\n",__FILE__,__LINE__);
     // clean-up database
     (void)cleanUpOrphanedEntries(&indexHandle);
     (void)cleanUpDuplicateIndizes(&indexHandle);
+fprintf(stderr,"%s, %d: done cle\n",__FILE__,__LINE__);
 
     // sleep, check quit flag
     sleepTime = 0;
@@ -5210,6 +5222,14 @@ LOCAL Errors assignJobToJob(IndexHandle *indexHandle,
 
 Errors Index_initAll(void)
 {
+  Errors error;
+
+  error = Database_initAll();
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
   return ERROR_NONE;
 }
 
@@ -5437,10 +5457,11 @@ void Index_done(void)
 }
 
 #ifdef NDEBUG
-IndexHandle *Index_open(void);
+IndexHandle *Index_open(long timeout);
 #else /* not NDEBUG */
-IndexHandle *__Index_open(const char  *__fileName__,
-                          uint        __lineNb__
+IndexHandle *__Index_open(const char *__fileName__,
+                          uint       __lineNb__,
+                          long       timeout
                          )
 #endif /* NDEBUG */
 {
@@ -5459,7 +5480,8 @@ IndexHandle *__Index_open(const char  *__fileName__,
 
     error = openIndex(indexHandle,
                       __databaseFileName,
-                      DATABASE_OPENMODE_READWRITE
+                      DATABASE_OPENMODE_READWRITE,
+                      timeout
                      );
     if (error != ERROR_NONE)
     {
@@ -6514,7 +6536,6 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     {
       return error;
     }
-
     (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,Database_getLastRowId(&indexHandle->databaseHandle));
 
     return ERROR_NONE;

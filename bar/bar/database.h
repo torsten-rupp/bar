@@ -70,8 +70,9 @@ typedef enum
 // database handle
 typedef struct
 {
-  sqlite3   *handle;
-  sem_t     wakeUp;
+  sqlite3   *handle;                    // SQlite3 handle
+  long      timeout;                    // timeout [ms]
+  sem_t     wakeUp;                     // unlock wake-up
   #ifndef NDEBUG
     char fileName[256];
     struct
@@ -177,10 +178,34 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
 #endif
 
 /***********************************************************************\
+* Name   : Database_initAll
+* Purpose: init database
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_initAll(void);
+
+/***********************************************************************\
+* Name   : Database_doneAll
+* Purpose: done database
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_doneAll(void);
+
+/***********************************************************************\
 * Name   : Database_open
 * Purpose: open database
-* Input  : databaseHandle - database handle variable
-*          fileName       - file name or NULL for "in memory"
+* Input  : databaseHandle   - database handle variable
+*          fileName         - file name or NULL for "in memory"
+*          databaseOpenMode - open mode; see DatabaseOpenModes
+*          timeout          - timeout [ms]
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -189,14 +214,16 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
 #ifdef NDEBUG
   Errors Database_open(DatabaseHandle    *databaseHandle,
                        const char        *fileName,
-                       DatabaseOpenModes databaseOpenMode
+                       DatabaseOpenModes databaseOpenMode,
+                       long              timeout
                       );
 #else /* not NDEBUG */
   Errors __Database_open(const char        *__fileName__,
                          uint              __lineNb__,
                          DatabaseHandle    *databaseHandle,
                          const char        *fileName,
-                         DatabaseOpenModes databaseOpenMode
+                         DatabaseOpenModes databaseOpenMode,
+                         long              timeout
                         );
 #endif /* NDEBUG */
 
