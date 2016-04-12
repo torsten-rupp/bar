@@ -760,17 +760,19 @@ LOCAL int executeCallback(void *userData,
 
 LOCAL int busyHandlerCallback(void *userData, int n)
 {
-  #define SLEEP_TIME 250L
+  #define SLEEP_TIME 1000L
 
-  UNUSED_VARIABLE(userData);
+  DatabaseHandle *databaseHandle = (DatabaseHandle*)userData;
+
+  assert(databaseHandle != NULL);
 
   #ifndef NDEBUG
-    fprintf(stderr,"Warning: database busy handler called (%d)\n",n);
+    fprintf(stderr,"Warning: database busy handler called %p: %d\n",pthread_self(),n);
   #endif /* not NDEBUG */
 
   delay(SLEEP_TIME);
 
-  return (n < 3*10*4) ? 1 : 0;
+  return ((databaseHandle->timeout == WAIT_FOREVER) || (n < databaseHandle->timeout)) ? 1 : 0;
 
   #undef SLEEP_TIME
 }
@@ -1010,7 +1012,7 @@ fprintf(stderr,"%s, %d:gsdgsdfgdfg \n",__FILE__,__LINE__);
               );
 if (sqliteResult == SQLITE_BUSY)
 {
-fprintf(stderr,"%s, %d: still SQLITE_BUSY %d \n",__FILE__,__LINE__,n);
+fprintf(stderr,"%s, %d: still SQLITE_BUSY %d %ld\n",__FILE__,__LINE__,n,timeout);
 debugDumpCurrentStackTrace(stderr,0,0);
 asm("int3");
 sqlite3_reset(statementHandle);
@@ -1397,7 +1399,7 @@ void Database_doneAll(void)
   #endif /* not NDEBUG */
 
   // set busy timeout handler
-  sqliteResult = sqlite3_busy_handler(databaseHandle->handle,busyHandlerCallback,NULL);
+  sqliteResult = sqlite3_busy_handler(databaseHandle->handle,busyHandlerCallback,databaseHandle);
   assert(sqliteResult == SQLITE_OK);
 
   // register special functions
@@ -2472,6 +2474,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
+fprintf(stderr,"%s, %d: begin tr %s\n",__FILE__,__LINE__,name);
   #ifndef NDEBUG
     if (databaseHandle->transaction.fileName != NULL)
     {
@@ -2490,33 +2493,15 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     }
   #endif /* NDEBUG */
 
-#if 0
   // format SQL command string
-  sqlString = String_format(String_new(),"SAVEPOINT %s;",name);
+//  sqlString = String_format(String_new(),"BEGIN TRANSACTION EXCLUSIVE;");
+  sqlString = String_format(String_new(),"BEGIN TRANSACTION;");
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-
-  // start transaction (create savepoint)
-  BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
-            DATABASE_UNLOCK(databaseHandle),
-  {
-    return sqliteExecute(databaseHandle,
-                         String_cString(sqlString),
-                         CALLBACK(NULL,NULL),
-                         databaseHandle->timeout
-                        );
-  });
-#else
-  // format SQL command string
-  sqlString = String_format(String_new(),"BEGIN TRANSACTION EXCLUSIVE;");
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-
   error = sqliteExecute(databaseHandle,
                         String_cString(sqlString),
                         CALLBACK(NULL,NULL),
                         databaseHandle->timeout
                        );
-#endif
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -2547,6 +2532,7 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   assert(databaseHandle->handle != NULL);
   assert(databaseHandle->transaction.fileName != NULL);
 
+fprintf(stderr,"%s, %d: end tr %s\n",__FILE__,__LINE__,name);
   #ifndef NDEBUG
     databaseHandle->transaction.fileName = NULL;
     databaseHandle->transaction.lineNb   = 0;
@@ -2607,6 +2593,7 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
   assert(databaseHandle->handle != NULL);
   assert(databaseHandle->transaction.fileName != NULL);
 
+fprintf(stderr,"%s, %d: rolback tr %s\n",__FILE__,__LINE__,name);
   #ifndef NDEBUG
     databaseHandle->transaction.fileName = NULL;
     databaseHandle->transaction.lineNb   = 0;
