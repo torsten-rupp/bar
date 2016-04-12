@@ -3416,8 +3416,6 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
 
   // delete old indizes for same storage file
 fprintf(stderr,"%s, %d: purgeStorageIndex\n",__FILE__,__LINE__);
-error = Index_beginTransaction(indexHandle,"purge");
-assert(error == ERROR_NONE);
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
                                  INDEX_ID_ANY, // uuidId
@@ -3433,7 +3431,6 @@ assert(error == ERROR_NONE);
                                 );
   if (error != ERROR_NONE)
   {
-Index_rollbackTransaction(indexHandle,"purge");
     Storage_doneSpecifier(&oldStorageSpecifier);
     String_delete(oldStorageName);
     return error;
@@ -3489,12 +3486,10 @@ Index_rollbackTransaction(indexHandle,"purge");
   Index_doneList(&indexQueryHandle);
   if (error != ERROR_NONE)
   {
-Index_rollbackTransaction(indexHandle,"purge");
     Storage_doneSpecifier(&oldStorageSpecifier);
     String_delete(oldStorageName);
     return error;
   }
-Index_endTransaction(indexHandle,"purge");
 
   // free resoruces
   Storage_doneSpecifier(&oldStorageSpecifier);
