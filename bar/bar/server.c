@@ -5055,7 +5055,7 @@ LOCAL void indexThreadCode(void)
   }
 
   // done index
-  Index_done(indexHandle);
+  Index_close(indexHandle);
 
   // free resources
   List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
@@ -5247,6 +5247,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                            {
                                              if      (fileInfo->timeModified > lastCheckedDateTime)
                                              {
+fprintf(stderr,"%s, %d: id=%llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),fileInfo->timeModified,lastCheckedDateTime,Misc_getCurrentDateTime());
                                                // request update index
                                                error = Index_setState(indexHandle,
                                                                       storageId,
@@ -5254,6 +5255,15 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                                                       Misc_getCurrentDateTime(),
                                                                       NULL
                                                                      );
+                                               if (error == ERROR_NONE)
+                                               {
+                                                 plogMessage(NULL,  // logHandle,
+                                                             LOG_TYPE_INDEX,
+                                                             "INDEX",
+                                                             "Requested update index for '%s'\n",
+                                                             String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                                                            );
+                                               }
                                              }
                                              else if (indexState == INDEX_STATE_OK)
                                              {
@@ -5281,7 +5291,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                                plogMessage(NULL,  // logHandle,
                                                            LOG_TYPE_INDEX,
                                                            "INDEX",
-                                                           "Added auto-index request for '%s'\n",
+                                                           "Requested add index for '%s'\n",
                                                            String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
                                                           );
                                              }
