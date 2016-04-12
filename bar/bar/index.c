@@ -88,9 +88,7 @@ const char *ENTRY_TABLE_NAMES[] =
 };
 
 // sleep time [s]
-#warning remove
-//#define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
-#define SLEEP_TIME_INDEX_CLEANUP_THREAD (2*60)
+#define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
 
 /***************************** Datatypes *******************************/
 typedef enum
@@ -3581,6 +3579,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   String           storageName;
   ulong            n;
   IndexQueryHandle indexQueryHandle;
+  IndexId          entryId;
   IndexId          indexId;
 
   assert(indexHandle != NULL);
@@ -3594,205 +3593,61 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   // initialize variables
   storageName = String_new();
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//error = Index_beginTransaction(indexHandle,"purge3");
-//assert(error == ERROR_NONE);
+  n = 0L;
 
   // clean-up
-  n = 0L;
-  error = Index_initListFiles(&indexQueryHandle,
-                              indexHandle,
-                              NULL,  // storageIds
-                              0,  // storageIdCount
-                              NULL,  // entryIds
-                              0,  // entryIdCount
-                              NULL  // pattern
-                             );
-  if (error == ERROR_NONE)
+  error = Index_beginTransaction(indexHandle,"purge orphaned entries");
+  if (error != ERROR_NONE)
   {
-    while (   !quitFlag
-           && Index_getNextFile(&indexQueryHandle,
-                                &indexId,
-                                storageName,
-                                NULL,  // storageDateTime,
-                                NULL,  // name,
-                                NULL,  // size,
-                                NULL,  // timeModified,
-                                NULL,  // userId,
-                                NULL,  // groupId,
-                                NULL,  // permission,
-                                NULL,  // fragmentOffset,
-                                NULL   // fragmentSize
-                               )
-          )
-    {
-      if (String_isEmpty(storageName))
-      {
-        (void)Index_deleteFile(indexHandle,indexId);
-        n++;
-      }
-    }
-    Index_doneList(&indexQueryHandle);
+    String_delete(storageName);
+    return error;
   }
-  error = Index_initListImages(&indexQueryHandle,
-                               indexHandle,
-                               NULL,  // storageIds
-                               0,  // storageIdCount
-                               NULL,  // entryIds
-                               0,  // entryIdCount
-                               NULL  // pattern
-                              );
-  if (error == ERROR_NONE)
-  {
-    while (   !quitFlag
-           && Index_getNextImage(&indexQueryHandle,
-                                 &indexId,
-                                 storageName,
-                                 NULL,  // storageDateTime,
-                                 NULL,  // imageName,
-                                 NULL,  // fileSystemType,
-                                 NULL,  // size,
-                                 NULL,  // blockOffset,
-                                 NULL   // blockCount
-                                )
-          )
-    {
-      if (String_isEmpty(storageName))
-      {
-        (void)Index_deleteImage(indexHandle,indexId);
-        n++;
-      }
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-  error = Index_initListDirectories(&indexQueryHandle,
-                                    indexHandle,
-                                    NULL,  // storageIds
-                                    0,  // storageIdCount
-                                    NULL,  // entryIds
-                                    0,  // entryIdCount
-                                    NULL  // pattern
-                                   );
-  if (error == ERROR_NONE)
-  {
-    while (   !quitFlag
-           && Index_getNextDirectory(&indexQueryHandle,
-                                     &indexId,
-                                     storageName,
-                                     NULL,  // storageDateTime,
-                                     NULL,  // directoryName,
-                                     NULL,  // timeModified,
-                                     NULL,  // userId,
-                                     NULL,  // groupId,
-                                     NULL   // permission
-                                    )
-          )
-    {
-      if (String_isEmpty(storageName))
-      {
-        (void)Index_deleteDirectory(indexHandle,indexId);
-        n++;
-      }
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-  error = Index_initListLinks(&indexQueryHandle,
-                                    indexHandle,
-                                    NULL,  // storageIds
-                                    0,  // storageIdCount
-                                    NULL,  // entryIds
-                                    0,  // entryIdCount
-                                    NULL  // pattern
-                                   );
-  if (error == ERROR_NONE)
-  {
-    while (   !quitFlag
-           && Index_getNextLink(&indexQueryHandle,
-                                &indexId,
-                                storageName,
-                                NULL,  // storageDateTime,
-                                NULL,  // name,
-                                NULL,  // destinationName
-                                NULL,  // timeModified,
-                                NULL,  // userId,
-                                NULL,  // groupId,
-                                NULL   // permission
-                               )
-          )
-    {
-      if (String_isEmpty(storageName))
-      {
-        (void)Index_deleteLink(indexHandle,indexId);
-        n++;
-      }
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-  error = Index_initListHardLinks(&indexQueryHandle,
-                                  indexHandle,
-                                  NULL,  // storageIds
-                                  0,  // storageIdCount
-                                  NULL,  // entryIds
-                                  0,  // entryIdCount
-                                  NULL  // pattern
-                                 );
-  if (error == ERROR_NONE)
-  {
-    while (   !quitFlag
-           && Index_getNextHardLink(&indexQueryHandle,
-                                    &indexId,
-                                    storageName,
-                                    NULL,  // storageDateTime,
-                                    NULL,  // fileName,
-                                    NULL,  // size,
-                                    NULL,  // timeModified,
-                                    NULL,  // userId,
-                                    NULL,  // groupId,
-                                    NULL,  // permission,
-                                    NULL,  // fragmentOffset
-                                    NULL   // fragmentSize
-                                   )
-          )
-    {
-      if (String_isEmpty(storageName))
-      {
-        (void)Index_deleteHardLink(indexHandle,indexId);
-        n++;
-      }
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-  error = Index_initListSpecial(&indexQueryHandle,
+  error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
                                 NULL,  // storageIds
                                 0,  // storageIdCount
                                 NULL,  // entryIds
                                 0,  // entryIdCount
-                                NULL  // pattern
+                                INDEX_TYPE_SET_ANY,
+                                NULL,  // entryPattern,
+                                FALSE,  // newestEntriesOnly
+                                0LL,
+                                INDEX_UNLIMITED
                                );
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    while (   !quitFlag
-           && Index_getNextSpecial(&indexQueryHandle,
-                                   &indexId,
-                                   storageName,
-                                   NULL,  // storageDateTime,
-                                   NULL,  // name,
-                                   NULL,  // timeModified,
-                                   NULL,  // userId,
-                                   NULL,  // groupId,
-                                   NULL   // permission
-                                  )
-          )
-    {
-      if (String_isEmpty(storageName))
-      {
-        (void)Index_deleteSpecial(indexHandle,indexId);
-        n++;
-      }
-    }
-    Index_doneList(&indexQueryHandle);
+    Index_rollbackTransaction(indexHandle,"purge orphaned entries");
+    String_delete(storageName);
+    return error;
   }
+  while (   !quitFlag
+         && Index_getNextEntry(&indexQueryHandle,
+                               &entryId,
+                               storageName,
+                               NULL,  // storageDateTime,
+                               NULL,  // name,
+                               NULL,  // destinationName,
+                               NULL,  // fileSystemType,
+                               NULL,  // size,
+                               NULL,  // timeModified,
+                               NULL,  // userId,
+                               NULL,  // groupId,
+                               NULL,  // permission,
+                               NULL,  // fragmentOrBlockOffset,
+                               NULL   // fragmentOrBlockSize
+                              )
+        )
+  {
+    if (String_isEmpty(storageName))
+    {
+//fprintf(stderr,"%s, %d: entryId=%ld\n",__FILE__,__LINE__,entryId);
+      Index_deleteEntry(indexHandle,entryId);
+      n++;
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+  Index_endTransaction(indexHandle,"purge orphaned entries");
+
   if (n > 0L) plogMessage(NULL,  // logHandle
                           LOG_TYPE_INDEX,
                           "INDEX",
@@ -3800,7 +3655,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           n
                          );
 
-//Index_endTransaction(indexHandle,"purge2");
 
   // free resources
   String_delete(storageName);
@@ -4163,6 +4017,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   ulong            n;
   IndexId          storageId;
   bool             deletedIndexFlag;
+  ulong            i;
   IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
   int64            duplicateStorageId;
 
@@ -4204,6 +4059,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     {
       break;
     }
+    i = 0L;
     while (   !quitFlag
            && !deletedIndexFlag
            && Index_getNextStorage(&indexQueryHandle1,
@@ -4235,7 +4091,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
                                      NULL,  // name
-                                     0LL,  // offset
+                                     i,  // offset
                                      INDEX_UNLIMITED
                                     );
       if (error != ERROR_NONE)
@@ -4305,6 +4161,8 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                              NULL  // errorMessage
                             );
       }
+
+      i++;
     }
     Index_doneList(&indexQueryHandle1);
   }
@@ -4351,7 +4209,7 @@ LOCAL void cleanupIndexThreadCode(void)
   assert(__databaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE,0);
+  error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE,WAIT_FOREVER);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
@@ -4457,7 +4315,7 @@ LOCAL void cleanupIndexThreadCode(void)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Clean-up index database\n"
+              "Started initial clean-up index database\n"
              );
   (void)cleanUpDuplicateMeta(&indexHandle);
   (void)cleanUpIncompleteUpdate(&indexHandle);
@@ -4467,17 +4325,25 @@ LOCAL void cleanupIndexThreadCode(void)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Done clean-up index database\n"
+              "Done initial clean-up index database\n"
              );
 
   // regular clean-ups
   while (!quitFlag)
   {
-fprintf(stderr,"%s, %d: start clean\n",__FILE__,__LINE__);
     // clean-up database
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Started regular clean-up index database\n"
+               );
     (void)cleanUpOrphanedEntries(&indexHandle);
     (void)cleanUpDuplicateIndizes(&indexHandle);
-fprintf(stderr,"%s, %d: done cle\n",__FILE__,__LINE__);
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Done regular clean-up index database\n"
+               );
 
     // sleep, check quit flag
     sleepTime = 0;
@@ -5513,7 +5379,6 @@ void Index_close(IndexHandle *indexHandle)
 Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name)
 {
   assert(indexHandle != NULL);
-fprintf(stderr,"%s, %d: begin tras %s \n",__FILE__,__LINE__,name);
 
   return Database_beginTransaction(&indexHandle->databaseHandle,name);
 }
@@ -5521,7 +5386,6 @@ fprintf(stderr,"%s, %d: begin tras %s \n",__FILE__,__LINE__,name);
 Errors Index_endTransaction(IndexHandle *indexHandle, const char *name)
 {
   assert(indexHandle != NULL);
-fprintf(stderr,"%s, %d: end tras %s \n",__FILE__,__LINE__,name);
 
   return Database_endTransaction(&indexHandle->databaseHandle,name);
 }
@@ -7038,7 +6902,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_DATABASE_ID_(storageId),
                            INDEX_TYPE_FILE
                           );
-fprintf(stderr,"%s, %d: eeee %s\n",__FILE__,__LINE__,Error_getText(error));
   if (error != ERROR_NONE) return error;
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -7808,7 +7671,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
-                        IndexId           *indexId,
+                        IndexId           *entryId,
                         String            storageName,
                         uint64            *storageDateTime,
                         String            entryName,
@@ -7870,7 +7733,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   assert(blockOffset_ >= 0.0);
   assert(blockCount_ >= 0.0);
   assert(hardlinkSize_ >= 0.0);
-  if (indexId != NULL) (*indexId) = INDEX_ID_(indexType,databaseId);
+  if (entryId != NULL) (*entryId) = INDEX_ID_(indexType,databaseId);
   if (size != NULL)
   {
     switch (indexType)
@@ -7901,6 +7764,93 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   }
 
   return TRUE;
+}
+
+Errors Index_deleteEntry(IndexHandle *indexHandle,
+                         IndexId     entryId
+                        )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(   (INDEX_TYPE_(entryId) == INDEX_TYPE_FILE)
+         || (INDEX_TYPE_(entryId) == INDEX_TYPE_IMAGE)
+         || (INDEX_TYPE_(entryId) == INDEX_TYPE_DIRECTORY)
+         || (INDEX_TYPE_(entryId) == INDEX_TYPE_LINK)
+         || (INDEX_TYPE_(entryId) == INDEX_TYPE_HARDLINK)
+         || (INDEX_TYPE_(entryId) == INDEX_TYPE_SPECIAL)
+        );
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  switch (Index_getType(entryId))
+  {
+    case INDEX_TYPE_FILE:
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM fileEntries WHERE entryId=%lld;",
+                               INDEX_DATABASE_ID_(entryId)
+                              );
+      break;
+    case INDEX_TYPE_IMAGE:
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM imageEntries WHERE entryId=%lld;",
+                               INDEX_DATABASE_ID_(entryId)
+                              );
+      break;
+    case INDEX_TYPE_DIRECTORY:
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM directoryEntries WHERE entryId=%lld;",
+                               INDEX_DATABASE_ID_(entryId)
+                              );
+      break;
+    case INDEX_TYPE_LINK:
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM linkEntries WHERE entryId=%lld;",
+                               INDEX_DATABASE_ID_(entryId)
+                              );
+      break;
+    case INDEX_TYPE_HARDLINK:
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
+                               INDEX_DATABASE_ID_(entryId)
+                              );
+      break;
+    case INDEX_TYPE_SPECIAL:
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM specialEntries WHERE entryId=%lld;",
+                               INDEX_DATABASE_ID_(entryId)
+                              );
+      break;
+    default:
+      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      break;
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "DELETE FROM entries WHERE id=%lld;",
+                           INDEX_DATABASE_ID_(entryId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,

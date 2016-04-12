@@ -1122,6 +1122,19 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                        );
 
 /***********************************************************************\
+* Name   : Index_deleteEntry
+* Purpose: delete entry
+* Input  : indexHandle - index handle
+*          entryId     - index id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteEntry(IndexHandle *indexHandle,
+                         IndexId     entryId
+                        );
+
+/***********************************************************************\
 * Name   : Index_initListFiles
 * Purpose: list file entries
 * Input  : indexQueryHandle - index query handle variable
