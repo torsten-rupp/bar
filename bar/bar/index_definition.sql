@@ -16,21 +16,6 @@ CREATE TABLE IF NOT EXISTS meta(
 INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$version);
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
-// --- history ---------------------------------------------------------
-CREATE TABLE IF NOT EXISTS history(
-  id              INTEGER PRIMARY KEY,
-  jobUUID         TEXT NOT NULL,
-  scheduleUUID    TEXT,
-  type            INTEGER,
-  created         INTEGER,
-  errorMessage    TEXT,
-  totalEntryCount INTEGER,
-  totalEntrySize  INTEGER,
-  duration        INTEGER
-);
-CREATE INDEX ON history (jobUUID,created,type);
-CREATE INDEX ON history (created);
-
 // --- uuids -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uuids(
   id                  INTEGER PRIMARY KEY,
@@ -643,23 +628,23 @@ CREATE TRIGGER BEFORE DELETE ON fileEntries
     UPDATE storage
       SET totalEntrySize=totalEntrySize-OLD.fragmentSize,
           totalFileCount=totalFileCount-1,
-          totalFileSize =totalFileSize +OLD.fragmentSize
+          totalFileSize =totalFileSize -OLD.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId ON fileEntries
   BEGIN
-    // update count in storage
+    // update count/size in storage
     UPDATE storage
       SET totalEntrySize=totalEntrySize-OLD.fragmentSize,
           totalFileCount=totalFileCount-1,
-          totalFileSize =totalFileSize +NEW.fragmentSize
+          totalFileSize =totalFileSize -OLD.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
     UPDATE storage
       SET totalEntrySize=totalEntrySize+NEW.fragmentSize,
           totalFileCount=totalFileCount+1,
-          totalFileSize =totalFileSize +OLD.fragmentSize
-      WHERE storage.id=NEW.storageId;
+          totalFileSize =totalFileSize +NEW.fragmentSize
+      WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
   END;
 
 // --- images ----------------------------------------------------------
@@ -701,7 +686,7 @@ CREATE TRIGGER BEFORE DELETE ON imageEntries
     // update count in storage
     UPDATE storage
       SET totalImageCount=totalImageCount-1,
-          totalImageSize =totalImageSize +OLD.blockSize*OLD.blockCount
+          totalImageSize =totalImageSize -OLD.blockSize*OLD.blockCount
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
   END;
 
@@ -710,7 +695,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON imageEntries
     // update count in storage
     UPDATE storage
       SET totalImageCount=totalImageCount-1,
-          totalImageSize =totalImageSize +OLD.blockSize*OLD.blockCount
+          totalImageSize =totalImageSize -OLD.blockSize*OLD.blockCount
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
     UPDATE storage
       SET totalImageCount=totalImageCount+1,
@@ -855,7 +840,7 @@ CREATE TRIGGER BEFORE DELETE ON hardlinkEntries
     UPDATE storage
       SET totalEntrySize    =totalEntrySize    -OLD.fragmentSize,
           totalHardlinkCount=totalHardlinkCount-1,
-          totalHardlinkSize =totalHardlinkSize +OLD.fragmentSize
+          totalHardlinkSize =totalHardlinkSize -OLD.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
   END;
 
@@ -919,6 +904,23 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON specialEntries
       SET totalSpecialCount=totalSpecialCount+1
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
   END;
+
+// --- history ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS history(
+  id              INTEGER PRIMARY KEY,
+  jobUUID         TEXT NOT NULL,
+  scheduleUUID    TEXT,
+  type            INTEGER,
+  created         INTEGER,
+  errorMessage    TEXT,
+  totalEntryCount INTEGER,
+  totalEntrySize  INTEGER,
+  duration        INTEGER
+);
+CREATE INDEX ON history (jobUUID,created,type);
+CREATE INDEX ON history (created);
+
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 /*
 
