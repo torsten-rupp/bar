@@ -90,6 +90,7 @@ typedef struct
 typedef struct
 {
   StorageSpecifier            *storageSpecifier;                  // storage specifier structure
+  IndexHandle                 *indexHandle;
   ConstString                 jobUUID;                            // unique job id to store or NULL
   ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
   const EntryList             *includeEntryList;                  // list of included entries
@@ -300,6 +301,7 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
 
 LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           StorageSpecifier         *storageSpecifier,
+                          IndexHandle              *indexHandle,
                           ConstString              jobUUID,
                           ConstString              scheduleUUID,
                           const EntryList          *includeEntryList,
@@ -322,6 +324,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
 
   // init variables
   createInfo->storageSpecifier               = storageSpecifier;
+  createInfo->indexHandle                    = indexHandle;
   createInfo->jobUUID                        = jobUUID;
   createInfo->scheduleUUID                   = scheduleUUID;
   createInfo->includeEntryList               = includeEntryList;
@@ -3500,7 +3503,7 @@ asm("int3");
     }
   }
   while ((error == ERROR_NONE) && (deleteStorageId != INDEX_ID_NONE));
-#elif 0
+#elif 1
   // delete old indizes for same storage file
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
@@ -3517,7 +3520,9 @@ asm("int3");
                                 );
   if (error != ERROR_NONE)
   {
-    break;
+    Storage_doneSpecifier(&oldStorageSpecifier);
+    String_delete(oldStorageName);
+    return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
                               NULL, // job UUID
@@ -3660,7 +3665,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                  LogHandle   *logHandle
                                 )
 {
-#if 0
+#if 1
   String           storageName;
   StorageSpecifier storageSpecifier;
   Errors           error;
@@ -4020,7 +4025,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                 LogHandle    *logHandle
                                )
 {
-#if 0
+#if 1
   String           storageName;
   StorageSpecifier storageSpecifier;
   Errors           error;
@@ -4384,7 +4389,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   AutoFreeList               autoFreeList;
   byte                       *buffer;
   StorageSpecifier           storageSpecifier;
-  IndexHandle                *indexHandle;
   void                       *autoFreeSavePoint;
   StorageMsg                 storageMsg;
   Errors                     error;
@@ -4417,11 +4421,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   Storage_initSpecifier(&storageSpecifier);
 
-  // init index
-//TODO timeout?
-  indexHandle = Index_open(WAIT_FOREVER);
-
-//  error = Index_beginTransaction(indexHandle,"storage");
+//  error = Index_beginTransaction(createInfo->indexHandle,"storage");
 
   // initial storage pre-processing
   if (!isAborted(createInfo))
@@ -4462,7 +4462,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  {
                    storageInfoDecrement(createInfo,storageMsg.fileSize);
                    File_delete(storageMsg.fileName,FALSE);
-                   if (storageMsg.storageId != INDEX_ID_NONE) Index_deleteStorage(indexHandle,storageMsg.storageId);
+                   if (storageMsg.storageId != INDEX_ID_NONE) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
@@ -4506,7 +4506,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // purge archives by max. job storage size
       if (createInfo->jobOptions->maxStorageSize > fileInfo.size)
       {
-        purgeStorageByJobUUID(indexHandle,
+        purgeStorageByJobUUID(createInfo->indexHandle,
                               createInfo->jobUUID,
                               createInfo->jobOptions->maxStorageSize-fileInfo.size,
                               createInfo->logHandle
@@ -4517,7 +4517,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       getServerSettings(createInfo->storageSpecifier,createInfo->jobOptions,&server);
       if (server.maxStorageSize > fileInfo.size)
       {
-        purgeStorageByServer(indexHandle,
+        purgeStorageByServer(createInfo->indexHandle,
                              &server,
                              server.maxStorageSize-fileInfo.size,
                              createInfo->logHandle
@@ -4691,7 +4691,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     {
       // check if append, get append storage
       if (   appendFlag
-          && Index_findByStorageName(indexHandle,
+          && Index_findByStorageName(createInfo->indexHandle,
                                      createInfo->storageSpecifier,
                                      storageMsg.archiveName,
                                      NULL,  // uuidId
@@ -4706,7 +4706,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         // assign storage to existing entity
 fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
-        error = Index_assignTo(indexHandle,
+        error = Index_assignTo(createInfo->indexHandle,
                                NULL,  // jobUUID
                                INDEX_ID_NONE,  // enityId
                                storageMsg.storageId,
@@ -4730,7 +4730,7 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
       {
 fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
         // delete old indizes for same storage file
-        error = purgeStorageIndex(indexHandle,
+        error = purgeStorageIndex(createInfo->indexHandle,
                                   storageMsg.storageId,
                                   createInfo->storageSpecifier,
                                   storageMsg.archiveName
@@ -4753,7 +4753,7 @@ fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
 
       // update index database archive name and size
 fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_cString(printableStorageName),archiveSize);
-      error = Index_storageUpdate(indexHandle,
+      error = Index_storageUpdate(createInfo->indexHandle,
                                   storageId,
                                   printableStorageName,
                                   archiveSize
@@ -4772,7 +4772,7 @@ fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
 
       // set index database state and time stamp
-      error = Index_setState(indexHandle,
+      error = Index_setState(createInfo->indexHandle,
                              storageId,
                              ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
                                ? INDEX_STATE_OK
@@ -4903,10 +4903,8 @@ fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_
     }
   }
 
+//TODO
 //Index_endTransaction(indexHandle,"create");
-
-  // done index
-  Index_close(indexHandle);
 
   // free resoures
   Storage_doneSpecifier(&storageSpecifier);
@@ -6518,7 +6516,6 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
 LOCAL void createThreadCode(CreateInfo *createInfo)
 {
   byte             *buffer;
-  IndexHandle      *indexHandle;
   EntryMsg         entryMsg;
   bool             ownFileFlag;
   const StringNode *stringNode;
@@ -6535,11 +6532,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // open index
-//TODO timeout?
-  indexHandle = Index_open(WAIT_FOREVER);
-
-error = Index_beginTransaction(indexHandle,"create");
+error = Index_beginTransaction(createInfo->indexHandle,"create");
 
   // store entries
   while (   (createInfo->failError == ERROR_NONE)
@@ -6572,7 +6565,7 @@ error = Index_beginTransaction(indexHandle,"create");
           {
             case ENTRY_TYPE_FILE:
               error = storeFileEntry(createInfo,
-                                     indexHandle,
+                                     createInfo->indexHandle,
                                      entryMsg.name,
                                      buffer,
                                      BUFFER_SIZE
@@ -6593,7 +6586,7 @@ error = Index_beginTransaction(indexHandle,"create");
           {
             case ENTRY_TYPE_FILE:
               error = storeDirectoryEntry(createInfo,
-                                          indexHandle,
+                                          createInfo->indexHandle,
                                           entryMsg.name
                                          );
               if (error != ERROR_NONE) createInfo->failError = error;
@@ -6612,7 +6605,7 @@ error = Index_beginTransaction(indexHandle,"create");
           {
             case ENTRY_TYPE_FILE:
               error = storeLinkEntry(createInfo,
-                                     indexHandle,
+                                     createInfo->indexHandle,
                                      entryMsg.name
                                     );
               if (error != ERROR_NONE) createInfo->failError = error;
@@ -6631,7 +6624,7 @@ error = Index_beginTransaction(indexHandle,"create");
           {
             case ENTRY_TYPE_FILE:
               error = storeHardLinkEntry(createInfo,
-                                         indexHandle,
+                                         createInfo->indexHandle,
                                          &entryMsg.nameList,
                                          buffer,
                                          BUFFER_SIZE
@@ -6652,14 +6645,14 @@ error = Index_beginTransaction(indexHandle,"create");
           {
             case ENTRY_TYPE_FILE:
               error = storeSpecialEntry(createInfo,
-                                        indexHandle,
+                                        createInfo->indexHandle,
                                         entryMsg.name
                                        );
               if (error != ERROR_NONE) createInfo->failError = error;
               break;
             case ENTRY_TYPE_IMAGE:
               error = storeImageEntry(createInfo,
-                                      indexHandle,
+                                      createInfo->indexHandle,
                                       entryMsg.name,
                                       buffer,
                                       BUFFER_SIZE
@@ -6710,10 +6703,8 @@ error = Index_beginTransaction(indexHandle,"create");
     }
   }
 
-Index_endTransaction(indexHandle,"create");
-
-  // close index
-  Index_close(indexHandle);
+//TODO
+Index_endTransaction(createInfo->indexHandle,"create");
 
   // free resources
   free(buffer);
@@ -6798,9 +6789,13 @@ Errors Command_create(ConstString                  jobUUID,
   DEBUG_TESTCODE() { Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
+  // open index
+  indexHandle = Index_open(WAIT_FOREVER);
+
   // init create info
   initCreateInfo(&createInfo,
                  &storageSpecifier,
+                 indexHandle,
                  jobUUID,
                  scheduleUUID,
                  includeEntryList,
@@ -6923,14 +6918,11 @@ Errors Command_create(ConstString                  jobUUID,
                                               || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL);
   }
 
-  // open index
-  indexHandle = Index_open(WAIT_FOREVER);
-
   // create new entity
   if (indexHandle != NULL)
   {
 #warning TODO
-//    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
     error = Index_newEntity(indexHandle,
                             jobUUID,
@@ -6949,10 +6941,8 @@ Errors Command_create(ConstString                  jobUUID,
     }
 //TODO
 //                      IndexId                      entityId,
-//    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
+    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
   }
-Index_close(indexHandle);
-indexHandle=NULL;
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
@@ -6960,7 +6950,7 @@ indexHandle=NULL;
                          scheduleUUID,
                          deltaSourceList,
                          jobOptions,
-NULL,//                         indexHandle,
+                         indexHandle,
                          entityId,
                          archiveType,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
@@ -7085,9 +7075,6 @@ createThreadCode(&createInfo);
   // final update of status info
   (void)updateStatusInfo(&createInfo,TRUE);
 
-  // close index
-  Index_close(indexHandle);
-
   // write incremental list
   if (   createInfo.storeIncrementalFileInfoFlag
       && (createInfo.failError == ERROR_NONE)
@@ -7128,6 +7115,9 @@ createThreadCode(&createInfo);
     }
     AUTOFREE_REMOVE(&autoFreeList,mountNode);
   }
+
+  // close index
+  Index_close(indexHandle);
 
   // output statics
   if (createInfo.failError == ERROR_NONE)
