@@ -228,6 +228,9 @@ LOCAL bool   quitFlag;
   }
   indexHandle->databaseFileName = databaseFileName;
   indexHandle->upgradeError     = ERROR_NONE;
+  #ifdef NDEBUG
+    indexHandle->threadId = pthread_self();
+  #endif /* NDEBUG */
 
   if (indexOpenMode == INDEX_OPEN_MODE_READ)
   {
@@ -5369,6 +5372,10 @@ void Index_close(IndexHandle *indexHandle)
 {
   if (indexHandle != NULL)
   {
+    #ifdef NDEBUG
+      assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+    #endif /* NDEBUG */
+
     DEBUG_REMOVE_RESOURCE_TRACE(indexHandle,sizeof(IndexHandle));
 
     closeIndex(indexHandle);
@@ -5379,6 +5386,9 @@ void Index_close(IndexHandle *indexHandle)
 Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name)
 {
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   return Database_beginTransaction(&indexHandle->databaseHandle,name);
 }
@@ -5386,6 +5396,9 @@ Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name)
 Errors Index_endTransaction(IndexHandle *indexHandle, const char *name)
 {
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   return Database_endTransaction(&indexHandle->databaseHandle,name);
 }
@@ -5393,7 +5406,9 @@ Errors Index_endTransaction(IndexHandle *indexHandle, const char *name)
 Errors Index_rollbackTransaction(IndexHandle *indexHandle, const char *name)
 {
   assert(indexHandle != NULL);
-fprintf(stderr,"%s, %d: rollback tras %s \n",__FILE__,__LINE__,name);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   return Database_rollbackTransaction(&indexHandle->databaseHandle,name);
 }
@@ -5437,6 +5452,9 @@ bool Index_findByJobUUID(IndexHandle  *indexHandle,
   DatabaseId          uuidId_,entityId_;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
 //TODO
 UNUSED_VARIABLE(jobUUID);
@@ -5510,6 +5528,9 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
   DatabaseId          uuidId_,entityId_;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
@@ -5577,6 +5598,9 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
   DatabaseId          uuidId_,entityId_,storageId_;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(storageId != NULL);
 
   (*storageId) = INDEX_ID_NONE;
@@ -5664,6 +5688,9 @@ bool Index_findByState(IndexHandle   *indexHandle,
   bool                result;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(storageId != NULL);
 
   if (entityId != NULL) (*entityId) = INDEX_ID_NONE;
@@ -5731,6 +5758,9 @@ Errors Index_getState(IndexHandle *indexHandle,
   DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
@@ -5747,7 +5777,7 @@ Errors Index_getState(IndexHandle *indexHandle,
                             FROM storage \
                             WHERE id=%lld \
                            ",
-                           storageId
+                           INDEX_DATABASE_ID_(storageId)
                           );
   if (error != ERROR_NONE)
   {
@@ -5782,6 +5812,9 @@ Errors Index_setState(IndexHandle *indexHandle,
   String  s;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
@@ -5814,7 +5847,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                               WHERE id=%lld; \
                              ",
                              lastCheckedDateTime,
-                             storageId
+                             INDEX_DATABASE_ID_(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -5835,7 +5868,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                               WHERE id=%lld; \
                              ",
                              s,
-                             storageId
+                             INDEX_DATABASE_ID_(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -5844,9 +5877,6 @@ Errors Index_setState(IndexHandle *indexHandle,
     }
 
     String_delete(s);
-  }
-  else
-  {
   }
 
   return ERROR_NONE;
@@ -5861,6 +5891,9 @@ long Index_countState(IndexHandle *indexHandle,
   long                count;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5905,6 +5938,9 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5956,6 +5992,9 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -5998,6 +6037,9 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -6056,6 +6098,9 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
   DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -6087,6 +6132,9 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -6134,6 +6182,9 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -6167,6 +6218,9 @@ Errors Index_newUUID(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -6205,6 +6259,9 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
   IndexId             entityId;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -6253,6 +6310,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((uuidId == INDEX_ID_ANY) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
 
   // check init error
@@ -6317,6 +6377,9 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -6356,6 +6419,9 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(entityId != NULL);
 
   // check init error
@@ -6415,6 +6481,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   IndexId             storageId;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
   // check init error
@@ -6485,6 +6554,9 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   double              totalEntryCount_,totalEntrySize_;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((indexIdCount == 0) || (indexIds != NULL));
 
   // init variables
@@ -6643,6 +6715,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((uuidId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_UUID));
   assert((entityId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
   assert((indexIdCount == 0) || (indexIds != NULL));
@@ -6779,6 +6854,9 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -6825,6 +6903,9 @@ Errors Index_newStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(storageId != NULL);
   assert((entityId == INDEX_ID_NONE) || (INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY));
 
@@ -6884,6 +6965,9 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
@@ -7014,6 +7098,9 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
@@ -7134,6 +7221,9 @@ Errors Index_getStorage(IndexHandle *indexHandle,
   DatabaseQueryHandle databaseQueryHandle;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
@@ -7193,6 +7283,9 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
@@ -7263,6 +7356,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   double              size_;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
   assert(count != NULL);
@@ -7541,9 +7637,12 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   Errors error;
 
   assert(indexQueryHandle != NULL);
+  assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
-  assert(indexHandle != NULL);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7705,6 +7804,9 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -7784,6 +7886,9 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(   (INDEX_TYPE_(entryId) == INDEX_TYPE_FILE)
          || (INDEX_TYPE_(entryId) == INDEX_TYPE_IMAGE)
          || (INDEX_TYPE_(entryId) == INDEX_TYPE_DIRECTORY)
@@ -7883,6 +7988,9 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -7976,6 +8084,9 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -8013,6 +8124,9 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_FILE);
 
   // check init error
@@ -8063,6 +8177,9 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -8150,6 +8267,9 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -8184,6 +8304,9 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_IMAGE);
 
   // check init error
@@ -8233,6 +8356,9 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -8322,6 +8448,9 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -8356,6 +8485,9 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_DIRECTORY);
 
   // check init error
@@ -8405,6 +8537,9 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -8495,6 +8630,9 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -8530,6 +8668,9 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_LINK);
 
   // check init error
@@ -8579,6 +8720,9 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -8672,6 +8816,9 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -8709,6 +8856,9 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_HARDLINK);
 
   // check init error
@@ -8758,6 +8908,9 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert((storageIdCount == 0) || (storageIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
 
@@ -8845,6 +8998,9 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexQueryHandle->indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
@@ -8879,6 +9035,9 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(indexId) == INDEX_TYPE_SPECIAL);
 
   // check init error
@@ -8939,6 +9098,9 @@ Errors Index_addFile(IndexHandle *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(fileName != NULL);
 
@@ -8948,16 +9110,20 @@ Errors Index_addFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
+#if 0
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+#endif
     // start transaction
+#if 0
     error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     // add file entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -8999,7 +9165,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
@@ -9032,16 +9198,19 @@ Errors Index_addFile(IndexHandle *indexHandle,
     }
 
     // end transaction
+#if 0
     error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
-    return ERROR_NONE;
-  });
+//    return ERROR_NONE;
+//  });
 
-  return error;
+//  return error;
+return ERROR_NONE;
 
   #undef TRANSACTION_NAME
 }
@@ -9062,6 +9231,9 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(imageName != NULL);
 
@@ -9077,11 +9249,13 @@ Errors Index_addImage(IndexHandle     *indexHandle,
             Database_unlock(&indexHandle->databaseHandle),
   {
     // start transaction
+#if 0
     error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     // add image entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -9123,7 +9297,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
@@ -9159,12 +9333,14 @@ Errors Index_addImage(IndexHandle     *indexHandle,
       return error;
     }
 
+#if 0
     // end transaction
     error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     return ERROR_NONE;
   });
@@ -9191,6 +9367,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(directoryName != NULL);
 
@@ -9204,12 +9383,14 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+#if 0
     // start transaction
     error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     // add directory entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -9251,7 +9432,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
@@ -9280,12 +9461,14 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       return error;
     }
 
+#if 0
     // end transaction
     error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     return ERROR_NONE;
   });
@@ -9313,6 +9496,9 @@ Errors Index_addLink(IndexHandle *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(linkName != NULL);
   assert(destinationName != NULL);
@@ -9329,12 +9515,14 @@ Errors Index_addLink(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+#if 0
     // start transaction
     error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     // add link entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -9376,7 +9564,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
@@ -9402,12 +9590,14 @@ Errors Index_addLink(IndexHandle *indexHandle,
       return error;
     }
 
+#if 0
     // end transaction
     error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     return ERROR_NONE;
   });
@@ -9437,6 +9627,9 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(fileName != NULL);
 
@@ -9450,12 +9643,14 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+#if 0
     // start transaction
     error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     // add hard link entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -9497,7 +9692,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
@@ -9529,12 +9724,14 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
       return error;
     }
 
+#if 0
     // end transaction
     error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     return ERROR_NONE;
   });
@@ -9564,6 +9761,9 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   DatabaseId entryId;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
@@ -9577,12 +9777,14 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+#if 0
     // start transaction
     error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     // add special entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -9624,7 +9826,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
+//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
@@ -9656,12 +9858,14 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       return error;
     }
 
+#if 0
     // end transaction
     error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     return ERROR_NONE;
   });
@@ -9683,6 +9887,9 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -9794,6 +10001,9 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   Errors  error;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check if entries exists for storage
@@ -9844,6 +10054,9 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
   bool             existsFlag;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(uuidId) == INDEX_TYPE_UUID);
 
 fprintf(stderr,"%s, %d: try prune uuid %llu\n",__FILE__,__LINE__,uuidId);
@@ -9927,6 +10140,9 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   bool             existsFlag;
 
   assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
   assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
 
 fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);

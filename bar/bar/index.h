@@ -87,6 +87,9 @@ typedef struct
   DatabaseHandle databaseHandle;
   Errors         upgradeError;
   bool           quitFlag;
+  #ifndef NDEBUG
+    pthread_t threadId;
+  #endif /* not NDEBUG */
 } IndexHandle;
 
 // index query handle
