@@ -47,7 +47,8 @@ LOCAL const struct
   { "create",           INDEX_STATE_CREATE           },
   { "update_requested", INDEX_STATE_UPDATE_REQUESTED },
   { "update",           INDEX_STATE_UPDATE           },
-  { "error",            INDEX_STATE_ERROR            }
+  { "error",            INDEX_STATE_ERROR            },
+  { "purge",            INDEX_STATE_PURGE            }
 };
 
 LOCAL const struct
@@ -5322,7 +5323,7 @@ void Index_done(void)
   Thread_join(&cleanupIndexThread);
 
   // free resources
-  free(__databaseFileName);
+  free((char*)__databaseFileName);
 }
 
 #ifdef NDEBUG

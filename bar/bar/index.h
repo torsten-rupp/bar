@@ -45,6 +45,7 @@ typedef enum
   INDEX_STATE_UPDATE_REQUESTED,
   INDEX_STATE_UPDATE,
   INDEX_STATE_ERROR,
+  INDEX_STATE_PURGE,
 
   INDEX_STATE_UNKNOWN
 } IndexStates;
@@ -268,6 +269,17 @@ bool Index_parseType(const char *name, IndexTypes *indexType);
 \***********************************************************************/
 
 Errors Index_init(const char *fileName);
+
+/***********************************************************************\
+* Name   : Index_done
+* Purpose: deinitialize index database
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+void Index_done(void);
 
 /***********************************************************************\
 * Name   : Index_isAvailable
