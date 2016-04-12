@@ -2532,7 +2532,6 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   assert(databaseHandle->handle != NULL);
   assert(databaseHandle->transaction.fileName != NULL);
 
-fprintf(stderr,"%s, %d: end tr %s\n",__FILE__,__LINE__,name);
   #ifndef NDEBUG
     databaseHandle->transaction.fileName = NULL;
     databaseHandle->transaction.lineNb   = 0;
@@ -2541,23 +2540,6 @@ fprintf(stderr,"%s, %d: end tr %s\n",__FILE__,__LINE__,name);
     #endif /* HAVE_BACKTRACE */
   #endif /* NDEBUG */
 
-#if 0
-  // format SQL command string
-  sqlString = String_format(String_new(),"RELEASE %s;",name);
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-
-  // end transaction (release savepoint)
-  BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
-            DATABASE_UNLOCK(databaseHandle),
-  {
-    return sqliteExecute(databaseHandle,
-                         String_cString(sqlString),
-                         CALLBACK(NULL,NULL),
-                         databaseHandle->timeout
-                        );
-  });
-#else
   // format SQL command string
   sqlString = String_format(String_new(),"END TRANSACTION;");
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
@@ -2568,7 +2550,6 @@ fprintf(stderr,"%s, %d: end tr %s\n",__FILE__,__LINE__,name);
                         CALLBACK(NULL,NULL),
                         databaseHandle->timeout
                        );
-#endif
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -2593,7 +2574,6 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
   assert(databaseHandle->handle != NULL);
   assert(databaseHandle->transaction.fileName != NULL);
 
-fprintf(stderr,"%s, %d: rolback tr %s\n",__FILE__,__LINE__,name);
   #ifndef NDEBUG
     databaseHandle->transaction.fileName = NULL;
     databaseHandle->transaction.lineNb   = 0;
@@ -2602,24 +2582,6 @@ fprintf(stderr,"%s, %d: rolback tr %s\n",__FILE__,__LINE__,name);
     #endif /* HAVE_BACKTRACE */
   #endif /* NDEBUG */
 
-#if 0
-  // format SQL command string
-  sqlString = String_format(String_new(),"ROLLBACK TO SAVEPOINT %s;",name);
-
-//TODO
-  // rollback transaction (rollback savepoint)
-  BLOCK_DOX(error,
-            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
-            DATABASE_UNLOCK(databaseHandle),
-  {
-    DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-    return sqliteExecute(databaseHandle,
-                         String_cString(sqlString),
-                         CALLBACK(NULL,NULL),
-                         databaseHandle->timeout
-                        );
-  });
-#else
   // format SQL command string
   sqlString = String_format(String_new(),"ROLLBACK TRANSACTION;");
 
@@ -2630,7 +2592,6 @@ fprintf(stderr,"%s, %d: rolback tr %s\n",__FILE__,__LINE__,name);
                         CALLBACK(NULL,NULL),
                         databaseHandle->timeout
                        );
-#endif
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
