@@ -3549,7 +3549,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Deleted incomplete index #%lld: %s\n",
+                  "Deleted incomplete index #%lld: '%s'\n",
                   storageId,
                   String_cString(printableStorageName)
                  );
@@ -6004,7 +6004,6 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
   {
     return indexHandle->upgradeError;
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -6042,11 +6041,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
   if (historyId != NULL) (*historyId) = INDEX_ID_(INDEX_TYPE_HISTORY,Database_getLastRowId(&indexHandle->databaseHandle));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -6896,6 +6893,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   }
 
   // Note: do in single steps to avoid long-time-locking of database!
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
@@ -6903,6 +6901,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_FILE
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -6910,6 +6909,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_FILE
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -6918,6 +6918,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_IMAGE
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -6925,6 +6926,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_IMAGE
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -6933,6 +6935,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_DIRECTORY
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -6940,6 +6943,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_DIRECTORY
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -6948,6 +6952,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_LINK
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -6955,6 +6960,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_LINK
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -6963,6 +6969,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_HARDLINK
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -6970,6 +6977,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_HARDLINK
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -6978,6 +6986,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_SPECIAL
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
                            "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -6985,6 +6994,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_TYPE_SPECIAL
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -6992,6 +7002,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                            INDEX_DATABASE_ID_(storageId)
                           );
   if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
