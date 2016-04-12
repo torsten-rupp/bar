@@ -83,7 +83,7 @@ typedef struct
     } locked;
     struct
     {
-      pthread_t  threadId;
+      pthread_t  threadId;              // thread who started transaction
       const char *fileName;
       uint       lineNb;
       void const *stackTrace[16];

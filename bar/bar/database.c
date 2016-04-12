@@ -767,7 +767,7 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   assert(databaseHandle != NULL);
 
   #ifndef NDEBUG
-    fprintf(stderr,"Warning: database busy handler called %p: %d\n",pthread_self(),n);
+//    fprintf(stderr,"Warning: database busy handler called %p: %d\n",pthread_self(),n);
   #endif /* not NDEBUG */
 
   delay(SLEEP_TIME);
@@ -2629,23 +2629,22 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   va_end(arguments);
 
   // execute SQL command
-//  BLOCK_DOX(error,
-//            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
-//            DATABASE_UNLOCK(databaseHandle),
-//  {
+  BLOCK_DOX(error,
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
+            DATABASE_UNLOCK(databaseHandle),
+  {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     databaseRowCallback.function = databaseRowFunction;
     databaseRowCallback.userData = databaseRowUserData;
 
-    error = sqliteExecute(databaseHandle,
-                          String_cString(sqlString),
+    return sqliteExecute(databaseHandle,
+                         String_cString(sqlString),
 //TODO:
-                          (databaseRowFunction != NULL) ? executeCallback : NULL,
-                          (databaseRowFunction != NULL) ? &databaseRowCallback : NULL,
-                          databaseHandle->timeout
-                         );
-//    return sqliteResult;
-//  });
+                         (databaseRowFunction != NULL) ? executeCallback : NULL,
+                         (databaseRowFunction != NULL) ? &databaseRowCallback : NULL,
+                         databaseHandle->timeout
+                        );
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
