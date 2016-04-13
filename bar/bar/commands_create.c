@@ -6532,7 +6532,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-error = Index_beginTransaction(createInfo->indexHandle,"create");
+//error = Index_beginTransaction(createInfo->indexHandle,"create");
 
   // store entries
   while (   (createInfo->failError == ERROR_NONE)
@@ -6704,7 +6704,7 @@ error = Index_beginTransaction(createInfo->indexHandle,"create");
   }
 
 //TODO
-Index_endTransaction(createInfo->indexHandle,"create");
+//Index_endTransaction(createInfo->indexHandle,"create");
 
   // free resources
   free(buffer);
