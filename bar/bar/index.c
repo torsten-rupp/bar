@@ -6147,46 +6147,40 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "INSERT INTO history \
-                                ( \
-                                 jobUUID, \
-                                 scheduleUUID, \
-                                 type, \
-                                 created, \
-                                 errorMessage, \
-                                 totalEntryCount, \
-                                 totalEntrySize, \
-                                 duration \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %'S, \
-                                 %'S, \
-                                 %d, \
-                                 %llu, \
-                                 %'s, \
-                                 %lu, \
-                                 %llu, \
-                                 %llu \
-                                ); \
-                             ",
-                             jobUUID,
-                             scheduleUUID,
-                             archiveType,
-                             createdDateTime,
-                             errorMessage,
-                             totalEntryCount,
-                             totalEntrySize,
-                             duration
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
+    return Database_execute(&indexHandle->databaseHandle,
+                            CALLBACK(NULL,NULL),
+                            "INSERT INTO history \
+                               ( \
+                                jobUUID, \
+                                scheduleUUID, \
+                                type, \
+                                created, \
+                                errorMessage, \
+                                totalEntryCount, \
+                                totalEntrySize, \
+                                duration \
+                               ) \
+                             VALUES \
+                               ( \
+                                %'S, \
+                                %'S, \
+                                %d, \
+                                %llu, \
+                                %'s, \
+                                %lu, \
+                                %llu, \
+                                %llu \
+                               ); \
+                            ",
+                            jobUUID,
+                            scheduleUUID,
+                            archiveType,
+                            createdDateTime,
+                            errorMessage,
+                            totalEntryCount,
+                            totalEntrySize,
+                            duration
+                           );
   });
   if (error != ERROR_NONE)
   {
@@ -6221,17 +6215,11 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM history WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(historyId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
+    return Database_execute(&indexHandle->databaseHandle,
+                            CALLBACK(NULL,NULL),
+                            "DELETE FROM history WHERE id=%lld;",
+                            INDEX_DATABASE_ID_(historyId)
+                           );
   });
 
   return error;
@@ -6279,6 +6267,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
+    Database_unlock(&indexHandle->databaseHandle);
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
@@ -6496,12 +6485,16 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-  String_delete(filter);
   if (error != ERROR_NONE)
   {
+    Database_unlock(&indexHandle->databaseHandle);
+    String_delete(filter);
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
+
+  // free resources
+  String_delete(filter);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -6986,7 +6979,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
-    doneIndexQueryHandle(indexQueryHandle);
+    Database_unlock(&indexHandle->databaseHandle);
     String_delete(indexModeSetString);
     String_delete(indexStateSetString);
     String_delete(filter);
@@ -6995,6 +6988,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 //    String_delete(uuidIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
+    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -8707,6 +8701,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
+    Database_unlock(&indexHandle->databaseHandle);
     String_delete(filter);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
