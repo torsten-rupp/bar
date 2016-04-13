@@ -5466,48 +5466,64 @@ UNUSED_VARIABLE(jobUUID);
     return FALSE;
   }
 
+  // get filter
   filter = String_newCString("1");
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","jobUUID=%'S",scheduleUUID);
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","scheduleUUID=%'S",scheduleUUID);
+
 //TODO get errorMessage
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT uuids.id, \
-                                   entities.id, \
-                                   CASE entities.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',entities.created) END, \
-                                   entities.type, \
-                                   '', \
-                                   entities.totalEntryCount, \
-                                   entities.totalEntrySize \
-                            FROM entities \
-                              LEFT JOIN uuids ON uuids.jobUUID=entityId.jobUUID \
-                            WHERE %s \
-                            GROUP BY entities.id \
-                            LIMIT 0,1 \
-                           ",
-                           String_cString(filter)
-                          );
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT uuids.id, \
+                                     entities.id, \
+                                     CASE entities.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',entities.created) END, \
+                                     entities.type, \
+                                     '', \
+                                     entities.totalEntryCount, \
+                                     entities.totalEntrySize \
+                              FROM entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entityId.jobUUID \
+                              WHERE %s \
+                              GROUP BY entities.id \
+                              LIMIT 0,1 \
+                             ",
+                             String_cString(filter)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    result = Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %lld %lld %d %S %lu %llu",
+                                 &uuidId_,
+                                 &entityId_,
+                                 createdDateTime,
+                                 archiveType,
+                                 lastErrorMessage,
+                                 totalEntryCount,
+                                 totalEntrySize
+                                );
+
+    Database_finalize(&databaseQueryHandle);
+
+    return ERROR_NONE;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(filter);
     return FALSE;
   }
-  result = Database_getNextRow(&databaseQueryHandle,
-                               "%lld %lld %lld %d %S %lu %llu",
-                               &uuidId_,
-                               &entityId_,
-                               createdDateTime,
-                               archiveType,
-                               lastErrorMessage,
-                               totalEntryCount,
-                               totalEntrySize
-                              );
-  Database_finalize(&databaseQueryHandle);
-
-  String_delete(filter);
 
   if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
   if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+
+  // free resources
+  String_delete(filter);
 
   return result;
 }
@@ -5540,39 +5556,53 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
     return FALSE;
   }
 
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT uuids.id, \
-                                   entities.id, \
-                                   entities.jobUUID, \
-                                   entities.scheduleUUID, \
-                                   storage.name, \
-                                   storage.state, \
-                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
-                            FROM storage \
-                              LEFT JOIN entities ON storage.entityId=entities.id \
-                              LEFT JOIN uuids ON entitys.jobUUID=uuids.jobUUID \
-                            WHERE storage.id=%lld \
-                            GROUP BY storage.id \
-                            LIMIT 0,1 \
-                           ",
-                           storageId
-                          );
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT uuids.id, \
+                                     entities.id, \
+                                     entities.jobUUID, \
+                                     entities.scheduleUUID, \
+                                     storage.name, \
+                                     storage.state, \
+                                     CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
+                              FROM storage \
+                                LEFT JOIN entities ON storage.entityId=entities.id \
+                                LEFT JOIN uuids ON entitys.jobUUID=uuids.jobUUID \
+                              WHERE storage.id=%lld \
+                              GROUP BY storage.id \
+                              LIMIT 0,1 \
+                             ",
+                             storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    result = Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %lld %S %S %S %d %llu",
+                                 &uuidId_,
+                                 &entityId_,
+                                 jobUUID,
+                                 scheduleUUID,
+                                 storageName,
+                                 indexState,
+                                 lastCheckedDateTime
+                                );
+
+    Database_finalize(&databaseQueryHandle);
+
+    return ERROR_NONE;
+  });
   if (error != ERROR_NONE)
   {
     return FALSE;
   }
-  result = Database_getNextRow(&databaseQueryHandle,
-                               "%lld %lld %S %S %S %d %llu",
-                               &uuidId_,
-                               &entityId_,
-                               jobUUID,
-                               scheduleUUID,
-                               storageName,
-                               indexState,
-                               lastCheckedDateTime
-                              );
-  Database_finalize(&databaseQueryHandle);
+
   if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
   if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
 
@@ -5612,61 +5642,72 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
     return FALSE;
   }
 
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT uuids.id, \
-                                   entities.id, \
-                                   storage.id, \
-                                   entities.jobUUID, \
-                                   entities.scheduleUUID, \
-                                   storage.name, \
-                                   storage.state, \
-                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
-                            FROM storage \
-                              LEFT JOIN entities ON storage.entityId=entities.id \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            GROUP BY storage.id \
-                           "
-                          );
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT uuids.id, \
+                                     entities.id, \
+                                     storage.id, \
+                                     entities.jobUUID, \
+                                     entities.scheduleUUID, \
+                                     storage.name, \
+                                     storage.state, \
+                                     CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
+                              FROM storage \
+                                LEFT JOIN entities ON storage.entityId=entities.id \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                              GROUP BY storage.id \
+                             "
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    tmpStorageName = String_new();
+    Storage_initSpecifier(&tmpStorageSpecifier);
+    foundFlag   = FALSE;
+    while (   !foundFlag
+           && Database_getNextRow(&databaseQueryHandle,
+                                  "%lld %lld %lld %S %S %S %d %llu",
+                                  &uuidId_,
+                                  &entityId_,
+                                  &storageId_,
+                                  jobUUID,
+                                  scheduleUUID,
+                                  tmpStorageName,
+                                  indexState,
+                                  lastCheckedDateTime
+                                 )
+          )
+    {
+      if (Storage_parseName(&tmpStorageSpecifier,tmpStorageName) == ERROR_NONE)
+      {
+        foundFlag = Storage_equalSpecifiers(storageSpecifier,archiveName,
+                                            &tmpStorageSpecifier,NULL
+                                           );
+        if (foundFlag)
+        {
+          if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
+          if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+          if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
+        }
+      }
+    }
+    Storage_doneSpecifier(&tmpStorageSpecifier);
+    String_delete(tmpStorageName);
+
+    Database_finalize(&databaseQueryHandle);
+
+    return ERROR_NONE;
+  });
   if (error != ERROR_NONE)
   {
     return FALSE;
   }
-
-  tmpStorageName = String_new();
-  Storage_initSpecifier(&tmpStorageSpecifier);
-  foundFlag   = FALSE;
-  while (   !foundFlag
-         && Database_getNextRow(&databaseQueryHandle,
-                                "%lld %lld %lld %S %S %S %d %llu",
-                                &uuidId_,
-                                &entityId_,
-                                &storageId_,
-                                jobUUID,
-                                scheduleUUID,
-                                tmpStorageName,
-                                indexState,
-                                lastCheckedDateTime
-                               )
-        )
-  {
-    if (Storage_parseName(&tmpStorageSpecifier,tmpStorageName) == ERROR_NONE)
-    {
-      foundFlag = Storage_equalSpecifiers(storageSpecifier,archiveName,
-                                          &tmpStorageSpecifier,NULL
-                                         );
-      if (foundFlag)
-      {
-        if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
-        if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
-        if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
-      }
-    }
-  }
-  Storage_doneSpecifier(&tmpStorageSpecifier);
-  String_delete(tmpStorageName);
-
-  Database_finalize(&databaseQueryHandle);
 
   return foundFlag;
 }
@@ -5705,45 +5746,62 @@ bool Index_findByState(IndexHandle   *indexHandle,
     return FALSE;
   }
 
+  // init variables
   indexStateSetString = String_new();
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT uuids.id, \
-                                   entities.id, \
-                                   storage.id, \
-                                   entities.jobUUID, \
-                                   entities.scheduleUUID, \
-                                   storage.name, \
-                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
-                            FROM storage \
-                              LEFT JOIN entities ON storage.entityId=entities.id \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE (storage.state IN (%S)) \
-                            LIMIT 0,1 \
-                           ",
-                           getIndexStateSetString(indexStateSetString,indexStateSet)
-                          );
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT uuids.id, \
+                                     entities.id, \
+                                     storage.id, \
+                                     entities.jobUUID, \
+                                     entities.scheduleUUID, \
+                                     storage.name, \
+                                     CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END \
+                              FROM storage \
+                                LEFT JOIN entities ON storage.entityId=entities.id \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                              WHERE (storage.state IN (%S)) \
+                              LIMIT 0,1 \
+                             ",
+                             getIndexStateSetString(indexStateSetString,indexStateSet)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    result = Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %lld %lld %S %S %S %llu",
+                                 &uuidId_,
+                                 &entityId_,
+                                 &storageId_,
+                                 jobUUID,
+                                 scheduleUUID,
+                                 storageName,
+                                 lastCheckedDateTime
+                                );
+
+    Database_finalize(&databaseQueryHandle);
+
+    return ERROR_NONE;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(indexStateSetString);
     return FALSE;
   }
-  String_delete(indexStateSetString);
-  result = Database_getNextRow(&databaseQueryHandle,
-                               "%lld %lld %lld %S %S %S %llu",
-                               &uuidId_,
-                               &entityId_,
-                               &storageId_,
-                               jobUUID,
-                               scheduleUUID,
-                               storageName,
-                               lastCheckedDateTime
-                              );
-  Database_finalize(&databaseQueryHandle);
 
   if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
   if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
   if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
+
+  // free resources
+  String_delete(indexStateSetString);
 
   return result;
 }
@@ -5770,34 +5828,43 @@ Errors Index_getState(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT state, \
-                                   CASE lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',lastChecked) END, \
-                                   errorMessage \
-                            FROM storage \
-                            WHERE id=%lld \
-                           ",
-                           INDEX_DATABASE_ID_(storageId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  if (!Database_getNextRow(&databaseQueryHandle,
-                           "%d %llu %S",
-                           indexState,
-                           lastCheckedDateTime,
-                           errorMessage
-                          )
-     )
-  {
-    (*indexState) = INDEX_STATE_UNKNOWN;
-    if (errorMessage != NULL) String_clear(errorMessage);
-  }
-  Database_finalize(&databaseQueryHandle);
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT state, \
+                                     CASE lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',lastChecked) END, \
+                                     errorMessage \
+                              FROM storage \
+                              WHERE id=%lld \
+                             ",
+                             INDEX_DATABASE_ID_(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    if (!Database_getNextRow(&databaseQueryHandle,
+                             "%d %llu %S",
+                             indexState,
+                             lastCheckedDateTime,
+                             errorMessage
+                            )
+       )
+    {
+      (*indexState) = INDEX_STATE_UNKNOWN;
+      if (errorMessage != NULL) String_clear(errorMessage);
+    }
+
+    Database_finalize(&databaseQueryHandle);
+
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_setState(IndexHandle *indexHandle,
@@ -5810,7 +5877,7 @@ Errors Index_setState(IndexHandle *indexHandle,
 {
   Errors  error;
   va_list arguments;
-  String  s;
+  String  errorText;
 
   assert(indexHandle != NULL);
   #ifdef NDEBUG
@@ -5824,63 +5891,77 @@ Errors Index_setState(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "UPDATE storage \
-                            SET state=%d, \
-                                errorMessage=NULL \
-                            WHERE id=%lld; \
-                           ",
-                           indexState,
-                           INDEX_DATABASE_ID_(storageId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  if (lastCheckedDateTime != 0LL)
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "UPDATE storage \
-                              SET lastChecked=DATETIME(%llu,'unixepoch') \
-                              WHERE id=%lld; \
-                             ",
-                             lastCheckedDateTime,
-                             INDEX_DATABASE_ID_(storageId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-
   if (errorMessage != NULL)
   {
     va_start(arguments,errorMessage);
-    s = String_vformat(String_new(),errorMessage,arguments);
+    errorText = String_vformat(String_new(),errorMessage,arguments);
     va_end(arguments);
+  }
+  else
+  {
+    errorText = NULL;
+  }
 
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
-                              SET errorMessage=%'S \
+                              SET state=%d, \
+                                  errorMessage=NULL \
                               WHERE id=%lld; \
                              ",
-                             s,
+                             indexState,
                              INDEX_DATABASE_ID_(storageId)
                             );
     if (error != ERROR_NONE)
     {
-      String_delete(s);
       return error;
     }
 
-    String_delete(s);
-  }
+    if (lastCheckedDateTime != 0LL)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "UPDATE storage \
+                                SET lastChecked=DATETIME(%llu,'unixepoch') \
+                                WHERE id=%lld; \
+                               ",
+                               lastCheckedDateTime,
+                               INDEX_DATABASE_ID_(storageId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
 
-  return ERROR_NONE;
+    if (errorText != NULL)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "UPDATE storage \
+                                SET errorMessage=%'S \
+                                WHERE id=%lld; \
+                               ",
+                               errorText,
+                               INDEX_DATABASE_ID_(storageId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    return ERROR_NONE;
+  });
+
+  // free resources
+  if (errorMessage != NULL) String_delete(errorText);
+
+  return error;
 }
 
 long Index_countState(IndexHandle *indexHandle,
@@ -5902,28 +5983,37 @@ long Index_countState(IndexHandle *indexHandle,
     return 0L;
   }
 
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT COUNT(id) \
-                            FROM storage \
-                            WHERE state=%d \
-                           ",
-                           indexState
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(count,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return -1L;
-  }
-  if (!Database_getNextRow(&databaseQueryHandle,
-                           "%ld",
-                           &count
-                          )
-     )
-  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(id) \
+                              FROM storage \
+                              WHERE state=%d \
+                             ",
+                             indexState
+                            );
+    if (error != ERROR_NONE)
+    {
+      return -1L;
+    }
+
+    if (!Database_getNextRow(&databaseQueryHandle,
+                             "%ld",
+                             &count
+                            )
+       )
+    {
+      Database_finalize(&databaseQueryHandle);
+      return -1L;
+    }
+
     Database_finalize(&databaseQueryHandle);
-    return -1L;
-  }
-  Database_finalize(&databaseQueryHandle);
+
+    return count;
+  });
 
   return count;
 }
@@ -5951,6 +6041,10 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id, \
@@ -5969,6 +6063,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
+    Database_unlock(&indexHandle->databaseHandle);
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
@@ -6048,44 +6143,56 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO history \
-                              ( \
-                               jobUUID, \
-                               scheduleUUID, \
-                               type, \
-                               created, \
-                               errorMessage, \
-                               totalEntryCount, \
-                               totalEntrySize, \
-                               duration \
-                              ) \
-                            VALUES \
-                              ( \
-                               %'S, \
-                               %'S, \
-                               %d, \
-                               %llu, \
-                               %'s, \
-                               %lu, \
-                               %llu, \
-                               %llu \
-                              ); \
-                           ",
-                           jobUUID,
-                           scheduleUUID,
-                           archiveType,
-                           createdDateTime,
-                           errorMessage,
-                           totalEntryCount,
-                           totalEntrySize,
-                           duration
-                          );
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO history \
+                                ( \
+                                 jobUUID, \
+                                 scheduleUUID, \
+                                 type, \
+                                 created, \
+                                 errorMessage, \
+                                 totalEntryCount, \
+                                 totalEntrySize, \
+                                 duration \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %'S, \
+                                 %'S, \
+                                 %d, \
+                                 %llu, \
+                                 %'s, \
+                                 %lu, \
+                                 %llu, \
+                                 %llu \
+                                ); \
+                             ",
+                             jobUUID,
+                             scheduleUUID,
+                             archiveType,
+                             createdDateTime,
+                             errorMessage,
+                             totalEntryCount,
+                             totalEntrySize,
+                             duration
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
   if (error != ERROR_NONE)
   {
     return error;
   }
+
   if (historyId != NULL) (*historyId) = INDEX_ID_(INDEX_TYPE_HISTORY,Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
@@ -6110,17 +6217,24 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
   }
 
   // delete history entry
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM history WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(historyId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM history WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(historyId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
@@ -6145,6 +6259,10 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id, \
@@ -6229,23 +6347,35 @@ Errors Index_newUUID(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "INSERT INTO uuids \
-                              ( \
-                               jobUUID \
-                              ) \
-                            VALUES \
-                              ( \
-                               %'S \
-                              ); \
-                           ",
-                           jobUUID
-                          );
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO uuids \
+                                ( \
+                                 jobUUID \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %'S \
+                                ); \
+                             ",
+                             jobUUID
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
   if (error != ERROR_NONE)
   {
     return error;
   }
+
   if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
@@ -6271,16 +6401,23 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
   }
 
   // delete entities of UUID
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT id \
-                            FROM entities \
-                            WHERE jobUUID=%'S; \
-                           ",
-                           jobUUID
-                          );
-  if (error == ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT id \
+                              FROM entities \
+                              WHERE jobUUID=%'S; \
+                             ",
+                             jobUUID
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
     while (   Database_getNextRow(&databaseQueryHandle,
                                   "%lld",
                                   &entityId
@@ -6290,8 +6427,11 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
     {
       error = Index_deleteEntity(indexHandle,INDEX_ID_(INDEX_TYPE_ENTITY,entityId));
     }
+
     Database_finalize(&databaseQueryHandle);
-  }
+
+    return ERROR_NONE;
+  });
 
   return error;
 }
@@ -6324,10 +6464,16 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // get filter
   filter = String_newCString("1");
   filterAppend(filter,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",INDEX_DATABASE_ID_(uuidId));
   filterAppend(filter,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
+
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id,\
@@ -6464,13 +6610,17 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     {
       return error;
     }
-    (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,Database_getLastRowId(&indexHandle->databaseHandle));
 
     return ERROR_NONE;
   });
-fprintf(stderr,"%s, %d: >>>>>>>>>>>>>>>>Index_newEntity %llu\n",__FILE__,__LINE__,(*entityId));
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
-  return error;
+  (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,Database_getLastRowId(&indexHandle->databaseHandle));
+
+  return ERROR_NONE;
 }
 
 Errors Index_deleteEntity(IndexHandle *indexHandle,
@@ -6493,17 +6643,23 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // delete storage of entity
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT id \
-                            FROM storage \
-                            WHERE entityId=%lld; \
-                           ",
-                           entityId
-                          );
-  if (error == ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
+    // delete storage of entity
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT id \
+                              FROM storage \
+                              WHERE entityId=%lld; \
+                             ",
+                             entityId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     while (   Database_getNextRow(&databaseQueryHandle,
                                   "%lld",
                                   &storageId
@@ -6514,17 +6670,24 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
       error = Index_deleteStorage(indexHandle,INDEX_ID_(INDEX_TYPE_STORAGE,storageId));
     }
     Database_finalize(&databaseQueryHandle);
-  }
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  // delete entity
-  if (error == ERROR_NONE)
-  {
+    // delete entity
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entities WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(entityId)
-                            );
-  }
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM entities WHERE id=%lld;",
+                               INDEX_DATABASE_ID_(entityId)
+                              );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
 
   return error;
 }
@@ -6636,19 +6799,43 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
   filterAppend(filter,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
 
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+  //TODO newest
+                             "SELECT COUNT(storage.id),\
+                                     TOTAL(storage.totalEntryCount), \
+                                     TOTAL(storage.totalEntrySize) \
+                              FROM storage \
+                              WHERE %s \
+                             ",
+                             String_cString(filter)
+                            );
+  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    if (Database_getNextRow(&databaseQueryHandle,
+                            "%lu %lf %lf",
+                            storageCount,
+                            &totalEntryCount_,
+                            &totalEntrySize_
+                           )
+          )
+    {
+      assert(totalEntryCount_ >= 0.0);
+      assert(totalEntrySize_ >= 0.0);
+      if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
+      if (totalEntrySize != NULL) (*totalEntrySize) = (uint64)totalEntrySize_;
+    }
+    Database_finalize(&databaseQueryHandle);
 
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-//TODO newest
-                           "SELECT COUNT(storage.id),\
-                                   TOTAL(storage.totalEntryCount), \
-                                   TOTAL(storage.totalEntrySize) \
-                            FROM storage \
-                            WHERE %s \
-                           ",
-                           String_cString(filter)
-                          );
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+    return ERROR_NONE;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(indexModeSetString);
@@ -6661,20 +6848,6 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
     String_delete(ftsName);
     return error;
   }
-  if (Database_getNextRow(&databaseQueryHandle,
-                          "%lu %lf %lf",
-                          storageCount,
-                          &totalEntryCount_,
-                          &totalEntrySize_
-                         )
-        )
-  {
-    assert(totalEntryCount_ >= 0.0);
-    assert(totalEntrySize_ >= 0.0);
-    if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
-    if (totalEntrySize != NULL) (*totalEntrySize) = (uint64)totalEntrySize_;
-  }
-  Database_finalize(&databaseQueryHandle);
 
   // free resources
   String_delete(indexModeSetString);
@@ -6763,6 +6936,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
     }
   }
 
+  // get filter
   filter              = String_newCString("1");
   indexStateSetString = String_new();
   indexModeSetString  = String_new();
@@ -6776,6 +6950,10 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   filterAppend(filter,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
 
 //Database_debugEnable(1);
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 //TODO newest
@@ -6977,119 +7155,113 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // Note: do in single steps to avoid long-time-locking of database!
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_FILE
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_FILE
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  // Note: do in single steps to avoid long global locking of database!
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_FILE
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_FILE
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_IMAGE
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_IMAGE
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_IMAGE
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_IMAGE
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_DIRECTORY
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_DIRECTORY
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_DIRECTORY
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_DIRECTORY
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_LINK
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_LINK
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_LINK
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_LINK
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_HARDLINK
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_HARDLINK
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_HARDLINK
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_HARDLINK
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_SPECIAL
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_SPECIAL
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_SPECIAL
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_SPECIAL
+                            );
+    if (error != ERROR_NONE) return error;
+  fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM storage WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(storageId)
-                          );
-  if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM storage WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(storageId)
+                            );
+    if (error != ERROR_NONE) return error;
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_clearStorage(IndexHandle *indexHandle,
@@ -7111,97 +7283,104 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   }
 
   // Note: do in single steps to avoid long-time-locking of database!
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_FILE
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_FILE
-                          );
-  if (error != ERROR_NONE) return error;
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_FILE
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_FILE
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_IMAGE
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_IMAGE
-                          );
-  if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_IMAGE
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_IMAGE
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_DIRECTORY
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_DIRECTORY
-                          );
-  if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_DIRECTORY
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_DIRECTORY
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_LINK
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_LINK
-                          );
-  if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_LINK
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_LINK
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_HARDLINK
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_HARDLINK
-                          );
-  if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_HARDLINK
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_HARDLINK
+                            );
+    if (error != ERROR_NONE) return error;
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_SPECIAL
-                          );
-  if (error != ERROR_NONE) return error;
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                           INDEX_DATABASE_ID_(storageId),
-                           INDEX_TYPE_SPECIAL
-                          );
-  if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_SPECIAL
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
+                             INDEX_DATABASE_ID_(storageId),
+                             INDEX_TYPE_SPECIAL
+                            );
+    if (error != ERROR_NONE) return error;
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 
@@ -7233,46 +7412,53 @@ Errors Index_getStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT storage.name, \
-                                   CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
-                                   storage.size, \
-                                   storage.totalEntryCount, \
-                                   storage.totalEntrySize, \
-                                   storage.state, \
-                                   storage.mode, \
-                                   CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END, \
-                                   storage.errorMessage \
-                            FROM storage \
-                            WHERE id=%d \
-                           ",
-                           INDEX_DATABASE_ID_(storageId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  if (!Database_getNextRow(&databaseQueryHandle,
-                           "%S %llu %llu %ld %llu %d %d %llu %S",
-                           storageName,
-                           createdDateTime,
-                           size,
-                           totalEntryCount,
-                           totalEntrySize,
-                           indexState,
-                           indexMode,
-                           lastCheckedDateTime,
-                           errorMessage
-                          )
-     )
-  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT storage.name, \
+                                     CASE storage.created WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.created) END, \
+                                     storage.size, \
+                                     storage.totalEntryCount, \
+                                     storage.totalEntrySize, \
+                                     storage.state, \
+                                     storage.mode, \
+                                     CASE storage.lastChecked WHEN 0 THEN 0 ELSE STRFTIME('%%s',storage.lastChecked) END, \
+                                     storage.errorMessage \
+                              FROM storage \
+                              WHERE id=%d \
+                             ",
+                             INDEX_DATABASE_ID_(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    if (!Database_getNextRow(&databaseQueryHandle,
+                             "%S %llu %llu %ld %llu %d %d %llu %S",
+                             storageName,
+                             createdDateTime,
+                             size,
+                             totalEntryCount,
+                             totalEntrySize,
+                             indexState,
+                             indexMode,
+                             lastCheckedDateTime,
+                             errorMessage
+                            )
+       )
+    {
+      Database_finalize(&databaseQueryHandle);
+      return ERROR_DATABASE_INDEX_NOT_FOUND;
+    }
     Database_finalize(&databaseQueryHandle);
-    return ERROR_DATABASE_INDEX_NOT_FOUND;
-  }
-  Database_finalize(&databaseQueryHandle);
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_storageUpdate(IndexHandle *indexHandle,
@@ -7295,41 +7481,47 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // update name
-  if (storageName != NULL)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
     // update name
+    if (storageName != NULL)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "UPDATE storage \
+                                SET name=%'S \
+                                WHERE id=%lld; \
+                               ",
+                               storageName,
+                               INDEX_DATABASE_ID_(storageId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    // update size
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
-                              SET name=%'S \
+                              SET size=%llu \
                               WHERE id=%lld; \
                              ",
-                             storageName,
+                             storageSize,
                              INDEX_DATABASE_ID_(storageId)
                             );
     if (error != ERROR_NONE)
     {
       return error;
     }
-  }
 
-  // update size
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "UPDATE storage \
-                            SET size=%llu \
-                            WHERE id=%lld; \
-                           ",
-                           storageSize,
-                           INDEX_DATABASE_ID_(storageId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    return ERROR_NONE;
+  });
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
@@ -7403,20 +7595,26 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     // not pattern/entries selected
     filterAppend(filter,!String_isEmpty(storageIdsString),"AND","id IN (%S)",storageIdsString);
 
-    if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
+    BLOCK_DOX(error,
+              Database_lock(&indexHandle->databaseHandle),
+              Database_unlock(&indexHandle->databaseHandle),
     {
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT TOTAL(%s),TOTAL(%s) \
-                                  FROM storage \
-                                  WHERE %S \
-                               ",
-                               newestEntriesOnly ? "totalFileCountNewest" : "totalFileCount",
-                               newestEntriesOnly ? "totalFileSizeNewest" : "totalFileSize",
-                               filter
-                              );
-      if (error == ERROR_NONE)
+      if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
       {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(%s),TOTAL(%s) \
+                                    FROM storage \
+                                    WHERE %S \
+                                 ",
+                                 newestEntriesOnly ? "totalFileCountNewest" : "totalFileCount",
+                                 newestEntriesOnly ? "totalFileSizeNewest" : "totalFileSize",
+                                 filter
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf %lf",
                                 &count_,
@@ -7431,21 +7629,22 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         Database_finalize(&databaseQueryHandle);
       }
-    }
-    if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
-    {
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT TOTAL(%s),TOTAL(%s) \
-                                  FROM storage \
-                                  WHERE %S \
-                               ",
-                               newestEntriesOnly ? "totalImageCountNewest" : "totalImageCount",
-                               newestEntriesOnly ? "totalImageSizeNewest" : "totalImageSize",
-                               filter
-                              );
-      if (error == ERROR_NONE)
+      if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
       {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(%s),TOTAL(%s) \
+                                    FROM storage \
+                                    WHERE %S \
+                                 ",
+                                 newestEntriesOnly ? "totalImageCountNewest" : "totalImageCount",
+                                 newestEntriesOnly ? "totalImageSizeNewest" : "totalImageSize",
+                                 filter
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf %lf",
                                 &count_,
@@ -7460,20 +7659,21 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         Database_finalize(&databaseQueryHandle);
       }
-    }
-    if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
-    {
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT TOTAL(%s) \
-                                  FROM storage \
-                                  WHERE %S \
-                               ",
-                               newestEntriesOnly ? "totalDirectoryCountNewest" : "totalDirectoryCount",
-                               filter
-                              );
-      if (error == ERROR_NONE)
+      if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
       {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(%s) \
+                                    FROM storage \
+                                    WHERE %S \
+                                 ",
+                                 newestEntriesOnly ? "totalDirectoryCountNewest" : "totalDirectoryCount",
+                                 filter
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf",
                                 &count_
@@ -7485,20 +7685,21 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         Database_finalize(&databaseQueryHandle);
       }
-    }
-    if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
-    {
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT TOTAL(%s) \
-                                  FROM storage \
-                                  WHERE %S \
-                               ",
-                               newestEntriesOnly ? "totalLinkCountNewest" : "totalLinkCount",
-                               filter
-                              );
-      if (error == ERROR_NONE)
+      if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
       {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(%s) \
+                                    FROM storage \
+                                    WHERE %S \
+                                 ",
+                                 newestEntriesOnly ? "totalLinkCountNewest" : "totalLinkCount",
+                                 filter
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf",
                                 &count_
@@ -7510,21 +7711,22 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         Database_finalize(&databaseQueryHandle);
       }
-    }
-    if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
-    {
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT TOTAL(%s),TOTAL(%s) \
-                                  FROM storage \
-                                  WHERE %S \
-                               ",
-                               newestEntriesOnly ? "totalHardlinkCountNewest" : "totalHardlinkCount",
-                               newestEntriesOnly ? "totalHardlinkSizeNewest" : "totalHardlinkSize",
-                               filter
-                              );
-      if (error == ERROR_NONE)
+      if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
       {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(%s),TOTAL(%s) \
+                                    FROM storage \
+                                    WHERE %S \
+                                 ",
+                                 newestEntriesOnly ? "totalHardlinkCountNewest" : "totalHardlinkCount",
+                                 newestEntriesOnly ? "totalHardlinkSizeNewest" : "totalHardlinkSize",
+                                 filter
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf %lf",
                                 &count_,
@@ -7539,20 +7741,21 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         Database_finalize(&databaseQueryHandle);
       }
-    }
-    if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
-    {
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT TOTAL(%s) \
-                                  FROM storage \
-                                  WHERE %S \
-                               ",
-                               newestEntriesOnly ? "totalSpecialCountNewest" : "totalSpecialCount",
-                               filter
-                              );
-      if (error == ERROR_NONE)
+      if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
       {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(%s) \
+                                    FROM storage \
+                                    WHERE %S \
+                                 ",
+                                 newestEntriesOnly ? "totalSpecialCountNewest" : "totalSpecialCount",
+                                 filter
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf",
                                 &count_
@@ -7564,43 +7767,53 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         Database_finalize(&databaseQueryHandle);
       }
-    }
+
+      return ERROR_NONE;
+    });
   }
   else
   {
-    // pattern/entries selected
+    // get filter
     filterAppend(filter,!String_isEmpty(storageIdsString),"AND","storageId IN (%S)",storageIdsString);
     filterAppend(filter,!String_isEmpty(ftsName),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestEntriesOnly ? "entryId" : "id",ftsName);
 //    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
     filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(id),TOTAL(size) \
-                                FROM %s \
-                                WHERE     %S \
-                                      AND type IN (%S) \
-                             ",
-                             newestEntriesOnly ? "entriesNewest" : "entries",
-                             filter,
-                             getIndexTypeSetString(indexTypeSetString,indexTypeSet)
-                            );
-      if (error == ERROR_NONE)
+    BLOCK_DOX(error,
+              Database_lock(&indexHandle->databaseHandle),
+              Database_unlock(&indexHandle->databaseHandle),
+    {
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT COUNT(id),TOTAL(size) \
+                                  FROM %s \
+                                  WHERE     %S \
+                                        AND type IN (%S) \
+                               ",
+                               newestEntriesOnly ? "entriesNewest" : "entries",
+                               filter,
+                               getIndexTypeSetString(indexTypeSetString,indexTypeSet)
+                              );
+      if (error != ERROR_NONE)
       {
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lf %lf",
-                                &count_,
-                                &size_
-                               )
-           )
-        {
-          assert(count_ >= 0.0);
-          assert(size_ >= 0.0);
-          if (count != NULL) (*count) += (uint64)count_;
-          if (size != NULL) (*size) += (uint64)size_;
-        }
-        Database_finalize(&databaseQueryHandle);
+        return error;
       }
+      if (Database_getNextRow(&databaseQueryHandle,
+                              "%lf %lf",
+                              &count_,
+                              &size_
+                             )
+         )
+      {
+        assert(count_ >= 0.0);
+        assert(size_ >= 0.0);
+        if (count != NULL) (*count) += (uint64)count_;
+        if (size != NULL) (*size) += (uint64)size_;
+      }
+      Database_finalize(&databaseQueryHandle);
+
+      return ERROR_NONE;
+    });
   }
 //Database_debugEnable(0);
 
@@ -7672,6 +7885,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
 
+  // get filter
   indexTypeSetString = String_new();
   filter = String_newCString("1");
   if (newestEntriesOnly)
@@ -7682,7 +7896,23 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entriesNewest.storageId IN (%S)",storageIdsString);
     filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
     filterAppend(filter,TRUE,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+  }
+  else
+  {
+    // get filter
+    filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
+    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+    filterAppend(filter,TRUE,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+  }
 
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
+  if (newestEntriesOnly)
+  {
     error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT entriesNewest.entryId, \
@@ -7721,13 +7951,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
   else
   {
-    // get filter
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
-    filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
-    filterAppend(filter,TRUE,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
-
     error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT entries.id, \
@@ -7764,17 +7987,26 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              limit
                             );
   }
+
+  if (error != ERROR_NONE)
+  {
+    Database_unlock(&indexHandle->databaseHandle);
+    String_delete(filter);
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+
+  // free resources
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-  if (error != ERROR_NONE)
-  {
-    doneIndexQueryHandle(indexQueryHandle);
-    return error;
-  }
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -7904,70 +8136,77 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  switch (Index_getType(entryId))
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    case INDEX_TYPE_FILE:
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DELETE FROM fileEntries WHERE entryId=%lld;",
-                               INDEX_DATABASE_ID_(entryId)
-                              );
-      break;
-    case INDEX_TYPE_IMAGE:
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DELETE FROM imageEntries WHERE entryId=%lld;",
-                               INDEX_DATABASE_ID_(entryId)
-                              );
-      break;
-    case INDEX_TYPE_DIRECTORY:
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DELETE FROM directoryEntries WHERE entryId=%lld;",
-                               INDEX_DATABASE_ID_(entryId)
-                              );
-      break;
-    case INDEX_TYPE_LINK:
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DELETE FROM linkEntries WHERE entryId=%lld;",
-                               INDEX_DATABASE_ID_(entryId)
-                              );
-      break;
-    case INDEX_TYPE_HARDLINK:
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
-                               INDEX_DATABASE_ID_(entryId)
-                              );
-      break;
-    case INDEX_TYPE_SPECIAL:
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DELETE FROM specialEntries WHERE entryId=%lld;",
-                               INDEX_DATABASE_ID_(entryId)
-                              );
-      break;
-    default:
-      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      break;
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    switch (Index_getType(entryId))
+    {
+      case INDEX_TYPE_FILE:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "DELETE FROM fileEntries WHERE entryId=%lld;",
+                                 INDEX_DATABASE_ID_(entryId)
+                                );
+        break;
+      case INDEX_TYPE_IMAGE:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "DELETE FROM imageEntries WHERE entryId=%lld;",
+                                 INDEX_DATABASE_ID_(entryId)
+                                );
+        break;
+      case INDEX_TYPE_DIRECTORY:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "DELETE FROM directoryEntries WHERE entryId=%lld;",
+                                 INDEX_DATABASE_ID_(entryId)
+                                );
+        break;
+      case INDEX_TYPE_LINK:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "DELETE FROM linkEntries WHERE entryId=%lld;",
+                                 INDEX_DATABASE_ID_(entryId)
+                                );
+        break;
+      case INDEX_TYPE_HARDLINK:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
+                                 INDEX_DATABASE_ID_(entryId)
+                                );
+        break;
+      case INDEX_TYPE_SPECIAL:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "DELETE FROM specialEntries WHERE entryId=%lld;",
+                                 INDEX_DATABASE_ID_(entryId)
+                                );
+        break;
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    }
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(entryId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(entryId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
@@ -8025,12 +8264,18 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     }
   }
 
+  // get filter
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_FILE);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
   filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -8051,16 +8296,24 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            ",
                            String_cString(filter)
                           );
+  if (error != ERROR_NONE)
+  {
+    Database_unlock(&indexHandle->databaseHandle);
+    String_delete(filter);
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  // free resources
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-  if (error != ERROR_NONE)
-  {
-    doneIndexQueryHandle(indexQueryHandle);
-    return error;
-  }
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -8136,27 +8389,34 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM fileEntries WHERE entryId=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM fileEntries WHERE entryId=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
@@ -8214,12 +8474,18 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     }
   }
 
+  // get filter
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
   filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -8237,16 +8503,24 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                            ",
                            String_cString(filter)
                           );
+  if (error != ERROR_NONE)
+  {
+    Database_unlock(&indexHandle->databaseHandle);
+    String_delete(filter);
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  // free resources
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-  if (error != ERROR_NONE)
-  {
-    doneIndexQueryHandle(indexQueryHandle);
-    return error;
-  }
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -8316,26 +8590,33 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM imageEntries WHERE entryId=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM imageEntries WHERE entryId=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
@@ -8393,12 +8674,18 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     }
   }
 
+  // get filter
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
   filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
 //Database_debugEnable(1);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -8418,16 +8705,23 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                            String_cString(filter)
                           );
 //Database_debugEnable(0);
+  if (error != ERROR_NONE)
+  {
+    String_delete(filter);
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  // free resources
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-  if (error != ERROR_NONE)
-  {
-    doneIndexQueryHandle(indexQueryHandle);
-    return error;
-  }
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -8497,26 +8791,33 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM directoryEntries WHERE entryId=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM directoryEntries WHERE entryId=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
@@ -8575,12 +8876,18 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   }
   String_appendCString(entryIdsString,"))");
 
+  // get filter
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
   filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -8599,16 +8906,24 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            ",
                            String_cString(filter)
                           );
+  if (error != ERROR_NONE)
+  {
+    Database_unlock(&indexHandle->databaseHandle);
+    String_delete(filter);
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  // free resources
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-  if (error != ERROR_NONE)
-  {
-    doneIndexQueryHandle(indexQueryHandle);
-    return error;
-  }
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -8680,26 +8995,33 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM linkEntries WHERE entryId=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM linkEntries WHERE entryId=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
@@ -8757,12 +9079,18 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     }
   }
 
+  // get filter
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
   filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -8783,16 +9111,24 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                            ",
                            String_cString(filter)
                           );
+  if (error != ERROR_NONE)
+  {
+    Database_unlock(&indexHandle->databaseHandle);
+    String_delete(filter);
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  // free resources
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-  if (error != ERROR_NONE)
-  {
-    doneIndexQueryHandle(indexQueryHandle);
-    return error;
-  }
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -8868,26 +9204,33 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
@@ -8945,12 +9288,18 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
     }
   }
 
+  // get filter
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,special.name)",regexpString);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
   filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+
+  // lock
+  Database_lock(&indexHandle->databaseHandle);
+
+  // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -8968,16 +9317,24 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                            ",
                            String_cString(filter)
                           );
+  if (error != ERROR_NONE)
+  {
+    Database_unlock(&indexHandle->databaseHandle);
+    String_delete(filter);
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    doneIndexQueryHandle(indexQueryHandle);
+    return error;
+  }
+
+  // free resources
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-  if (error != ERROR_NONE)
-  {
-    doneIndexQueryHandle(indexQueryHandle);
-    return error;
-  }
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -9047,26 +9404,33 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM specialEntries WHERE entryId=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "DELETE FROM entries WHERE id=%lld;",
-                           INDEX_DATABASE_ID_(indexId)
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM specialEntries WHERE entryId=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE id=%lld;",
+                             INDEX_DATABASE_ID_(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 void Index_doneList(IndexQueryHandle *indexQueryHandle)
@@ -9076,6 +9440,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle)
   DEBUG_REMOVE_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   Database_finalize(&indexQueryHandle->databaseQueryHandle);
+  Database_unlock(&indexQueryHandle->indexHandle->databaseHandle);
   doneIndexQueryHandle(indexQueryHandle);
 }
 
@@ -9111,12 +9476,10 @@ Errors Index_addFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-#if 0
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-#endif
     // start transaction
 #if 0
     error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
@@ -9207,11 +9570,10 @@ Errors Index_addFile(IndexHandle *indexHandle,
     }
 #endif
 
-//    return ERROR_NONE;
-//  });
+    return ERROR_NONE;
+  });
 
-//  return error;
-return ERROR_NONE;
+  return error;
 
   #undef TRANSACTION_NAME
 }
@@ -9244,7 +9606,6 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // add image entry
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
@@ -9996,10 +10357,10 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
                           IndexId     storageId
                          )
 {
+  Errors  error;
   bool    existsFlag;
   uint    i;
   IndexId id;
-  Errors  error;
 
   assert(indexHandle != NULL);
   #ifdef NDEBUG
@@ -10008,41 +10369,48 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
 
   // check if entries exists for storage
-  existsFlag = FALSE;
-  for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    if (Database_exists(&indexHandle->databaseHandle,
-                        ENTRY_TABLE_NAMES[i],
-                        "id",
-                        "WHERE storageId=%lld",
-                        INDEX_DATABASE_ID_(storageId)
-                       )
-       )
+    existsFlag = FALSE;
+    for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
     {
-      existsFlag = TRUE;
-      break;
-    }
-    UNUSED_VARIABLE(id);
-  }
-
-  // prune storage if empty
-  if (!existsFlag)
-  {
-    // delete storage entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM storage WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(storageId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
+      if (Database_exists(&indexHandle->databaseHandle,
+                          ENTRY_TABLE_NAMES[i],
+                          "id",
+                          "WHERE storageId=%lld",
+                          INDEX_DATABASE_ID_(storageId)
+                         )
+         )
+      {
+        existsFlag = TRUE;
+        break;
+      }
+      UNUSED_VARIABLE(id);
     }
 
-    // delete directory if empty
-  }
+    // prune storage if empty
+    if (!existsFlag)
+    {
+      // delete storage entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM storage WHERE id=%lld;",
+                               INDEX_DATABASE_ID_(storageId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
 
-  return ERROR_NONE;
+      // delete directory if empty
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 Errors Index_pruneUUID(IndexHandle *indexHandle,
@@ -10063,70 +10431,76 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
 fprintf(stderr,"%s, %d: try prune uuid %llu\n",__FILE__,__LINE__,uuidId);
 
   // prune entities of uuid
-  error = Index_initListEntities(&indexQueryHandle,
-                                 indexHandle,
-                                 uuidId,
-                                 NULL,  // jobUUID,
-                                 NULL,  // scheduldUUID
-                                 DATABASE_ORDERING_ASCENDING,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  while (Index_getNextEntity(&indexQueryHandle,
-                             NULL,  // jobUUID,
-                             NULL,  // scheduleUUID,
-                             NULL,  // uuidId,
-                             &entityId,
-                             NULL,  // archiveType,
-                             NULL,  // createdDateTime,
-                             NULL,  // lastErrorMessage
-                             NULL,  // totalEntryCount,
-                             NULL  // totalEntrySize,
-                            )
-        )
-  {
-    error = Index_pruneEntity(indexHandle,entityId);
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-  }
-  Index_doneList(&indexQueryHandle);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // check if entity exists
-  existsFlag = FALSE;
-  if (Database_exists(&indexHandle->databaseHandle,
-                      "entities",
-                      "id",
-                      "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
-                      INDEX_DATABASE_ID_(uuidId)
-                     )
-     )
-  {
-    existsFlag = TRUE;
-  }
-
-  // prune uuid if empty
-  if (!existsFlag)
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM uuids WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(uuidId)
-                            );
+    error = Index_initListEntities(&indexQueryHandle,
+                                   indexHandle,
+                                   uuidId,
+                                   NULL,  // jobUUID,
+                                   NULL,  // scheduldUUID
+                                   DATABASE_ORDERING_ASCENDING,
+                                   0LL,  // offset
+                                   INDEX_UNLIMITED
+                                  );
     if (error != ERROR_NONE)
     {
       return error;
     }
-  }
+    while (Index_getNextEntity(&indexQueryHandle,
+                               NULL,  // jobUUID,
+                               NULL,  // scheduleUUID,
+                               NULL,  // uuidId,
+                               &entityId,
+                               NULL,  // archiveType,
+                               NULL,  // createdDateTime,
+                               NULL,  // lastErrorMessage
+                               NULL,  // totalEntryCount,
+                               NULL  // totalEntrySize,
+                              )
+          )
+    {
+      error = Index_pruneEntity(indexHandle,entityId);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // check if entity exists
+    existsFlag = FALSE;
+    if (Database_exists(&indexHandle->databaseHandle,
+                        "entities",
+                        "id",
+                        "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
+                        INDEX_DATABASE_ID_(uuidId)
+                       )
+       )
+    {
+      existsFlag = TRUE;
+    }
+
+    // prune uuid if empty
+    if (!existsFlag)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM uuids WHERE id=%lld;",
+                               INDEX_DATABASE_ID_(uuidId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+    return ERROR_NONE;
+  });
 
   return ERROR_NONE;
 }
@@ -10149,79 +10523,86 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
 fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
 
   // prune storage of entity
-  error = Index_initListStorages(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 entityId,
-                                 NULL,  // jobUUID
-                                 NULL,   // storageIds
-                                 0,  // storageIdCount
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // name
-                                 0LL,   // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error != ERROR_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    return error;
-  }
-  while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // jobUUID
-                              NULL,  // scheduleUUID
-                              NULL,  // uuidId
-                              NULL,  // entityId
-                              NULL,  // archiveType
-                              &storageId,
-                              NULL,  // storageName,
-                              NULL,  // createdDateTime
-                              NULL,  // entries
-                              NULL,  // size
-                              NULL,  // indexState
-                              NULL,  // indexMode
-                              NULL,  // lastCheckedDateTime
-                              NULL   // errorMessage
-                             )
-        )
-  {
-    error = Index_pruneStorage(indexHandle,storageId);
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-  }
-  Index_doneList(&indexQueryHandle);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // check if storage exists
-  existsFlag = FALSE;
-  if (Database_exists(&indexHandle->databaseHandle,
-                      "storage",
-                      "id",
-                      "WHERE entityId=%lld",
-                      INDEX_DATABASE_ID_(entityId)
-                     )
-     )
-  {
-    existsFlag = TRUE;
-  }
-
-  // prune entity if empty
-  if (!existsFlag)
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entities WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(entityId)
-                            );
+    error = Index_initListStorages(&indexQueryHandle,
+                                   indexHandle,
+                                   INDEX_ID_ANY,  // uuidId
+                                   entityId,
+                                   NULL,  // jobUUID
+                                   NULL,   // storageIds
+                                   0,  // storageIdCount
+                                   INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
+                                   NULL,  // name
+                                   0LL,   // offset
+                                   INDEX_UNLIMITED
+                                  );
     if (error != ERROR_NONE)
     {
       return error;
     }
-  }
+    while (Index_getNextStorage(&indexQueryHandle,
+                                NULL,  // jobUUID
+                                NULL,  // scheduleUUID
+                                NULL,  // uuidId
+                                NULL,  // entityId
+                                NULL,  // archiveType
+                                &storageId,
+                                NULL,  // storageName,
+                                NULL,  // createdDateTime
+                                NULL,  // entries
+                                NULL,  // size
+                                NULL,  // indexState
+                                NULL,  // indexMode
+                                NULL,  // lastCheckedDateTime
+                                NULL   // errorMessage
+                               )
+          )
+    {
+      error = Index_pruneStorage(indexHandle,storageId);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+    }
+    Index_doneList(&indexQueryHandle);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // check if storage exists
+    existsFlag = FALSE;
+    if (Database_exists(&indexHandle->databaseHandle,
+                        "storage",
+                        "id",
+                        "WHERE entityId=%lld",
+                        INDEX_DATABASE_ID_(entityId)
+                       )
+       )
+    {
+      existsFlag = TRUE;
+    }
+
+    // prune entity if empty
+    if (!existsFlag)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM entities WHERE id=%lld;",
+                               INDEX_DATABASE_ID_(entityId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    return ERROR_NONE;
+  });
 
   return ERROR_NONE;
 }
