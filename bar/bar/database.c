@@ -1040,7 +1040,7 @@ asm("int3");
       if (sqliteResult != SQLITE_DONE)
       {
         error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
-fprintf(stderr,"%s, %d: %d %s\n",__FILE__,__LINE__,sqliteResult,Error_getText(error));
+fprintf(stderr,"%s, %d: %d %s -- %s\n",__FILE__,__LINE__,sqliteResult,Error_getText(error),String_cString(sqlString));
       }
 
       // free call-back data
@@ -1388,11 +1388,12 @@ void Database_doneAll(void)
   sqliteMode = 0;
   switch (databaseOpenMode)
   {
-    case DATABASE_OPENMODE_CREATE:    sqliteMode = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE; break;
-    case DATABASE_OPENMODE_READ:      sqliteMode = SQLITE_OPEN_READONLY;                     break;
-    case DATABASE_OPENMODE_READWRITE: sqliteMode = SQLITE_OPEN_READWRITE;                    break;
+    case DATABASE_OPENMODE_CREATE:    sqliteMode |= SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE; break;
+    case DATABASE_OPENMODE_READ:      sqliteMode |= SQLITE_OPEN_READONLY;                     break;
+    case DATABASE_OPENMODE_READWRITE: sqliteMode |= SQLITE_OPEN_READWRITE;                    break;
   }
 //sqliteMode |= SQLITE_OPEN_PRIVATECACHE;
+//sqliteMode |= SQLITE_OPEN_NOMUTEX;
 
   // open database
   if (fileName == NULL) fileName = ":memory:";
@@ -2523,12 +2524,18 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   // format SQL command string
 //  sqlString = String_format(String_new(),"BEGIN TRANSACTION EXCLUSIVE;");
   sqlString = String_format(String_new(),"BEGIN TRANSACTION;");
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-  error = sqliteExecute(databaseHandle,
-                        String_cString(sqlString),
-                        CALLBACK(NULL,NULL),
-                        databaseHandle->timeout
-                       );
+
+  BLOCK_DOX(error,
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
+            DATABASE_UNLOCK(databaseHandle),
+  {
+    DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+    return sqliteExecute(databaseHandle,
+                         String_cString(sqlString),
+                         CALLBACK(NULL,NULL),
+                         databaseHandle->timeout
+                        );
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -2569,14 +2576,19 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
 
   // format SQL command string
   sqlString = String_format(String_new(),"END TRANSACTION;");
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
 
   // end transaction
-  error = sqliteExecute(databaseHandle,
-                        String_cString(sqlString),
-                        CALLBACK(NULL,NULL),
-                        databaseHandle->timeout
-                       );
+  BLOCK_DOX(error,
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
+            DATABASE_UNLOCK(databaseHandle),
+  {
+    DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+    return sqliteExecute(databaseHandle,
+                         String_cString(sqlString),
+                         CALLBACK(NULL,NULL),
+                         databaseHandle->timeout
+                        );
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -2613,12 +2625,17 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
   sqlString = String_format(String_new(),"ROLLBACK TRANSACTION;");
 
   // rollback transaction
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-  error = sqliteExecute(databaseHandle,
-                        String_cString(sqlString),
-                        CALLBACK(NULL,NULL),
-                        databaseHandle->timeout
-                       );
+  BLOCK_DOX(error,
+            DATABASE_LOCK(databaseHandle,"%s",String_cString(sqlString)),
+            DATABASE_UNLOCK(databaseHandle),
+  {
+    DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+    return sqliteExecute(databaseHandle,
+                         String_cString(sqlString),
+                         CALLBACK(NULL,NULL),
+                         databaseHandle->timeout
+                        );
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
