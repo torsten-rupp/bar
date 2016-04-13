@@ -322,6 +322,7 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
     INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
   END;
 
+//TODO: remove
 create table log(event text);
 
 
@@ -380,13 +381,11 @@ CREATE VIRTUAL TABLE FTS_entries USING FTS4(
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON entries
   BEGIN
- insert into log values('1');
-
+// insert into log values('1');
     // update count in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1
       WHERE storage.id=NEW.storageId;
- insert into log values('2');
 
     // insert/update newest info
     INSERT OR IGNORE INTO entriesNewest
@@ -404,37 +403,30 @@ CREATE TRIGGER AFTER INSERT ON entries
           size=NEW.size
       WHERE     name=NEW.name
             AND timeLastChanged<NEW.timeLastChanged;
- insert into log values('2');
 
     // update FTS
     INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
- insert into log values('3');
   END;
 
 CREATE TRIGGER BEFORE DELETE ON entries
   BEGIN
- insert into log values('4');
     // update count in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1
       WHERE storage.id=OLD.storageId;
- insert into log values('5');
 
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.id;
     INSERT OR IGNORE INTO entriesNewest
         (storageId,name,type,size,timeLastChanged,entryId)
       SELECT storageId,name,type,size,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.id AND name=OLD.name;
- insert into log values('5');
 
     // update FTS
     DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
- insert into log values('6');
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId ON entries
   BEGIN
- insert into log values('7');
     // update count in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1
@@ -442,7 +434,6 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1
       WHERE storage.id=NEW.storageId;
- insert into log values('8');
   END;
 
 //CREATE TRIGGER AFTER UPDATE OF totalEntryCount,totalEntrySize ON entries
