@@ -70,20 +70,23 @@ typedef enum
 // database handle
 typedef struct
 {
-  sqlite3   *handle;                    // SQlite3 handle
-  long      timeout;                    // timeout [ms]
-  sem_t     wakeUp;                     // unlock wake-up
+  sqlite3_mutex *lock;
+  sqlite3       *handle;                    // SQlite3 handle
+  long          timeout;                    // timeout [ms]
+  sem_t         wakeUp;                     // unlock wake-up
   #ifndef NDEBUG
     char fileName[256];
     struct
     {
-      char   text[8*1024];
-      uint   lineNb;
-      uint64 t0,t1;
+      pthread_t  threadId;                  // thread who aquired lock
+      const char *fileName;
+      uint       lineNb;
+      char       text[8*1024];
+      uint64     t0,t1;                     // lock start/end timestamp [s]
     } locked;
     struct
     {
-      pthread_t  threadId;              // thread who started transaction
+      pthread_t  threadId;                  // thread who started transaction
       const char *fileName;
       uint       lineNb;
       void const *stackTrace[16];
@@ -164,6 +167,7 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
 #ifndef NDEBUG
   #define Database_open(...)             __Database_open(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_close(...)            __Database_close(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_lock(...)             __Database_lock(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_beginTransaction(...) __Database_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_prepare(...)          __Database_prepare(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_finalize(...)         __Database_finalize(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -254,7 +258,14 @@ void Database_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-void Database_lock(DatabaseHandle *databaseHandle);
+#ifdef NDEBUG
+  void Database_lock(DatabaseHandle *databaseHandle);
+#else /* not NDEBUG */
+  void __Database_lock(const char   *__fileName__,
+                       uint         __lineNb__,
+                       DatabaseHandle *databaseHandle
+                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_unlock

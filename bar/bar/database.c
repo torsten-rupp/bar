@@ -117,7 +117,7 @@ typedef union
     { \
       assert(databaseHandle != NULL); \
       \
-      sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
+      sqlite3_mutex_enter(databaseHandle->lock); \
       if (format != NULL) \
       { \
         stringFormat(databaseHandle->locked.text,sizeof(databaseHandle->locked.text),format, ## __VA_ARGS__); \
@@ -166,7 +166,7 @@ typedef union
             ); \
       } \
       databaseHandle->locked.lineNb = 0; \
-      sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)); \
+      sqlite3_mutex_leave(databaseHandle->lock); \
     } \
     while (0)
 #else /* NDEBUG */
@@ -175,7 +175,7 @@ typedef union
     { \
       assert(databaseHandle != NULL); \
       \
-      sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)); \
+      sqlite3_mutex_enter(databaseHandle->lock); \
     } \
     while (0)
 
@@ -184,7 +184,7 @@ typedef union
     { \
       assert(databaseHandle != NULL); \
       \
-      sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)); \
+      sqlite3_mutex_leave(databaseHandle->lock); \
     } \
     while (0)
 #endif /* not NDEBUG */
@@ -1339,6 +1339,7 @@ void Database_doneAll(void)
   assert(databaseHandle != NULL);
 
   // init variables
+  databaseHandle->lock    = NULL;
   databaseHandle->handle  = NULL;
   databaseHandle->timeout = timeout;
   sem_init(&databaseHandle->wakeUp,0,0);
@@ -1352,9 +1353,16 @@ void Database_doneAll(void)
     databaseHandle->transaction.stackTraceSize = 0;
   #endif /* not NDEBUG */
 
+  // create lock
+  databaseHandle->lock = sqlite3_mutex_alloc(SQLITE_MUTEX_RECURSIVE);
+  if (databaseHandle->lock == NULL)
+  {
+    return ERRORX_(DATABASE,0,"create lock fail");
+  }
+
+  // create directory if needed
   if (fileName != NULL)
   {
-    // create directory if needed
     directory = File_getFilePathNameCString(String_new(),fileName);
     if (   !String_isEmpty(directory)
         && !File_isDirectory(directory)
@@ -1368,6 +1376,7 @@ void Database_doneAll(void)
       if (error != ERROR_NONE)
       {
         File_deleteFileName(directory);
+        sqlite3_mutex_free(databaseHandle->lock);
         sem_destroy(&databaseHandle->wakeUp);
         return error;
       }
@@ -1391,6 +1400,7 @@ void Database_doneAll(void)
   if (sqliteResult != SQLITE_OK)
   {
     error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
+    sqlite3_mutex_free(databaseHandle->lock);
     sem_destroy(&databaseHandle->wakeUp);
     return error;
   }
@@ -1466,22 +1476,40 @@ void Database_doneAll(void)
   sqlite3_close(databaseHandle->handle);
 
   // free resources
+  sqlite3_mutex_free(databaseHandle->lock);
   sem_destroy(&databaseHandle->wakeUp);
 }
 
-void Database_lock(DatabaseHandle *databaseHandle)
+#ifdef NDEBUG
+  void Database_lock(DatabaseHandle *databaseHandle)
+#else /* not NDEBUG */
+  void __Database_lock(const char   *__fileName__,
+                       uint         __lineNb__,
+                       DatabaseHandle *databaseHandle
+                      )
+#endif /* NDEBUG */
 {
   assert(databaseHandle != NULL);
-  assert(databaseHandle->handle != NULL);
 
-  DATABASE_LOCK(databaseHandle,"");
+  sqlite3_mutex_enter(databaseHandle->lock);
+  #ifdef NDEBUG
+    databaseHandle->locked.fileName = __FILE__;
+    databaseHandle->locked.lineNb   = __LINE__;
+  #else /* not NDEBUG */
+    databaseHandle->locked.fileName = __fileName__;
+    databaseHandle->locked.lineNb   = __lineNb__;
+  #endif /* NDEBUG */
+  databaseHandle->locked.text[0] = '\0';
+  databaseHandle->locked.t0      = Misc_getTimestamp();
 }
 void Database_unlock(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
-  assert(databaseHandle->handle != NULL);
 
-  DATABASE_UNLOCK(databaseHandle);
+  databaseHandle->locked.t1       = Misc_getTimestamp();
+  databaseHandle->locked.lineNb   = 0; \
+  databaseHandle->locked.fileName = NULL;
+  sqlite3_mutex_leave(databaseHandle->lock); \
 }
 
 Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
@@ -2474,7 +2502,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-fprintf(stderr,"%s, %d: begin tr %s\n",__FILE__,__LINE__,name);
   #ifndef NDEBUG
     if (databaseHandle->transaction.fileName != NULL)
     {
@@ -2699,9 +2726,9 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   #endif /* not NDEBUG */
 
   // prepare SQL command execution
-  error = ERROR_NONE;
-  BLOCK_DO(DATABASE_LOCK(databaseQueryHandle->databaseHandle,"%s",String_cString(databaseQueryHandle->sqlString)),
-           DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
+  BLOCK_DOX(error,
+            DATABASE_LOCK(databaseQueryHandle->databaseHandle,"%s",String_cString(databaseQueryHandle->sqlString)),
+            DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
 //    DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString);
@@ -2724,6 +2751,8 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
+
+    return error;
   });
   if (error != ERROR_NONE)
   {
