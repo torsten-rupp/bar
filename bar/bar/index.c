@@ -164,7 +164,7 @@ LOCAL bool   quitFlag;
   // create tables
   error = Database_execute(&databaseHandle,
                            CALLBACK(NULL,NULL),
-                           INDEX_TABLE_DEFINITION
+                           INDEX_DEFINITION
                           );
   if (error != ERROR_NONE)
   {

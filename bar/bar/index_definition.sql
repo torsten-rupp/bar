@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS uuids(
 CREATE TABLE IF NOT EXISTS entities(
   id                  INTEGER PRIMARY KEY,
   jobUUID             TEXT NOT NULL,
-  scheduleUUID        TEXT NOT NULL,
+  scheduleUUID        TEXT NOT NULL DEFAULT '',
   created             INTEGER,
   type                INTEGER,
   parentJobUUID       INTEGER,

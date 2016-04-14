@@ -161,7 +161,7 @@ while ($line=<STDIN>)
       {
         $databaseTableDefinition=$databaseTableDefinition."$line\\\n";
 
-        print "#define INDEX_TABLE_DEFINITION_".uc($databaseTableDefinitionName)." \\\n\"\\\n";
+        print "#define INDEX_DEFINITION_".uc($databaseTableDefinitionName)." \\\n\"\\\n";
         print $databaseTableDefinition;
         print "\"\n";
         print "\n";
@@ -185,7 +185,7 @@ while ($line=<STDIN>)
 }
 
 # all definitions
-print "#define INDEX_TABLE_DEFINITION \\\n\"\\\n";
+print "#define INDEX_DEFINITION \\\n\"\\\n";
 print $allDatabaseTableDefinitions;
 print "\"\n";
 
