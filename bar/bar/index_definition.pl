@@ -22,14 +22,20 @@ use Getopt::Long;
 
 # ---------------------------- constants/variables ---------------------------
 
+my $PREFIX_CONST_NAME = "INDEX_CONST_";
+
 # --------------------------------- includes ---------------------------------
 
 # -------------------------------- functions ---------------------------------
 
 # ------------------------------ main program  -------------------------------
 
+print "#ifndef __INDEX_DEFINITION__\n";
+print "#define __INDEX_DEFINITION__\n";
+print "\n";
+
 my $commentFlag=0;
-my $version=0;
+my %constants;
 my $allDatabaseTableDefinitions = "";
 my $databaseTableDefinitionName="";
 my $databaseTableDefinition="";
@@ -57,7 +63,10 @@ while ($line=<STDIN>)
       if ($1 ne "")
       {
         # replace macros
-        $1 =~ s/\$version/$version/g;
+        foreach $name (keys %constants)
+        {
+          $1 =~ s/\$$name/$constants{$name}/g;
+        }
         $1 =~ s/"/\\"/g;
 
         $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$1\\\n";
@@ -75,7 +84,10 @@ while ($line=<STDIN>)
       if ($1 ne "")
       {
         # replace macros
-        $1 =~ s/\$version/$version/g;
+        foreach $name (keys %constants)
+        {
+          $1 =~ s/\$$name/$constants{$name}/g;
+        }
         $1 =~ s/"/\\"/g;
 
         $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$1\\\n";
@@ -92,19 +104,26 @@ while ($line=<STDIN>)
     {
       # comment
     }
-    elsif ($line =~ /\s*VERSION\s*=\s*(\d+)\s*;\s*$/)
+    elsif ($line =~ /^const\s+(\w+)\s*=\s+(\S*)\s*$/)
     {
-      # VERSION=...
-      $version=$1;
+      # constant
+      my $name =$1;
+      my $value=$2;
 
-      print "#define INDEX_VERSION ".$version."\n\n";
+      $constants{$name}=$value;
+
+      print "#define $PREFIX_CONST_NAME$name $value\n";
     }
     elsif ($line =~ /\s*CREATE\s+TABLE\s+.*?(\S+)\s*\(/)
     {
       # create table
 
       # replace macros
-      $line =~ s/\$version/$version/g;
+      foreach $name (keys %constants)
+      {
+        $line =~ s/\$$name/$constants{$name}/g;
+      }
+      $line =~ s/"/\\"/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
       $databaseTableDefinitionName=$1;
@@ -116,9 +135,15 @@ while ($line=<STDIN>)
       # create anonymous index
 
       # replace macros
-      $1 =~ s/\$version/$version/g;
+      foreach $name (keys %constants)
+      {
+        $1 =~ s/\$$name/$constants{$name}/g;
+      }
       $1 =~ s/"/\\"/g;
-      $2 =~ s/\$version/$version/g;
+      foreach $name (keys %constants)
+      {
+        $2 =~ s/\$$name/$constants{$name}/g;
+      }
       $2 =~ s/"/\\"/g;
 
       # create index name
@@ -136,7 +161,10 @@ while ($line=<STDIN>)
       # create anonymous trigger
 
       # replace macros
-      $2 =~ s/\$version/$version/g;
+      foreach $name (keys %constants)
+      {
+        $2 =~ s/\$$name/$constants{$name}/g;
+      }
       $2 =~ s/"/\\"/g;
 
       # create trigger name
@@ -153,7 +181,10 @@ while ($line=<STDIN>)
       # end table/index
 
       # replace macros
-      $line =~ s/\$version/$version/g;
+      foreach $name (keys %constants)
+      {
+        $line =~ s/\$$name/$constants{$name}/g;
+      }
       $line =~ s/"/\\"/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
@@ -161,10 +192,10 @@ while ($line=<STDIN>)
       {
         $databaseTableDefinition=$databaseTableDefinition."$line\\\n";
 
+        print "\n";
         print "#define INDEX_DEFINITION_".uc($databaseTableDefinitionName)." \\\n\"\\\n";
         print $databaseTableDefinition;
         print "\"\n";
-        print "\n";
 
         $databaseTableDefinitionName="";
       }
@@ -172,7 +203,10 @@ while ($line=<STDIN>)
     else
     {
       # replace macros
-      $line =~ s/\$version/$version/g;
+      foreach $name (keys %constants)
+      {
+        $line =~ s/\$$name/$constants{$name}/g;
+      }
       $line =~ s/"/\\"/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
@@ -185,9 +219,13 @@ while ($line=<STDIN>)
 }
 
 # all definitions
+print "\n";
 print "#define INDEX_DEFINITION \\\n\"\\\n";
 print $allDatabaseTableDefinitions;
 print "\"\n";
+
+print "\n";
+print "#endif /* __INDEX_DEFINITION__ */\n";
 
 exit 0;
 # end of file

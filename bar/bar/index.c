@@ -47,8 +47,7 @@ LOCAL const struct
   { "create",           INDEX_STATE_CREATE           },
   { "update_requested", INDEX_STATE_UPDATE_REQUESTED },
   { "update",           INDEX_STATE_UPDATE           },
-  { "error",            INDEX_STATE_ERROR            },
-  { "purge",            INDEX_STATE_PURGE            }
+  { "error",            INDEX_STATE_ERROR            }
 };
 
 LOCAL const struct
@@ -7149,6 +7148,9 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(storageId));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
   // Note: do in single steps to avoid long global locking of database!
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
@@ -7182,7 +7184,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              INDEX_TYPE_IMAGE
                             );
     if (error != ERROR_NONE) return error;
-
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
@@ -7225,7 +7226,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              INDEX_TYPE_HARDLINK
                             );
     if (error != ERROR_NONE) return error;
-
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
@@ -7240,7 +7240,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              INDEX_TYPE_SPECIAL
                             );
     if (error != ERROR_NONE) return error;
-
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM storage WHERE id=%lld;",

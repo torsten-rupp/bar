@@ -24,12 +24,16 @@
 #include "files.h"
 #include "filesystems.h"
 #include "errors.h"
+#include "index_definition.h"
 
 #include "storage.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+// index version
+#define INDEX_VERSION INDEX_CONST_VERSION
+
 // max. limit value
 #define INDEX_UNLIMITED 9223372036854775807LL
 
@@ -45,7 +49,6 @@ typedef enum
   INDEX_STATE_UPDATE_REQUESTED,
   INDEX_STATE_UPDATE,
   INDEX_STATE_ERROR,
-  INDEX_STATE_PURGE,
 
   INDEX_STATE_UNKNOWN
 } IndexStates;
@@ -103,19 +106,19 @@ typedef struct
 // index types
 typedef enum
 {
-  INDEX_TYPE_NONE,
+  INDEX_TYPE_NONE      = 0,
 
-  INDEX_TYPE_HISTORY,
-  INDEX_TYPE_UUID,
-  INDEX_TYPE_ENTITY,
-  INDEX_TYPE_STORAGE,
-  INDEX_TYPE_ENTRY,
-  INDEX_TYPE_FILE,
-  INDEX_TYPE_IMAGE,
-  INDEX_TYPE_DIRECTORY,
-  INDEX_TYPE_LINK,
-  INDEX_TYPE_HARDLINK,
-  INDEX_TYPE_SPECIAL
+  INDEX_TYPE_UUID      = INDEX_CONST_TYPE_UUID,
+  INDEX_TYPE_ENTITY    = INDEX_CONST_TYPE_ENTITY,
+  INDEX_TYPE_STORAGE   = INDEX_CONST_TYPE_STORAGE,
+  INDEX_TYPE_ENTRY     = INDEX_CONST_TYPE_ENTRY,
+  INDEX_TYPE_FILE      = INDEX_CONST_TYPE_FILE,
+  INDEX_TYPE_IMAGE     = INDEX_CONST_TYPE_IMAGE,
+  INDEX_TYPE_DIRECTORY = INDEX_CONST_TYPE_DIRECTORY,
+  INDEX_TYPE_LINK      = INDEX_CONST_TYPE_LINK,
+  INDEX_TYPE_HARDLINK  = INDEX_CONST_TYPE_HARDLINK,
+  INDEX_TYPE_SPECIAL   = INDEX_CONST_TYPE_SPECIAL,
+  INDEX_TYPE_HISTORY   = INDEX_CONST_TYPE_HISTORY,
 } IndexTypes;
 
 #define INDEX_TYPE_MIN INDEX_TYPE_UUID
