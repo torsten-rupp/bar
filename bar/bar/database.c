@@ -1109,7 +1109,7 @@ asm("int3");
       if (sqliteResult != SQLITE_DONE)
       {
         error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
-fprintf(stderr,"%s, %d: %d %s -- %s\n",__FILE__,__LINE__,sqliteResult,Error_getText(error),String_cString(sqlString));
+fprintf(stderr,"%s, %d: %d %s -- %s\n",__FILE__,__LINE__,sqliteResult,Error_getText(error),sqlString);
       }
 
       // free call-back data
