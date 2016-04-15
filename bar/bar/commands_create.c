@@ -4421,8 +4421,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   Storage_initSpecifier(&storageSpecifier);
 
-//  error = Index_beginTransaction(createInfo->indexHandle,"storage");
-
   // initial storage pre-processing
   if (!isAborted(createInfo))
   {
@@ -4902,9 +4900,6 @@ fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_
       String_delete(pattern);
     }
   }
-
-//TODO
-//Index_endTransaction(indexHandle,"create");
 
   // free resoures
   Storage_doneSpecifier(&storageSpecifier);
@@ -6532,8 +6527,6 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-//error = Index_beginTransaction(createInfo->indexHandle,"create");
-
   // store entries
   while (   (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
@@ -6703,9 +6696,6 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     }
   }
 
-//TODO
-//Index_endTransaction(createInfo->indexHandle,"create");
-
   // free resources
   free(buffer);
 }
@@ -6791,6 +6781,7 @@ Errors Command_create(ConstString                  jobUUID,
 
   // open index
   indexHandle = Index_open(WAIT_FOREVER);
+  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
   // init create info
   initCreateInfo(&createInfo,
@@ -6922,7 +6913,19 @@ Errors Command_create(ConstString                  jobUUID,
   if (indexHandle != NULL)
   {
 #warning TODO
-    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+#if 1
+    error = Index_beginTransaction(indexHandle,"CREATE");
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create index for '%s' (error: %s)!\n",
+                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+//    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_rollbackTransaction(indexHandle,"CREATE"); });
+#endif
 
     error = Index_newEntity(indexHandle,
                             jobUUID,
@@ -7027,6 +7030,24 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 createThreadCode(&createInfo);
 #endif
 
+  // signal end of data
+  MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
+  MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
+
+  // wait for threads
+  if (!Thread_join(&storageThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop storage thread!");
+  }
+  if (!Thread_join(&collectorThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop collector thread!");
+  }
+  if (!Thread_join(&collectorSumThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop collector sum thread!");
+  }
+
   // close archive
   error = Archive_close(&createInfo.archiveInfo);
   if (error != ERROR_NONE)
@@ -7054,26 +7075,25 @@ createThreadCode(&createInfo);
   }
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-  // signal end of data
-  MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
-  MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
-
-  // wait for threads
-  if (!Thread_join(&storageThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop storage thread!");
-  }
-  if (!Thread_join(&collectorThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop collector thread!");
-  }
-  if (!Thread_join(&collectorSumThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop collector sum thread!");
-  }
-
   // final update of status info
   (void)updateStatusInfo(&createInfo,TRUE);
+
+  // update index
+  if (indexHandle != NULL)
+  {
+#if 1
+    error = Index_endTransaction(indexHandle,"CREATE");
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create index for '%s' (error: %s)!\n",
+                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+#endif
+  }
 
   // write incremental list
   if (   createInfo.storeIncrementalFileInfoFlag
