@@ -9,8 +9,11 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include <config.h>  // use <...> to support separated build directory
+
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include <pcreposix.h>
 #include <assert.h>
 
@@ -59,6 +62,74 @@ LOCAL void printUsage(const char *programName)
   printf("Options:  -c|--create  - create database file\n");
   printf("          -H|--headaer - print headers\n");
   printf("          -h|--help    - print this help\n");
+}
+
+/***********************************************************************\
+* Name   : unixTimestamp
+* Purpose: callback for UNIXTIMESTAMP function
+* Input  : context - SQLite3 context
+*          argc    - number of arguments
+*          argv    - argument array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv[])
+{
+  const char *text,*format;
+  uint64     timestamp;
+  char       *s;
+  #ifdef HAVE_LOCALTIME_R
+    struct tm tmBuffer;
+  #endif /* HAVE_LOCALTIME_R */
+  struct tm  *tm;
+
+  assert(context != NULL);
+  assert(argc >= 1);
+  assert(argv != NULL);
+
+  UNUSED_VARIABLE(argc);
+
+  // get text to convert, optional date/time format
+  text   = (const char*)sqlite3_value_text(argv[0]);
+  format = (argc >= 2) ? argv[1] : NULL;
+
+  // convert to Unix timestamp
+  if (text != NULL)
+  {
+    timestamp = strtol(text,&s,10);
+    if ((*s) != '\0')
+    {
+      #ifdef HAVE_GETDATE_R
+        tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
+      #else /* not HAVE_GETDATE_R */
+        tm = getdate(text);
+      #endif /* HAVE_GETDATE_R */
+      if (tm != NULL)
+      {
+        timestamp = (uint64)mktime(tm);
+      }
+      else
+      {
+        s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
+        if ((s != NULL) && ((*s) == '\0'))
+        {
+          timestamp = (uint64)mktime(&tmBuffer);
+        }
+        else
+        {
+          timestamp = 0LL;
+        }
+      }
+    }
+  }
+  else
+  {
+    timestamp = 0LL;
+  }
+
+  sqlite3_result_int64(context,(int64)timestamp);
 }
 
 /***********************************************************************\
@@ -356,6 +427,16 @@ int main(int argc, const char *argv[])
   }
 
   // register special functions
+  sqliteResult = sqlite3_create_function(handle,
+                                         "unixtimestamp",
+                                         1,
+                                         SQLITE_ANY,
+                                         NULL,
+                                         unixTimestamp,
+                                         NULL,
+                                         NULL
+                                        );
+  assert(sqliteResult == SQLITE_OK);
   sqliteResult = sqlite3_create_function(handle,
                                          "regexp",
                                          3,
