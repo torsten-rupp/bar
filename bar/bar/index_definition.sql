@@ -20,7 +20,7 @@ const TYPE_HARDLINK  = 9
 const TYPE_SPECIAL   = 10
 const TYPE_HISTORY   = 11
 
-PRAGMA foreign_keys = ON $VERSION;
+PRAGMA foreign_keys = ON;
 PRAGMA auto_vacuum = INCREMENTAL;
 
 // --- meta ------------------------------------------------------------
