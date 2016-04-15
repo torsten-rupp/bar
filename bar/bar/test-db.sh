@@ -107,15 +107,18 @@ id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastCha
 $SQLITE3 $databaseFile "INSERT INTO specialEntries (entryId,specialType) VALUES ($id,2)"
 
 echo "UUIDs:"
-$SQLITE3 $databaseFile -H "SELECT id,jobUUID,totalEntityCount,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize FROM uuids"
+$SQLITE3 $databaseFile -H "SELECT id,jobUUID,totalEntityCount,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize,totalFileCount,totalFileSize FROM uuids"
 echo "Entities:"
 $SQLITE3 $databaseFile -H "SELECT id,jobUUID,created,type,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize FROM entities"
+$SQLITE3 $databaseFile -H "SELECT id,totalEntryCount,totalEntrySize,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount FROM entities"
 echo "Storage:"
 $SQLITE3 $databaseFile -H "SELECT id,entityId,name,created,size,totalEntryCount,totalEntrySize,totalEntryCountNewest,totalEntrySizeNewest FROM storage"
+$SQLITE3 $databaseFile -H "SELECT id,totalEntryCount,totalEntrySize,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount FROM storage"
 echo "Entries:"
 $SQLITE3 $databaseFile -H "SELECT id,storageId,name,type FROM entries"
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+if true; then
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # insert+delete
 id1=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,5,'x1',$DATETIME1); SELECT last_insert_rowid();"`
@@ -171,5 +174,6 @@ $SQLITE3 $databaseFile -H "SELECT id,jobUUID,created,type,totalStorageCount,tota
 echo "Storage:"
 $SQLITE3 $databaseFile -H "SELECT id,entityId,name,created,size,totalEntryCount,totalEntrySize,totalEntryCountNewest,totalEntrySizeNewest FROM storage"
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+fi
 
 #$SQLITE3 $databaseFile "SELECT * FROM log"
