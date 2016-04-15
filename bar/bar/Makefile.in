@@ -211,7 +211,8 @@ CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 S
 endif
 
 # SQLite flags
-SQLITE_FLAGS = -DHAVE_USLEEP=@HAVE_USLEEP@ -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
+SQLITE_FLAGS = -DHAVE_USLEEP=@HAVE_USLEEP@ -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
+#-DSQLITE_DEBUG -DSQLITE_LOCK_TRACE 
 
 # xdelta3 flags
 XDELTA3_FLAGS =
@@ -428,6 +429,20 @@ BAR_MINIDUMP_HEADERS = \
 
 BAR_MINIDUMP_OBJECTS = $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cc,%.o,$z)) \
                        stackwalk_common.o \
+
+BAR_SQLITE3_SOURCES  = bar-sqlite3.c \
+                       global.c \
+                       lists.c \
+                       strings.c \
+                       stringlists.c \
+                       files.c \
+                       devices.c \
+                       stacktraces.c \
+                       sqlite3.c \
+
+BAR_SQLITE3_HEADERS  = $(patsubst %.c,%.h,$(BAR_SQLITE3_SOURCES)) \
+
+BAR_SQLITE3_OBJECTS  = $(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.cc,%.o,$z))
 
 OTHER_SOURCES        = forward.h \
                        \
@@ -736,7 +751,7 @@ else
 endif
 
 # compile SQLite, xdelta C source without warning and debug flags
-sqlite3.o: sqlite3.c
+sqlite3.o: sqlite3.c sqlite3.h
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
 ifeq (@HAVE_XDELTA@,1)
@@ -801,6 +816,15 @@ bar-minidump@EXEEXT@: $(BAR_MINIDUMP_OBJECTS)
 
 # create show chunks program
 showchunks@EXEEXT@: showchunks.o
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
+
+# create bar-sqlite3
+bar-sqlite3.o: bar-sqlite3.c index_definition.h
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+
+bar-sqlite3: bar-sqlite3.o debug/global.o debug/lists.o debug/strings.o debug/stringlists.o debug/files.o debug/devices.o debug/stacktraces.o debug/errors.o sqlite3.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
