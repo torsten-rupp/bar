@@ -426,6 +426,19 @@ int main(int argc, const char *argv[])
     exit(1);
   }
 
+  sqliteResult = sqlite3_exec(handle,
+                              "PRAGMA synchronous=OFF",
+                              CALLBACK(NULL,NULL),
+                              &errorMessage
+                             );
+  assert(sqliteResult == SQLITE_OK);
+  sqliteResult = sqlite3_exec(handle,
+                              "PRAGMA journal_mode=WAL",
+                              CALLBACK(NULL,NULL),
+                              &errorMessage
+                             );
+  assert(sqliteResult == SQLITE_OK);
+
   // register special functions
   sqliteResult = sqlite3_create_function(handle,
                                          "unixtimestamp",
