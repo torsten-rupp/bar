@@ -3389,9 +3389,9 @@ UNUSED_VARIABLE(entityId);
 
 /***********************************************************************\
 * Name   : purgeStorageIndex
-* Purpose: call back to store archive file
+* Purpose: purge storage index
 * Input  : indexHandle      - index handle or NULL if no index
-*          storageId        - index id of storage
+*          storageId        - index id of storage to purge
 *          storageSpecifier - storage specifier
 *          archiveName      - storage archive name
 * Output : -
@@ -3565,65 +3565,6 @@ asm("int3");
 
       // delete uuid if empty
       error = Index_pruneUUID(indexHandle,oldUUIDId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-    }
-  }
-  Index_doneList(&indexQueryHandle);
-#else
-  // delete old indizes for same storage file
-  error = Index_initListStorages(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY, // uuidId
-                                 INDEX_ID_ANY, // entityId
-                                 NULL, // jobUUID,
-                                 NULL,  // storageIds
-                                 0,  // storageIdCount
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 archiveName,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error != ERROR_NONE)
-  {
-    Storage_doneSpecifier(&oldStorageSpecifier);
-    String_delete(oldStorageName);
-    return error;
-  }
-  while (Index_getNextStorage(&indexQueryHandle,
-                              NULL, // job UUID
-                              NULL, // schedule UUID
-                              &oldUUIDId,
-                              &oldEntityId,
-                              NULL, // archive type
-                              &oldStorageId,
-                              oldStorageName,
-                              NULL, // createdDateTime
-                              NULL, // entries
-                              NULL, // size
-                              NULL, // indexState,
-                              NULL, // indexMode,
-                              NULL, // lastCheckedDateTime,
-                              NULL  // errorMessage
-                             )
-        )
-  {
-    if (   (oldStorageId != storageId)
-        && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
-        && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
-       )
-    {
-      // delete old storage index
-      error = Index_setState(indexHandle,
-                             oldStorageId,
-                             INDEX_STATE_PURGE,
-                             0LL,  // lastCheckedDateTime
-                             NULL // errorMessage
-                            );
       if (error != ERROR_NONE)
       {
         break;
