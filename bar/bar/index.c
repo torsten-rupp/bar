@@ -7150,7 +7150,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 
 fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(storageId));
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+//asm("int3");
   // Note: do in single steps to avoid long global locking of database!
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
