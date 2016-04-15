@@ -5247,7 +5247,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                            {
                                              if      (fileInfo->timeModified > lastCheckedDateTime)
                                              {
-fprintf(stderr,"%s, %d: id=%llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),fileInfo->timeModified,lastCheckedDateTime,Misc_getCurrentDateTime());
                                                // request update index
                                                error = Index_setState(indexHandle,
                                                                       storageId,
