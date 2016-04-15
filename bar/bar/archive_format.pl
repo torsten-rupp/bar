@@ -254,7 +254,7 @@ while ($line=<STDIN>)
     writeCFile("const int $PREFIX_CHUNK_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
     writeCFile("\n");
   }
-  elsif ($line =~ /^CONST\s+(\w+)\s*=\s*(\S*)\s*/)
+  elsif ($line =~ /^const\s+(\w+)\s*=\s*(\S*)\s*/)
   {
     # constant
     my $name =$1;
