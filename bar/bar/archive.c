@@ -6986,7 +6986,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   {
     error = archiveInfo->pendingError;
     archiveInfo->pendingError = ERROR_NONE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
@@ -7010,7 +7009,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
@@ -7023,7 +7021,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList1);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return error;
     }
 
@@ -7033,7 +7030,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList1);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return error;
       }
       continue;
@@ -7050,7 +7046,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info); });
@@ -7058,7 +7053,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
   archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm);
@@ -7069,7 +7063,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
@@ -7086,15 +7079,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
     else
     {
-#if 0
       password = getFirstDecryptPassword(&passwordHandle,
                                          archiveInfo,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          CALLBACK(archiveInfo->getPasswordFunction,archiveInfo->getPasswordUserData)
                                         );
-#endif
-password=NULL;
     }
     passwordFlag  = (password != NULL);
     decryptedFlag = FALSE;
@@ -7281,9 +7271,7 @@ password=NULL;
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
-//        password = getNextDecryptPassword(&passwordHandle);
-//TODO
-password=NULL;
+        password = getNextDecryptPassword(&passwordHandle);
 
         // reset error and try next password
         if (password != NULL)
@@ -7302,10 +7290,8 @@ password=NULL;
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ fprintf(stderr,"%s, %d: x1\n",__FILE__,__LINE__); AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
@@ -7313,7 +7299,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if      (error != ERROR_NONE)                                                  return error;
     else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
