@@ -313,7 +313,7 @@ INLINE bool Index_isAvailable(void)
 \***********************************************************************/
 
 #ifdef NDEBUG
-IndexHandle *Index_open(void);
+IndexHandle *Index_open(long timeout);
 #else /* not NDEBUG */
 IndexHandle *__Index_open(const char *__fileName__,
                           uint       __lineNb__,
