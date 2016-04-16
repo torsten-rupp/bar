@@ -3287,16 +3287,16 @@ UNUSED_VARIABLE(storageId);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors archiveStore(IndexHandle *indexHandle,
-                          ConstString jobUUID,
-                          ConstString scheduleUUID,
-                          IndexId     entityId,
+LOCAL Errors archiveStore(IndexHandle  *indexHandle,
+                          ConstString  jobUUID,
+                          ConstString  scheduleUUID,
+                          IndexId      entityId,
                           ArchiveTypes archiveType,
-                          IndexId     storageId,
-                          int         partNumber,
-                          ConstString intermediateFileName,
-                          uint64      intermediateFileSize,
-                          void        *userData
+                          IndexId      storageId,
+                          int          partNumber,
+                          ConstString  intermediateFileName,
+                          uint64       intermediateFileSize,
+                          void         *userData
                          )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
@@ -3476,8 +3476,6 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
     {
 fprintf(stderr,"%s, %d: deleteStorageId=%llu\n",__FILE__,__LINE__,deleteStorageId);
       // delete old storage index
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
       error = Index_deleteStorage(indexHandle,deleteStorageId);
       if (error != ERROR_NONE)
       {
@@ -4769,6 +4767,26 @@ fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_
     AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
   }
 
+  // discard unprocessed archives
+  while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),NO_WAIT))
+  {
+    // discard index
+    if (storageMsg.storageId != INDEX_ID_NONE) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+
+    // delete temporary storage file
+    error = File_delete(storageMsg.fileName,FALSE);
+    if (error != ERROR_NONE)
+    {
+      printWarning("Cannot delete file '%s' (error: %s)!\n",
+                   String_cString(storageMsg.fileName),
+                   Error_getText(error)
+                  );
+    }
+
+    // free resources
+    freeStorageMsg(&storageMsg,NULL);
+  }
+
   // final storage post-processing
   if (   !isAborted(createInfo)
       && (createInfo->failError == ERROR_NONE)
@@ -4787,10 +4805,11 @@ fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_
     }
   }
 
+//TODO: required?
   // delete old storage files if no database
   if (   !isAborted(createInfo)
       && (createInfo->failError == ERROR_NONE)
-      && (storageMsg.storageId != INDEX_ID_NONE)
+      && (createInfo->indexHandle == NULL)
      )
   {
     if (globalOptions.deleteOldArchiveFilesFlag)
@@ -6948,7 +6967,6 @@ Errors Command_create(ConstString                  jobUUID,
   AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
 
   // start create threads
-#if 1
   for (z = 0; z < createThreadCount; z++)
   {
     if (!Thread_init(&createThreads[z],"BAR create",globalOptions.niceLevel,createThreadCode,&createInfo))
@@ -6957,29 +6975,7 @@ Errors Command_create(ConstString                  jobUUID,
     }
   }
 
-  // wait for create threads
-  for (z = 0; z < createThreadCount; z++)
-  {
-    if (!Thread_join(&createThreads[z]))
-    {
-      HALT_FATAL_ERROR("Cannot stop create thread!");
-    }
-    Thread_done(&createThreads[z]);
-  }
-#else
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-createThreadCode(&createInfo);
-#endif
-
-  // signal end of data
-  MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
-  MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
-
-  // wait for threads
-  if (!Thread_join(&storageThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop storage thread!");
-  }
+  // wait for collector threads
   if (!Thread_join(&collectorThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop collector thread!");
@@ -6987,6 +6983,17 @@ createThreadCode(&createInfo);
   if (!Thread_join(&collectorSumThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop collector sum thread!");
+  }
+
+  // wait for create threads
+  MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
+  for (z = 0; z < createThreadCount; z++)
+  {
+    if (!Thread_join(&createThreads[z]))
+    {
+      HALT_FATAL_ERROR("Cannot stop create thread!");
+    }
+    Thread_done(&createThreads[z]);
   }
 
   // close archive
@@ -7015,6 +7022,13 @@ createThreadCode(&createInfo);
     return error;
   }
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
+  // wait for storage thread
+  MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
+  if (!Thread_join(&storageThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop storage thread!");
+  }
 
   // final update of status info
   (void)updateStatusInfo(&createInfo,TRUE);
