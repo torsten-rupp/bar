@@ -3613,7 +3613,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                 0,  // entryIdCount
                                 INDEX_TYPE_SET_ANY,
                                 NULL,  // entryPattern,
-                                FALSE,  // newestEntriesOnly
+                                FALSE,  // newestOnly
                                 0LL,
                                 INDEX_UNLIMITED
                                );
@@ -3966,7 +3966,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0,  // entryIdCount
                                 INDEX_TYPE_SET_ANY,
                                 NULL,  // entryPattern,
-                                FALSE,  // newestEntriesOnly
+                                FALSE,  // newestOnly
                                 0LL,
                                 INDEX_UNLIMITED
                                );
@@ -7148,7 +7148,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(storageId));
+fprintf(stderr,"%s, %d: Index_deleteStorage %llu\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(storageId));
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //asm("int3");
   // Note: do in single steps to avoid long global locking of database!
@@ -7520,7 +7520,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             uint          entryIdCount,
                             IndexTypeSet  indexTypeSet,
                             ConstString   name,
-                            bool          newestEntriesOnly,
+                            bool          newestOnly,
                             ulong         *count,
                             uint64        *size
                            )
@@ -7596,8 +7596,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     FROM storage \
                                     WHERE %S \
                                  ",
-                                 newestEntriesOnly ? "totalFileCountNewest" : "totalFileCount",
-                                 newestEntriesOnly ? "totalFileSizeNewest" : "totalFileSize",
+                                 newestOnly ? "totalFileCountNewest" : "totalFileCount",
+                                 newestOnly ? "totalFileSizeNewest" : "totalFileSize",
                                  filter
                                 );
         if (error != ERROR_NONE)
@@ -7626,8 +7626,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     FROM storage \
                                     WHERE %S \
                                  ",
-                                 newestEntriesOnly ? "totalImageCountNewest" : "totalImageCount",
-                                 newestEntriesOnly ? "totalImageSizeNewest" : "totalImageSize",
+                                 newestOnly ? "totalImageCountNewest" : "totalImageCount",
+                                 newestOnly ? "totalImageSizeNewest" : "totalImageSize",
                                  filter
                                 );
         if (error != ERROR_NONE)
@@ -7656,7 +7656,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     FROM storage \
                                     WHERE %S \
                                  ",
-                                 newestEntriesOnly ? "totalDirectoryCountNewest" : "totalDirectoryCount",
+                                 newestOnly ? "totalDirectoryCountNewest" : "totalDirectoryCount",
                                  filter
                                 );
         if (error != ERROR_NONE)
@@ -7682,7 +7682,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     FROM storage \
                                     WHERE %S \
                                  ",
-                                 newestEntriesOnly ? "totalLinkCountNewest" : "totalLinkCount",
+                                 newestOnly ? "totalLinkCountNewest" : "totalLinkCount",
                                  filter
                                 );
         if (error != ERROR_NONE)
@@ -7708,8 +7708,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     FROM storage \
                                     WHERE %S \
                                  ",
-                                 newestEntriesOnly ? "totalHardlinkCountNewest" : "totalHardlinkCount",
-                                 newestEntriesOnly ? "totalHardlinkSizeNewest" : "totalHardlinkSize",
+                                 newestOnly ? "totalHardlinkCountNewest" : "totalHardlinkCount",
+                                 newestOnly ? "totalHardlinkSizeNewest" : "totalHardlinkSize",
                                  filter
                                 );
         if (error != ERROR_NONE)
@@ -7738,7 +7738,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     FROM storage \
                                     WHERE %S \
                                  ",
-                                 newestEntriesOnly ? "totalSpecialCountNewest" : "totalSpecialCount",
+                                 newestOnly ? "totalSpecialCountNewest" : "totalSpecialCount",
                                  filter
                                 );
         if (error != ERROR_NONE)
@@ -7764,7 +7764,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   {
     // get filter
     filterAppend(filter,!String_isEmpty(storageIdsString),"AND","storageId IN (%S)",storageIdsString);
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestEntriesOnly ? "entryId" : "id",ftsName);
+    filterAppend(filter,!String_isEmpty(ftsName),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestOnly ? "entryId" : "id",ftsName);
 //    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
     filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -7779,7 +7779,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                   WHERE     %S \
                                         AND type IN (%S) \
                                ",
-                               newestEntriesOnly ? "entriesNewest" : "entries",
+                               newestOnly ? "entriesNewest" : "entries",
                                filter,
                                getIndexTypeSetString(indexTypeSetString,indexTypeSet)
                               );
@@ -7825,7 +7825,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              ConstString      name,
-                             bool             newestEntriesOnly,
+                             bool             newestOnly,
                              uint64           offset,
                              uint64           limit
                             )
@@ -7877,7 +7877,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   // get filter
   indexTypeSetString = String_new();
   filter = String_newCString("1");
-  if (newestEntriesOnly)
+  if (newestOnly)
   {
     // get filter
     filterAppend(filter,!String_isEmpty(ftsName),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
@@ -7900,7 +7900,8 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
-  if (newestEntriesOnly)
+//Database_debugEnable(1);
+  if (newestOnly)
   {
     error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -7976,7 +7977,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              limit
                             );
   }
-
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);

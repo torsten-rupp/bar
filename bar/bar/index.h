@@ -1039,15 +1039,15 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_getEntriesInfo
 * Purpose: get entries info
-* Input  : indexQueryHandle  - index query handle variable
-*          indexHandle       - index handle
-*          storageIds        - storage ids or NULL
-*          storageIdCount    - storage id count or 0
-*          entryIds          - entry ids or NULL
-*          entryIdCount      - entry id count or 0
-*          indexTypeSet      - index type set or INDEX_TYPE_SET_ANY
-*          name              - name pattern (glob, can be NULL)
-*          newestEntriesOnly - TRUE for newest entries only
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          storageIds       - storage ids or NULL
+*          storageIdCount   - storage id count or 0
+*          entryIds         - entry ids or NULL
+*          entryIdCount     - entry id count or 0
+*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
+*          name             - name pattern (glob, can be NULL)
+*          newestOnly       - TRUE for newest entries only
 * Output : count - entry count (can be NULL)
 *          size  - size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
@@ -1061,7 +1061,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             uint          entryIdCount,
                             IndexTypeSet  indexTypeSet,
                             ConstString   name,
-                            bool          newestEntriesOnly,
+                            bool          newestOnly,
                             ulong         *count,
                             uint64        *size
                            );
@@ -1069,19 +1069,19 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 /***********************************************************************\
 * Name   : Index_initListEntries
 * Purpose: list entries
-* Input  : indexQueryHandle  - index query handle variable
-*          indexHandle       - index handle
-*          storageIds        - storage ids or NULL
-*          storageIdCount    - storage id count or 0
-*          entryIds          - entry ids or NULL
-*          entryIdCount      - entry id count or 0
-*          indexTypeSet      - index type set or INDEX_TYPE_SET_ANY
-*          name              - name pattern (glob, can be NULL)
-*          newestEntriesOnly - TRUE for newest entries only
-*          offset            - offset or 0
-*          limit             - numer of entries to list or
-*                              INDEX_UNLIMITED
-* Output : indexQueryHandle  - index query handle
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          storageIds       - storage ids or NULL
+*          storageIdCount   - storage id count or 0
+*          entryIds         - entry ids or NULL
+*          entryIdCount     - entry id count or 0
+*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
+*          name             - name pattern (glob, can be NULL)
+*          newestOnly       - TRUE for newest entries only
+*          offset           - offset or 0
+*          limit            - numer of entries to list or
+*                             INDEX_UNLIMITED
+* Output : indexQueryHandle - index query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1094,7 +1094,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              ConstString      name,
-                             bool             newestEntriesOnly,
+                             bool             newestOnly,
                              uint64           offset,
                              uint64           limit
                             );
