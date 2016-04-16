@@ -544,6 +544,11 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
           totalFileSize =totalFileSize +NEW.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
+    UPDATE storage
+      SET totalFileCountNewest=totalFileCountNewest+1,
+          totalFileSizeNewest =totalFileSizeNewest +NEW.fragmentSize
+      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
+
     // update offset/size in entry/newest entry
     UPDATE entries
       SET offset=NEW.fragmentOffset,
@@ -611,6 +616,11 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
           totalImageSize =totalImageSize +NEW.blockCount*NEW.blockSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
 
+    UPDATE storage
+      SET totalImageCountNewest=totalImageCountNewest+1,
+          totalImageSizeNewest =totalImageSizeNewest +NEW.blockOffset*NEW.blockSize
+      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
+
     // update offset/size in entry/newest entry
     UPDATE entries
       SET offset=NEW.blockOffset*NEW.blockSize,
@@ -670,6 +680,10 @@ CREATE TRIGGER AFTER INSERT ON directoryEntries
     UPDATE storage
       SET totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+
+    UPDATE storage
+      SET totalDirectoryCountNewest=totalDirectoryCountNewest+1
+      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
   END;
 
 CREATE TRIGGER BEFORE DELETE ON directoryEntries
@@ -708,6 +722,10 @@ CREATE TRIGGER AFTER INSERT ON linkEntries
     UPDATE storage
       SET totalLinkCount=totalLinkCount+1
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+
+    UPDATE storage
+      SET totalLinkCountNewest=totalLinkCountNewest+1
+      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
 
     // update count/size in parent directories
     UPDATE directoryEntries
@@ -755,6 +773,11 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
       SET totalHardlinkCount=totalHardlinkCount+1,
           totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+
+    UPDATE storage
+      SET totalHardlinkCountNewest=totalHardlinkCountNewest+1,
+          totalHardlinkSizeNewest =totalHardlinkSizeNewest +NEW.fragmentSize
+      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
 
     // update offset/size in entry/newest entry
     UPDATE entries
@@ -818,6 +841,10 @@ CREATE TRIGGER AFTER INSERT ON specialEntries
     UPDATE storage
       SET totalSpecialCount=totalSpecialCount+1
       WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+
+    UPDATE storage
+      SET totalSpecialCountNewest=totalSpecialCountNewest+1
+      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
 
     // update count/size in parent directories
     UPDATE directoryEntries
