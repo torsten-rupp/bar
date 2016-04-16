@@ -356,8 +356,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
              passwordHandle->passwordMode = PASSWORD_MODE_ASK;
              break;
            case PASSWORD_MODE_ASK:
-//TODO
-             if (0&&passwordHandle->getPasswordFunction != NULL)
+             if (passwordHandle->getPasswordFunction != NULL)
              {
                // input password
                Password_init(&newPassword);
