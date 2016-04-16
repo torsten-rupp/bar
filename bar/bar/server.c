@@ -1975,7 +1975,6 @@ LOCAL void triggerJob(JobNode      *jobNode,
 fprintf(stderr,"%s, %d: IS_JOB_REMOTE=%d\n",__FILE__,__LINE__,IS_JOB_REMOTE(jobNode));
   if (IS_JOB_REMOTE(jobNode))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
      // start remote create job
      jobNode->runningInfo.error = Remote_jobStart(&jobNode->remoteHost,
                                                   jobNode->uuid,
