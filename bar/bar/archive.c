@@ -339,7 +339,6 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
       }
       else
       {
-fprintf(stderr,"%s, %d: %p %d\n",__FILE__,__LINE__,passwordHandle,passwordHandle->passwordMode);
         switch (passwordHandle->passwordMode)
         {
            case PASSWORD_MODE_NONE:
@@ -401,7 +400,6 @@ fprintf(stderr,"%s, %d: %p %d\n",__FILE__,__LINE__,passwordHandle,passwordHandle
       }
     }
   }
-fprintf(stderr,"%s, %d: %p password=%p\n",__FILE__,__LINE__,passwordHandle,password);
 
   return password;
 }
@@ -659,7 +657,6 @@ LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo, IndexHandle *indexHandl
                                                        );
       if (storageSize > archiveInfo->jobOptions->archivePartSize)
       {
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveInfo->partNumber);
         archiveInfo->partNumber++;
       }
     }
@@ -3296,33 +3293,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 }
 #endif /* 0 */
   }
-
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-#if 0
-  // create index
-  if (   (archiveInfo->indexHandle != NULL)
-      && !archiveInfo->jobOptions->noIndexDatabaseFlag
-      && !archiveInfo->jobOptions->dryRunFlag
-      && !archiveInfo->jobOptions->noStorageFlag
-     )
-  {
-    error = Index_newEntity(archiveInfo->indexHandle,
-                            jobUUID,
-                            scheduleUUID,
-                            archiveType,
-                            &archiveInfo->entityId
-                           );
-    if (error != ERROR_NONE)
-    {
-      if (error != ERROR_NONE)
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
-    }
-fprintf(stderr,"%s, %d:crate emn %llu \n",__FILE__,__LINE__,archiveInfo->entityId);
-  }
-#endif
 
   // free resources
   AutoFree_done(&autoFreeList);
@@ -7287,7 +7257,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
     }
   }
   while ((error != ERROR_NONE) && (password != NULL));
-  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ fprintf(stderr,"%s, %d: x1\n",__FILE__,__LINE__); AutoFree_cleanup(&autoFreeList2); });
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -10520,7 +10490,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     String_set(printableStorageName,storageName);
   }
 
-fprintf(stderr,"%s, %d: ----------- start update indz %s\n",__FILE__,__LINE__,String_cString(storageName));
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
   if (storageSpecifier.type == STORAGE_TYPE_SCP)
   {
@@ -10808,7 +10777,6 @@ fprintf(stderr,"%s, %d: ----------- start update indz %s\n",__FILE__,__LINE__,St
                                               );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               String_delete(directoryName);
               break;
             }
@@ -10828,7 +10796,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             {
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(directoryName);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               break;
             }
 
@@ -11046,7 +11013,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   else
   {
 //TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     (void)Index_rollbackTransaction(indexHandle,TRANSACTION_NAME);
   }
 #endif
