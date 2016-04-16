@@ -5532,14 +5532,14 @@ Errors getPasswordConsole(String        name,
           title = String_new();
           switch (passwordType)
           {
-            case PASSWORD_TYPE_CRYPT : String_format(title,"Crypt password"); break;
-            case PASSWORD_TYPE_FTP   : String_format(title,"FTP password"); break;
-            case PASSWORD_TYPE_SSH   : String_format(title,"SSH password"); break;
-            case PASSWORD_TYPE_WEBDAV: String_format(title,"WebDAV password"); break;
+            case PASSWORD_TYPE_CRYPT : String_format(title,"Crypt"); break;
+            case PASSWORD_TYPE_FTP   : String_format(title,"FTP"); break;
+            case PASSWORD_TYPE_SSH   : String_format(title,"SSH"); break;
+            case PASSWORD_TYPE_WEBDAV: String_format(title,"WebDAV"); break;
           }
           if (!stringIsEmpty(text))
           {
-            String_format(title,"for '%s'",text);
+            String_format(title," password for '%s'",text);
           }
           if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
