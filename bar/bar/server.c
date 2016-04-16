@@ -13475,7 +13475,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                                 Array_length(&clientInfo->entryIdArray),
                                 INDEX_TYPE_SET_ANY,
                                 NULL, // pattern
-                                FALSE,  // newestEntriesOnly,
+                                FALSE,  // newestOnly,
                                 0,
                                 INDEX_UNLIMITED
                                );
@@ -13668,7 +13668,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
                                Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_SET_ANY,
                                NULL,  // pattern,
-                               FALSE,  // newestEntriesOnly
+                               FALSE,  // newestOnly
                                &totalEntryCount,
                                &totalEntrySize
                               );
@@ -14073,261 +14073,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       }
       break;
     case ENTRIES:
-//TODO remove
-#if 0
-      if (error == ERROR_NONE)
-      {
-        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_length(&clientInfo->entryIdArray),
-                               INDEX_TYPE_FILE
-                              )
-           )
-        {
-          error = Index_initListFiles(&indexQueryHandle,
-                                      indexHandle,
-                                      NULL, // Array_cArray(clientInfo->storageIdArray),
-                                      0, // Array_length(clientInfo->storageIdArray),
-                                      Array_cArray(&clientInfo->entryIdArray),
-                                      Array_length(&clientInfo->entryIdArray),
-                                      NULL // pattern
-                                     );
-          if (error == ERROR_NONE)
-          {
-            while (Index_getNextFile(&indexQueryHandle,
-                                        NULL, // indexId,
-                                        storageName, // storageName
-                                        NULL, // storageDateTime
-                                        entryName,
-                                        NULL, // size
-                                        NULL, // timeModified
-                                        NULL, // userId
-                                        NULL, // groupId
-                                        NULL, // permission
-                                        NULL, // fragmentOffset
-                                        NULL  // fragmentSize
-                                       )
-                  )
-            {
-              if (!StringList_contain(&storageNameList,storageName))
-              {
-                StringList_append(&storageNameList,storageName);
-              }
-              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-            }
-            Index_doneList(&indexQueryHandle);
-          }
-        }
-      }
-
-      if (error == ERROR_NONE)
-      {
-        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_length(&clientInfo->entryIdArray),
-                               INDEX_TYPE_IMAGE
-                              )
-           )
-        {
-          error = Index_initListImages(&indexQueryHandle,
-                                       indexHandle,
-                                       NULL, // Array_cArray(clientInfo->storageIdArray),
-                                       0, // Array_length(clientInfo->storageIdArray),
-                                       Array_cArray(&clientInfo->entryIdArray),
-                                       Array_length(&clientInfo->entryIdArray),
-                                       NULL // pattern
-                                      );
-          if (error == ERROR_NONE)
-          {
-            while (Index_getNextImage(&indexQueryHandle,
-                                      NULL, // indexId,
-                                      storageName, // storageName
-                                      NULL, // storageDateTime
-                                      entryName,
-                                      NULL, // fileSystemType
-                                      NULL, // size
-                                      NULL, // blockOffset
-                                      NULL // blockCount
-                                     )
-                  )
-            {
-              if (!StringList_contain(&storageNameList,storageName))
-              {
-                StringList_append(&storageNameList,storageName);
-              }
-              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-            }
-            Index_doneList(&indexQueryHandle);
-          }
-        }
-      }
-
-      if (error == ERROR_NONE)
-      {
-        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_length(&clientInfo->entryIdArray),
-                               INDEX_TYPE_DIRECTORY
-                              )
-           )
-        {
-          error = Index_initListDirectories(&indexQueryHandle,
-                                            indexHandle,
-                                            NULL, // Array_cArray(clientInfo->storageIdArray),
-                                            0, // Array_length(clientInfo->storageIdArray),
-                                            Array_cArray(&clientInfo->entryIdArray),
-                                            Array_length(&clientInfo->entryIdArray),
-                                            NULL // pattern
-                                           );
-          if (error == ERROR_NONE)
-          {
-            while (Index_getNextDirectory(&indexQueryHandle,
-                                          NULL, // indexId,
-                                          storageName, // storageName
-                                          NULL, // storageDateTime
-                                          entryName,
-                                          NULL, // timeModified
-                                          NULL, // userId
-                                          NULL, // groupId
-                                          NULL // permission
-                                         )
-                  )
-            {
-              if (!StringList_contain(&storageNameList,storageName))
-              {
-                StringList_append(&storageNameList,storageName);
-              }
-              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-            }
-            Index_doneList(&indexQueryHandle);
-          }
-        }
-      }
-
-      if (error == ERROR_NONE)
-      {
-        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_length(&clientInfo->entryIdArray),
-                               INDEX_TYPE_LINK
-                              )
-           )
-        {
-          error = Index_initListLinks(&indexQueryHandle,
-                                      indexHandle,
-                                      NULL, // Array_cArray(clientInfo->storageIdArray),
-                                      0, // Array_length(clientInfo->storageIdArray),
-                                      Array_cArray(&clientInfo->entryIdArray),
-                                      Array_length(&clientInfo->entryIdArray),
-                                      NULL // pattern
-                                     );
-          if (error == ERROR_NONE)
-          {
-            while (Index_getNextLink(&indexQueryHandle,
-                                     NULL, // indexId,
-                                     storageName, // storageName
-                                     NULL, // storageDateTime
-                                     entryName,
-                                     NULL, // destinationName
-                                     NULL, // timeModified
-                                     NULL, // userId
-                                     NULL, // groupId
-                                     NULL // permission
-                                    )
-                  )
-            {
-              if (!StringList_contain(&storageNameList,storageName))
-              {
-                StringList_append(&storageNameList,storageName);
-              }
-              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-            }
-            Index_doneList(&indexQueryHandle);
-          }
-        }
-      }
-
-      if (error == ERROR_NONE)
-      {
-        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_length(&clientInfo->entryIdArray),
-                               INDEX_TYPE_HARDLINK
-                              )
-           )
-        {
-          error = Index_initListHardLinks(&indexQueryHandle,
-                                          indexHandle,
-                                          NULL, // Array_cArray(clientInfo->storageIdArray),
-                                          0, // Array_length(clientInfo->storageIdArray),
-                                          Array_cArray(&clientInfo->entryIdArray),
-                                          Array_length(&clientInfo->entryIdArray),
-                                          NULL // pattern
-                                         );
-          if (error == ERROR_NONE)
-          {
-            while (Index_getNextHardLink(&indexQueryHandle,
-                                         NULL, // indexId,
-                                         storageName, // storageName
-                                         NULL, // storageDateTime
-                                         entryName,
-                                         NULL, // size
-                                         NULL, // timeModified
-                                         NULL, // userId
-                                         NULL, // groupId
-                                         NULL, // permission
-                                         NULL, // fragmentOffset
-                                         NULL  // fragmentSize
-                                        )
-                  )
-            {
-              if (!StringList_contain(&storageNameList,storageName))
-              {
-                StringList_append(&storageNameList,storageName);
-              }
-              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-            }
-            Index_doneList(&indexQueryHandle);
-          }
-        }
-      }
-
-      if (error == ERROR_NONE)
-      {
-        if (Index_containsType(Array_cArray(&clientInfo->entryIdArray),
-                               Array_length(&clientInfo->entryIdArray),
-                               INDEX_TYPE_SPECIAL
-                              )
-           )
-        {
-          error = Index_initListSpecial(&indexQueryHandle,
-                                        indexHandle,
-                                        NULL, // Array_cArray(clientInfo->storageIdArray),
-                                        0, // Array_length(clientInfo->storageIdArray),
-                                        Array_cArray(&clientInfo->entryIdArray),
-                                        Array_length(&clientInfo->entryIdArray),
-                                        NULL // pattern
-                                       );
-          if (error == ERROR_NONE)
-          {
-            while (Index_getNextSpecial(&indexQueryHandle,
-                                        NULL, // indexId,
-                                        storageName, // storageName
-                                        NULL, // storageDateTime
-                                        entryName,
-                                        NULL, // timeModified
-                                        NULL, // userId
-                                        NULL, // groupId
-                                        NULL // permission
-                                       )
-                  )
-            {
-              if (!StringList_contain(&storageNameList,storageName))
-              {
-                StringList_append(&storageNameList,storageName);
-              }
-              EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
-            }
-            Index_doneList(&indexQueryHandle);
-          }
-        }
-      }
-#else
       error = Index_initListEntries(&indexQueryHandle,
                                     indexHandle,
                                     NULL, // Array_cArray(clientInfo->storageIdArray),
@@ -14336,7 +14081,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     Array_length(&clientInfo->entryIdArray),
                                     INDEX_TYPE_SET_ANY,
                                     NULL, // pattern
-                                    FALSE,  // newestEntriesOnly,
+                                    FALSE,  // newestOnly,
                                     0,
                                     INDEX_UNLIMITED
                                    );
@@ -14367,7 +14112,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
         }
         Index_doneList(&indexQueryHandle);
       }
-#endif
       break;
     default:
       #ifndef NDEBUG
@@ -16332,7 +16076,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 * Notes  : Arguments:
 *            entryPattern=<text>
 *            indexType=<type>|*
-*            newestEntriesOnly=yes|no
+*            newestOnly=yes|no
 *          Result:
 *            totalEntryCount=<n>
 *            totalEntrySize=<n [bytes]>
@@ -16343,7 +16087,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   String     entryPattern;
   bool       indexTypeAny;
   IndexTypes indexType;
-  bool       newestEntriesOnly;
+  bool       newestOnly;
   Errors     error;
   ulong      totalEntryCount;
   uint64     totalEntrySize;
@@ -16373,9 +16117,9 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
     String_delete(entryPattern);
     return;
   }
-  if (!StringMap_getBool(argumentMap,"newestEntriesOnly",&newestEntriesOnly,FALSE))
+  if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestEntriesOnly=yes|no");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
     String_delete(entryPattern);
     return;
   }
@@ -16396,7 +16140,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
                                0,  // entryIdCount
                                indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
                                entryPattern,
-                               newestEntriesOnly,
+                               newestOnly,
                                &totalEntryCount,
                                &totalEntrySize
                               );
@@ -16427,7 +16171,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
 * Notes  : Arguments:
 *            entryPattern=<text>
 *            indexType=<text>|*
-*            newestEntriesOnly=yes|no
+*            newestOnly=yes|no
 *            [offset=<n>]
 *            [limit=<n>]
 *          Result:
@@ -16756,7 +16500,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   String           entryPatternString;
   bool             indexTypeAny;
   IndexTypes       indexType;
-  bool             newestEntriesOnly;
+  bool             newestOnly;
   uint64           offset;
   uint64           limit;
   uint             entryCount;
@@ -16802,9 +16546,9 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     String_delete(entryPatternString);
     return;
   }
-  if (!StringMap_getBool(argumentMap,"newestEntriesOnly",&newestEntriesOnly,FALSE))
+  if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestEntriesOnly=yes|no");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
     String_delete(entryPatternString);
     return;
   }
@@ -16835,7 +16579,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                 0,  // entryIdCount
                                 indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
                                 entryPatternString,
-                                newestEntriesOnly,
+                                newestOnly,
                                 offset,
                                 limit
                                );
@@ -16868,7 +16612,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         )
   {
 //TODO
-    if (0&&newestEntriesOnly)
+    if (newestOnly)
     {
       // find/allocate index node
       indexNode = findIndexEntryNode(&indexList,indexId,name);
