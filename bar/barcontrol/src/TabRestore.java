@@ -3436,7 +3436,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     private long             totalEntryCount       = 0;
     private EntryTypes       entryType             = EntryTypes.ANY;
     private String           entryPattern          = "";
-    private boolean          newestEntriesOnly     = false;
+    private boolean          newestOnly            = false;
     private boolean          setUpdateIndicator    = false;          // true to set color/cursor at update
 
     /** create update entry list thread
@@ -3582,31 +3582,31 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       return entryPattern;
     }
 
-    /** get newest-entries-only
+    /** get newest-only
      * @return true for newest entries only
      */
-    public boolean getNewestEntriesOnly()
+    public boolean getNewestOnly()
     {
-      return newestEntriesOnly;
+      return newestOnly;
     }
 
     /** trigger update of entry list
      * @param entryPattern new entry pattern or null
      * @param type type or *
-     * @param newestEntriesOnly flag for newest entries only or null
+     * @param newestOnly flag for newest entries only or null
      */
-    public void triggerUpdate(String entryPattern, String type, boolean newestEntriesOnly)
+    public void triggerUpdate(String entryPattern, String type, boolean newestOnly)
     {
       synchronized(trigger)
       {
         if (   (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
             || (entryType != this.entryType)
-            || (this.newestEntriesOnly != newestEntriesOnly)
+            || (this.newestOnly != newestOnly)
            )
         {
           this.entryPattern          = entryPattern;
           this.entryType             = entryType;
-          this.newestEntriesOnly     = newestEntriesOnly;
+          this.newestOnly            = newestOnly;
           this.setUpdateIndicator    = true;
           this.updateTotalEntryCount = true;
           trigger.notify();
@@ -3657,15 +3657,15 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
 
 
     /** trigger update of entry list
-     * @param newestEntriesOnly flag for newest entries only or null
+     * @param newestOnly flag for newest entries only or null
      */
-    public void triggerUpdateNewestEntriesOnly(boolean newestEntriesOnly)
+    public void triggerUpdateNewestOnly(boolean newestOnly)
     {
       synchronized(trigger)
       {
-        if (this.newestEntriesOnly != newestEntriesOnly)
+        if (this.newestOnly != newestOnly)
         {
-          this.newestEntriesOnly     = newestEntriesOnly;
+          this.newestOnly            = newestOnly;
           this.setUpdateIndicator    = true;
           this.updateTotalEntryCount = true;
           trigger.notify();
@@ -3719,10 +3719,10 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       // get entries info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestEntriesOnly=%y",
+      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestOnly=%y",
                                                        entryPattern,
                                                        entryType.toString(),
-                                                       newestEntriesOnly
+                                                       newestOnly
                                                       ),
                                    1,  // debugLevel
                                    errorMessage,
@@ -3791,10 +3791,10 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
       // update entry table segment
       final String[] errorMessage = new String[1];
       final int[]    n            = new int[1];
-      BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y offset=%d limit=%d",
+      BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestOnly=%y offset=%d limit=%d",
                                                    entryPattern,
                                                    entryType.toString(),
-                                                   newestEntriesOnly,
+                                                   newestOnly,
                                                    offset,
                                                    limit
                                                   ),
@@ -6040,12 +6040,12 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            boolean newestEntriesOnly = widget.getSelection();
+            boolean newestOnly = widget.getSelection();
 
             selectedEntryIdSet.clear();
             checkedEntryEvent.trigger();
 
-            updateEntryTableThread.triggerUpdateNewestEntriesOnly(newestEntriesOnly);
+            updateEntryTableThread.triggerUpdateNewestOnly(newestOnly);
           }
         });
 
@@ -8217,10 +8217,10 @@ Dprintf.dprintf("valueMap=%s",valueMap);
     final boolean doit[]            = new boolean[]{true};
     if (checked)
     {
-      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestEntriesOnly=%y",
+      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestOnly=%y",
                                                        updateEntryTableThread.getEntryPattern(),
                                                        updateEntryTableThread.getEntryType().toString(),
-                                                       updateEntryTableThread.getNewestEntriesOnly()
+                                                       updateEntryTableThread.getNewestOnly()
                                                       ),
                                    0,  // debugLevel
                                    errorMessage,
@@ -8255,10 +8255,10 @@ Dprintf.dprintf("valueMap=%s",valueMap);
         final int n[] = new int[]{0};
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(totalEntryCount[0]);
-        int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestEntriesOnly=%y",
+        int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestOnly=%y",
                                                                  updateEntryTableThread.getEntryPattern(),
                                                                  updateEntryTableThread.getEntryType().toString(),
-                                                                 updateEntryTableThread.getNewestEntriesOnly()
+                                                                 updateEntryTableThread.getNewestOnly()
                                                                 ),
                                              1,
                                              errorMessage,
