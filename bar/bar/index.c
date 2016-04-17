@@ -76,17 +76,6 @@ LOCAL const struct
   { "SPECIAL",   INDEX_TYPE_SPECIAL   },
 };
 
-// entry table names
-const char *ENTRY_TABLE_NAMES[] =
-{
-  "files",
-  "images",
-  "directories",
-  "links",
-  "hardlinks",
-  "special"
-};
-
 // sleep time [s]
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
 
@@ -4693,30 +4682,38 @@ LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
                                     IndexId     toStorageId
                                    )
 {
-  Errors           error;
-  uint             i;
+  Errors error;
 
   assert(indexHandle != NULL);
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
-  assert(INDEX_TYPE_(toStorageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(toStorageId) == INDEX_TYPE_STORAGE);
 
   // assign storage entries to other storage
-  for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "UPDATE entries \
+                            SET storageId=%lld \
+                            WHERE storageId=%lld; \
+                           ",
+                           Index_getDatabaseId(toStorageId),
+                           Index_getDatabaseId(storageId)
+                          );
+  if (error != ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "UPDATE %s \
-                              SET storageId=%lld \
-                              WHERE storageId=%lld; \
-                             ",
-                             ENTRY_TABLE_NAMES[i],
-                             INDEX_DATABASE_ID_(toStorageId),
-                             INDEX_DATABASE_ID_(storageId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    return error;
+  }
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           "UPDATE entriesNewest \
+                            SET storageId=%lld \
+                            WHERE storageId=%lld; \
+                           ",
+                           Index_getDatabaseId(toStorageId),
+                           Index_getDatabaseId(storageId)
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
   }
 
   // delete storage if empty
@@ -4750,8 +4747,8 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
   IndexId          storageId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
-  assert(INDEX_TYPE_(toStorageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(Index_getType(toStorageId) == INDEX_TYPE_STORAGE);
 
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
@@ -4837,7 +4834,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
   IndexId          entityId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_TYPE_(toStorageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(toStorageId) == INDEX_TYPE_STORAGE);
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
@@ -4896,8 +4893,8 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
-  assert(INDEX_TYPE_(toEntityId) == INDEX_TYPE_ENTITY);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(toEntityId) == INDEX_TYPE_ENTITY);
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -4905,8 +4902,8 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                             SET entityId=%lld \
                             WHERE id=%lld; \
                            ",
-                           INDEX_DATABASE_ID_(toEntityId),
-                           INDEX_DATABASE_ID_(storageId)
+                           Index_getDatabaseId(toEntityId),
+                           Index_getDatabaseId(storageId)
                           );
   if (error != ERROR_NONE)
   {
@@ -4937,8 +4934,8 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
-  assert(INDEX_TYPE_(toEntityId) == INDEX_TYPE_ENTITY);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(Index_getType(toEntityId) == INDEX_TYPE_ENTITY);
 
   // assign to entity
   error = Database_execute(&indexHandle->databaseHandle,
@@ -4947,8 +4944,8 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
                             SET entityId=%lld \
                             WHERE entityId=%lld; \
                            ",
-                           INDEX_DATABASE_ID_(toEntityId),
-                           INDEX_DATABASE_ID_(entityId)
+                           Index_getDatabaseId(toEntityId),
+                           Index_getDatabaseId(entityId)
                           );
   if (error != ERROR_NONE)
   {
@@ -4972,7 +4969,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
                               WHERE id=%lld; \
                              ",
                              toArchiveType,
-                             INDEX_DATABASE_ID_(toEntityId)
+                             Index_getDatabaseId(toEntityId)
                             );
     if (error != ERROR_NONE)
     {
@@ -5006,7 +5003,7 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
   IndexId          entityId;
 
   assert(indexHandle != NULL);
-  assert(INDEX_TYPE_(toEntityId) == INDEX_TYPE_ENTITY);
+  assert(Index_getType(toEntityId) == INDEX_TYPE_ENTITY);
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
@@ -5547,7 +5544,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5819,7 +5816,7 @@ Errors Index_getState(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5839,7 +5836,7 @@ Errors Index_getState(IndexHandle *indexHandle,
                               FROM storage \
                               WHERE id=%lld \
                              ",
-                             INDEX_DATABASE_ID_(storageId)
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -5882,7 +5879,7 @@ Errors Index_setState(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5913,7 +5910,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                               WHERE id=%lld; \
                              ",
                              indexState,
-                             INDEX_DATABASE_ID_(storageId)
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -5929,7 +5926,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                                 WHERE id=%lld; \
                                ",
                                lastCheckedDateTime,
-                               INDEX_DATABASE_ID_(storageId)
+                               Index_getDatabaseId(storageId)
                               );
       if (error != ERROR_NONE)
       {
@@ -5946,7 +5943,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                                 WHERE id=%lld; \
                                ",
                                errorText,
-                               INDEX_DATABASE_ID_(storageId)
+                               Index_getDatabaseId(storageId)
                               );
       if (error != ERROR_NONE)
       {
@@ -6217,7 +6214,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
     return Database_execute(&indexHandle->databaseHandle,
                             CALLBACK(NULL,NULL),
                             "DELETE FROM history WHERE id=%lld;",
-                            INDEX_DATABASE_ID_(historyId)
+                            Index_getDatabaseId(historyId)
                            );
   });
 
@@ -6454,7 +6451,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   // get filter
   filter = String_newCString("1");
-  filterAppend(filter,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",INDEX_DATABASE_ID_(uuidId));
+  filterAppend(filter,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filter,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
 
@@ -6575,6 +6572,24 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
+                             "INSERT OR IGNORE INTO uuids \
+                                ( \
+                                 jobUUID \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %'S \
+                                ); \
+                             ",
+                             jobUUID
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
                              "INSERT INTO entities \
                                 ( \
                                  jobUUID, \
@@ -6671,7 +6686,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "DELETE FROM entities WHERE id=%lld;",
-                               INDEX_DATABASE_ID_(entityId)
+                               Index_getDatabaseId(entityId)
                               );
     if (error != ERROR_NONE)
     {
@@ -6933,7 +6948,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   indexStateSetString = String_new();
   indexModeSetString  = String_new();
 
-  filterAppend(filter,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",INDEX_DATABASE_ID_(entityId));
+  filterAppend(filter,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
   filterAppend(filter,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","storage.id IN (%S)",storageIdsString);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
@@ -7079,7 +7094,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
   assert(storageId != NULL);
-  assert((entityId == INDEX_ID_NONE) || (INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY));
+  assert((entityId == INDEX_ID_NONE) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7112,7 +7127,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                  DATETIME('now')\
                                 ); \
                              ",
-                             INDEX_DATABASE_ID_(entityId),
+                             Index_getDatabaseId(entityId),
                              storageName,
                              indexState,
                              indexMode
@@ -7140,7 +7155,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7148,7 +7163,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-fprintf(stderr,"%s, %d: Index_deleteStorage %llu\n",__FILE__,__LINE__,INDEX_DATABASE_ID_(storageId));
+fprintf(stderr,"%s, %d: Index_deleteStorage %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //asm("int3");
   // Note: do in single steps to avoid long global locking of database!
@@ -7159,91 +7174,91 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_LINK
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_LINK
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_SPECIAL
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_SPECIAL
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM storage WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(storageId)
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
 
@@ -7263,7 +7278,7 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7279,14 +7294,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE
                             );
     if (error != ERROR_NONE) return error;
@@ -7294,14 +7309,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE
                             );
     if (error != ERROR_NONE) return error;
@@ -7309,14 +7324,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY
                             );
     if (error != ERROR_NONE) return error;
@@ -7324,14 +7339,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_LINK
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_LINK
                             );
     if (error != ERROR_NONE) return error;
@@ -7339,14 +7354,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK
                             );
     if (error != ERROR_NONE) return error;
@@ -7354,14 +7369,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_SPECIAL
                             );
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_SPECIAL
                             );
     if (error != ERROR_NONE) return error;
@@ -7393,7 +7408,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7419,7 +7434,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                               FROM storage \
                               WHERE id=%d \
                              ",
-                             INDEX_DATABASE_ID_(storageId)
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7462,7 +7477,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7484,7 +7499,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
                                 WHERE id=%lld; \
                                ",
                                storageName,
-                               INDEX_DATABASE_ID_(storageId)
+                               Index_getDatabaseId(storageId)
                               );
       if (error != ERROR_NONE)
       {
@@ -7500,7 +7515,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
                               WHERE id=%lld; \
                              ",
                              storageSize,
-                             INDEX_DATABASE_ID_(storageId)
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -8112,12 +8127,12 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(   (INDEX_TYPE_(entryId) == INDEX_TYPE_FILE)
-         || (INDEX_TYPE_(entryId) == INDEX_TYPE_IMAGE)
-         || (INDEX_TYPE_(entryId) == INDEX_TYPE_DIRECTORY)
-         || (INDEX_TYPE_(entryId) == INDEX_TYPE_LINK)
-         || (INDEX_TYPE_(entryId) == INDEX_TYPE_HARDLINK)
-         || (INDEX_TYPE_(entryId) == INDEX_TYPE_SPECIAL)
+  assert(   (Index_getType(entryId) == INDEX_TYPE_FILE)
+         || (Index_getType(entryId) == INDEX_TYPE_IMAGE)
+         || (Index_getType(entryId) == INDEX_TYPE_DIRECTORY)
+         || (Index_getType(entryId) == INDEX_TYPE_LINK)
+         || (Index_getType(entryId) == INDEX_TYPE_HARDLINK)
+         || (Index_getType(entryId) == INDEX_TYPE_SPECIAL)
         );
 
   // check init error
@@ -8136,42 +8151,42 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "DELETE FROM fileEntries WHERE entryId=%lld;",
-                                 INDEX_DATABASE_ID_(entryId)
+                                 Index_getDatabaseId(entryId)
                                 );
         break;
       case INDEX_TYPE_IMAGE:
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "DELETE FROM imageEntries WHERE entryId=%lld;",
-                                 INDEX_DATABASE_ID_(entryId)
+                                 Index_getDatabaseId(entryId)
                                 );
         break;
       case INDEX_TYPE_DIRECTORY:
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "DELETE FROM directoryEntries WHERE entryId=%lld;",
-                                 INDEX_DATABASE_ID_(entryId)
+                                 Index_getDatabaseId(entryId)
                                 );
         break;
       case INDEX_TYPE_LINK:
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "DELETE FROM linkEntries WHERE entryId=%lld;",
-                                 INDEX_DATABASE_ID_(entryId)
+                                 Index_getDatabaseId(entryId)
                                 );
         break;
       case INDEX_TYPE_HARDLINK:
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
-                                 INDEX_DATABASE_ID_(entryId)
+                                 Index_getDatabaseId(entryId)
                                 );
         break;
       case INDEX_TYPE_SPECIAL:
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "DELETE FROM specialEntries WHERE entryId=%lld;",
-                                 INDEX_DATABASE_ID_(entryId)
+                                 Index_getDatabaseId(entryId)
                                 );
         break;
       default:
@@ -8186,7 +8201,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(entryId)
+                             Index_getDatabaseId(entryId)
                             );
     if (error != ERROR_NONE)
     {
@@ -8371,7 +8386,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(indexId) == INDEX_TYPE_FILE);
+  assert(Index_getType(indexId) == INDEX_TYPE_FILE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -8386,7 +8401,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE entryId=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -8396,7 +8411,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -8572,7 +8587,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(indexId) == INDEX_TYPE_IMAGE);
+  assert(Index_getType(indexId) == INDEX_TYPE_IMAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -8587,7 +8602,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE entryId=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -8596,7 +8611,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -8774,7 +8789,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(indexId) == INDEX_TYPE_DIRECTORY);
+  assert(Index_getType(indexId) == INDEX_TYPE_DIRECTORY);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -8789,7 +8804,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE entryId=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -8798,7 +8813,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -8978,7 +8993,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(indexId) == INDEX_TYPE_LINK);
+  assert(Index_getType(indexId) == INDEX_TYPE_LINK);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -8993,7 +9008,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE entryId=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -9002,7 +9017,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -9187,7 +9202,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(indexId) == INDEX_TYPE_HARDLINK);
+  assert(Index_getType(indexId) == INDEX_TYPE_HARDLINK);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -9202,7 +9217,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -9211,7 +9226,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -9387,7 +9402,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(indexId) == INDEX_TYPE_SPECIAL);
+  assert(Index_getType(indexId) == INDEX_TYPE_SPECIAL);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -9402,7 +9417,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE entryId=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -9411,7 +9426,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
-                             INDEX_DATABASE_ID_(indexId)
+                             Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -9458,7 +9473,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(fileName != NULL);
 
   // check init error
@@ -9508,7 +9523,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                  %u \
                                 ); \
                              ",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE,
                              fileName,
                              timeLastAccess,
@@ -9588,7 +9603,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(imageName != NULL);
 
   // check init error
@@ -9638,7 +9653,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                  %u \
                                 ); \
                              ",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE,
                              imageName,
                              0LL,
@@ -9723,7 +9738,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(directoryName != NULL);
 
   // check init error
@@ -9773,7 +9788,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                  %u \
                                 ); \
                              ",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY,
                              directoryName,
                              timeLastAccess,
@@ -9805,7 +9820,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                 ); \
                              ",
                              entryId,
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              directoryName
                             );
     if (error != ERROR_NONE)
@@ -9852,7 +9867,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
@@ -9905,7 +9920,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                  %u \
                                 ); \
                              ",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_LINK,
                              linkName,
                              timeLastAccess,
@@ -9983,7 +9998,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(fileName != NULL);
 
   // check init error
@@ -10033,7 +10048,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                  %u \
                                 ); \
                              ",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK,
                              fileName,
                              timeLastAccess,
@@ -10117,7 +10132,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   // check init error
@@ -10167,7 +10182,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                  %u \
                                 ); \
                              ",
-                             INDEX_DATABASE_ID_(storageId),
+                             Index_getDatabaseId(storageId),
                              INDEX_TYPE_SPECIAL,
                              name,
                              timeLastAccess,
@@ -10256,7 +10271,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
 
     if (storageId != INDEX_ID_NONE)
     {
-      assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+      assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
       // assign storage to other entity
       error = assignStorageToEntity(indexHandle,
@@ -10271,7 +10286,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
 
     if (entityId != INDEX_ID_NONE)
     {
-      assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
+      assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
       // assign all storage entries of entity to other entity
       error = assignEntityToEntity(indexHandle,
@@ -10305,7 +10320,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
 
     if (storageId != INDEX_ID_NONE)
     {
-      assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
+      assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
       // assign storage entries to other storage
       error = assignStorageToStorage(indexHandle,storageId,toStorageId);
@@ -10317,7 +10332,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
 
     if (entityId != INDEX_ID_NONE)
     {
-      assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
+      assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
       // assign all storage entries of entity to other storage
       error = assignEntityToStorage(indexHandle,entityId,toStorageId);
@@ -10344,66 +10359,6 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
   return ERROR_NONE;
 }
 
-Errors Index_pruneStorage(IndexHandle *indexHandle,
-                          IndexId     storageId
-                         )
-{
-  Errors  error;
-  bool    existsFlag;
-  uint    i;
-  IndexId id;
-
-  assert(indexHandle != NULL);
-  #ifdef NDEBUG
-    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
-  #endif /* NDEBUG */
-  assert(INDEX_TYPE_(storageId) == INDEX_TYPE_STORAGE);
-
-  // check if entries exists for storage
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-    existsFlag = FALSE;
-    for (i = 0; i < SIZE_OF_ARRAY(ENTRY_TABLE_NAMES); i++)
-    {
-      if (Database_exists(&indexHandle->databaseHandle,
-                          ENTRY_TABLE_NAMES[i],
-                          "id",
-                          "WHERE storageId=%lld",
-                          INDEX_DATABASE_ID_(storageId)
-                         )
-         )
-      {
-        existsFlag = TRUE;
-        break;
-      }
-      UNUSED_VARIABLE(id);
-    }
-
-    // prune storage if empty
-    if (!existsFlag)
-    {
-      // delete storage entry
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DELETE FROM storage WHERE id=%lld;",
-                               INDEX_DATABASE_ID_(storageId)
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // delete directory if empty
-    }
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-
 Errors Index_pruneUUID(IndexHandle *indexHandle,
                        IndexId     uuidId
                       )
@@ -10417,9 +10372,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(uuidId) == INDEX_TYPE_UUID);
-
-fprintf(stderr,"%s, %d: try prune uuid %llu\n",__FILE__,__LINE__,uuidId);
+  assert(Index_getType(uuidId) == INDEX_TYPE_UUID);
 
   // prune entities of uuid
   BLOCK_DOX(error,
@@ -10465,17 +10418,12 @@ fprintf(stderr,"%s, %d: try prune uuid %llu\n",__FILE__,__LINE__,uuidId);
     }
 
     // check if entity exists
-    existsFlag = FALSE;
-    if (Database_exists(&indexHandle->databaseHandle,
-                        "entities",
-                        "id",
-                        "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
-                        INDEX_DATABASE_ID_(uuidId)
-                       )
-       )
-    {
-      existsFlag = TRUE;
-    }
+    existsFlag = Database_exists(&indexHandle->databaseHandle,
+                                 "entities",
+                                 "entities.id",
+                                 "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
+                                 Index_getDatabaseId(uuidId)
+                                );
 
     // prune uuid if empty
     if (!existsFlag)
@@ -10483,7 +10431,7 @@ fprintf(stderr,"%s, %d: try prune uuid %llu\n",__FILE__,__LINE__,uuidId);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "DELETE FROM uuids WHERE id=%lld;",
-                               INDEX_DATABASE_ID_(uuidId)
+                               Index_getDatabaseId(uuidId)
                               );
       if (error != ERROR_NONE)
       {
@@ -10509,9 +10457,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   #ifdef NDEBUG
     assert(pthread_self(),pthread_equals(indexHandle->threadId));;
   #endif /* NDEBUG */
-  assert(INDEX_TYPE_(entityId) == INDEX_TYPE_ENTITY);
-
-fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
   // prune storage of entity
   BLOCK_DOX(error,
@@ -10566,17 +10512,12 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
     }
 
     // check if storage exists
-    existsFlag = FALSE;
-    if (Database_exists(&indexHandle->databaseHandle,
-                        "storage",
-                        "id",
-                        "WHERE entityId=%lld",
-                        INDEX_DATABASE_ID_(entityId)
-                       )
-       )
-    {
-      existsFlag = TRUE;
-    }
+    existsFlag = Database_exists(&indexHandle->databaseHandle,
+                                 "storage",
+                                 "id",
+                                 "WHERE entityId=%lld",
+                                 Index_getDatabaseId(entityId)
+                                );
 
     // prune entity if empty
     if (!existsFlag)
@@ -10584,7 +10525,7 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "DELETE FROM entities WHERE id=%lld;",
-                               INDEX_DATABASE_ID_(entityId)
+                               Index_getDatabaseId(entityId)
                               );
       if (error != ERROR_NONE)
       {
@@ -10596,6 +10537,54 @@ fprintf(stderr,"%s, %d: try prune entiry %llu\n",__FILE__,__LINE__,entityId);
   });
 
   return ERROR_NONE;
+}
+
+Errors Index_pruneStorage(IndexHandle *indexHandle,
+                          IndexId     storageId
+                         )
+{
+  Errors  error;
+  bool    existsFlag;
+  uint    i;
+  IndexId id;
+
+  assert(indexHandle != NULL);
+  #ifdef NDEBUG
+    assert(pthread_self(),pthread_equals(indexHandle->threadId));;
+  #endif /* NDEBUG */
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+  // check if entries exists for storage
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    existsFlag = Database_exists(&indexHandle->databaseHandle,
+                                 "entries",
+                                 "id",
+                                 "WHERE storageId=%lld",
+                                 Index_getDatabaseId(storageId)
+                                );
+
+    // prune storage if empty
+    if (!existsFlag)
+    {
+      // delete storage entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM storage WHERE id=%lld;",
+                               Index_getDatabaseId(storageId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
 }
 
 #ifdef __cplusplus
