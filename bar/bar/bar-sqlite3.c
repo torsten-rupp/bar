@@ -35,6 +35,7 @@
 LOCAL bool create        = FALSE;
 LOCAL bool showHeader    = FALSE;
 LOCAL bool headerPrinted = FALSE;
+LOCAL bool verbose       = FALSE;
 
 /****************************** Macros *********************************/
 
@@ -60,7 +61,8 @@ LOCAL void printUsage(const char *programName)
   printf("Usage %s: [<options>] <database file>\n",programName);
   printf("\n");
   printf("Options:  -c|--create  - create database file\n");
-  printf("          -H|--headaer - print headers\n");
+  printf("          -H|--header  - print headers\n");
+  printf("          -v|--verbose - verbose output\n");
   printf("          -h|--help    - print this help\n");
 }
 
@@ -360,18 +362,22 @@ int main(int argc, const char *argv[])
   n = 0;
   while (i < argc)
   {
-    if      (stringEquals(argv[i],"-h") || stringEquals(argv[i],"--help"))
+    if      (stringEquals(argv[i],"-c") || stringEquals(argv[i],"--create"))
     {
-      printUsage(argv[0]);
-      exit(0);
+      create = TRUE;
     }
     else if (stringEquals(argv[i],"-H") || stringEquals(argv[i],"--header"))
     {
       showHeader = TRUE;
     }
-    else if (stringEquals(argv[i],"-c") || stringEquals(argv[i],"--create"))
+    else if (stringEquals(argv[i],"-v") || stringEquals(argv[i],"--verbose"))
     {
-      create = TRUE;
+      verbose = TRUE;
+    }
+    else if (stringEquals(argv[i],"-h") || stringEquals(argv[i],"--help"))
+    {
+      printUsage(argv[0]);
+      exit(0);
     }
     else if (stringEquals(argv[i],"--"))
     {
@@ -493,6 +499,7 @@ int main(int argc, const char *argv[])
                                 CALLBACK(printRow,NULL),
                                 &errorMessage
                                );
+    if (verbose) printf("Result: %d\n",sqliteResult);
     if (sqliteResult != SQLITE_OK)
     {
       fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",sqlCommand,errorMessage);
