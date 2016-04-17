@@ -1762,20 +1762,6 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                      );
 
 /***********************************************************************\
-* Name   : Index_pruneStorage
-* Purpose: delete storage from index if not used anymore (empty)
-* Input  : indexHandle - index handle
-*          storageId   - storage id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_pruneStorage(IndexHandle *indexHandle,
-                          IndexId     storageId
-                         );
-
-/***********************************************************************\
 * Name   : Index_pruneUUID
 * Purpose: delete uuid from index if not used anymore (empty)
 * Input  : indexHandle - index handle
@@ -1802,6 +1788,20 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
 Errors Index_pruneEntity(IndexHandle *indexHandle,
                          IndexId     entityId
                         );
+
+/***********************************************************************\
+* Name   : Index_pruneStorage
+* Purpose: delete storage from index if not used anymore (empty)
+* Input  : indexHandle - index handle
+*          storageId   - storage id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_pruneStorage(IndexHandle *indexHandle,
+                          IndexId     storageId
+                         );
 
 #ifdef __cplusplus
   }
