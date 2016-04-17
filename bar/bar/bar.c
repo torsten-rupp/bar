@@ -7190,7 +7190,7 @@ LOCAL Errors runJob(void)
   Errors error;
 
   // get include/excluded entries from commands
-  if (includeFileCommand != NULL)
+  if (!stringIsEmpty(includeFileCommand))
   {
     error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,includeFileCommand);
     if (error != ERROR_NONE)
@@ -7198,7 +7198,7 @@ LOCAL Errors runJob(void)
       return error;
     }
   }
-  if (includeImageCommand != NULL)
+  if (!stringIsEmpty(includeImageCommand))
   {
     error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,includeImageCommand);
     if (error != ERROR_NONE)
@@ -7206,7 +7206,7 @@ LOCAL Errors runJob(void)
       return error;
     }
   }
-  if (excludeCommand != NULL)
+  if (!stringIsEmpty(excludeCommand))
   {
     error = addExcludeListCommand(&excludePatternList,excludeCommand);
     if (error != ERROR_NONE)
@@ -7262,7 +7262,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   Errors error;
 
   // get include/excluded entries from commands
-  if (includeFileCommand != NULL)
+  if (!stringIsEmpty(includeFileCommand))
   {
     error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,includeFileCommand);
     if (error != ERROR_NONE)
@@ -7270,7 +7270,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       return error;
     }
   }
-  if (includeImageCommand != NULL)
+  if (!stringIsEmpty(includeImageCommand))
   {
     error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,includeImageCommand);
     if (error != ERROR_NONE)
@@ -7278,7 +7278,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       return error;
     }
   }
-  if (excludeCommand != NULL)
+  if (!stringIsEmpty(excludeCommand))
   {
     error = addExcludeListCommand(&excludePatternList,excludeCommand);
     if (error != ERROR_NONE)
