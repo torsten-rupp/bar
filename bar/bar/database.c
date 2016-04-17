@@ -838,6 +838,11 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   #ifndef NDEBUG
 //    fprintf(stderr,"Warning: database busy handler called %p: %d\n",pthread_self(),n);
   #endif /* not NDEBUG */
+if (n > 10)
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//asm("int3");
+}
 
   delay(SLEEP_TIME);
 
@@ -2692,6 +2697,7 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *
   assert(databaseHandle->handle != NULL);
   assert(databaseHandle->transaction.fileName != NULL);
 
+fprintf(stderr,"%s, %d: Database_rollbackTransaction\n",__FILE__,__LINE__);
   #ifndef NDEBUG
     databaseHandle->transaction.fileName = NULL;
     databaseHandle->transaction.lineNb   = 0;
@@ -3222,12 +3228,16 @@ bool Database_exists(DatabaseHandle *databaseHandle,
                                       &statementHandle,
                                       NULL
                                      );
-    if (sqliteResult == SQLITE_OK)
+    if      (sqliteResult == SQLITE_OK)
     {
       if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
       {
         existsFlag = TRUE;
       }
+    }
+    else if (sqliteResult == SQLITE_MISUSE)
+    {
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
     }
 
     sqlite3_finalize(statementHandle);
