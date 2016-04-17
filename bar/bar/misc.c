@@ -999,6 +999,7 @@ String Misc_expandMacros(String           string,
       {
         if ((templateString[i+1] == '%'))
         {
+          // escaped %
           if (expandMacroCharacter)
           {
             String_appendChar(expanded,'%');
@@ -1011,6 +1012,7 @@ String Misc_expandMacros(String           string,
         }
         else
         {
+          // macro %
           macroFlag = TRUE;
           i++;
         }
@@ -1085,12 +1087,11 @@ String Misc_expandMacros(String           string,
       format[j] = '\0';
 
       // find macro
-      if (strlen(name) > 0)
+      if (!stringIsEmpty(name))
       {
-        // find macro
         j = 0;
         while (   (j < macroCount)
-               && (strcmp(name,macros[j].name) != 0)
+               && !stringEquals(name,macros[j].name)
               )
         {
           j++;
@@ -1102,24 +1103,24 @@ String Misc_expandMacros(String           string,
           {
             case EXPAND_MACRO_MODE_STRING:
               // get default format if no format given
-              if (strlen(format) == 0)
+              if (stringIsEmpty(format))
               {
                 switch (macros[j].type)
                 {
                   case TEXT_MACRO_TYPE_INTEGER:
-                    strcpy(format,"%d");
+                    stringCopy(format,"%d",sizeof(format));
                     break;
                   case TEXT_MACRO_TYPE_INTEGER64:
-                    strcpy(format,"%lld");
+                    stringCopy(format,"%lld",sizeof(format));
                     break;
                   case TEXT_MACRO_TYPE_DOUBLE:
-                    strcpy(format,"%lf");
+                    stringCopy(format,"%lf",sizeof(format));
                     break;
                   case TEXT_MACRO_TYPE_CSTRING:
-                    strcpy(format,"%s");
+                    stringCopy(format,"%s",sizeof(format));
                     break;
                   case TEXT_MACRO_TYPE_STRING:
-                    strcpy(format,"%S");
+                    stringCopy(format,"%S",sizeof(format));
                     break;
                   #ifndef NDEBUG
                     default:
@@ -1173,8 +1174,29 @@ String Misc_expandMacros(String           string,
       }
       else
       {
-        // empty macro: keep macro
-        String_appendChar(expanded,'%');
+        // empty macro: expand with empty value
+        switch (expandMacroMode)
+        {
+          case EXPAND_MACRO_MODE_STRING:
+            // get default format if no format given
+            if (stringIsEmpty(format))
+            {
+              stringCopy(format,"%s",sizeof(format));
+            }
+
+            // expand macro into string
+            String_format(expanded,format,"");
+            break;
+          case EXPAND_MACRO_MODE_PATTERN:
+            // expand macro into pattern
+            String_appendCString(expanded,"\\s*");
+            break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+            #endif /* NDEBUG */
+        }
       }
     }
   }
