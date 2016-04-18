@@ -9464,8 +9464,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
                      uint64      fragmentSize
                     )
 {
-  #define TRANSACTION_NAME "ADD_FILE"
-
   Errors     error;
   DatabaseId entryId;
 
@@ -9486,15 +9484,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    // start transaction
-#if 0
-    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
-
     // add file entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -9535,10 +9524,10 @@ Errors Index_addFile(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO fileEntries \
@@ -9563,25 +9552,13 @@ Errors Index_addFile(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
-
-    // end transaction
-#if 0
-    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
 
     return ERROR_NONE;
   });
 
   return error;
-
-  #undef TRANSACTION_NAME
 }
 
 Errors Index_addImage(IndexHandle     *indexHandle,
@@ -9594,8 +9571,6 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                       uint64          blockCount
                      )
 {
-  #define TRANSACTION_NAME "ADD_IMAGE"
-
   Errors     error;
   DatabaseId entryId;
 
@@ -9616,15 +9591,6 @@ Errors Index_addImage(IndexHandle     *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    // start transaction
-#if 0
-    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
-
     // add image entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -9665,10 +9631,10 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO imageEntries \
@@ -9697,25 +9663,13 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
-
-#if 0
-    // end transaction
-    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
 
     return ERROR_NONE;
   });
 
   return error;
-
-  #undef TRANSACTION_NAME
 }
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
@@ -9729,8 +9683,6 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                           uint32      permission
                          )
 {
-  #define TRANSACTION_NAME "ADD_DIRECTORY"
-
   Errors     error;
   DatabaseId entryId;
 
@@ -9751,15 +9703,6 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-#if 0
-    // start transaction
-    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
-
     // add directory entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -9800,10 +9743,10 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO directoryEntries \
@@ -9825,25 +9768,13 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
-
-#if 0
-    // end transaction
-    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
 
     return ERROR_NONE;
   });
 
   return error;
-
-  #undef TRANSACTION_NAME
 }
 
 Errors Index_addLink(IndexHandle *indexHandle,
@@ -9858,8 +9789,6 @@ Errors Index_addLink(IndexHandle *indexHandle,
                      uint32      permission
                     )
 {
-  #define TRANSACTION_NAME "ADD_LINK"
-
   Errors     error;
   DatabaseId entryId;
 
@@ -9883,15 +9812,6 @@ Errors Index_addLink(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-#if 0
-    // start transaction
-    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
-
     // add link entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -9932,10 +9852,10 @@ Errors Index_addLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO linkEntries \
@@ -9954,25 +9874,13 @@ Errors Index_addLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
-
-#if 0
-    // end transaction
-    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
 
     return ERROR_NONE;
   });
 
   return error;
-
-  #undef TRANSACTION_NAME
 }
 
 Errors Index_addHardlink(IndexHandle *indexHandle,
@@ -9989,8 +9897,6 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                          uint64      fragmentSize
                         )
 {
-  #define TRANSACTION_NAME "ADD_HARDLINK"
-
   Errors     error;
   DatabaseId entryId;
 
@@ -10011,15 +9917,6 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-#if 0
-    // start transaction
-    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
-
     // add hard link entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -10060,10 +9957,10 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO hardlinkEntries \
@@ -10088,25 +9985,13 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
-
-#if 0
-    // end transaction
-    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
 
     return ERROR_NONE;
   });
 
   return error;
-
-  #undef TRANSACTION_NAME
 }
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
@@ -10123,8 +10008,6 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                         uint32           minor
                        )
 {
-  #define TRANSACTION_NAME "ADD_SPECIAL"
-
   Errors     error;
   DatabaseId entryId;
 
@@ -10145,15 +10028,6 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-#if 0
-    // start transaction
-    error = Database_beginTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
-
     // add special entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -10194,10 +10068,10 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-//      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO specialEntries \
@@ -10222,25 +10096,13 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_rollbackTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
       return error;
     }
-
-#if 0
-    // end transaction
-    error = Database_endTransaction(&indexHandle->databaseHandle,TRANSACTION_NAME);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
 
     return ERROR_NONE;
   });
 
   return error;
-
-  #undef TRANSACTION_NAME
 }
 
 Errors Index_assignTo(IndexHandle  *indexHandle,
