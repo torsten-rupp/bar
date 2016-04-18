@@ -570,7 +570,7 @@ LOCAL String formatSQLString(String     sqlString,
 
 /***********************************************************************\
 * Name   : unixTimestamp
-* Purpose: callback for UNIXTIMESTAMP function
+* Purpose: callback for UNIXTIMESTAMP function (Unix epoch, UTC)
 * Input  : context - SQLite3 context
 *          argc    - number of arguments
 *          argv    - argument array
@@ -612,14 +612,14 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
       #endif /* HAVE_GETDATE_R */
       if (tm != NULL)
       {
-        timestamp = (uint64)mktime(tm);
+        timestamp = (uint64)timegm(tm);
       }
       else
       {
         s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
         if ((s != NULL) && ((*s) == '\0'))
         {
-          timestamp = (uint64)mktime(&tmBuffer);
+          timestamp = (uint64)timegm(&tmBuffer);
         }
         else
         {
