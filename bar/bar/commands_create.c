@@ -4621,7 +4621,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     // done
     printInfo(1,"ok\n");
-    logMessage(createInfo->logHandle,LOG_TYPE_STORAGE,"Stored '%s'\n",String_cString(printableStorageName));
+    logMessage(createInfo->logHandle,LOG_TYPE_STORAGE,"Stored '%s' (%llu bytes)\n",String_cString(printableStorageName),archiveSize);
 
     // update index database and set state
     if (storageMsg.storageId != INDEX_ID_NONE)
