@@ -1144,11 +1144,15 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
     // split needed -> close archive file
     if (archiveInfo->file.openFlag)
     {
+fprintf(stderr,"%s, %d: split \n",__FILE__,__LINE__);
       error = closeArchiveFile(archiveInfo,indexHandle);
       if (error != ERROR_NONE)
       {
         return error;
       }
+
+//TODO: write index entry?
+
     }
   }
 
@@ -1659,6 +1663,31 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         {
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
+        }
+
+        // store in index database
+        if (   (archiveEntryInfo->indexHandle != NULL)
+            && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
+           )
+        {
+          error = Index_addFile(archiveEntryInfo->indexHandle,
+                                archiveEntryInfo->archiveInfo->storageId,
+                                archiveEntryInfo->file.chunkFileEntry.name,
+                                archiveEntryInfo->file.chunkFileEntry.size,
+                                archiveEntryInfo->file.chunkFileEntry.timeLastAccess,
+                                archiveEntryInfo->file.chunkFileEntry.timeModified,
+                                archiveEntryInfo->file.chunkFileEntry.timeLastChanged,
+                                archiveEntryInfo->file.chunkFileEntry.userId,
+                                archiveEntryInfo->file.chunkFileEntry.groupId,
+                                archiveEntryInfo->file.chunkFileEntry.permission,
+                                archiveEntryInfo->file.chunkFileData.fragmentOffset,
+                                archiveEntryInfo->file.chunkFileData.fragmentSize
+                               );
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+            return error;
+          }
         }
 
         // store fragment offset, count for next fragment
@@ -2203,6 +2232,22 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           return error;
         }
 
+        // store in index database
+        if (   (archiveEntryInfo->indexHandle != NULL)
+            && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
+           )
+        {
+          error = Index_addImage(archiveEntryInfo->indexHandle,
+                                 archiveEntryInfo->archiveInfo->storageId,
+                                 archiveEntryInfo->image.chunkImageEntry.name,
+                                 archiveEntryInfo->image.chunkImageEntry.fileSystemType,
+                                 archiveEntryInfo->image.chunkImageEntry.size,
+                                 archiveEntryInfo->image.chunkImageEntry.blockSize,
+                                 archiveEntryInfo->image.chunkImageData.blockOffset,
+                                 archiveEntryInfo->image.chunkImageData.blockCount
+                                );
+        }
+
         // mark header "not written"
         archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
@@ -2580,13 +2625,15 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                      bool             allowNewPartFlag
                                     )
 {
-  uint   blockCount;
-  ulong  byteLength;
-  ulong  minBytes;
-  bool   newPartFlag;
-  Errors error;
-  bool   eofDelta;
-  ulong  deltaLength;
+  uint             blockCount;
+  ulong            byteLength;
+  ulong            minBytes;
+  bool             newPartFlag;
+  Errors           error;
+  bool             eofDelta;
+  ulong            deltaLength;
+  const StringNode *stringNode;
+  String           fileName;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -2786,8 +2833,29 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           return error;
         }
 
-        // mark header "not written"
-        archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
+        // store in index database
+        if (   (archiveEntryInfo->indexHandle != NULL)
+            && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
+           )
+        {
+          STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
+          {
+            error = Index_addFile(archiveEntryInfo->indexHandle,
+                                  archiveEntryInfo->archiveInfo->storageId,
+                                  fileName,
+                                  archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
+                                  archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
+                                  archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
+                                  archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
+                                  archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
+                                  archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
+                                  archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
+                                  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
+                                  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
+                                 );
+            if (error != ERROR_NONE) break;
+          }
+        }
 
         // store fragment offset, count for next fragment
         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset += archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
@@ -8784,6 +8852,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 tmpError = Chunk_close(&archiveEntryInfo->file.chunkFile.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               }
+//TODO: remove
+assert((archiveEntryInfo->file.chunkFileEntry.size == 0) || (archiveEntryInfo->file.chunkFileData.fragmentSize > 0));
 
               // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -8809,12 +8879,12 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 }
               }
 
-              if (   (archiveEntryInfo->indexHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
-                 )
+              // store in index database
+              if (error == ERROR_NONE)
               {
-                // store in index database
-                if (error == ERROR_NONE)
+                if (   (archiveEntryInfo->indexHandle != NULL)
+                    && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
+                   )
                 {
                   error = Index_addFile(archiveEntryInfo->indexHandle,
                                         archiveEntryInfo->archiveInfo->storageId,
@@ -8960,12 +9030,12 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 }
               }
 
-              if (   (archiveEntryInfo->indexHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
-                 )
+              // store in index database
+              if (error == ERROR_NONE)
               {
-                // store in index database
-                if (error == ERROR_NONE)
+                if (   (archiveEntryInfo->indexHandle != NULL)
+                    && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
+                   )
                 {
                   error = Index_addImage(archiveEntryInfo->indexHandle,
                                          archiveEntryInfo->archiveInfo->storageId,
@@ -9064,14 +9134,14 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               // unlock archive
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
-              if (   (archiveEntryInfo->indexHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
-                 )
+              // store in index database
+              if (error == ERROR_NONE)
               {
-                // store in index database
-                if (error == ERROR_NONE)
+                if (   (archiveEntryInfo->indexHandle != NULL)
+                    && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
+                   )
                 {
-                  error = Index_addLink(archiveEntryInfo->indexHandle,
+                 error = Index_addLink(archiveEntryInfo->indexHandle,
                                         archiveEntryInfo->archiveInfo->storageId,
                                         archiveEntryInfo->link.chunkLinkEntry.name,
                                         archiveEntryInfo->link.chunkLinkEntry.destinationName,
@@ -9195,13 +9265,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 }
               }
 
-              if (   (archiveEntryInfo->indexHandle != NULL)
-                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
-                 )
+              if (error == ERROR_NONE)
               {
-                // store in index database
-                if (error == ERROR_NONE)
+                if (   (archiveEntryInfo->indexHandle != NULL)
+                    && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
+                   )
                 {
+                  // store in index database
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
                     error = Index_addFile(archiveEntryInfo->indexHandle,
