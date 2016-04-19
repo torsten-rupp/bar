@@ -35,6 +35,7 @@
 LOCAL bool create        = FALSE;
 LOCAL bool showHeader    = FALSE;
 LOCAL bool headerPrinted = FALSE;
+LOCAL bool foreignKeys   = TRUE;
 LOCAL bool verbose       = FALSE;
 
 /****************************** Macros *********************************/
@@ -370,6 +371,10 @@ int main(int argc, const char *argv[])
     {
       showHeader = TRUE;
     }
+    else if (stringEquals(argv[i],"-n") || stringEquals(argv[i],"--no-foreign-keys"))
+    {
+      foreignKeys = FALSE;
+    }
     else if (stringEquals(argv[i],"-v") || stringEquals(argv[i],"--verbose"))
     {
       verbose = TRUE;
@@ -444,6 +449,15 @@ int main(int argc, const char *argv[])
                               &errorMessage
                              );
   assert(sqliteResult == SQLITE_OK);
+  if (foreignKeys)
+  {
+    sqliteResult = sqlite3_exec(handle,
+                                "PRAGMA foreign_keys=ON;",
+                                CALLBACK(NULL,NULL),
+                                &errorMessage
+                               );
+    assert(sqliteResult == SQLITE_OK);
+  }
 
   // register special functions
   sqliteResult = sqlite3_create_function(handle,
