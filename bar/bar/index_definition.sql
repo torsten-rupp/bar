@@ -191,7 +191,7 @@ CREATE TRIGGER AFTER UPDATE OF jobUUID,totalEntryCount,totalEntrySize,totalFileC
 // --- storage ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage(
   id                        INTEGER PRIMARY KEY,
-  entityId                  INTEGER,
+  entityId                  INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
   name                      TEXT NOT NULL,
   created                   INTEGER,
   size                      INTEGER,
@@ -225,10 +225,7 @@ CREATE TABLE IF NOT EXISTS storage(
   totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
   totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
   totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries [bytes]
-  totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
-
-  // Note: no foreign key entityId: storage may be created temporary before an entity
-  FOREIGN KEY(entityId) REFERENCES entities(id)
+  totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
 );
 CREATE INDEX ON storage (entityId,name,created,state);
 
@@ -290,6 +287,7 @@ CREATE TRIGGER BEFORE DELETE ON storage
   END;
 CREATE TRIGGER AFTER UPDATE OF entityId,size,totalEntryCount,totalEntrySize,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount ON storage
   BEGIN
+ insert into log values('after update storage begin');
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  -1,
           totalStorageSize   =totalStorageSize   -OLD.size,
@@ -341,7 +339,7 @@ create table log(event text);
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
   id                    INTEGER PRIMARY KEY,
-  storageId             INTEGER,
+  storageId             INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
   type                  INTEGER,
   name                  TEXT,
   timeLastAccess        INTEGER,
@@ -353,9 +351,7 @@ CREATE TABLE IF NOT EXISTS entries(
 
   // updated by triggers
   offset                INTEGER DEFAULT 0,  // Note: redundancy for faster access
-  size                  INTEGER DEFAULT 0,  // Note: redundancy for faster access
-
-  FOREIGN KEY(storageId) REFERENCES storage(id)
+  size                  INTEGER DEFAULT 0   // Note: redundancy for faster access
 );
 CREATE INDEX ON entries (storageId,type,name);
 CREATE INDEX ON entries (name);
@@ -364,7 +360,7 @@ CREATE INDEX ON entries (type,name);
 // newest entries (updated by triggers)
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
-  entryId         INTEGER DEFAULT 0,
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
 
   storageId       INTEGER DEFAULT 0,       // Note: redundancy for faster access
   type            INTEGER DEFAULT 0,       // Note: redundancy for faster access
@@ -396,23 +392,6 @@ CREATE TRIGGER AFTER INSERT ON entries
   BEGIN
     // update FTS
     INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
-  END;
-
-CREATE TRIGGER BEFORE DELETE ON entries
-  BEGIN
-    // delete/update newest info
-    DELETE FROM entriesNewest WHERE entryId=OLD.id;
-    INSERT OR IGNORE INTO entriesNewest
-        (storageId,name,type,size,timeLastChanged,entryId)
-      SELECT storageId,name,type,size,MAX(timeLastChanged),id FROM entries WHERE id!=OLD.id AND name=OLD.name;
-
-    // update count in storage
-    UPDATE storage
-      SET totalEntryCount=totalEntryCount-1
-      WHERE storage.id=OLD.storageId;
-
-    // update FTS
-    DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId ON entries
@@ -498,26 +477,6 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
       WHERE storage.id=NEW.storageId;
   END;
 
-/*
-CREATE TRIGGER AFTER UPDATE OF size ON entriesNewest
-  BEGIN
-    // delete/update newest info
-    UPDATE storage
-      SET totalEntrySizeNewest   =totalEntrySizeNewest   -OLD.size,
-          totalFileSizeNewest    =totalFileSizeNewest    -CASE OLD.type WHEN $TYPE_FILE     THEN OLD.size ELSE 0 END,
-          totalImageSizeNewest   =totalImageSizeNewest   -CASE OLD.type WHEN $TYPE_IMAGE    THEN OLD.size ELSE 0 END,
-          totalHardlinkSizeNewest=totalHardlinkSizeNewest-CASE OLD.type WHEN $TYPE_HARDLINK THEN OLD.size ELSE 0 END
-      WHERE EXISTS(SELECT id FROM entriesNewest WHERE entryId=OLD.id);
-
-    UPDATE storage
-      SET totalEntrySizeNewest   =totalEntrySizeNewest   +NEW.size,
-          totalFileSizeNewest    =totalFileSizeNewest    +CASE NEW.type WHEN $TYPE_FILE     THEN NEW.size ELSE 0 END,
-          totalImageSizeNewest   =totalImageSizeNewest   +CASE NEW.type WHEN $TYPE_IMAGE    THEN NEW.size ELSE 0 END,
-          totalHardlinkSizeNewest=totalHardlinkSizeNewest+CASE NEW.type WHEN $TYPE_HARDLINK THEN NEW.size ELSE 0 END
-      WHERE EXISTS(SELECT id FROM entriesNewest WHERE entryId=NEW.id);
-  END;
-*/
-
 CREATE TRIGGER AFTER UPDATE OF name ON entries
   BEGIN
     // update FTS
@@ -529,7 +488,9 @@ CREATE TRIGGER AFTER UPDATE OF offset,size ON entries
   BEGIN
     // insert newest info
     INSERT OR IGNORE INTO entriesNewest
-      (name,offset,size) VALUES (NEW.name,NEW.offset,NEW.size);
+        (name,offset,size)
+      VALUES
+        (NEW.name,NEW.offset,NEW.size);
 // insert into log values('insert newest '||NEW.name||' '||NEW.offset||' '||NEW.size);
  
     // update newest info
@@ -548,7 +509,49 @@ CREATE TRIGGER AFTER UPDATE OF offset,size ON entries
             AND offset=NEW.offset
             AND size=NEW.size
             AND timeLastChanged<NEW.timeLastChanged;
+ insert into log values('update newest '||NEW.name||' '||NEW.offset||' '||NEW.size);
   END;
+
+CREATE TRIGGER BEFORE DELETE ON entries
+  BEGIN
+ insert into log values('delete entries begin id='||OLD.id);
+
+    // delete/update newest info
+    DELETE FROM entriesNewest WHERE entryId=OLD.id;
+// insert into log values('delete newest entryid '||OLD.id);
+    INSERT OR IGNORE INTO entriesNewest
+        (entryId,storageId,name,type,size,timeLastChanged,offset,size)
+      SELECT id,storageId,name,type,size,MAX(timeLastChanged),offset,size
+        FROM entries
+        WHERE     id!=OLD.id
+              AND name=OLD.name
+              AND offset=OLD.offset
+              AND size=OLD.size;
+// insert into log values('re-insert newest entryid '||(select entryId from entriesNewest where name=OLD.name));
+
+/*
+    // update count in storage
+    UPDATE storage
+      SET totalEntryCount    =totalEntryCount    -1,
+          totalEntrySize     =totalEntrySize     -OLD.size,
+          totalFileCount     =totalFileCount     -CASE OLD.type WHEN $TYPE_FILE      THEN 1        ELSE 0 END,
+          totalFileSize      =totalFileSize      -CASE OLD.type WHEN $TYPE_FILE      THEN OLD.size ELSE 0 END,
+          totalImageCount    =totalImageCount    -CASE OLD.type WHEN $TYPE_IMAGE     THEN 1        ELSE 0 END,
+          totalImageSize     =totalImageSize     -CASE OLD.type WHEN $TYPE_IMAGE     THEN OLD.size ELSE 0 END,
+          totalDirectoryCount=totalDirectoryCount-CASE OLD.type WHEN $TYPE_DIRECTORY THEN 1        ELSE 0 END,
+          totalLinkCount     =totalLinkCount     -CASE OLD.type WHEN $TYPE_LINK      THEN 1        ELSE 0 END,
+          totalHardlinkCount =totalHardlinkCount -CASE OLD.type WHEN $TYPE_HARDLINK  THEN 1        ELSE 0 END,
+          totalHardlinkSize  =totalHardlinkSize  -CASE OLD.type WHEN $TYPE_HARDLINK  THEN OLD.size ELSE 0 END,
+          totalSpecialCount  =totalSpecialCount  -CASE OLD.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
+      WHERE storage.id=OLD.storageId;
+*/
+
+    // update FTS
+    DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
+ insert into log values('delete entries done');
+  END;
+
+// -------------------------------------------------------
 
 /*
 CREATE TRIGGER AFTER INSERT ON entriesNewest
@@ -608,7 +611,7 @@ CREATE TRIGGER AFTER UPDATE OF entryId ON entriesNewest
 // --- skipped entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER,
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
   type            INTEGER,
   name            TEXT,
   timeLastAccess  INTEGER,
@@ -616,9 +619,7 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
   timeLastChanged INTEGER,
   userId          INTEGER,
   groupId         INTEGER,
-  permission      INTEGER,
-
-  FOREIGN KEY(storageId) REFERENCES storage(id)
+  permission      INTEGER
 );
 CREATE INDEX ON skippedEntries (name);
 CREATE INDEX ON skippedEntries (type);
@@ -626,14 +627,13 @@ CREATE INDEX ON skippedEntries (type);
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
   id              INTEGER PRIMARY KEY,
-  entryId         INTEGER,
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
   fragmentOffset  INTEGER,
-  fragmentSize    INTEGER,
+  fragmentSize    INTEGER
 
   // updated by triggers
-
-  FOREIGN KEY(entryId) REFERENCES entries(id)
 );
 CREATE INDEX ON fileEntries (entryId);
 
@@ -650,26 +650,29 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalFileCount =totalFileCount +1
-      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
 
     // update count/size in parent directories
     UPDATE directoryEntries
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.fragmentSize
-      WHERE     directoryEntries.storageId=(SELECT storageId FROM entries WHERE id=NEW.entryId)
+      WHERE     directoryEntries.storageId=NEW.storageId
             AND directoryEntries.name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
 CREATE TRIGGER BEFORE DELETE ON fileEntries
   BEGIN
+ insert into log values('delete fileEntries id='||OLD.id||' entryid='||OLD.entryId);
     // update count/size in storage
     UPDATE storage
-      SET totalEntrySize=totalEntrySize-OLD.fragmentSize,
-          totalFileCount=totalFileCount-1,
-          totalFileSize =totalFileSize -OLD.fragmentSize
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      SET totalEntryCount=totalEntryCount-1,
+          totalEntrySize =totalEntrySize -OLD.fragmentSize,
+          totalFileCount =totalFileCount -1,
+          totalFileSize  =totalFileSize  -OLD.fragmentSize
+      WHERE storage.id=OLD.storageId;
+ insert into log values('delete from storageId='||OLD.storageId);
+ insert into log values('delete fileEntries dne');
   END;
-
 
 CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON fileEntries
   BEGIN
@@ -678,25 +681,24 @@ CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON fileEntries
       SET totalEntrySize=totalEntrySize-OLD.fragmentSize,
           totalFileCount=totalFileCount-1,
           totalFileSize =totalFileSize -OLD.fragmentSize
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalEntrySize=totalEntrySize+NEW.fragmentSize,
           totalFileCount=totalFileCount+1,
           totalFileSize =totalFileSize +NEW.fragmentSize
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
   END;
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
   id              INTEGER PRIMARY KEY,
-  entryId         INTEGER,
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
   fileSystemType  INTEGER,
   blockSize       INTEGER,
   blockOffset     INTEGER,
-  blockCount      INTEGER,
-
-  FOREIGN KEY(entryId) REFERENCES entries(id)
+  blockCount      INTEGER
 );
 CREATE INDEX ON imageEntries (entryId);
 
@@ -713,16 +715,18 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalImageCount=totalImageCount+1
-      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
   END;
 
 CREATE TRIGGER BEFORE DELETE ON imageEntries
   BEGIN
-    // update count in storage
+    // update count/size in storage
     UPDATE storage
-      SET totalImageCount=totalImageCount-1,
+      SET totalEntryCount=totalEntryCount -1,
+          totalEntrySize =totalEntrySize  -OLD.blockSize*OLD.blockCount,
+          totalImageCount=totalImageCount-1,
           totalImageSize =totalImageSize -OLD.blockSize*OLD.blockCount
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      WHERE storage.id=OLD.storageId;
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId,blockSizd,blockCount ON imageEntries
@@ -731,28 +735,26 @@ CREATE TRIGGER AFTER UPDATE OF storageId,blockSizd,blockCount ON imageEntries
     UPDATE storage
       SET totalImageCount=totalImageCount-1,
           totalImageSize =totalImageSize -OLD.blockSize*OLD.blockCount
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalImageCount=totalImageCount+1,
           totalImageSize =totalImageSize +NEW.blockSize*NEW.blockCount
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
   END;
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
   id                    INTEGER PRIMARY KEY,
-  entryId               INTEGER,
-  storageId             INTEGER,            // Note: duplicate storage for faster access parent directories
-  name                  TEXT,               // Note: duplicate storage for faster access parent directories
+  storageId             INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId               INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  name                  TEXT,                                              // Note: redundancy for faster access of parent directories
 
   // updated by triggers
   totalEntryCount       INTEGER DEFAULT 0,  // total number of entries
   totalEntrySize        INTEGER DEFAULT 0,  // total size of entries [bytes]
 
   totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest entries
-  totalEntrySizeNewest  INTEGER DEFAULT 0,  // total size of newest entries [bytes]
-
-  FOREIGN KEY(entryId) REFERENCES entries(id)
+  totalEntrySizeNewest  INTEGER DEFAULT 0   // total size of newest entries [bytes]
 );
 CREATE INDEX ON directoryEntries (entryId);
 CREATE INDEX ON directoryEntries (storageId,name);
@@ -770,15 +772,16 @@ CREATE TRIGGER AFTER INSERT ON directoryEntries
     UPDATE storage
       SET totalEntryCount    =totalEntryCount    +1,
           totalDirectoryCount=totalDirectoryCount+1
-      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
+      WHERE storage.id=NEW.storageId
   END;
 
 CREATE TRIGGER BEFORE DELETE ON directoryEntries
   BEGIN
-    // update count in storage
+    // update count/size in storage
     UPDATE storage
-      SET totalDirectoryCount=totalDirectoryCount-1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      SET totalEntryCount    =totalEntryCount    -1,
+          totalDirectoryCount=totalDirectoryCount-1
+      WHERE storage.id=OLD.storageId;
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId ON directoryEntries
@@ -786,19 +789,18 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON directoryEntries
     // update count in storage
     UPDATE storage
       SET totalDirectoryCount=totalDirectoryCount-1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalDirectoryCount=totalDirectoryCount+1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
   END;
 
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
   id              INTEGER PRIMARY KEY,
-  entryId         INTEGER,
-  destinationName TEXT,
-
-  FOREIGN KEY(entryId) REFERENCES entries(id)
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  destinationName TEXT
 );
 CREATE INDEX ON linkEntries (entryId);
 
@@ -815,21 +817,22 @@ CREATE TRIGGER AFTER INSERT ON linkEntries
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalLinkCount =totalLinkCount +1
-      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
 
     // update count/size in parent directories
     UPDATE directoryEntries
       SET totalEntryCount=totalEntryCount+1
-      WHERE     directoryEntries.storageId=(SELECT storageId FROM entries WHERE id=NEW.entryId)
+      WHERE     directoryEntries.storageId=NEW.storageId
             AND directoryEntries.name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
 CREATE TRIGGER BEFORE DELETE ON linkEntries
   BEGIN
-    // update count in storage
+    // update count/size in storage
     UPDATE storage
-      SET totalLinkCount=totalLinkCount-1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      SET totalEntryCount=totalEntryCount-1,
+          totalLinkCount =totalLinkCount -1
+      WHERE storage.id=OLD.storageId;
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId ON linkEntries
@@ -837,21 +840,20 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON linkEntries
     // update count in storage
     UPDATE storage
       SET totalLinkCount=totalLinkCount-1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalLinkCount=totalLinkCount+1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
   END;
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
   id              INTEGER PRIMARY KEY,
-  entryId         INTEGER,
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
   fragmentOffset  INTEGER,
-  fragmentSize    INTEGER,
-
-  FOREIGN KEY(entryId) REFERENCES entries(id)
+  fragmentSize    INTEGER
 );
 CREATE INDEX ON hardlinkEntries (entryId);
 
@@ -868,24 +870,25 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
     UPDATE storage
       SET totalEntryCount   =totalEntryCount   +1,
           totalHardlinkCount=totalHardlinkCount+1
-      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
 
     // update count/size in parent directories
     UPDATE directoryEntries
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.fragmentSize
-      WHERE     directoryEntries.storageId=(SELECT storageId FROM entries WHERE id=NEW.entryId)
+      WHERE     directoryEntries.storageId=NEW.storageId
             AND directoryEntries.name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
 CREATE TRIGGER BEFORE DELETE ON hardlinkEntries
   BEGIN
-    // update count in storage
+    // update count/size in storage
     UPDATE storage
-      SET totalEntrySize    =totalEntrySize    -OLD.fragmentSize,
+      SET totalEntryCount   =totalEntryCount   -1,
+          totalEntrySize    =totalEntrySize    -OLD.fragmentSize,
           totalHardlinkCount=totalHardlinkCount-1,
           totalHardlinkSize =totalHardlinkSize -OLD.fragmentSize
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      WHERE storage.id=OLD.storageId;
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON hardlinkEntries
@@ -895,23 +898,22 @@ CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON hardlinkEntries
       SET totalEntrySize    =totalEntrySize    -OLD.fragmentSize,
           totalHardlinkCount=totalHardlinkCount-1,
           totalHardlinkSize =totalHardlinkSize -OLD.fragmentSize
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalEntrySize    =totalEntrySize    +NEW.fragmentSize,
           totalHardlinkCount=totalHardlinkCount+1,
           totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
   END;
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
   id              INTEGER PRIMARY KEY,
-  entryId         INTEGER,
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   specialType     INTEGER,
   major           INTEGER,
-  minor           INTEGER,
-
-  FOREIGN KEY(entryId) REFERENCES entries(id)
+  minor           INTEGER
 );
 CREATE INDEX ON specialEntries (entryId);
 
@@ -928,21 +930,22 @@ CREATE TRIGGER AFTER INSERT ON specialEntries
     UPDATE storage
       SET totalEntryCount  =totalEntryCount  +1,
           totalSpecialCount=totalSpecialCount+1
-      WHERE storage.id=(SELECT storageId FROM entriesNewest WHERE entryId=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
 
     // update count/size in parent directories
     UPDATE directoryEntries
       SET totalEntryCount=totalEntryCount+1
-      WHERE     directoryEntries.storageId=(SELECT storageId FROM entries WHERE id=NEW.entryId)
+      WHERE     directoryEntries.storageId=NEW.storageId
             AND directoryEntries.name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
 CREATE TRIGGER BEFORE DELETE ON specialEntries
   BEGIN
-    // update count in storage
+    // update count/size in storage
     UPDATE storage
-      SET totalSpecialCount=totalSpecialCount-1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      SET totalEntryCount  =totalEntryCount  -1,
+          totalSpecialCount=totalSpecialCount-1
+      WHERE storage.id=OLD.storageId;
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId ON specialEntries
@@ -950,10 +953,10 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON specialEntries
     // update count in storage
     UPDATE storage
       SET totalSpecialCount=totalSpecialCount-1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=OLD.entryId);
+      WHERE storage.id=OLD.storageId;
     UPDATE storage
       SET totalSpecialCount=totalSpecialCount+1
-      WHERE storage.id=(SELECT storageId FROM entries WHERE id=NEW.entryId);
+      WHERE storage.id=NEW.storageId;
   END;
 
 // --- history ---------------------------------------------------------

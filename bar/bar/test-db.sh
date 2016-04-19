@@ -1,6 +1,7 @@
 #!/bin/sh
 
 SQLITE3=./bar-sqlite3
+make $SQLITE3 > /dev/null
 
 databaseFile=bar-index.db
 
@@ -35,94 +36,95 @@ storageId1=`$SQLITE3 $databaseFile "INSERT INTO storage (entityId,name,created,s
 storageId2=`$SQLITE3 $databaseFile "INSERT INTO storage (entityId,name,created,size,state,mode) VALUES ($entityId2,'s2',$DATETIME3,400,1,1); SELECT last_insert_rowid();"`
 storageId3=`$SQLITE3 $databaseFile "INSERT INTO storage (entityId,name,created,size,state,mode) VALUES ($entityId3,'s3',$DATETIME4,0,1,1); SELECT last_insert_rowid();"`
 
+if false; then
 # files
 if false; then
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'f1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'f1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'f2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'f2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'f2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'f2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 fi
 
 # images
 if false; then
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_IMAGE,'i1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO imageEntries (entryId,size,blockSize,blockOffset,blockCount) VALUES ($id,1000,1,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId1,$id,1000,1,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_IMAGE,'i1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO imageEntries (entryId,size,blockSize,blockOffset,blockCount) VALUES ($id,1000,1,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId1,$id,1000,1,500,500)"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_IMAGE,'i2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO imageEntries (entryId,size,blockSize,blockOffset,blockCount) VALUES ($id,1000,1,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId1,$id,1000,1,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_IMAGE,'i2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO imageEntries (entryId,size,blockSize,blockOffset,blockCount) VALUES ($id,1000,1,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId1,$id,1000,1,500,500)"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_IMAGE,'i2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO imageEntries (entryId,size,blockSize,blockOffset,blockCount) VALUES ($id,1000,1,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId1,$id,1000,1,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_IMAGE,'i2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO imageEntries (entryId,size,blockSize,blockOffset,blockCount) VALUES ($id,1000,1,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId1,$id,1000,1,500,500)"
 fi
 
 # directories
 if false; then
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_DIRECTORY,'d1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO directoryEntries (entryId,storageId,name) VALUES ($id,$storageId1,'dir1')"
+$SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageId,name) VALUES ($storageId1,$id,$storageId1,'dir1')"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_DIRECTORY,'d2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO directoryEntries (entryId,storageId,name) VALUES ($id,$storageId1,'dir2')"
+$SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageId,name) VALUES ($storageId1,$id,$storageId1,'dir2')"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_DIRECTORY,'d2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO directoryEntries (entryId,storageId,name) VALUES ($id,$storageId1,'dir2')"
+$SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageId,name) VALUES ($storageId1,$id,$storageId1,'dir2')"
 fi
 
 # links
 if false; then
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_LINK,'l1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO linkEntries (entryId,destinationName) VALUES ($id,'destination1')"
+$SQLITE3 $databaseFile "INSERT INTO linkEntries (storageId,entryId,destinationName) VALUES ($storageId1,$id,'destination1')"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_LINK,'l2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO linkEntries (entryId,destinationName) VALUES ($id,'destination2')"
+$SQLITE3 $databaseFile "INSERT INTO linkEntries (storageId,entryId,destinationName) VALUES ($storageId1,$id,'destination2')"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_LINK,'l2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO linkEntries (entryId,destinationName) VALUES ($id,'destination2')"
+$SQLITE3 $databaseFile "INSERT INTO linkEntries (storageId,entryId,destinationName) VALUES ($storageId1,$id,'destination2')"
 fi
 
 # hardlink
 if false; then
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_HARDLINK,'h1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_HARDLINK,'h1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_HARDLINK,'h2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_HARDLINK,'h2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_HARDLINK,'h2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_HARDLINK,'h2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id,1000,500,500)"
+$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 fi
 
 # special
 if true; then
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_SPECIAL,'s1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO specialEntries (entryId,specialType) VALUES ($id,1)"
+$SQLITE3 $databaseFile "INSERT INTO specialEntries (storageId,entryId,specialType) VALUES ($storageId1,$id,1)"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_SPECIAL,'s2',$DATETIME2); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO specialEntries (entryId,specialType) VALUES ($id,2)"
+$SQLITE3 $databaseFile "INSERT INTO specialEntries (storageId,entryId,specialType) VALUES ($storageId1,$id,2)"
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_SPECIAL,'s2',$DATETIME3); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO specialEntries (entryId,specialType) VALUES ($id,2)"
+$SQLITE3 $databaseFile "INSERT INTO specialEntries (storageId,entryId,specialType) VALUES ($storageId1,$id,2)"
 fi
 
 echo "UUIDs:"
@@ -135,18 +137,40 @@ $SQLITE3 $databaseFile -H "SELECT id,entityId,name,created,size,totalEntryCount,
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount FROM storage"
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCountNewest,totalFileSizeNewest,totalImageCountNewest,totalImageSizeNewest,totalDirectoryCountNewest,totalLinkCountNewest,totalHardlinkCountNewest,totalHardlinkSizeNewest,totalSpecialCountNewest FROM storage"
 echo "Entries:"
-$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type,offset,size FROM entries"
+$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type,timeLastChanged,offset,size FROM entries"
 echo "Newest entries:"
 $SQLITE3 $databaseFile -H "SELECT id,entryId,storageId,entryId,name,type,offset,size FROM entriesNewest"
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+fi
 
-if false; then
+if true; then
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # insert+delete
-id1=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'x1',$DATETIME1); SELECT last_insert_rowid();"`
-id2=`$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id1,1000,0,500); SELECT last_insert_rowid();"`
-id3=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'x1',$DATETIME1); SELECT last_insert_rowid();"`
-id4=`$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id3,1000,0,500); SELECT last_insert_rowid();"`
+id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME1); SELECT last_insert_rowid();"`
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id,1000,0,500);"
+id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME1); SELECT last_insert_rowid();"`
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id,1000,500,500);"
+id1=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME2); SELECT last_insert_rowid();"`
+id2=`$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id1,1000,0,500); SELECT last_insert_rowid();"`
+id3=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME2); SELECT last_insert_rowid();"`
+id4=`$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id3,1000,500,500); SELECT last_insert_rowid();"`
+
+if false; then
+id5=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_IMAGE,'i1',$DATETIME1); SELECT last_insert_rowid();"`
+id6=`$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId2,$id5,1000,1,0,500); SELECT last_insert_rowid();"`
+
+id7=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_DIRECTORY,'d1',$DATETIME1); SELECT last_insert_rowid();"`
+id8=`$SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageId,name) VALUES ($storageId2,$id7,$storageId2,'dir1'); SELECT last_insert_rowid();"`
+
+id9=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_LINK,'l1',$DATETIME1); SELECT last_insert_rowid();"`
+id10=`$SQLITE3 $databaseFile "INSERT INTO linkEntries (storageId,entryId,destinationName) VALUES ($storageId2,$id9,'destination1'); SELECT last_insert_rowid();"`
+
+id11=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_HARDLINK,'h1',$DATETIME1); SELECT last_insert_rowid();"`
+id12=`$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id11,1000,0,500); SELECT last_insert_rowid();"`
+
+id13=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_SPECIAL,'xs1',$DATETIME1); SELECT last_insert_rowid();"`
+id14=`$SQLITE3 $databaseFile "INSERT INTO specialEntries (storageId,entryId,specialType) VALUES ($storageId2,$id13,1); SELECT last_insert_rowid();"`
+fi
 
 echo "--- after insert -----------------------------------------------------"
 echo "UUIDs:"
@@ -158,12 +182,24 @@ echo "Storage:"
 $SQLITE3 $databaseFile -H "SELECT id,entityId,name,created,size,totalEntryCount,totalEntrySize,totalEntryCountNewest,totalEntrySizeNewest FROM storage"
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount FROM storage"
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCountNewest,totalFileSizeNewest,totalImageCountNewest,totalImageSizeNewest,totalDirectoryCountNewest,totalLinkCountNewest,totalHardlinkCountNewest,totalHardlinkSizeNewest,totalSpecialCountNewest FROM storage"
-#echo "Entries:"
-#$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type FROM entries"
+echo "Entries:"
+$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type,timeLastChanged,offset,size FROM entries"
+echo "Newest entries:"
+$SQLITE3 $databaseFile -H "SELECT id,entryId,storageId,entryId,name,type,offset,size FROM entriesNewest"
 
-$SQLITE3 $databaseFile "DELETE FROM fileEntries WHERE id=$id4"
+$SQLITE3 $databaseFile -H "SELECT * FROM fileEntries"
+
+if false; then
+$SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id13"
+$SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id11"
+$SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id9"
+$SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id7"
+$SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id5"
+fi
+
+#$SQLITE3 $databaseFile "DELETE FROM fileEntries WHERE id=$id4"
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id3"
-$SQLITE3 $databaseFile "DELETE FROM fileEntries WHERE id=$id2"
+#$SQLITE3 $databaseFile "DELETE FROM fileEntries WHERE id=$id2"
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id1"
 
 echo "--- after delete -----------------------------------------------------"
@@ -175,21 +211,25 @@ $SQLITE3 $databaseFile -H "SELECT id,totalFileCount,totalFileSize,totalImageCoun
 echo "Storage:"
 $SQLITE3 $databaseFile -H "SELECT id,entityId,name,created,size,totalEntryCount,totalEntrySize,totalEntryCountNewest,totalEntrySizeNewest FROM storage"
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount FROM storage"
-#echo "Entries:"
-#$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type FROM entries"
+echo "Entries:"
+$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type,timeLastChanged,offset,size FROM entries"
+echo "Newest entries:"
+$SQLITE3 $databaseFile -H "SELECT id,entryId,storageId,entryId,name,type,offset,size FROM entriesNewest"
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+fi
 
+if false; then
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # assign
 id1=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'af1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id1,1000,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id1,1000,0,500)"
 id2=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'af1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO fileEntries (entryId,size,fragmentOffset,fragmentSize) VALUES ($id2,1000,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id2,1000,0,500)"
 
 id3=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_IMAGE,'ai1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO imageEntries (entryId,size,blockSize,blockOffset,blockCount) VALUES ($id3,1000,1,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId2,$id3,1000,1,0,500)"
 id4=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_IMAGE,'ai1',$DATETIME1); SELECT last_insert_rowid();"`
-$SQLITE3 $databaseFile "INSERT INTO imageEntries (entryId,size,blockSize,blockOffset,blockCount) VALUES ($id4,1000,1,0,500)"
+$SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId2,$id4,1000,1,0,500)"
 
 echo "--- before assign ----------------------------------------------------"
 echo "UUIDs:"
@@ -202,7 +242,7 @@ $SQLITE3 $databaseFile -H "SELECT id,entityId,name,created,size,totalEntryCount,
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount FROM storage"
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCountNewest,totalFileSizeNewest,totalImageCountNewest,totalImageSizeNewest,totalDirectoryCountNewest,totalLinkCountNewest,totalHardlinkCountNewest,totalHardlinkSizeNewest,totalSpecialCountNewest FROM storage"
 #echo "Entries:"
-#$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type FROM entries"
+#$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type,timeLastChanged,offset,size FROM entries"
 
 $SQLITE3 $databaseFile "UPDATE entries SET storageId=$storageId3 WHERE id=$id4"
 $SQLITE3 $databaseFile "UPDATE entries SET storageId=$storageId3 WHERE id=$id3"
@@ -220,7 +260,7 @@ $SQLITE3 $databaseFile -H "SELECT id,entityId,name,created,size,totalEntryCount,
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount FROM storage"
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCountNewest,totalFileSizeNewest,totalImageCountNewest,totalImageSizeNewest,totalDirectoryCountNewest,totalLinkCountNewest,totalHardlinkCountNewest,totalHardlinkSizeNewest,totalSpecialCountNewest FROM storage"
 #echo "Entries:"
-#$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type FROM entries"
+#$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type,timeLastChanged,offset,size FROM entries"
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 fi
 
