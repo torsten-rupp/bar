@@ -287,7 +287,6 @@ CREATE TRIGGER BEFORE DELETE ON storage
   END;
 CREATE TRIGGER AFTER UPDATE OF entityId,size,totalEntryCount,totalEntrySize,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount ON storage
   BEGIN
- insert into log values('after update storage begin');
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  -1,
           totalStorageSize   =totalStorageSize   -OLD.size,
@@ -360,7 +359,7 @@ CREATE INDEX ON entries (type,name);
 // newest entries (updated by triggers)
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
-  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  entryId         INTEGER REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
 
   storageId       INTEGER DEFAULT 0,       // Note: redundancy for faster access
   type            INTEGER DEFAULT 0,       // Note: redundancy for faster access
@@ -496,7 +495,6 @@ CREATE TRIGGER AFTER UPDATE OF offset,size ON entries
     // update newest info
     UPDATE entriesNewest
       SET entryId=NEW.id,
-
           storageId=NEW.storageId,
           type=NEW.type,
           timeLastChanged=NEW.timeLastChanged,
@@ -509,13 +507,11 @@ CREATE TRIGGER AFTER UPDATE OF offset,size ON entries
             AND offset=NEW.offset
             AND size=NEW.size
             AND timeLastChanged<NEW.timeLastChanged;
- insert into log values('update newest '||NEW.name||' '||NEW.offset||' '||NEW.size);
+// insert into log values('update newest '||NEW.name||' '||NEW.offset||' '||NEW.size);
   END;
 
 CREATE TRIGGER BEFORE DELETE ON entries
   BEGIN
- insert into log values('delete entries begin id='||OLD.id);
-
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.id;
 // insert into log values('delete newest entryid '||OLD.id);
@@ -548,7 +544,6 @@ CREATE TRIGGER BEFORE DELETE ON entries
 
     // update FTS
     DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
- insert into log values('delete entries done');
   END;
 
 // -------------------------------------------------------
@@ -577,6 +572,7 @@ CREATE TRIGGER AFTER DELETE ON entriesNewest
 
 CREATE TRIGGER AFTER UPDATE OF entryId ON entriesNewest
   BEGIN
+// insert into log values('update entriesNewest entryId'||NEW.storageId||' '||NEW.offset||' '||NEW.size);
     // update count/size in storage
     UPDATE storage
       SET totalEntryCountNewest    =totalEntryCountNewest    -1,
@@ -662,7 +658,6 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
 
 CREATE TRIGGER BEFORE DELETE ON fileEntries
   BEGIN
- insert into log values('delete fileEntries id='||OLD.id||' entryid='||OLD.entryId);
     // update count/size in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -670,8 +665,6 @@ CREATE TRIGGER BEFORE DELETE ON fileEntries
           totalFileCount =totalFileCount -1,
           totalFileSize  =totalFileSize  -OLD.fragmentSize
       WHERE storage.id=OLD.storageId;
- insert into log values('delete from storageId='||OLD.storageId);
- insert into log values('delete fileEntries dne');
   END;
 
 CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON fileEntries
@@ -772,7 +765,7 @@ CREATE TRIGGER AFTER INSERT ON directoryEntries
     UPDATE storage
       SET totalEntryCount    =totalEntryCount    +1,
           totalDirectoryCount=totalDirectoryCount+1
-      WHERE storage.id=NEW.storageId
+      WHERE storage.id=NEW.storageId;
   END;
 
 CREATE TRIGGER BEFORE DELETE ON directoryEntries
