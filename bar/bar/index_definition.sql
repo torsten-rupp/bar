@@ -458,6 +458,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
   END;
 
 //TODO: zusammen mit storageId?
+/*
 CREATE TRIGGER AFTER UPDATE OF size ON entries
   BEGIN
     // update count/size in storage
@@ -475,6 +476,7 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
           totalHardlinkSize=totalHardlinkSize+CASE NEW.type WHEN $TYPE_HARDLINK THEN NEW.size ELSE 0 END
       WHERE storage.id=NEW.storageId;
   END;
+*/
 
 CREATE TRIGGER AFTER UPDATE OF name ON entries
   BEGIN
@@ -506,7 +508,7 @@ CREATE TRIGGER AFTER UPDATE OF offset,size ON entries
       WHERE     name=NEW.name
             AND offset=NEW.offset
             AND size=NEW.size
-            AND timeLastChanged<NEW.timeLastChanged;
+            AND timeLastChanged<=NEW.timeLastChanged;
 // insert into log values('update newest '||NEW.name||' '||NEW.offset||' '||NEW.size);
   END;
 
@@ -624,7 +626,9 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
     // update count in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
-          totalFileCount =totalFileCount +1
+          totalEntrySize =totalEntrySize +NEW.fragmentSize,
+          totalFileCount =totalFileCount +1,
+          totalFileSize  =totalFileSize  +NEW.fragmentSize
       WHERE storage.id=NEW.storageId;
 
     // update count/size in parent directories
@@ -686,7 +690,9 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
     // update count in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
-          totalImageCount=totalImageCount+1
+          totalEntrySize =totalEntrySize +NEW.blockCount *NEW.blockSize,
+          totalImageCount=totalImageCount+1,
+          totalImageSize =totalImageSize +NEW.blockCount *NEW.blockSize
       WHERE storage.id=NEW.storageId;
   END;
 
@@ -694,8 +700,8 @@ CREATE TRIGGER BEFORE DELETE ON imageEntries
   BEGIN
     // update count/size in storage
     UPDATE storage
-      SET totalEntryCount=totalEntryCount -1,
-          totalEntrySize =totalEntrySize  -OLD.blockSize*OLD.blockCount,
+      SET totalEntryCount=totalEntryCount-1,
+          totalEntrySize =totalEntrySize -OLD.blockSize*OLD.blockCount,
           totalImageCount=totalImageCount-1,
           totalImageSize =totalImageSize -OLD.blockSize*OLD.blockCount
       WHERE storage.id=OLD.storageId;
@@ -841,7 +847,9 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
     // update count in storage
     UPDATE storage
       SET totalEntryCount   =totalEntryCount   +1,
-          totalHardlinkCount=totalHardlinkCount+1
+          totalEntrySize    =totalEntrySize    +NEW.fragmentSize,
+          totalHardlinkCount=totalHardlinkCount+1,
+          totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
       WHERE storage.id=NEW.storageId;
 
     // update count/size in parent directories

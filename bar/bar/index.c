@@ -9563,6 +9563,9 @@ Errors Index_addFile(IndexHandle *indexHandle,
 {
   Errors     error;
   DatabaseId entryId;
+  #ifndef NDEBUG
+    int64 n;
+  #endif /* not NDEBUG */
 
   assert(indexHandle != NULL);
   #ifdef NDEBUG
@@ -9654,6 +9657,19 @@ Errors Index_addFile(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      error = Database_getInteger64(&indexHandle->databaseHandle,
+                                    &n,
+                                    "storage",
+                                    "totalEntrySize",
+                                    "WHERE id=%lld",
+                                    Index_getDatabaseId(storageId)
+                                   );
+      assert(error == ERROR_NONE);
+fprintf(stderr,"%s, %d: n=%lld\n",__FILE__,__LINE__,n);
+      assert(n >= 0LL);
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
