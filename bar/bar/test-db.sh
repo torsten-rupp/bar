@@ -42,13 +42,13 @@ $SQLITE3 $databaseFile "INSERT INTO uuids (jobUUID) VALUES ('5678')"
 entityId1=`$SQLITE3 $databaseFile "INSERT INTO entities (jobUUID,scheduleUUID,created,type) VALUES ('0000','',$DATETIME1,1); SELECT last_insert_rowid();"`
 entityId2=`$SQLITE3 $databaseFile "INSERT INTO entities (jobUUID,scheduleUUID,created,type) VALUES ('1234','',$DATETIME1,1); SELECT last_insert_rowid();"`
 entityId3=`$SQLITE3 $databaseFile "INSERT INTO entities (jobUUID,scheduleUUID,created,type) VALUES ('5678','',$DATETIME1,1); SELECT last_insert_rowid();"`
-verify "SELECT COUNT(id) FROM entities" 4;
+verify "SELECT COUNT(id) FROM entities" 4
 
 # storage
 storageId1=`$SQLITE3 $databaseFile "INSERT INTO storage (entityId,name,created,size,state,mode) VALUES ($entityId1,'s1',$DATETIME2,4400,1,1); SELECT last_insert_rowid();"`
 storageId2=`$SQLITE3 $databaseFile "INSERT INTO storage (entityId,name,created,size,state,mode) VALUES ($entityId2,'s2',$DATETIME3,400,1,1); SELECT last_insert_rowid();"`
 storageId3=`$SQLITE3 $databaseFile "INSERT INTO storage (entityId,name,created,size,state,mode) VALUES ($entityId3,'s3',$DATETIME4,0,1,1); SELECT last_insert_rowid();"`
-verify "SELECT COUNT(id) FROM storage" 3;
+verify "SELECT COUNT(id) FROM storage" 3
 
 if false; then
 # files
@@ -72,18 +72,19 @@ $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragment
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'f2',$DATETIME3); SELECT last_insert_rowid();"`
 $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 
-verify "SELECT COUNT(id) FROM entries" $(($n1+6));
-verify "SELECT COUNT(id) FROM fileEntries" 6;
+verify "SELECT COUNT(id) FROM entries" $(($n1+6))
+verify "SELECT COUNT(id) FROM fileEntries" 6
 
-verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+6));
-verify "SELECT totalFileCount FROM storage WHERE id=$storageId1" 6;
-verify "SELECT totalFileSize FROM storage WHERE id=$storageId1" 3000;
-verify "SELECT totalFileCountNewest FROM storage WHERE id=$storageId1" 4;
-verify "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId1" 2000;
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+6))
+verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId1" $(($n2+4))
+verify "SELECT totalFileCount FROM storage WHERE id=$storageId1" 6
+verify "SELECT totalFileSize FROM storage WHERE id=$storageId1" 3000
+verify "SELECT totalFileCountNewest FROM storage WHERE id=$storageId1" 4
+verify "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId1" 2000
 
-verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+6));
-verify "SELECT totalFileCount FROM entities WHERE id=$entityId1" 6;
-verify "SELECT totalFileSize FROM entities WHERE id=$entityId1" 3000;
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+6))
+verify "SELECT totalFileCount FROM entities WHERE id=$entityId1" 6
+verify "SELECT totalFileSize FROM entities WHERE id=$entityId1" 3000
 fi
 
 # images
@@ -107,18 +108,19 @@ $SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSi
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_IMAGE,'i2',$DATETIME3); SELECT last_insert_rowid();"`
 $SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId1,$id,1000,1,500,500)"
 
-verify "SELECT COUNT(id) FROM entries" $(($n1+6));
-verify "SELECT COUNT(id) FROM imageEntries" 6;
+verify "SELECT COUNT(id) FROM entries" $(($n1+6))
+verify "SELECT COUNT(id) FROM imageEntries" 6
 
-verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+6));
-verify "SELECT totalImageCount FROM storage WHERE id=$storageId1" 6;
-verify "SELECT totalImageSize FROM storage WHERE id=$storageId1" 3000;
-verify "SELECT totalImageCountNewest FROM storage WHERE id=$storageId1" 4;
-verify "SELECT totalImageSizeNewest FROM storage WHERE id=$storageId1" 2000;
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+6))
+verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId1" $(($n2+4))
+verify "SELECT totalImageCount FROM storage WHERE id=$storageId1" 6
+verify "SELECT totalImageSize FROM storage WHERE id=$storageId1" 3000
+verify "SELECT totalImageCountNewest FROM storage WHERE id=$storageId1" 4
+verify "SELECT totalImageSizeNewest FROM storage WHERE id=$storageId1" 2000
 
-verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+6));
-verify "SELECT totalImageCount FROM entities WHERE id=$entityId1" 6;
-verify "SELECT totalImageSize FROM entities WHERE id=$entityId1" 3000;
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+6))
+verify "SELECT totalImageCount FROM entities WHERE id=$entityId1" 6
+verify "SELECT totalImageSize FROM entities WHERE id=$entityId1" 3000
 fi
 
 # directories
@@ -136,15 +138,16 @@ $SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageI
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_DIRECTORY,'d2',$DATETIME3); SELECT last_insert_rowid();"`
 $SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageId,name) VALUES ($storageId1,$id,$storageId1,'dir2')"
 
-verify "SELECT COUNT(id) FROM entries" $(($n1+3));
+verify "SELECT COUNT(id) FROM entries" $(($n1+3))
 verify "SELECT COUNT(id) FROM directoryEntries" 3;
 
-verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+3));
-verify "SELECT totalDirectoryCount FROM storage WHERE id=$storageId1" 3;
-verify "SELECT totalDirectoryCountNewest FROM storage WHERE id=$storageId1" 2;
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+3))
+verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId1" $(($n2+2))
+verify "SELECT totalDirectoryCount FROM storage WHERE id=$storageId1" 3
+verify "SELECT totalDirectoryCountNewest FROM storage WHERE id=$storageId1" 2
 
-verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+3));
-verify "SELECT totalDirectoryCount FROM entities WHERE id=$entityId1" 3;
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+3))
+verify "SELECT totalDirectoryCount FROM entities WHERE id=$entityId1" 3
 fi
 
 # links
@@ -165,12 +168,13 @@ $SQLITE3 $databaseFile "INSERT INTO linkEntries (storageId,entryId,destinationNa
 verify "SELECT COUNT(id) FROM entries" $(($n1+3));
 verify "SELECT COUNT(id) FROM linkEntries" 3;
 
-verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+3));
-verify "SELECT totalLinkCount FROM storage WHERE id=$storageId1" 3;
-verify "SELECT totalLinkCountNewest FROM storage WHERE id=$storageId1" 2;
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+3))
+verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId1" $(($n2+2))
+verify "SELECT totalLinkCount FROM storage WHERE id=$storageId1" 3
+verify "SELECT totalLinkCountNewest FROM storage WHERE id=$storageId1" 2
 
-verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+3));
-verify "SELECT totalLinkCount FROM entities WHERE id=$entityId1" 3;
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+3))
+verify "SELECT totalLinkCount FROM entities WHERE id=$entityId1" 3
 fi
 
 # hardlink
@@ -194,17 +198,18 @@ $SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,frag
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_HARDLINK,'h2',$DATETIME3); SELECT last_insert_rowid();"`
 $SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 
-verify "SELECT COUNT(id) FROM entries" $(($n1+6));
-verify "SELECT COUNT(id) FROM hardlinkEntries" 6;
+verify "SELECT COUNT(id) FROM entries" $(($n1+6))
+verify "SELECT COUNT(id) FROM hardlinkEntries" 6
 
-verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+6));
-verify "SELECT totalHardlinkCount FROM storage WHERE id=$storageId1" 6;
-verify "SELECT totalHardlinkSize FROM storage WHERE id=$storageId1" 3000;
-verify "SELECT totalHardlinkCountNewest FROM storage WHERE id=$storageId1" 4;
-verify "SELECT totalHardlinkSizeNewest FROM storage WHERE id=$storageId1" 2000;
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+6))
+verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId1" $(($n2+4))
+verify "SELECT totalHardlinkCount FROM storage WHERE id=$storageId1" 6
+verify "SELECT totalHardlinkSize FROM storage WHERE id=$storageId1" 3000
+verify "SELECT totalHardlinkCountNewest FROM storage WHERE id=$storageId1" 4
+verify "SELECT totalHardlinkSizeNewest FROM storage WHERE id=$storageId1" 2000
 
-verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+6));
-verify "SELECT totalHardlinkCount FROM entities WHERE id=$entityId1" 6;
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+6))
+verify "SELECT totalHardlinkCount FROM entities WHERE id=$entityId1" 6
 fi
 
 # special
@@ -222,15 +227,16 @@ $SQLITE3 $databaseFile "INSERT INTO specialEntries (storageId,entryId,specialTyp
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_SPECIAL,'s2',$DATETIME3); SELECT last_insert_rowid();"`
 $SQLITE3 $databaseFile "INSERT INTO specialEntries (storageId,entryId,specialType) VALUES ($storageId1,$id,2)"
 
-verify "SELECT COUNT(id) FROM entries" $(($n1+3));
-verify "SELECT COUNT(id) FROM specialEntries" 3;
+verify "SELECT COUNT(id) FROM entries" $(($n1+3))
+verify "SELECT COUNT(id) FROM specialEntries" 3
 
-verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+3));
-verify "SELECT totalSpecialCount FROM storage WHERE id=$storageId1" 3;
-verify "SELECT totalSpecialCountNewest FROM storage WHERE id=$storageId1" 2;
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId1" $(($n2+3))
+verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId1" $(($n2+2))
+verify "SELECT totalSpecialCount FROM storage WHERE id=$storageId1" 3
+verify "SELECT totalSpecialCountNewest FROM storage WHERE id=$storageId1" 2
 
-verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+3));
-verify "SELECT totalSpecialCount FROM entities WHERE id=$entityId1" 3;
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId1" $(($n3+3))
+verify "SELECT totalSpecialCount FROM entities WHERE id=$entityId1" 3
 fi
 
 echo "UUIDs:"
@@ -255,14 +261,15 @@ if true; then
 # insert+delete
 n1=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM entries"`
 n2=`$SQLITE3 $databaseFile "SELECT totalEntryCount FROM storage WHERE id=$storageId2"`
-n3=`$SQLITE3 $databaseFile "SELECT totalEntryCount FROM entities WHERE id=$entityId2"`
+n3=`$SQLITE3 $databaseFile "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId2"`
+n4=`$SQLITE3 $databaseFile "SELECT totalEntryCount FROM entities WHERE id=$entityId2"`
 
-n4=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM fileEntries"`
-n5=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM imageEntries"`
-n6=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM directoryEntries"`
-n7=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM linkEntries"`
-n8=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM hardlinkEntries"`
-n9=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM specialEntries"`
+n5=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM fileEntries"`
+n6=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM imageEntries"`
+n7=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM directoryEntries"`
+n8=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM linkEntries"`
+n9=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM hardlinkEntries"`
+n10=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM specialEntries"`
 
 id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME1); SELECT last_insert_rowid();"`
 $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id,1000,0,500);"
@@ -288,44 +295,6 @@ id12=`$SQLITE3 $databaseFile "INSERT INTO hardlinkEntries (storageId,entryId,siz
 id13=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_SPECIAL,'xs1',$DATETIME1); SELECT last_insert_rowid();"`
 id14=`$SQLITE3 $databaseFile "INSERT INTO specialEntries (storageId,entryId,specialType) VALUES ($storageId2,$id13,1); SELECT last_insert_rowid();"`
 
-verify "SELECT COUNT(id) FROM entries" $(($n1+4+1+1+1+1+1));
-verify "SELECT COUNT(id) FROM fileEntries" $(($n4+4));
-verify "SELECT COUNT(id) FROM imageEntries" $(($n5+1));
-verify "SELECT COUNT(id) FROM directoryEntries" $(($n6+1));
-verify "SELECT COUNT(id) FROM linkEntries" $(($n7+1));
-verify "SELECT COUNT(id) FROM hardlinkEntries" $(($n8+1));
-verify "SELECT COUNT(id) FROM specialEntries" $(($n9+1));
-
-verify "SELECT totalEntryCount FROM storage WHERE id=$storageId2" 9;
-
-verify "SELECT totalFileCount FROM storage WHERE id=$storageId2" 4;
-verify "SELECT totalFileSize FROM storage WHERE id=$storageId2" 2000;
-verify "SELECT totalFileCountNewest FROM storage WHERE id=$storageId2" 2;
-verify "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId2" 1000;
-
-verify "SELECT totalImageCount FROM storage WHERE id=$storageId2" 1;
-verify "SELECT totalImageSize FROM storage WHERE id=$storageId2" 500;
-verify "SELECT totalImageCountNewest FROM storage WHERE id=$storageId2" 1;
-verify "SELECT totalImageSizeNewest FROM storage WHERE id=$storageId2" 500;
-
-verify "SELECT totalDirectoryCount FROM storage WHERE id=$storageId2" 1;
-verify "SELECT totalDirectoryCountNewest FROM storage WHERE id=$storageId2" 1;
-
-verify "SELECT totalLinkCount FROM storage WHERE id=$storageId2" 1;
-verify "SELECT totalLinkCountNewest FROM storage WHERE id=$storageId2" 1;
-
-verify "SELECT totalHardlinkCount FROM storage WHERE id=$storageId2" 1;
-verify "SELECT totalHardlinkSize FROM storage WHERE id=$storageId2" 500;
-verify "SELECT totalHardlinkCountNewest FROM storage WHERE id=$storageId2" 1;
-verify "SELECT totalHardlinkSizeNewest FROM storage WHERE id=$storageId2" 500;
-
-verify "SELECT totalSpecialCount FROM storage WHERE id=$storageId2" 1;
-verify "SELECT totalSpecialCountNewest FROM storage WHERE id=$storageId2" 1;
-
-verify "SELECT totalEntryCount FROM entities WHERE id=$entityId2" 9;
-verify "SELECT totalFileCount FROM entities WHERE id=$entityId2" 4;
-verify "SELECT totalFileSize FROM entities WHERE id=$entityId2" 2000;
-
 echo "--- after insert -----------------------------------------------------"
 echo "UUIDs:"
 $SQLITE3 $databaseFile -H "SELECT id,jobUUID,totalEntityCount,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize FROM uuids"
@@ -342,33 +311,55 @@ echo "Newest entries:"
 $SQLITE3 $databaseFile -H "SELECT id,entryId,storageId,entryId,name,type,offset,size FROM entriesNewest"
 echo "----------------------------------------------------------------------"
 
+verify "SELECT COUNT(id) FROM entries" $(($n1+4+1+1+1+1+1))
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId2" $(($n2+4+1+1+1+1+1))
+verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId2" $((n3+2+1+1+1+1+1))
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId2" $(($n4+4+1+1+1+1+1))
+
+verify "SELECT COUNT(id) FROM fileEntries" $(($n5+4))
+verify "SELECT COUNT(id) FROM imageEntries" $(($n6+1))
+verify "SELECT COUNT(id) FROM directoryEntries" $(($n7+1))
+verify "SELECT COUNT(id) FROM linkEntries" $(($n8+1))
+verify "SELECT COUNT(id) FROM hardlinkEntries" $(($n9+1))
+verify "SELECT COUNT(id) FROM specialEntries" $(($n10+1))
+
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId2" 9
+
+verify "SELECT totalFileCount FROM storage WHERE id=$storageId2" 4
+verify "SELECT totalFileSize FROM storage WHERE id=$storageId2" 2000
+verify "SELECT totalFileCountNewest FROM storage WHERE id=$storageId2" 2
+verify "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId2" 1000
+
+verify "SELECT totalImageCount FROM storage WHERE id=$storageId2" 1
+verify "SELECT totalImageSize FROM storage WHERE id=$storageId2" 500
+verify "SELECT totalImageCountNewest FROM storage WHERE id=$storageId2" 1
+verify "SELECT totalImageSizeNewest FROM storage WHERE id=$storageId2" 500
+
+verify "SELECT totalDirectoryCount FROM storage WHERE id=$storageId2" 1
+verify "SELECT totalDirectoryCountNewest FROM storage WHERE id=$storageId2" 1
+
+verify "SELECT totalLinkCount FROM storage WHERE id=$storageId2" 1
+verify "SELECT totalLinkCountNewest FROM storage WHERE id=$storageId2" 1
+
+verify "SELECT totalHardlinkCount FROM storage WHERE id=$storageId2" 1
+verify "SELECT totalHardlinkSize FROM storage WHERE id=$storageId2" 500
+verify "SELECT totalHardlinkCountNewest FROM storage WHERE id=$storageId2" 1
+verify "SELECT totalHardlinkSizeNewest FROM storage WHERE id=$storageId2" 500
+
+verify "SELECT totalSpecialCount FROM storage WHERE id=$storageId2" 1
+verify "SELECT totalSpecialCountNewest FROM storage WHERE id=$storageId2" 1
+
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId2" 9
+verify "SELECT totalFileCount FROM entities WHERE id=$entityId2" 4
+verify "SELECT totalFileSize FROM entities WHERE id=$entityId2" 2000
+
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id13"
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id11"
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id9"
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id7"
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id5"
-#$SQLITE3 $databaseFile "DELETE FROM fileEntries WHERE id=$id4"
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id3"
-#$SQLITE3 $databaseFile "DELETE FROM fileEntries WHERE id=$id2"
 $SQLITE3 $databaseFile "DELETE FROM entries WHERE id=$id1"
-
-verify "SELECT COUNT(id) FROM entries" $(($n1+2));
-verify "SELECT COUNT(id) FROM fileEntries" $(($n4+2));
-verify "SELECT COUNT(id) FROM imageEntries" $n5;
-verify "SELECT COUNT(id) FROM directoryEntries" $n6;
-verify "SELECT COUNT(id) FROM linkEntries" $n7;
-verify "SELECT COUNT(id) FROM hardlinkEntries" $n8;
-verify "SELECT COUNT(id) FROM specialEntries" $n9;
-
-verify "SELECT totalEntryCount FROM storage WHERE id=$storageId2" 2;
-verify "SELECT totalFileCount FROM storage WHERE id=$storageId2" 2;
-verify "SELECT totalFileSize FROM storage WHERE id=$storageId2" 1000;
-verify "SELECT totalFileCountNewest FROM storage WHERE id=$storageId2" 2;
-verify "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId2" 1000;
-
-verify "SELECT totalEntryCount FROM entities WHERE id=$entityId2" 2;
-verify "SELECT totalFileCount FROM entities WHERE id=$entityId2" 2;
-verify "SELECT totalFileSize FROM entities WHERE id=$entityId2" 1000;
 
 echo "--- after delete -----------------------------------------------------"
 echo "UUIDs:"
@@ -379,11 +370,34 @@ $SQLITE3 $databaseFile -H "SELECT id,totalFileCount,totalFileSize,totalImageCoun
 echo "Storage:"
 $SQLITE3 $databaseFile -H "SELECT id,entityId,name,created,size,totalEntryCount,totalEntrySize,totalEntryCountNewest,totalEntrySizeNewest FROM storage"
 $SQLITE3 $databaseFile -H "SELECT id,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount FROM storage"
-#echo "Entries:"
-#$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type,timeLastChanged,offset,size FROM entries"
-#echo "Newest entries:"
-#$SQLITE3 $databaseFile -H "SELECT id,entryId,storageId,entryId,name,type,offset,size FROM entriesNewest"
+echo "Entries:"
+$SQLITE3 $databaseFile -H "SELECT id,storageId,name,type,timeLastChanged,offset,size FROM entries"
+echo "Newest entries:"
+$SQLITE3 $databaseFile -H "SELECT id,entryId,storageId,entryId,name,type,offset,size FROM entriesNewest"
 echo "----------------------------------------------------------------------"
+
+verify "SELECT COUNT(id) FROM entries" $(($n1+2));
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId2" $(($n2+2))
+verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId2" $((n3+2))
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId2" $(($n4+2))
+
+verify "SELECT COUNT(id) FROM fileEntries" $(($n5+2));
+verify "SELECT COUNT(id) FROM imageEntries" $n6;
+verify "SELECT COUNT(id) FROM directoryEntries" $n7;
+verify "SELECT COUNT(id) FROM linkEntries" $n8;
+verify "SELECT COUNT(id) FROM hardlinkEntries" $n9;
+verify "SELECT COUNT(id) FROM specialEntries" $n10;
+
+verify "SELECT totalEntryCount FROM storage WHERE id=$storageId2" 2
+verify "SELECT totalFileCount FROM storage WHERE id=$storageId2" 2
+verify "SELECT totalFileSize FROM storage WHERE id=$storageId2" 1000
+verify "SELECT totalFileCountNewest FROM storage WHERE id=$storageId2" 2
+verify "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId2" 1000
+
+verify "SELECT totalEntryCount FROM entities WHERE id=$entityId2" 2
+verify "SELECT totalFileCount FROM entities WHERE id=$entityId2" 2
+verify "SELECT totalFileSize FROM entities WHERE id=$entityId2" 1000
+
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 fi
 
