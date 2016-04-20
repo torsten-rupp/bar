@@ -491,7 +491,7 @@ CREATE TRIGGER AFTER UPDATE OF offset,size ON entries
       VALUES
         (NEW.name,NEW.offset,NEW.size);
 // insert into log values('insert newest '||NEW.name||' '||NEW.offset||' '||NEW.size);
- 
+
     // update newest info
     UPDATE entriesNewest
       SET entryId=NEW.id,
@@ -525,50 +525,20 @@ CREATE TRIGGER BEFORE DELETE ON entries
               AND size=OLD.size;
 // insert into log values('re-insert newest entryid '||(select entryId from entriesNewest where name=OLD.name));
 
-/*
-    // update count in storage
-    UPDATE storage
-      SET totalEntryCount    =totalEntryCount    -1,
-          totalEntrySize     =totalEntrySize     -OLD.size,
-          totalFileCount     =totalFileCount     -CASE OLD.type WHEN $TYPE_FILE      THEN 1        ELSE 0 END,
-          totalFileSize      =totalFileSize      -CASE OLD.type WHEN $TYPE_FILE      THEN OLD.size ELSE 0 END,
-          totalImageCount    =totalImageCount    -CASE OLD.type WHEN $TYPE_IMAGE     THEN 1        ELSE 0 END,
-          totalImageSize     =totalImageSize     -CASE OLD.type WHEN $TYPE_IMAGE     THEN OLD.size ELSE 0 END,
-          totalDirectoryCount=totalDirectoryCount-CASE OLD.type WHEN $TYPE_DIRECTORY THEN 1        ELSE 0 END,
-          totalLinkCount     =totalLinkCount     -CASE OLD.type WHEN $TYPE_LINK      THEN 1        ELSE 0 END,
-          totalHardlinkCount =totalHardlinkCount -CASE OLD.type WHEN $TYPE_HARDLINK  THEN 1        ELSE 0 END,
-          totalHardlinkSize  =totalHardlinkSize  -CASE OLD.type WHEN $TYPE_HARDLINK  THEN OLD.size ELSE 0 END,
-          totalSpecialCount  =totalSpecialCount  -CASE OLD.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
-      WHERE storage.id=OLD.storageId;
-*/
-
     // update FTS
     DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
   END;
 
 // -------------------------------------------------------
 
-/*
 CREATE TRIGGER AFTER INSERT ON entriesNewest
   BEGIN
     UPDATE storage
-      SET 
-      //totalEntryCountNewest=totalEntryCountNewest+1,
+      SET totalEntryCountNewest=totalEntryCountNewest+1,
           totalEntrySizeNewest =totalEntrySizeNewest +NEW.size
       WHERE storage.id=NEW.storageId;
 // insert into log values('insert entriesNewest '||NEW.name||' '||NEW.size);
   END;
-
-CREATE TRIGGER AFTER DELETE ON entriesNewest
-  BEGIN
-    UPDATE storage
-      SET 
-      //totalEntryCountNewest=totalEntryCountNewest-1,
-          totalEntrySizeNewest =totalEntrySizeNewest -OLD.size
-      WHERE storage.id=OLD.storageId;
-// insert into log values('delete entriesNewest '||OLD.name||' '||OLD.size);
-  END;
-*/
 
 CREATE TRIGGER AFTER UPDATE OF entryId ON entriesNewest
   BEGIN
@@ -601,6 +571,15 @@ CREATE TRIGGER AFTER UPDATE OF entryId ON entriesNewest
           totalHardlinkSizeNewest  =totalHardlinkSizeNewest  +CASE NEW.type WHEN $TYPE_HARDLINK  THEN NEW.size ELSE 0 END,
           totalSpecialCountNewest  =totalSpecialCountNewest  +CASE NEW.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
       WHERE storage.id=NEW.storageId;
+  END;
+
+CREATE TRIGGER BEFORE DELETE ON entriesNewest
+  BEGIN
+    UPDATE storage
+      SET totalEntryCountNewest=totalEntryCountNewest-1,
+          totalEntrySizeNewest =totalEntrySizeNewest -OLD.size
+      WHERE storage.id=OLD.storageId;
+// insert into log values('delete entriesNewest '||OLD.name||' '||OLD.size);
   END;
 
 //TODO
