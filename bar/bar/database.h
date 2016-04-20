@@ -593,7 +593,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Database_setInteger64
-* Purpose: isnert or update int64 value in database table
+* Purpose: insert or update int64 value in database table
 * Input  : databaseHandle - database handle
 *          value          - int64 value
 *          tableName      - table name
@@ -613,6 +613,51 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                              const char     *additional,
                              ...
                             );
+
+/***********************************************************************\
+* Name   : Database_getDouble
+* Purpose: get int64 value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : value - double value
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getDouble(DatabaseHandle *databaseHandle,
+                          double         *value,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         );
+
+/***********************************************************************\
+* Name   : Database_setDouble
+* Purpose: insert or update double value in database table
+* Input  : databaseHandle - database handle
+*          value          - double value
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setDouble(DatabaseHandle *databaseHandle,
+                          double         value,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         );
 
 /***********************************************************************\
 * Name   : Database_getString
