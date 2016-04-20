@@ -741,6 +741,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO fileEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -749,11 +750,13 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
@@ -788,6 +791,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO imageEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fileSystemType, \
@@ -798,6 +802,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %d, \
                                                                                           %llu, \
@@ -805,6 +810,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       (uint64)Database_getTableColumnListInt64(fromColumnList,"size",0LL),
                                                                                       (int)Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
@@ -841,6 +847,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO linkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           destinationName \
                                                                                          ) \
@@ -850,6 +857,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
@@ -882,6 +890,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO specialEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           specialType, \
                                                                                           major, \
@@ -890,11 +899,13 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %d, \
                                                                                           %u, \
                                                                                           %u \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       (int)Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
                                                                                       (uint)Database_getTableColumnListInt64(fromColumnList,"major",0LL),
@@ -1069,6 +1080,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO fileEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -1077,11 +1089,13 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -1118,15 +1132,18 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO linkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           destinationName \
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
@@ -1161,6 +1178,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO hardlinkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -1169,11 +1187,13 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -1210,6 +1230,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO specialEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           specialType, \
                                                                                           major, \
@@ -1218,11 +1239,13 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %d, \
                                                                                           %u, \
                                                                                           %u \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListInt(fromColumnList,"specialType",0),
                                                                                       Database_getTableColumnListUInt(fromColumnList,"major",0),
@@ -1382,6 +1405,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO fileEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -1390,11 +1414,13 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -1431,6 +1457,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO imageEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fileSystemType, \
@@ -1441,6 +1468,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %d, \
                                                                                           %llu, \
@@ -1448,6 +1476,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListInt(fromColumnList,"fileSystemType",0LL),
@@ -1486,15 +1515,18 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO linkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           destinationName \
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
@@ -1529,6 +1561,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO hardlinkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -1542,6 +1575,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -1578,6 +1612,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO specialEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           specialType, \
                                                                                           major, \
@@ -1586,11 +1621,13 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %d, \
                                                                                           %u, \
                                                                                           %u \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListInt(fromColumnList,"specialType",0LL),
                                                                                       Database_getTableColumnListUInt(fromColumnList,"major",0LL),
@@ -1878,6 +1915,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO fileEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        size, \
                                                                                                                        fragmentOffset, \
@@ -1886,11 +1924,13 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -1928,6 +1968,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Err
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO imageEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        size, \
                                                                                                                        fileSystemType, \
@@ -1938,6 +1979,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Err
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %d, \
                                                                                                                        %llu, \
@@ -1945,6 +1987,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Err
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                                                    Database_getTableColumnListInt(fromColumnList,"fileSystemType",0LL),
@@ -1984,15 +2027,18 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Err
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO linkEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        destinationName \
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %'s \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                                                   );
@@ -2028,6 +2074,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Err
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO hardlinkEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        size, \
                                                                                                                        fragmentOffset, \
@@ -2036,11 +2083,13 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Err
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -2078,6 +2127,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Err
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO specialEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        specialType, \
                                                                                                                        major, \
@@ -2086,11 +2136,13 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Err
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %d, \
                                                                                                                        %u, \
                                                                                                                        %u \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListInt(fromColumnList,"specialType",0),
                                                                                                                    Database_getTableColumnListUInt(fromColumnList,"major",0),
@@ -2257,6 +2309,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO fileEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -2265,11 +2318,13 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -2306,6 +2361,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO imageEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fileSystemType, \
@@ -2316,6 +2372,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %d, \
                                                                                           %llu, \
@@ -2323,6 +2380,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListInt(fromColumnList,"fileSystemType",0LL),
@@ -2361,15 +2419,18 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO linkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           destinationName \
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
@@ -2404,6 +2465,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO hardlinkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -2412,11 +2474,13 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -2453,6 +2517,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO specialEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           specialType, \
                                                                                           major, \
@@ -2461,11 +2526,13 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %d, \
                                                                                           %u, \
                                                                                           %u \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListInt(fromColumnList,"specialType",0LL),
                                                                                       Database_getTableColumnListUInt(fromColumnList,"major",0LL),
@@ -2647,6 +2714,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO fileEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        size, \
                                                                                                                        fragmentOffset, \
@@ -2655,11 +2723,13 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -2696,6 +2766,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO imageEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        size, \
                                                                                                                        fileSystemType, \
@@ -2706,6 +2777,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %d, \
                                                                                                                        %llu, \
@@ -2713,6 +2785,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListInt64(fromColumnList,"size",0LL),
                                                                                                                    Database_getTableColumnListInt(fromColumnList,"fileSystemType",0),
@@ -2751,15 +2824,18 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO linkEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        destinationName \
                                                                                                                       ) \
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %'s \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                                                   );
@@ -2794,6 +2870,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO hardlinkEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        size, \
                                                                                                                        fragmentOffset, \
@@ -2802,11 +2879,13 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %llu, \
                                                                                                                        %llu, \
                                                                                                                        %llu \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -2843,6 +2922,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    CALLBACK(NULL,NULL),
                                                                                                                    "INSERT INTO specialEntries \
                                                                                                                       ( \
+                                                                                                                       storageId, \
                                                                                                                        entryId, \
                                                                                                                        specialType, \
                                                                                                                        major, \
@@ -2851,11 +2931,13 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                     VALUES \
                                                                                                                       ( \
                                                                                                                        %lld, \
+                                                                                                                       %lld, \
                                                                                                                        %d, \
                                                                                                                        %u, \
                                                                                                                        %u \
                                                                                                                       ); \
                                                                                                                    ",
+                                                                                                                   toStorageId,
                                                                                                                    Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                                                    Database_getTableColumnListInt(fromColumnList,"specialType",0),
                                                                                                                    Database_getTableColumnListUInt(fromColumnList,"major",0),
@@ -3020,6 +3102,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO fileEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -3028,11 +3111,13 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -3069,6 +3154,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO imageEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fileSystemType, \
@@ -3079,6 +3165,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %d, \
                                                                                           %llu, \
@@ -3086,6 +3173,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListInt(fromColumnList,"fileSystemType",0),
@@ -3124,15 +3212,18 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO linkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           destinationName \
                                                                                          ) \
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
@@ -3167,6 +3258,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO hardlinkEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           size, \
                                                                                           fragmentOffset, \
@@ -3175,11 +3267,13 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %llu, \
                                                                                           %llu, \
                                                                                           %llu \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
@@ -3216,6 +3310,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       CALLBACK(NULL,NULL),
                                                                                       "INSERT INTO specialEntries \
                                                                                          ( \
+                                                                                          storageId, \
                                                                                           entryId, \
                                                                                           specialType, \
                                                                                           major, \
@@ -3224,11 +3319,13 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %d, \
                                                                                           %u, \
                                                                                           %u \
                                                                                          ); \
                                                                                       ",
+                                                                                      toStorageId,
                                                                                       Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListInt(fromColumnList,"specialType",0),
                                                                                       Database_getTableColumnListUInt(fromColumnList,"major",0),
@@ -9532,6 +9629,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO fileEntries \
                                 ( \
+                                 storageId, \
                                  entryId, \
                                  size, \
                                  fragmentOffset, \
@@ -9540,11 +9638,13 @@ Errors Index_addFile(IndexHandle *indexHandle,
                               VALUES \
                                 ( \
                                  %lld, \
+                                 %lld, \
                                  %llu, \
                                  %llu, \
                                  %llu\
                                 ); \
                              ",
+                             Index_getDatabaseId(storageId),
                              entryId,
                              size,
                              fragmentOffset,
@@ -9609,6 +9709,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                               VALUES \
                                 ( \
                                  %lld, \
+                                 %lld, \
                                  %d, \
                                  %'S, \
                                  %llu, \
@@ -9639,6 +9740,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO imageEntries \
                                 ( \
+                                 storageId, \
                                  entryId, \
                                  size, \
                                  fragmentOffset, \
@@ -9647,6 +9749,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                               VALUES \
                                 ( \
                                  %lld, \
+                                 %lld, \
                                  %d, \
                                  %llu, \
                                  %u, \
@@ -9654,6 +9757,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                  %llu\
                                 ); \
                              ",
+                             Index_getDatabaseId(storageId),
                              entryId,
                              fileSystemType,
                              size,
@@ -9751,8 +9855,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO directoryEntries \
                                 ( \
-                                 entryId, \
                                  storageId, \
+                                 entryId, \
                                  name \
                                 ) \
                               VALUES \
@@ -9762,8 +9866,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                  %'S\
                                 ); \
                              ",
-                             entryId,
                              Index_getDatabaseId(storageId),
+                             entryId,
                              directoryName
                             );
     if (error != ERROR_NONE)
@@ -9860,15 +9964,18 @@ Errors Index_addLink(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO linkEntries \
                                 ( \
+                                 storageId, \
                                  entryId, \
                                  destinationName, \
                                 ) \
                               VALUES \
                                 ( \
                                  %lld, \
+                                 %lld, \
                                  %'S \
                                 ); \
                              ",
+                             Index_getDatabaseId(storageId),
                              entryId,
                              destinationName
                             );
@@ -9965,6 +10072,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO hardlinkEntries \
                                 ( \
+                                 storageId, \
                                  entryId, \
                                  size, \
                                  fragmentOffset, \
@@ -9973,11 +10081,13 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                               VALUES \
                                 ( \
                                  %lld, \
+                                 %lld, \
                                  %llu, \
                                  %llu, \
                                  %llu\
                                 ); \
                              ",
+                             Index_getDatabaseId(storageId),
                              entryId,
                              size,
                              fragmentOffset,
@@ -10076,6 +10186,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                              CALLBACK(NULL,NULL),
                              "INSERT INTO specialEntries \
                                 ( \
+                                 storageId, \
                                  entryId, \
                                  specialType, \
                                  major, \
@@ -10084,11 +10195,13 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               VALUES \
                                 ( \
                                  %lld, \
+                                 %lld, \
                                  %d, \
                                  %d, \
                                  %d\
                                 ); \
                              ",
+                             Index_getDatabaseId(storageId),
                              entryId,
                              specialType,
                              major,
