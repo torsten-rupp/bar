@@ -440,8 +440,7 @@ bool abortFlag;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
 
-//TODO: single array?
-  Array               storageIdArray;                      // ids of storage archives to list/restore
+  Array               indexIdArray;                        // ids of uuid/entity/storage ids to list/restore
   Array               entryIdArray;                        // ids of entries to restore
 } ClientInfo;
 
@@ -4199,8 +4198,8 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
                                  NULL,  // jobUUID
-                                 NULL,  // storageIds
-                                 0,  // storageIdCount
+                                 NULL,  // indexIds
+                                 0,  // indexIdCount
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
@@ -5317,8 +5316,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    NULL,  // jobUUID
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
@@ -12971,8 +12970,8 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  INDEX_ID_ANY,  // uuidId
                                  INDEX_ID_ANY,  // entityId,
                                  NULL,  // jobUUID
-                                 Array_cArray(&clientInfo->storageIdArray),
-                                 Array_length(&clientInfo->storageIdArray),
+                                 Array_cArray(&clientInfo->indexIdArray),
+                                 Array_length(&clientInfo->indexIdArray),
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
@@ -13040,7 +13039,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  Array_clear(&clientInfo->storageIdArray);
+  Array_clear(&clientInfo->indexIdArray);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13085,6 +13084,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
     return;
   }
 
+  Array_append(&clientInfo->indexIdArray,&indexId);
+#if 0
   switch (Index_getType(indexId))
   {
     case INDEX_TYPE_UUID:
@@ -13121,8 +13122,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
                                        INDEX_ID_ANY,  // uuidId
                                        entityId,
                                        NULL,  // jobUUID
-                                       NULL,  // storageIds
-                                       0,  // storageIdCount
+                                       NULL,  // indexIds
+                                       0,  // indexIdCount
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
                                        NULL,  // name
@@ -13166,8 +13167,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
                                      INDEX_ID_ANY,  // uuidId
                                      indexId,
                                      NULL,  // jobUUID
-                                     NULL,  // storageIds
-                                     0,  // storageIdCount
+                                     NULL,  // indexIds
+                                     0,  // indexIdCount
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
                                      NULL,  // name
@@ -13209,6 +13210,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
       return;
       break; // not reached
   }
+#endif
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13253,6 +13255,8 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
+  Array_removeAll(&clientInfo->indexIdArray,&indexId,CALLBACK(NULL,NULL));
+#if 0
   switch (Index_getType(indexId))
   {
     case INDEX_TYPE_UUID:
@@ -13289,8 +13293,8 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
                                        INDEX_ID_ANY,  // uuidId
                                        entityId,
                                        NULL,  // jobUUID,
-                                       NULL,  // storageIds
-                                       0,  // storageIdCount
+                                       NULL,  // indexIds
+                                       0,  // indexIdCount
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
                                        NULL,  // name
@@ -13334,8 +13338,8 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
                                      INDEX_ID_ANY,  // uuidId
                                      indexId,
                                      NULL,  // jobUUID
-                                     NULL,  // storageIds
-                                     0,  // storageIdCount
+                                     NULL,  // indexIds
+                                     0,  // indexIdCount
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
                                      NULL,  // name
@@ -13377,6 +13381,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
       return;
       break; // not reached
   }
+#endif
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13417,8 +13422,8 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
   }
 
   error = Index_getStoragesInfo(indexHandle,
-                                Array_cArray(&clientInfo->storageIdArray),
-                                Array_length(&clientInfo->storageIdArray),
+                                Array_cArray(&clientInfo->indexIdArray),
+                                Array_length(&clientInfo->indexIdArray),
                                 INDEX_STATE_SET_ALL,
                                 INDEX_MODE_SET_ALL,
                                 NULL,
@@ -13456,6 +13461,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          entryId;
+  const char       *type;
   uint64           size;
 
   assert(clientInfo != NULL);
@@ -13469,11 +13475,11 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
   // list entries
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
-                                NULL, // Array_cArray(clientInfo->storageIdArray),
-                                0, // Array_length(clientInfo->storageIdArray),
+                                NULL, // Array_cArray(clientInfo->indexIdArray),
+                                0, // Array_length(clientInfo->indexIdArray),
                                 Array_cArray(&clientInfo->entryIdArray),
                                 Array_length(&clientInfo->entryIdArray),
-                                INDEX_TYPE_SET_ANY,
+                                INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL, // pattern
                                 FALSE,  // newestOnly,
                                 0,
@@ -13486,7 +13492,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
   while (Index_getNextEntry(&indexQueryHandle,
-                            &entryId, // entryId,
+                            &entryId,
                             NULL, // storageName
                             NULL, // storageDateTime
                             entryName,
@@ -13498,14 +13504,30 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                             NULL,  // groupId
                             NULL,  // permission
                             NULL,  // fragmentOrBlockOffset
-                            NULL // fragmentSizeOrBlockCount
+                            NULL  // fragmentSizeOrBlockCount
                            )
         )
   {
+    switch (Index_getType(entryId))
+    {
+      case INDEX_TYPE_FILE:      type = "FILE";      break;
+      case INDEX_TYPE_IMAGE:     type = "IMAGE";     break;
+      case INDEX_TYPE_DIRECTORY: type = "DIRECTORY"; break;
+      case INDEX_TYPE_LINK:      type = "LINK";      break;
+      case INDEX_TYPE_HARDLINK:  type = "HARDLINK";  break;
+      case INDEX_TYPE_SPECIAL:   type = "SPECIAL";   break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "entryId=%llu name=%'S size=%llu",
+                     "entryId=%llu name=%'S type=%s size=%llu",
                      entryId,
                      entryName,
+                     type,
                      size
                     );
   }
@@ -13666,7 +13688,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
                                0,  // storageIdCount
                                Array_cArray(&clientInfo->entryIdArray),
                                Array_length(&clientInfo->entryIdArray),
-                               INDEX_TYPE_SET_ANY,
+                               INDEX_TYPE_SET_ANY_ENTRY,
                                NULL,  // pattern,
                                FALSE,  // newestOnly
                                &totalEntryCount,
@@ -14038,8 +14060,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                        INDEX_ID_ANY,  // uuidId
                                        INDEX_ID_ANY,  // entityId
                                        NULL,  // jobUUID
-                                       Array_cArray(&clientInfo->storageIdArray),
-                                       Array_length(&clientInfo->storageIdArray),
+                                       Array_cArray(&clientInfo->indexIdArray),
+                                       Array_length(&clientInfo->indexIdArray),
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
                                        NULL,  // name
@@ -14075,11 +14097,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     case ENTRIES:
       error = Index_initListEntries(&indexQueryHandle,
                                     indexHandle,
-                                    NULL, // Array_cArray(clientInfo->storageIdArray),
-                                    0, // Array_length(clientInfo->storageIdArray),
+                                    NULL, // Array_cArray(clientInfo->indexIdArray),
+                                    0, // Array_length(clientInfo->indexIdArray),
                                     Array_cArray(&clientInfo->entryIdArray),
                                     Array_length(&clientInfo->entryIdArray),
-                                    INDEX_TYPE_SET_ANY,
+                                    INDEX_TYPE_SET_ANY_ENTRY,
                                     NULL, // pattern
                                     FALSE,  // newestOnly,
                                     0,
@@ -15575,8 +15597,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    NULL,  // jobUUID
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
@@ -15631,8 +15653,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    uuidId,
                                    INDEX_ID_ANY,  // entityId,
                                    NULL,  // jobUUID
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
@@ -15686,8 +15708,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_ID_ANY,  // uuidId
                                    entityId,
                                    NULL,  // jobUUID
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
@@ -15753,8 +15775,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    jobUUID,
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
@@ -15818,8 +15840,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entityId,
                                    NULL,  // jobUUID
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
@@ -15955,8 +15977,8 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY, // entity id
                                    NULL,  // jobUUID
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
@@ -16138,11 +16160,11 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
 
   // get index info
   error = Index_getEntriesInfo(indexHandle,
-                               Array_cArray(&clientInfo->storageIdArray),
-                               Array_length(&clientInfo->storageIdArray),
+                               Array_cArray(&clientInfo->indexIdArray),
+                               Array_length(&clientInfo->indexIdArray),
                                NULL,  // entryIds
                                0,  // entryIdCount
-                               indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
+                               indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
                                entryPattern,
                                newestOnly,
                                &totalEntryCount,
@@ -16577,11 +16599,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
 
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
-                                Array_cArray(&clientInfo->storageIdArray),
-                                Array_length(&clientInfo->storageIdArray),
+                                Array_cArray(&clientInfo->indexIdArray),
+                                Array_length(&clientInfo->indexIdArray),
                                 NULL,  // entryIds
                                 0,  // entryIdCount
-                                indexTypeAny ? INDEX_TYPE_SET_ANY : SET_VALUE(indexType),
+                                indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
                                 entryPatternString,
                                 newestOnly,
                                 offset,
@@ -16615,7 +16637,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                               )
         )
   {
-//TODO
     if (newestOnly)
     {
       // find/allocate index node
@@ -16681,7 +16702,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
          && !isCommandAborted(clientInfo,id)
         )
   {
-//    switch (indexNode->indexType)
     switch (Index_getType(indexNode->indexId))
     {
       case INDEX_TYPE_FILE:
@@ -17300,7 +17320,7 @@ clientInfo->abortFlag = FALSE;
   DeltaSourceList_init(&clientInfo->deltaSourceList);
   initJobOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
-  Array_init(&clientInfo->storageIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
 }
 
@@ -17423,7 +17443,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   }
 
   Array_done(&clientInfo->entryIdArray);
-  Array_done(&clientInfo->storageIdArray);
+  Array_done(&clientInfo->indexIdArray);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   doneJobOptions(&clientInfo->jobOptions);
   DeltaSourceList_done(&clientInfo->deltaSourceList);
