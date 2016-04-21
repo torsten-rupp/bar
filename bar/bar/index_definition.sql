@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS uuids(
   totalHardlinkSize   INTEGER DEFAULT 0,  // total size of hardlink entries [bytes]
   totalSpecialCount   INTEGER DEFAULT 0   // total number of file entries
 );
+CREATE INDEX ON uuids (jobUUID);
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
