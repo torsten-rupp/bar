@@ -2754,9 +2754,8 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
       if (isUpdateTriggered()) return;
 
       // update UUIDs menu items
-Dprintf.dprintf("");
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=*"),
-                               0,  // debugLevel
+                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -2771,7 +2770,6 @@ Dprintf.dprintf("");
                                      long   totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
                                      long   totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
 
-Dprintf.dprintf("");
                                      // add UUID index data
                                      final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
                                                                                            jobUUID,
@@ -4801,6 +4799,7 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               selectedIndexIdSet.set(storageIndexData.id,treeItem.getChecked());
               setStorageList(storageIndexData.id,treeItem.getChecked());
 
+              // trigger update checked
               checkedStorageEvent.trigger();
             }
           }
@@ -4823,10 +4822,10 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
               boolean   isChecked = treeItem.getChecked();
               IndexData indexData = (IndexData)treeItem.getData();
 
+              // set/reset checked
               selectedIndexIdSet.set(indexData.id,isChecked);
               if (treeItem.getExpanded())
               {
-                // check/uncheck all
                 for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
                 {
                   subTreeItem.setChecked(isChecked);
@@ -5108,8 +5107,11 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
             if (storageIndexData != null)
             {
+              // set/reset checked
               selectedIndexIdSet.set(storageIndexData.id,tabletem.getChecked());
               setStorageList(storageIndexData.id,tabletem.getChecked());
+
+              // trigger update checked
               checkedStorageEvent.trigger();
             }
           }
@@ -5130,8 +5132,11 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
             if (storageIndexData != null)
             {
+              // set/reset checked
               selectedIndexIdSet.set(storageIndexData.id,tabletem.getChecked());
               setStorageList(storageIndexData.id,tabletem.getChecked());
+
+              // trigger update checked
               checkedStorageEvent.trigger();
             }
           }
@@ -7563,13 +7568,12 @@ assert storagePattern != null;
     Button    button;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore archives"),400,300,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore archives"),600,400,new double[]{1.0,0.0},1.0);
 
     final WidgetEvent selectRestoreToEvent = new WidgetEvent();
 
     // create widgets
     final Table  widgetArchiveTable;
-    final Label  widgetTotalEntryCount;
     final Label  widgetTotal;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
@@ -7579,18 +7583,18 @@ assert storagePattern != null;
     composite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Archives:"));
-      Widgets.layout(label,0,0,TableLayoutData.NW);
+      label = Widgets.newLabel(composite,BARControl.tr("Archives")+":");
+      Widgets.layout(label,0,0,TableLayoutData.NW,0,2);
       widgetArchiveTable = Widgets.newTable(composite);
       Widgets.layout(widgetArchiveTable,1,0,TableLayoutData.NSWE,0,2,0,4);
-      Widgets.addTableColumn(widgetArchiveTable,0,"Name",   SWT.LEFT,  450,true);
-      Widgets.addTableColumn(widgetArchiveTable,1,"Entries",SWT.RIGHT,  50,true);
-      Widgets.addTableColumn(widgetArchiveTable,2,"Size",   SWT.RIGHT,  50,true);
+      Widgets.addTableColumn(widgetArchiveTable,0,BARControl.tr("Name"),   SWT.LEFT,  410,true);
+      Widgets.addTableColumn(widgetArchiveTable,1,BARControl.tr("Entries"),SWT.RIGHT,  60,true);
+      Widgets.addTableColumn(widgetArchiveTable,2,BARControl.tr("Size"),   SWT.RIGHT, 100,true);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Total:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Total")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
       widgetTotal = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetTotal,2,1,TableLayoutData.WE);
+      Widgets.layout(widgetTotal,2,1,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
@@ -7821,6 +7825,7 @@ assert storagePattern != null;
               public void run()
               {
                 widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                widgetTotal.pack();
               }
             });
           }
@@ -7858,7 +7863,7 @@ assert storagePattern != null;
                                                    BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE,
                                                    250  // max. lines
                                                   );
-      busyDialog.updateText(2,"%s",BARControl.tr("Failed entries:"));
+      busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
       new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.overwriteEntries})
       {
@@ -8483,7 +8488,7 @@ Dprintf.dprintf("");
     Button     button;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore entries"),400,300,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore entries"),600,400,new double[]{1.0,0.0},1.0);
 
     final WidgetEvent selectRestoreToEvent = new WidgetEvent();
 
@@ -8498,17 +8503,18 @@ Dprintf.dprintf("");
     composite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Entries:"));
-      Widgets.layout(label,0,0,TableLayoutData.NW);
+      label = Widgets.newLabel(composite,BARControl.tr("Entries")+":");
+      Widgets.layout(label,0,0,TableLayoutData.NW,0,2);
       widgetEntryTable = Widgets.newTable(composite);
       Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE,0,2,0,4);
-      Widgets.addTableColumn(widgetEntryTable,0,"Name",   SWT.LEFT,  450,true);
-      Widgets.addTableColumn(widgetEntryTable,1,"Size",   SWT.RIGHT,  50,true);
+      Widgets.addTableColumn(widgetEntryTable,0,BARControl.tr("Name"),SWT.LEFT,  390,true);
+      Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Type"),SWT.LEFT,  100,true);
+      Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Size"),SWT.RIGHT, 100,true);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Total:"));
+      label = Widgets.newLabel(composite,BARControl.tr("Total")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
       widgetTotal = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetTotal,2,1,TableLayoutData.WE);
+      Widgets.layout(widgetTotal,2,1,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
@@ -8690,6 +8696,7 @@ Dprintf.dprintf("");
                                        {
                                          final long   entryId = valueMap.getLong  ("entryId");
                                          final String name    = valueMap.getString("name"   );
+                                         final String type    = valueMap.getString("type"   );
                                          final long   size    = valueMap.getLong  ("size"   );
 
                                          display.syncExec(new Runnable()
@@ -8699,7 +8706,8 @@ Dprintf.dprintf("");
                                               Widgets.addTableItem(widgetEntryTable,
                                                                    entryId,
                                                                    name,
-                                                                   Long.toString(size)
+                                                                   type,
+                                                                   (size > 0L) ? Long.toString(size) : ""
                                                                   );
                                            }
                                          });
@@ -8736,6 +8744,7 @@ Dprintf.dprintf("");
               public void run()
               {
                 widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                widgetTotal.pack();
               }
             });
           }
@@ -8772,7 +8781,7 @@ Dprintf.dprintf("");
                                                    null,
                                                    BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE
                                                   );
-      busyDialog.updateText(2,"%s",BARControl.tr("Failed entries:"));
+      busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
       new BackgroundTask(busyDialog,new Object[]{entryIdSet,data.restoreToDirectory,data.overwriteEntries})
       {

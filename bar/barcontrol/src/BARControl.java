@@ -1232,8 +1232,11 @@ public class BARControl
    */
   public static void waitCursor(Shell shell)
   {
-    shell.setCursor(waitCursor);
-    waitCursorCount++;
+    if (!shell.isDisposed())
+    {
+      shell.setCursor(waitCursor);
+      waitCursorCount++;
+    }
   }
 
   /** reset wait cursor
@@ -1246,7 +1249,10 @@ public class BARControl
     waitCursorCount--;
     if (waitCursorCount <= 0)
     {
-      shell.setCursor(null);
+      if (!shell.isDisposed())
+      {
+        shell.setCursor(null);
+      }
     }
   }
 
