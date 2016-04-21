@@ -7587,9 +7587,9 @@ assert storagePattern != null;
       Widgets.layout(label,0,0,TableLayoutData.NW,0,2);
       widgetArchiveTable = Widgets.newTable(composite);
       Widgets.layout(widgetArchiveTable,1,0,TableLayoutData.NSWE,0,2,0,4);
-      Widgets.addTableColumn(widgetArchiveTable,0,BARControl.tr("Name"),   SWT.LEFT,  410,true);
-      Widgets.addTableColumn(widgetArchiveTable,1,BARControl.tr("Entries"),SWT.RIGHT,  60,true);
-      Widgets.addTableColumn(widgetArchiveTable,2,BARControl.tr("Size"),   SWT.RIGHT, 100,true);
+      Widgets.addTableColumn(widgetArchiveTable,0,BARControl.tr("Name"),   SWT.LEFT, 430,true);
+      Widgets.addTableColumn(widgetArchiveTable,1,BARControl.tr("Entries"),SWT.RIGHT, 80,true);
+      Widgets.addTableColumn(widgetArchiveTable,2,BARControl.tr("Size"),   SWT.RIGHT, 60,true);
 
       label = Widgets.newLabel(composite,BARControl.tr("Total")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
@@ -7785,12 +7785,15 @@ assert storagePattern != null;
                                          {
                                            public void run()
                                            {
-                                              Widgets.addTableItem(widgetArchiveTable,
-                                                                   storageId,
-                                                                   name,
-                                                                   Long.toString(totalEntryCount),
-                                                                   Long.toString(totalEntrySize)
-                                                                  );
+                                              if (!widgetArchiveTable.isDisposed())
+                                              {
+                                                Widgets.addTableItem(widgetArchiveTable,
+                                                                     storageId,
+                                                                     name,
+                                                                     Long.toString(totalEntryCount),
+                                                                     Units.formatByteSize(totalEntrySize)
+                                                                    );
+                                              }
                                            }
                                          });
                                        }
@@ -7824,8 +7827,11 @@ assert storagePattern != null;
             {
               public void run()
               {
-                widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
-                widgetTotal.pack();
+                if (!widgetTotal.isDisposed())
+                {
+                  widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                  widgetTotal.pack();
+                }
               }
             });
           }
@@ -7834,7 +7840,10 @@ assert storagePattern != null;
           {
             public void run()
             {
-              widgetRestore.setEnabled(!indexIdSet.isEmpty());
+              if (!widgetRestore.isDisposed())
+              {
+                widgetRestore.setEnabled(!indexIdSet.isEmpty());
+              }
             }
           });
         }
@@ -8507,9 +8516,9 @@ Dprintf.dprintf("");
       Widgets.layout(label,0,0,TableLayoutData.NW,0,2);
       widgetEntryTable = Widgets.newTable(composite);
       Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE,0,2,0,4);
-      Widgets.addTableColumn(widgetEntryTable,0,BARControl.tr("Name"),SWT.LEFT,  390,true);
-      Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Type"),SWT.LEFT,  100,true);
-      Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Size"),SWT.RIGHT, 100,true);
+      Widgets.addTableColumn(widgetEntryTable,0,BARControl.tr("Name"),SWT.LEFT, 430,true);
+      Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Type"),SWT.LEFT, 100,true);
+      Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Size"),SWT.RIGHT, 60,true);
 
       label = Widgets.newLabel(composite,BARControl.tr("Total")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
@@ -8703,12 +8712,15 @@ Dprintf.dprintf("");
                                          {
                                            public void run()
                                            {
-                                              Widgets.addTableItem(widgetEntryTable,
-                                                                   entryId,
-                                                                   name,
-                                                                   type,
-                                                                   (size > 0L) ? Long.toString(size) : ""
-                                                                  );
+                                              if (!widgetEntryTable.isDisposed())
+                                              {
+                                                Widgets.addTableItem(widgetEntryTable,
+                                                                     entryId,
+                                                                     name,
+                                                                     type,
+                                                                     (size > 0L) ? Units.formatByteSize(size) : ""
+                                                                    );
+                                              }
                                            }
                                          });
                                        }
@@ -8743,8 +8755,11 @@ Dprintf.dprintf("");
             {
               public void run()
               {
-                widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
-                widgetTotal.pack();
+                if (!widgetTotal.isDisposed())
+                {
+                  widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                  widgetTotal.pack();
+                }
               }
             });
           }
@@ -8753,7 +8768,11 @@ Dprintf.dprintf("");
           {
             public void run()
             {
-              widgetRestore.setEnabled(!entryIdSet.isEmpty());
+              if (!widgetRestore.isDisposed())
+              {
+                widgetRestore.setEnabled(!entryIdSet.isEmpty());
+              }
+
             }
           });
         }

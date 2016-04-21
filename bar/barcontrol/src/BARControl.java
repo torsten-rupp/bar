@@ -1235,8 +1235,8 @@ public class BARControl
     if (!shell.isDisposed())
     {
       shell.setCursor(waitCursor);
-      waitCursorCount++;
     }
+    waitCursorCount++;
   }
 
   /** reset wait cursor
