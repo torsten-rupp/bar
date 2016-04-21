@@ -4,9 +4,10 @@ SQLITE3=./bar-sqlite3
 make $SQLITE3 > /dev/null
 
 databaseFile=bar-index.db
-testBase=1
-testDelete=1
-testAssign=1
+testBase=0
+testDelete=0
+testAssign=0
+testDirectory=1
 
 DATETIME1=`date -d "2016-01-01 01:01:01" +%s`
 DATETIME2=`date -d "2016-02-02 02:02:02" +%s`
@@ -404,7 +405,7 @@ if test $testAssign -eq 1; then
   storageTotalFileCountNewest=`$SQLITE3 $databaseFile "SELECT totalFileCountNewest FROM storage WHERE id=$storageId2"`
   storageTotalFileSizeNewest=`$SQLITE3 $databaseFile "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId2"`
 
-  storageTotalImageCount=`$SQLITE3 $databaseFile "SELECT totalImageCountlEntryCount FROM storage WHERE id=$storageId2"`
+  storageTotalImageCount=`$SQLITE3 $databaseFile "SELECT totalImageCount FROM storage WHERE id=$storageId2"`
   storageTotalImageSize=`$SQLITE3 $databaseFile "SELECT totalImageSize FROM storage WHERE id=$storageId2"`
   storageTotalImageCountNewest=`$SQLITE3 $databaseFile "SELECT totalImageCountNewest FROM storage WHERE id=$storageId2"`
   storageTotalImageSizeNewest=`$SQLITE3 $databaseFile "SELECT totalImageSizeNewest FROM storage WHERE id=$storageId2"`
@@ -540,6 +541,67 @@ if test $testAssign -eq 1; then
   verify "SELECT totalEntryCount FROM entities WHERE id=$entityId3" 4
   verify "SELECT totalFileCount FROM entities WHERE id=$entityId3" 2
   verify "SELECT totalFileSize FROM entities WHERE id=$entityId3" 1000
+fi
+
+if test $testDirectory -eq 1; then
+  # test directory
+  entriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM entries"`
+  storageTotalEntryCount=`$SQLITE3 $databaseFile "SELECT totalEntryCount FROM storage WHERE id=$storageId2"`
+  storageTotalEntryCountNewest=`$SQLITE3 $databaseFile "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId2"`
+  entitiesTotalEntryCount=`$SQLITE3 $databaseFile "SELECT totalEntryCount FROM entities WHERE id=$entityId2"`
+
+  storageTotalFileCount=`$SQLITE3 $databaseFile "SELECT totalFileCount FROM storage WHERE id=$storageId2"`
+  storageTotalFileSize=`$SQLITE3 $databaseFile "SELECT totalFileSize FROM storage WHERE id=$storageId2"`
+  storageTotalFileCountNewest=`$SQLITE3 $databaseFile "SELECT totalFileCountNewest FROM storage WHERE id=$storageId2"`
+  storageTotalFileSizeNewest=`$SQLITE3 $databaseFile "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId2"`
+
+  storageTotalImageCount=`$SQLITE3 $databaseFile "SELECT totalImageCount FROM storage WHERE id=$storageId2"`
+  storageTotalImageSize=`$SQLITE3 $databaseFile "SELECT totalImageSize FROM storage WHERE id=$storageId2"`
+  storageTotalImageCountNewest=`$SQLITE3 $databaseFile "SELECT totalImageCountNewest FROM storage WHERE id=$storageId2"`
+  storageTotalImageSizeNewest=`$SQLITE3 $databaseFile "SELECT totalImageSizeNewest FROM storage WHERE id=$storageId2"`
+
+  storageTotalDirectoryCount=`$SQLITE3 $databaseFile "SELECT totalDirectoryCount FROM storage WHERE id=$storageId2"`
+  storageTotalDirectoryCountNewest=`$SQLITE3 $databaseFile "SELECT totalDirectoryCountNewest FROM storage WHERE id=$storageId2"`
+
+  storageTotalLinkCount=`$SQLITE3 $databaseFile "SELECT totalLinkCount FROM storage WHERE id=$storageId2"`
+  storageTotalLinkCountNewest=`$SQLITE3 $databaseFile "SELECT totalLinkCountNewest FROM storage WHERE id=$storageId2"`
+
+  storageTotalHardlinkCount=`$SQLITE3 $databaseFile "SELECT totalHardlinkCount FROM storage WHERE id=$storageId2"`
+  storageTotalHardlinkSize=`$SQLITE3 $databaseFile "SELECT totalHardlinkSize FROM storage WHERE id=$storageId2"`
+  storageTotalHardlinkCountNewest=`$SQLITE3 $databaseFile "SELECT totalHardlinkCountNewest FROM storage WHERE id=$storageId2"`
+  storageTotalHardlinkSizeNewest=`$SQLITE3 $databaseFile "SELECT totalHardlinkSizeNewest FROM storage WHERE id=$storageId2"`
+
+  storageTotalSpecialCount=`$SQLITE3 $databaseFile "SELECT totalSpecialCount FROM storage WHERE id=$storageId2"`
+  storageTotalSpecialCountNewest=`$SQLITE3 $databaseFile "SELECT totalSpecialCountNewest FROM storage WHERE id=$storageId2"`
+
+  fileEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM fileEntries"`
+  imageEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM imageEntries"`
+  directoryEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM directoryEntries"`
+  linkEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM linkEntries"`
+  hardlinkEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM hardlinkEntries"`
+  specialEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM specialEntries"`
+
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_DIRECTORY,'/d1',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageId,name) VALUES ($storageId1,$id,$storageId1,'/d1')"
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_DIRECTORY,'/d1/d2',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageId,name) VALUES ($storageId1,$id,$storageId1,'/d1/d2')"
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_DIRECTORY,'/d1/d2/d3',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO directoryEntries (storageId,entryId,storageId,name) VALUES ($storageId1,$id,$storageId1,'/d1/d2/d3')"
+
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'/d1/f1',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'/d1/f1',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
+
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'/d1/d2/f2',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'/d1/d2/f2',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
+
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'/d1/d2/d3/f3',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,0,500)"
+  id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'/d1/d2/d3/f3',$DATETIME1); SELECT last_insert_rowid();"`
+  $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId1,$id,1000,500,500)"
 fi
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
