@@ -1524,6 +1524,14 @@ void Database_doneAll(void)
                                         );
   assert(sqliteResult == SQLITE_OK);
 
+  // enable recursive triggers
+  error = sqliteExecute(databaseHandle->handle,
+                        "PRAGMA recursive_triggers=ON",
+                        CALLBACK(NULL,NULL),
+                        databaseHandle->timeout
+                       );
+  assert(error == ERROR_NONE);
+
   #ifdef DATABASE_DEBUG
     fprintf(stderr,"Database debug: open '%s'\n",fileName);
   #endif

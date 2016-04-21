@@ -449,6 +449,12 @@ int main(int argc, const char *argv[])
                               &errorMessage
                              );
   assert(sqliteResult == SQLITE_OK);
+  sqliteResult = sqlite3_exec(handle,
+                              "PRAGMA recursive_triggers=ON",
+                              CALLBACK(NULL,NULL),
+                              &errorMessage
+                             );
+  assert(sqliteResult == SQLITE_OK);
   if (foreignKeys)
   {
     sqliteResult = sqlite3_exec(handle,
