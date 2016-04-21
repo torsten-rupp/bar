@@ -138,15 +138,26 @@ typedef enum
 } IndexTypes;
 
 #define INDEX_TYPE_MIN INDEX_TYPE_UUID
-#define INDEX_TYPE_MAX INDEX_TYPE_SPECIAL
+#define INDEX_TYPE_MAX INDEX_TYPE_HISTORY
 
 #define INDEX_TYPE_SET_NONE 0
 #define INDEX_TYPE_SET_ANY \
-  (  SET_VALUE(INDEX_TYPE_STORAGE) \
+  (  SET_VALUE(INDEX_TYPE_UUID) \
    | SET_VALUE(INDEX_TYPE_ENTITY) \
-   | SET_VALUE(INDEX_TYPE_DIRECTORY) \
+   | SET_VALUE(INDEX_TYPE_STORAGE) \
+   | SET_VALUE(INDEX_TYPE_ENTITY) \
    | SET_VALUE(INDEX_TYPE_FILE) \
    | SET_VALUE(INDEX_TYPE_IMAGE) \
+   | SET_VALUE(INDEX_TYPE_DIRECTORY) \
+   | SET_VALUE(INDEX_TYPE_LINK) \
+   | SET_VALUE(INDEX_TYPE_HARDLINK) \
+   | SET_VALUE(INDEX_TYPE_SPECIAL) \
+   | SET_VALUE(INDEX_TYPE_HISTORY) \
+  )
+#define INDEX_TYPE_SET_ANY_ENTRY \
+  (  SET_VALUE(INDEX_TYPE_FILE) \
+   | SET_VALUE(INDEX_TYPE_IMAGE) \
+   | SET_VALUE(INDEX_TYPE_DIRECTORY) \
    | SET_VALUE(INDEX_TYPE_LINK) \
    | SET_VALUE(INDEX_TYPE_HARDLINK) \
    | SET_VALUE(INDEX_TYPE_SPECIAL) \
@@ -312,10 +323,10 @@ void Index_done(void);
 
 /***********************************************************************\
 * Name   : Index_isAvailable
-* Purpose: deinitialize index database
+* Purpose: check if index database is available
 * Input  : -
 * Output : -
-* Return : -
+* Return : TRUE iff index database is available
 * Notes  : -
 \***********************************************************************/
 
@@ -1067,8 +1078,8 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 * Purpose: get entries info
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          storageIds       - storage ids or NULL
-*          storageIdCount   - storage id count or 0
+*          indexIds         - uuid/entity/storage ids or NULL
+*          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
@@ -1081,8 +1092,8 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
-                            const IndexId storageIds[],
-                            uint          storageIdCount,
+                            const IndexId indexIds[],
+                            uint          indexIdCount,
                             const IndexId entryIds[],
                             uint          entryIdCount,
                             IndexTypeSet  indexTypeSet,
@@ -1097,8 +1108,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 * Purpose: list entries
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          storageIds       - storage ids or NULL
-*          storageIdCount   - storage id count or 0
+*          indexIds         - uuid/entity/storage ids or NULL
+*          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
@@ -1114,8 +1125,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
 Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
-                             const IndexId    storageIds[],
-                             uint             storageIdCount,
+                             const IndexId    indexIds[],
+                             uint             indexIdCount,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
