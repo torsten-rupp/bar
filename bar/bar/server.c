@@ -14970,6 +14970,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     entityId = INDEX_ID_ANY;
   }
+  else if (stringEquals(StringMap_getTextCString(argumentMap,"entityId","NONE"),"NONE"))
+  {
+    entityId = INDEX_ID_ENTITY_NONE;
+  }
   else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_ANY))
   {
     entityId = (IndexId)n;

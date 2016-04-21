@@ -37,6 +37,22 @@
 // max. limit value
 #define INDEX_UNLIMITED 9223372036854775807LL
 
+// special index ids
+#define INDEX_ID_NONE  0LL
+#define INDEX_ID_ANY  -1LL
+
+#define INDEX_ID_UUID_NONE     INDEX_ID_UUID     (DATABASE_ID_NONE)
+#define INDEX_ID_ENTITY_NONE   INDEX_ID_ENTITY   (DATABASE_ID_NONE)
+#define INDEX_ID_STORAGE_NONE  INDEX_ID_STORAGE  (DATABASE_ID_NONE)
+#define INDEX_ID_ENTRY_NONE    INDEX_ID_ENTRY    (DATABASE_ID_NONE)
+#define INDEX_ID_FILE_NONE     INDEX_ID_FILE     (DATABASE_ID_NONE)
+#define INDEX_ID_IMAGE_NONE    INDEX_ID_IMAGE    (DATABASE_ID_NONE)
+#define INDEX_ID_DIRECTORY_NONEINDEX_ID_DIRECTORY(DATABASE_ID_NONE)
+#define INDEX_ID_LINK_NONE     INDEX_ID_LINK     (DATABASE_ID_NONE)
+#define INDEX_ID_HARDLINK_NONE INDEX_ID_HARDLINK (DATABASE_ID_NONE)
+#define INDEX_ID_SPECIAL_NONE  INDEX_ID_SPECIAL  (DATABASE_ID_NONE)
+#define INDEX_ID_HISTORY_NONE  INDEX_ID_HISTORY  (DATABASE_ID_NONE)
+
 /***************************** Datatypes *******************************/
 
 // index states
@@ -152,10 +168,6 @@ typedef union
   IndexId data;
 } __IndexId;
 
-// special index ids
-#define INDEX_ID_NONE  0LL
-#define INDEX_ID_ANY  -1LL
-
 /***************************** Variables *******************************/
 extern const char *__databaseFileName;
 
@@ -168,8 +180,22 @@ extern const char *__databaseFileName;
 #define INDEX_MODE_SET(indexMode) (1U << indexMode)
 
 // get type, database id from index id
-#define INDEX_TYPE_(indexId)             (((__IndexId)(indexId)).type                   )
-#define INDEX_DATABASE_ID_(indexId)      (((__IndexId)(indexId)).databaseId             )
+#define INDEX_TYPE_(indexId)        (((__IndexId)(indexId)).type      )
+#define INDEX_DATABASE_ID_(indexId) (((__IndexId)(indexId)).databaseId)
+
+// create index id
+#define INDEX_ID_(indexType,databaseId) ((IndexId)((__IndexId){{indexType,databaseId}}).data)
+#define INDEX_ID_UUID(databaseId)      INDEX_ID_(INDEX_TYPE_UUID     ,databaseId)
+#define INDEX_ID_ENTITY(databaseId)    INDEX_ID_(INDEX_TYPE_ENTITY   ,databaseId)
+#define INDEX_ID_STORAGE(databaseId)   INDEX_ID_(INDEX_TYPE_STORAGE  ,databaseId)
+#define INDEX_ID_ENTRY(databaseId)     INDEX_ID_(INDEX_TYPE_ENTRY    ,databaseId)
+#define INDEX_ID_FILE(databaseId)      INDEX_ID_(INDEX_TYPE_FILE     ,databaseId)
+#define INDEX_ID_IMAGE(databaseId)     INDEX_ID_(INDEX_TYPE_IMAGE    ,databaseId)
+#define INDEX_ID_DIRECTORY(databaseId) INDEX_ID_(INDEX_TYPE_DIRECTORY,databaseId)
+#define INDEX_ID_LINK(databaseId)      INDEX_ID_(INDEX_TYPE_LINK     ,databaseId)
+#define INDEX_ID_HARDLINK(databaseId)  INDEX_ID_(INDEX_TYPE_HARDLINK ,databaseId)
+#define INDEX_ID_SPECIAL(databaseId)   INDEX_ID_(INDEX_TYPE_SPECIAL  ,databaseId)
+#define INDEX_ID_HISTORY(databaseId)   INDEX_ID_(INDEX_TYPE_HISTORY  ,databaseId)
 
 #ifndef NDEBUG
   #define Index_open(...) __Index_open(__FILE__,__LINE__, ## __VA_ARGS__)

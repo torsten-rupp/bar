@@ -94,9 +94,6 @@ LOCAL bool   quitFlag;
 
 /****************************** Macros *********************************/
 
-// create index id
-#define INDEX_ID_(type,databaseId) ((IndexId)((__IndexId){{type,databaseId}}).data)
-
 #ifndef NDEBUG
   #define createIndex(...) __createIndex(__FILE__,__LINE__, ## __VA_ARGS__)
   #define openIndex(...)  __openIndex(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -2186,7 +2183,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                UNUSED_VARIABLE(userData);
 
                                if (   Index_findByStorageId(oldIndexHandle,
-                                                            INDEX_ID_(INDEX_TYPE_STORAGE,Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
+                                                            INDEX_ID_STORAGE(Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             NULL,  // jobUUID
                                                             NULL,  // scheduleUUDI
                                                             NULL,  // uuidId
@@ -2980,7 +2977,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                UNUSED_VARIABLE(userData);
 
                                if (   Index_findByStorageId(oldIndexHandle,
-                                                            INDEX_ID_(INDEX_TYPE_STORAGE,Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
+                                                            INDEX_ID_STORAGE(Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             jobUUID,
                                                             NULL,  // scheduleUUDI
                                                             NULL,  // uuidId
@@ -5612,8 +5609,8 @@ UNUSED_VARIABLE(jobUUID);
     return FALSE;
   }
 
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
-  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
+  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
 
   // free resources
   String_delete(filter);
@@ -5696,8 +5693,8 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
     return FALSE;
   }
 
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
-  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
+  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
 
   return result;
 }
@@ -5784,9 +5781,9 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
                                            );
         if (foundFlag)
         {
-          if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
-          if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
-          if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
+          if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
+          if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
+          if (storageId != NULL) (*storageId) = INDEX_ID_STORAGE(storageId_);
         }
       }
     }
@@ -5889,9 +5886,9 @@ bool Index_findByState(IndexHandle   *indexHandle,
     return FALSE;
   }
 
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
-  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
-  if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
+  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
+  if (storageId != NULL) (*storageId) = INDEX_ID_STORAGE(storageId_);
 
   // free resources
   String_delete(indexStateSetString);
@@ -6206,7 +6203,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (historyId != NULL) (*historyId) = INDEX_ID_(INDEX_TYPE_HISTORY,databaseId);
+  if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(databaseId);
 
   return ERROR_NONE;
 }
@@ -6280,7 +6277,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
     return error;
   }
 
-  if (historyId != NULL) (*historyId) = INDEX_ID_(INDEX_TYPE_HISTORY,Database_getLastRowId(&indexHandle->databaseHandle));
+  if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
 }
@@ -6406,7 +6403,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,databaseId);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(databaseId);
 
   return TRUE;
 }
@@ -6458,7 +6455,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
     return error;
   }
 
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,Database_getLastRowId(&indexHandle->databaseHandle));
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
 }
@@ -6507,7 +6504,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
            && (error == ERROR_NONE)
           )
     {
-      error = Index_deleteEntity(indexHandle,INDEX_ID_(INDEX_TYPE_ENTITY,entityId));
+      error = Index_deleteEntity(indexHandle,INDEX_ID_ENTITY(entityId));
     }
 
     Database_finalize(&databaseQueryHandle);
@@ -6636,8 +6633,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_ENTITY,uuidId_);
-  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_ENTITY(uuidId_);
+  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
 
   return TRUE;
 }
@@ -6722,7 +6719,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     return error;
   }
 
-  (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,Database_getLastRowId(&indexHandle->databaseHandle));
+  (*entityId) = INDEX_ID_ENTITY(Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
 }
@@ -6771,7 +6768,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
            && (error == ERROR_NONE)
           )
     {
-      error = Index_deleteStorage(indexHandle,INDEX_ID_(INDEX_TYPE_STORAGE,storageId));
+      error = Index_deleteStorage(indexHandle,INDEX_ID_STORAGE(storageId));
     }
     Database_finalize(&databaseQueryHandle);
     if (error != ERROR_NONE)
@@ -7044,7 +7041,6 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   filter              = String_newCString("1");
   indexStateSetString = String_new();
   indexModeSetString  = String_new();
-
   filterAppend(filter,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
   filterAppend(filter,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filter,!String_isEmpty(storageIdsString),"AND","storage.id IN (%S)",storageIdsString);
@@ -7169,9 +7165,9 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_(INDEX_TYPE_UUID,uuidId_);
-  if (entityId != NULL) (*entityId) = INDEX_ID_(INDEX_TYPE_ENTITY,entityId_);
-  if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
+  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
+  if (storageId != NULL) (*storageId) = INDEX_ID_STORAGE(storageId_);
 
   return TRUE;
 }
@@ -7234,7 +7230,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       return error;
     }
 
-    (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,Database_getLastRowId(&indexHandle->databaseHandle));
+    (*storageId) = INDEX_ID_STORAGE(Database_getLastRowId(&indexHandle->databaseHandle));
 
     return ERROR_NONE;
   });
@@ -8468,7 +8464,7 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_FILE,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_FILE(databaseId);
 
   return TRUE;
 }
@@ -8669,7 +8665,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_IMAGE,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_IMAGE(databaseId);
 
   return TRUE;
 }
@@ -8871,7 +8867,7 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_DIRECTORY,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_DIRECTORY(databaseId);
 
   return TRUE;
 }
@@ -9075,7 +9071,7 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_LINK,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_LINK(databaseId);
 
   return TRUE;
 }
@@ -9284,7 +9280,7 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_HARDLINK,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_HARDLINK(databaseId);
 
   return TRUE;
 }
@@ -9484,7 +9480,7 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (indexId != NULL) (*indexId) = INDEX_ID_(INDEX_TYPE_SPECIAL,databaseId);
+  if (indexId != NULL) (*indexId) = INDEX_ID_SPECIAL(databaseId);
 
   return TRUE;
 }
@@ -9667,7 +9663,15 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     Index_getDatabaseId(storageId)
                                    );
       assert(error == ERROR_NONE);
-fprintf(stderr,"%s, %d: n=%lld\n",__FILE__,__LINE__,n);
+      assert(n >= 0LL);
+      error = Database_getInteger64(&indexHandle->databaseHandle,
+                                    &n,
+                                    "storage",
+                                    "totalFileSize",
+                                    "WHERE id=%lld",
+                                    Index_getDatabaseId(storageId)
+                                   );
+      assert(error == ERROR_NONE);
       assert(n >= 0LL);
     #endif /* not NDEBUG */
 
@@ -9689,6 +9693,9 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 {
   Errors     error;
   DatabaseId entryId;
+  #ifndef NDEBUG
+    int64 n;
+  #endif /* not NDEBUG */
 
   assert(indexHandle != NULL);
   #ifdef NDEBUG
@@ -9785,6 +9792,27 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      error = Database_getInteger64(&indexHandle->databaseHandle,
+                                    &n,
+                                    "storage",
+                                    "totalEntrySize",
+                                    "WHERE id=%lld",
+                                    Index_getDatabaseId(storageId)
+                                   );
+      assert(error == ERROR_NONE);
+      assert(n >= 0LL);
+      error = Database_getInteger64(&indexHandle->databaseHandle,
+                                    &n,
+                                    "storage",
+                                    "totalImageSize",
+                                    "WHERE id=%lld",
+                                    Index_getDatabaseId(storageId)
+                                   );
+      assert(error == ERROR_NONE);
+      assert(n >= 0LL);
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
@@ -10022,6 +10050,9 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 {
   Errors     error;
   DatabaseId entryId;
+  #ifndef NDEBUG
+    int64 n;
+  #endif /* not NDEBUG */
 
   assert(indexHandle != NULL);
   #ifdef NDEBUG
@@ -10113,6 +10144,27 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      error = Database_getInteger64(&indexHandle->databaseHandle,
+                                    &n,
+                                    "storage",
+                                    "totalEntrySize",
+                                    "WHERE id=%lld",
+                                    Index_getDatabaseId(storageId)
+                                   );
+      assert(error == ERROR_NONE);
+      assert(n >= 0LL);
+      error = Database_getInteger64(&indexHandle->databaseHandle,
+                                    &n,
+                                    "storage",
+                                    "totalHardlinkSize",
+                                    "WHERE id=%lld",
+                                    Index_getDatabaseId(storageId)
+                                   );
+      assert(error == ERROR_NONE);
+      assert(n >= 0LL);
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });

@@ -2589,7 +2589,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       try
       {
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=%d limit=%d",
-                                                     (storageEntityState != EntityStates.NONE) ? "*" : "0",
+                                                     (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                      storagePattern,
                                                      storageIndexStateSet.nameList("|"),
                                                      "*",
@@ -5576,8 +5576,9 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
+
             IndexStateSet storageIndexStateSet;
-            EntityStates storageEntityState;
+            EntityStates  storageEntityState;
             switch (widget.getSelectionIndex())
             {
               case 0:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
