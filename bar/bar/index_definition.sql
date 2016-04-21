@@ -436,7 +436,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
           totalHardlinkCountNewest =totalHardlinkCountNewest -CASE OLD.type WHEN $TYPE_HARDLINK  THEN 1        ELSE 0 END,
           totalHardlinkSizeNewest  =totalHardlinkSizeNewest  -CASE OLD.type WHEN $TYPE_HARDLINK  THEN OLD.size ELSE 0 END,
           totalSpecialCountNewest  =totalSpecialCountNewest  -CASE OLD.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
-      WHERE     EXISTS(SELECT entryId FROM entriesNewest WHERE entryId=OLD.id)
+      WHERE     EXISTS(SELECT id FROM entriesNewest WHERE entryId=OLD.id)
             AND storage.id=OLD.storageId;
     UPDATE storage
       SET totalEntryCountNewest    =totalEntryCountNewest    +1,
@@ -450,7 +450,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
           totalHardlinkCountNewest =totalHardlinkCountNewest +CASE NEW.type WHEN $TYPE_HARDLINK  THEN 1        ELSE 0 END,
           totalHardlinkSizeNewest  =totalHardlinkSizeNewest  +CASE NEW.type WHEN $TYPE_HARDLINK  THEN NEW.size ELSE 0 END,
           totalSpecialCountNewest  =totalSpecialCountNewest  +CASE NEW.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
-      WHERE     EXISTS (SELECT entryId FROM entriesNewest WHERE entryId=NEW.id)
+      WHERE     EXISTS(SELECT id FROM entriesNewest WHERE entryId=NEW.id)
             AND storage.id=NEW.storageId;
 
     UPDATE entriesNewest
@@ -636,8 +636,15 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
     UPDATE directoryEntries
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.fragmentSize
-      WHERE     directoryEntries.storageId=NEW.storageId
-            AND directoryEntries.name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
+      WHERE     storageId=NEW.storageId
+            AND name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
+    UPDATE directoryEntries
+      SET totalEntryCountNewest=totalEntryCountNewest+1,
+          totalEntrySizeNewest =totalEntrySizeNewest +NEW.fragmentSize
+      WHERE     EXISTS(SELECT id FROM entriesNewest WHERE entryId=NEW.entryId)
+            AND storageId=NEW.storageId
+            AND name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
+ insert into log values('insert '||(SELECT name FROM entries WHERE id=NEW.entryId)||' -> '||DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId)));
   END;
 
 CREATE TRIGGER BEFORE DELETE ON fileEntries
@@ -772,6 +779,17 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON directoryEntries
     UPDATE storage
       SET totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
+  END;
+
+CREATE TRIGGER AFTER UPDATE OF totalEntryCount,totalEntrySize ON directoryEntries
+  BEGIN
+    // update count/size in parent directories
+    UPDATE directoryEntries
+      SET totalEntryCount=totalEntryCount+1,
+          totalEntrySize =totalEntrySize +NEW.totalEntrySize
+      WHERE     directoryEntries.storageId=NEW.storageId
+            AND directoryEntries.name=DIRNAME(NEW.name);
+ insert into log values('dir up entry id '||NEW.name||' -> '||DIRNAME(NEW.name));
   END;
 
 // --- links -----------------------------------------------------------
