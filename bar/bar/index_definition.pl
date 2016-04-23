@@ -129,7 +129,6 @@ while ($line=<STDIN>)
       $databaseTableDefinitionName=$1;
       $databaseTableDefinition=$line;
     }
-#CREATE INDEX IF NOT EXISTS filesIndex1 ON files (storageId,name);
     elsif ($line =~ /\s*CREATE\s+INDEX\s+ON\s+(\S+)\s+(.*?)$/)
     {
       # create anonymous index
@@ -155,7 +154,6 @@ while ($line=<STDIN>)
         $databaseTableDefinition=$databaseTableDefinition."CREATE INDEX $index ON $1 $2\\\n";
       }
     }
-#CREATE TRIGGER AFTER INSERT ON files
     elsif ($line =~ /\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
     {
       # create anonymous trigger
