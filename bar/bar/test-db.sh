@@ -4,9 +4,9 @@ SQLITE3=./bar-sqlite3
 make $SQLITE3 > /dev/null
 
 databaseFile=bar-index.db
-testBase=0
-testDelete=0
-testAssign=0
+testBase=1
+testDelete=1
+testAssign=1
 testDirectory=1
 
 DATETIME1=`date -d "2016-01-01 01:01:01" +%s`

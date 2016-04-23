@@ -561,8 +561,17 @@ CREATE TRIGGER AFTER INSERT ON entriesNewest
   BEGIN
  insert into log values('trigger entriesNewest INSERT: '||'name='||NEW.name||' size='||NEW.size);
     UPDATE storage
-      SET totalEntryCountNewest=totalEntryCountNewest+1,
-          totalEntrySizeNewest =totalEntrySizeNewest +NEW.size
+      SET totalEntryCountNewest    =totalEntryCountNewest    +1,
+          totalEntrySizeNewest     =totalEntrySizeNewest     +NEW.size,
+          totalFileCountNewest     =totalFileCountNewest     +CASE NEW.type WHEN $TYPE_FILE      THEN 1        ELSE 0 END,
+          totalFileSizeNewest      =totalFileSizeNewest      +CASE NEW.type WHEN $TYPE_FILE      THEN NEW.size ELSE 0 END,
+          totalImageCountNewest    =totalImageCountNewest    +CASE NEW.type WHEN $TYPE_IMAGE     THEN 1        ELSE 0 END,
+          totalImageSizeNewest     =totalImageSizeNewest     +CASE NEW.type WHEN $TYPE_IMAGE     THEN NEW.size ELSE 0 END,
+          totalDirectoryCountNewest=totalDirectoryCountNewest+CASE NEW.type WHEN $TYPE_DIRECTORY THEN 1        ELSE 0 END,
+          totalLinkCountNewest     =totalLinkCountNewest     +CASE NEW.type WHEN $TYPE_LINK      THEN 1        ELSE 0 END,
+          totalHardlinkCountNewest =totalHardlinkCountNewest +CASE NEW.type WHEN $TYPE_HARDLINK  THEN 1        ELSE 0 END,
+          totalHardlinkSizeNewest  =totalHardlinkSizeNewest  +CASE NEW.type WHEN $TYPE_HARDLINK  THEN NEW.size ELSE 0 END,
+          totalSpecialCountNewest  =totalSpecialCountNewest  +CASE NEW.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
       WHERE storage.id=NEW.storageId;
 
     // update count/size in parent directories
@@ -626,8 +635,17 @@ CREATE TRIGGER AFTER UPDATE OF entryId ON entriesNewest
 CREATE TRIGGER BEFORE DELETE ON entriesNewest
   BEGIN
     UPDATE storage
-      SET totalEntryCountNewest=totalEntryCountNewest-1,
-          totalEntrySizeNewest =totalEntrySizeNewest -OLD.size
+      SET totalEntryCountNewest    =totalEntryCountNewest    -1,
+          totalEntrySizeNewest     =totalEntrySizeNewest     -OLD.size,
+          totalFileCountNewest     =totalFileCountNewest     -CASE OLD.type WHEN $TYPE_FILE      THEN 1        ELSE 0 END,
+          totalFileSizeNewest      =totalFileSizeNewest      -CASE OLD.type WHEN $TYPE_FILE      THEN OLD.size ELSE 0 END,
+          totalImageCountNewest    =totalImageCountNewest    -CASE OLD.type WHEN $TYPE_IMAGE     THEN 1        ELSE 0 END,
+          totalImageSizeNewest     =totalImageSizeNewest     -CASE OLD.type WHEN $TYPE_IMAGE     THEN OLD.size ELSE 0 END,
+          totalDirectoryCountNewest=totalDirectoryCountNewest-CASE OLD.type WHEN $TYPE_DIRECTORY THEN 1        ELSE 0 END,
+          totalLinkCountNewest     =totalLinkCountNewest     -CASE OLD.type WHEN $TYPE_LINK      THEN 1        ELSE 0 END,
+          totalHardlinkCountNewest =totalHardlinkCountNewest -CASE OLD.type WHEN $TYPE_HARDLINK  THEN 1        ELSE 0 END,
+          totalHardlinkSizeNewest  =totalHardlinkSizeNewest  -CASE OLD.type WHEN $TYPE_HARDLINK  THEN OLD.size ELSE 0 END,
+          totalSpecialCountNewest  =totalSpecialCountNewest  -CASE OLD.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
       WHERE storage.id=OLD.storageId;
 // insert into log values('delete entriesNewest '||OLD.name||' '||OLD.size);
   END;
