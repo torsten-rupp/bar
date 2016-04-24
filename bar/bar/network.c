@@ -706,8 +706,10 @@ Errors Network_connect(SocketHandle *socketHandle,
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(loginName);
         UNUSED_VARIABLE(password);
-        UNUSED_VARIABLE(sshPublicKeyFileName);
-        UNUSED_VARIABLE(sshPrivateKeyFileName);
+        UNUSED_VARIABLE(sshPublicKeyData);
+        UNUSED_VARIABLE(sshPublicKeyLength);
+        UNUSED_VARIABLE(sshPrivateKeyData);
+        UNUSED_VARIABLE(sshPrivateKeyLength);
 
         close(socketHandle->handle);
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1357,7 +1359,10 @@ Errors Network_accept(SocketHandle             *socketHandle,
 
         socketHandle->type = SOCKET_TYPE_TLS;
       #else /* not HAVE_GNU_TLS */
-        UNUSED_VARIABLE(result);
+        UNUSED_VARIABLE(serverSocketHandle);
+        UNUSED_VARIABLE(serverSocketHandle);
+        UNUSED_VARIABLE(flags);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GNU_TLS */
       break;
@@ -1432,7 +1437,10 @@ Errors Network_startSSL(SocketHandle *socketHandle,
 
     return ERROR_NONE;
   #else /* not HAVE_GNU_TLS */
-    UNUSED_VARIABLE(result);
+    UNUSED_VARIABLE(socketHandle);
+    UNUSED_VARIABLE(caFileName);
+    UNUSED_VARIABLE(certFileName);
+    UNUSED_VARIABLE(keyFileName);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GNU_TLS */
