@@ -148,9 +148,51 @@ LOCAL bool findCommandInPath(String command, const char *name)
 
 LOCAL Errors execute(const char *command, const char *arguments[])
 {
+  /***********************************************************************\
+  * Name   : getError
+  * Purpose: get error
+  * Input  : errorCode - error number
+  * Output : -
+  * Return : error
+  * Notes  : -
+  \***********************************************************************/
+
+  Errors getError(int errorCode)
+  {
+    Errors error;
+    String s;
+    uint   i;
+
+    assert(arguments != NULL);
+    assert(arguments[0] != NULL);
+
+    // init variables
+    s = String_new();
+
+    // format command
+    String_joinCString(s,command,' ');
+    i = 1;
+    while (arguments[i] != NULL)
+    {
+      String_joinCString(s,arguments[i],' ');
+      i++;
+    }
+
+    // get error
+    error = ERRORX_(EXEC_FAIL,errorCode,"%s",String_cString(s));
+
+    // free resources
+    String_delete(s);
+
+    return error;
+  }
+
   pid_t  pid;
   Errors error;
   int    status;
+
+  assert(arguments != NULL);
+  assert(arguments[0] != NULL);
 
   pid = fork();
   if      (pid == 0)
@@ -168,7 +210,7 @@ LOCAL Errors execute(const char *command, const char *arguments[])
   }
   else if (pid < 0)
   {
-    error = ERRORX_(EXEC_FAIL,errno,"%s",command);
+    error = getError(errno);
     return error;
   }
 
@@ -184,12 +226,12 @@ LOCAL Errors execute(const char *command, const char *arguments[])
     }
     else
     {
-      error = ERRORX_(EXEC_FAIL,WEXITSTATUS(status),"%s",command);
+      error = getError(WEXITSTATUS(status));
     }
   }
   else if (WIFSIGNALED(status))
   {
-    error = ERRORX_(EXEC_FAIL,WTERMSIG(status),"%s",command);
+    error = getError(WTERMSIG(status));
   }
   else
   {
