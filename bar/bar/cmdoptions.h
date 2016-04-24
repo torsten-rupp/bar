@@ -870,7 +870,7 @@ extern "C" {
 *          commandLineOptions     - array with command line options
 *                                   spezification
 *          commandLineOptionCount - size of command line options array
-*          errorOutputHandle      - error output handle or NULL
+*          outputHandle           - error/warning output handle or NULL
 *          errorPrefix            - error prefix or NULL
 *          warningPrefix          - warning prefix or NULL
 * Output : arguments
@@ -884,7 +884,7 @@ bool CmdOption_parse(const char              *argv[],
                      const CommandLineOption commandLineOptions[],
                      uint                    commandLineOptionCount,
                      int                     commandPriority,
-                     FILE                    *errorOutputHandle,
+                     FILE                    *outputHandle,
                      const char              *errorPrefix,
                      const char              *warningPrefix
                     );
