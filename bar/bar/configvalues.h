@@ -93,7 +93,7 @@ typedef struct
     char       **cString;
     String     *string;
     void       *special;
-    const char *newName;
+    void       *deprecated;
   }                variable;                      // variable, new name or NULL
   int              offset;                        // offset in struct or -1
   struct
@@ -140,6 +140,12 @@ typedef struct
     bool(*format)(void **formatUserData, void *userData, String line);
     void *userData;                               // user data for parse special
   } specialValue;
+  struct
+  {
+    const char *newName;                          // new name
+    bool(*parse)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+    void       *userData;                         // user data for parse deprecated
+  } deprecatedValue;
 } ConfigValue;
 
 /* example
@@ -315,6 +321,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   } \
 }; \
 
@@ -345,6 +352,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }, \
   __VA_ARGS__ \
   { \
@@ -362,6 +370,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 
 /***********************************************************************\
@@ -395,6 +404,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units)
@@ -429,7 +439,8 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units)
@@ -465,6 +476,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units) \
   CONFIG_VALUE_DOUBLE(name,NULL,offsetof(type,member),min,max,units)
@@ -498,6 +510,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member) \
   CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member))
@@ -531,6 +544,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
   CONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
@@ -565,6 +579,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
   CONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value)
@@ -599,6 +614,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects) \
   CONFIG_VALUE_SELECT(name,NULL,offsetof(type,member),selects)
@@ -633,6 +649,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SET(name,type,member,set) \
   CONFIG_VALUE_SET(name,NULL,offsetof(type,member),set)
@@ -666,6 +683,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_CSTRING(name,type,member) \
   CONFIG_VALUE_CSTRING(name,NULL,offsetof(type,member))
@@ -699,6 +717,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_STRING(name,type,member) \
   CONFIG_VALUE_STRING(name,NULL,offsetof(type,member))
@@ -711,7 +730,6 @@ typedef struct
 *          offset          - offset in structure or -1
 *          type            - structure type
 *          member          - structure memory name
-*          parse           - parse function
 *          parse           - parse function
 *          formatInit      - format init function
 *          formatDone      - format done function
@@ -737,7 +755,8 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {parse,formatInit,formatDone,format,userData}\
+    {parse,formatInit,formatDone,format,userData},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SPECIAL(name,type,member,parse,formatInit,formatDone,format,userData) \
   CONFIG_VALUE_SPECIAL(name,NULL,offsetof(type,member),parse,formatInit,formatDone,format,userData)
@@ -767,6 +786,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_IGNORE(name) \
   CONFIG_VALUE_IGNORE(name)
@@ -774,18 +794,25 @@ typedef struct
 /***********************************************************************\
 * Name   : CONFIG_VALUE_DEPRECATED, CONFIG_STRUCT_VALUE_DEPRECATED
 * Purpose: define an string-value
-* Input  : name - name
+* Input  : name            - name
+*          variablePointer - pointer to variable or NULL
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          newName         - new name or NULL
+*          parse           - parse function
+*          userData        - user data for parse/format functions
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_DEPRECATED(name,newName) \
+#define CONFIG_VALUE_DEPRECATED(name,variablePointer,offset,newName,parse,userData) \
   { \
     CONFIG_VALUE_TYPE_DEPRECATED,\
     name,\
-    {NULL},\
-    0,\
+    {variablePointer},\
+    offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
     {0.0,0.0,NULL},\
@@ -796,9 +823,10 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {newName,parse,userData}\
   }
-#define CONFIG_STRUCT_VALUE_DEPRECATED(name,newName) \
-  CONFIG_VALUE_DEPRECATED(name,newName)
+#define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,newName,parse,userData) \
+  CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),newName,parse,userData)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_BEGIN_SECTION, CONFIG_VALUE_END_SECTION
@@ -864,7 +892,7 @@ typedef struct
 
 #define CONFIG_VALUE_ITERATE(configValues,sectionName,index) \
   for ((index) = ConfigValue_firstValueIndex(configValues,sectionName); \
-       (index) < ConfigValue_lastValueIndex(configValues,sectionName); \
+       (index != -1) && ((index) < ConfigValue_lastValueIndex(configValues,sectionName)); \
        (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
@@ -887,7 +915,7 @@ typedef struct
 
 #define CONFIG_VALUE_ITERATEX(configValues,sectionName,index,condition) \
   for ((index) = ConfigValue_firstValueIndex(configValues,sectionName); \
-       ((index) < ConfigValue_lastValueIndex(configValues,sectionName)) && (condition); \
+       (index != -1) && ((index) < ConfigValue_lastValueIndex(configValues,sectionName)) && (condition)); \
        (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
@@ -1061,12 +1089,13 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
 /***********************************************************************
 * Name   : ConfigValue_parse
 * Purpose: parse config value
-* Input  : name              - config value name
-*          value             - config value
-*          configValues      - array with config value specification
-*          sectionName       - section name or NULL
-*          errorOutputHandle - error output handle or NULL
-*          errorPrefix       - error prefix or NULL
+* Input  : name          - config value name
+*          value         - config value
+*          configValues  - array with config value specification
+*          sectionName   - section name or NULL
+*          outputHandle  - error/warning output handle or NULL
+*          errorPrefix   - error prefix or NULL
+*          warningPrefix - warning prefix or NULL
 * Output : variable - variable
 * Return : TRUE if config value parsed, FALSE on error
 * Notes  :
@@ -1076,8 +1105,9 @@ bool ConfigValue_parse(const char        *name,
                        const char        *value,
                        const ConfigValue configValues[],
                        const char        *sectionName,
-                       FILE              *errorOutputHandle,
+                       FILE              *outputHandle,
                        const char        *errorPrefix,
+                       const char        *warningPrefix,
                        void              *variable
                       );
 
