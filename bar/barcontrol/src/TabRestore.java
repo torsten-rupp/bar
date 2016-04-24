@@ -7552,11 +7552,13 @@ assert storagePattern != null;
     class Data
     {
       String  restoreToDirectory;
+      boolean directoryContent;
       boolean overwriteEntries;
 
       Data()
       {
         this.restoreToDirectory = null;
+        this.directoryContent   = false;
         this.overwriteEntries   = false;
       }
     };
@@ -7577,6 +7579,7 @@ assert storagePattern != null;
     final Label  widgetTotal;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
+    final Button widgetDirectoryContent;
     final Button widgetOverwriteEntries;
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
@@ -7692,9 +7695,13 @@ assert storagePattern != null;
         });
       }
 
+      widgetDirectoryContent = Widgets.newCheckbox(composite,BARControl.tr("Directory content"));
+      widgetDirectoryContent.setToolTipText(BARControl.tr("Restore content of selected directories, too."));
+      Widgets.layout(widgetDirectoryContent,4,0,TableLayoutData.W,0,2);
+
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,4,0,TableLayoutData.W,0,2);
+      Widgets.layout(widgetOverwriteEntries,5,0,TableLayoutData.W,0,2);
     }
 
     // buttons
@@ -7717,6 +7724,7 @@ assert storagePattern != null;
           Button widget = (Button)selectionEvent.widget;
 
           data.restoreToDirectory = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
+          data.directoryContent   = widgetDirectoryContent.getSelection();
           data.overwriteEntries   = widgetOverwriteEntries.getSelection();
 
           Dialogs.close(dialog,true);
@@ -7874,14 +7882,15 @@ assert storagePattern != null;
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
-      new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.overwriteEntries})
+      new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.directoryContent,data.overwriteEntries})
       {
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
           final IndexIdSet indexIdSet         = (IndexIdSet)((Object[])userData)[0];
           final String     restoreToDirectory = (String    )((Object[])userData)[1];
-          final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[2];
+          final boolean    directoryContent   = (Boolean   )((Object[])userData)[2];
+          final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[3];
 
           int errorCode;
 
@@ -7905,8 +7914,9 @@ assert storagePattern != null;
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteEntries=%y",
+            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S directoryContent=%y overwriteEntries=%y",
                                                                      restoreToDirectory,
+                                                                     directoryContent,
                                                                      overwriteEntries
                                                                     ),
                                                  0,  // debugLevel
@@ -8481,11 +8491,13 @@ Dprintf.dprintf("");
     class Data
     {
       String  restoreToDirectory;
+      boolean directoryContent;
       boolean overwriteEntries;
 
       Data()
       {
         this.restoreToDirectory = null;
+        this.directoryContent   = false;
         this.overwriteEntries   = false;
       }
     };
@@ -8506,6 +8518,7 @@ Dprintf.dprintf("");
     final Label  widgetTotal;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
+    final Button widgetDirectoryContent;
     final Button widgetOverwriteEntries;
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
@@ -8622,9 +8635,13 @@ Dprintf.dprintf("");
         });
       }
 
+      widgetDirectoryContent = Widgets.newCheckbox(composite,BARControl.tr("Directory content"));
+      widgetDirectoryContent.setToolTipText(BARControl.tr("Restore content of selected directories, too."));
+      Widgets.layout(widgetDirectoryContent,4,0,TableLayoutData.W,0,2);
+
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,4,0,TableLayoutData.W,0,2);
+      Widgets.layout(widgetOverwriteEntries,5,0,TableLayoutData.W,0,2);
     }
 
     // buttons
@@ -8647,6 +8664,7 @@ Dprintf.dprintf("");
           Button widget = (Button)selectionEvent.widget;
 
           data.restoreToDirectory = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
+          data.directoryContent   = widgetDirectoryContent.getSelection();
           data.overwriteEntries   = widgetOverwriteEntries.getSelection();
 
           Dialogs.close(dialog,true);
@@ -8802,14 +8820,15 @@ Dprintf.dprintf("");
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
-      new BackgroundTask(busyDialog,new Object[]{entryIdSet,data.restoreToDirectory,data.overwriteEntries})
+      new BackgroundTask(busyDialog,new Object[]{entryIdSet,data.restoreToDirectory,data.directoryContent,data.overwriteEntries})
       {
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
           final IndexIdSet entryIdSet         = (IndexIdSet)((Object[])userData)[0];
           final String     restoreToDirectory = (String    )((Object[])userData)[1];
-          final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[2];
+          final boolean    directoryContent   = (Boolean   )((Object[])userData)[2];
+          final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[3];
 
           int errorCode;
 
@@ -8833,8 +8852,9 @@ Dprintf.dprintf("");
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S overwriteEntries=%y",
+            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y overwriteEntries=%y",
                                                                      restoreToDirectory,
+                                                                     directoryContent,
                                                                      overwriteEntries
                                                                     ),
                                                  0,  // debugLevel
