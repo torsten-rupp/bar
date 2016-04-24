@@ -22,6 +22,7 @@
   * Added test button for scripts
   * added option --mount: mount/unmount devices before/after
     execution of job
+  * deprecated option --mount-device
   * added option --include-command, --exclude-command
   * added configuration options include-file-command,
     include-image-command, exclude-command
