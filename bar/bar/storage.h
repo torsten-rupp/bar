@@ -198,8 +198,6 @@ typedef struct
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
 
-  bool                            mountedDeviceFlag;         // true iff device was mounted
-
   StorageUpdateStatusInfoFunction updateStatusInfoFunction;  // storage status info update call-back
   void                            *updateStatusInfoUserData;
   GetPasswordFunction             getPasswordFunction;       // get password call-back
@@ -370,8 +368,6 @@ typedef struct
   StorageHandle                *storageHandle;
   StorageModes                 mode;                         // storage mode: READ, WRITE
   String                       archiveName;                  // archive name
-
-  bool                         mountedDeviceFlag;            // true iff device was mounted
 
   union
   {

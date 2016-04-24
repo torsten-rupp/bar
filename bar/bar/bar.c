@@ -268,7 +268,9 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 #ifndef WERROR
 LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 #endif
-//TODO: remove
+
+// deprecated
+LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
@@ -564,8 +566,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("batch",                        0,  2,1,batchFlag,                                                                                              "run in batch mode"                                                        ),
   CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,1,&globalOptions.remoteBARExecutable,              cmdOptionParseString,NULL,                             "remote BAR executable","file name"                                        ),
 
-  CMD_OPTION_STRING       ("mount-device",                 0,  1,2,jobOptions.mountDeviceName,                                                                             "device to mount/unmount","name"                                           ),
-
   CMD_OPTION_STRING       ("pre-command",                  0,  1,1,jobOptions.preProcessScript,                                                                           "pre-process command","command"                                            ),
   CMD_OPTION_STRING       ("post-command",                 0,  1,1,jobOptions.postProcessScript,                                                                          "post-process command","command"                                           ),
 
@@ -701,7 +701,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                                                                              "output help to extended options"                                          ),
   CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                                                                       "output help to internal options"                                          ),
 
-  CMD_OPTION_DEPRECATED   ("stop-on-error",                0,  1,2,&jobOptions.noStopOnErrorFlag,                   cmdOptionParseDeprecatedStopOnError,NULL,              "no-stop-on-error"),
+  // deprecated
+  CMD_OPTION_DEPRECATED   ("mount-device",                 0,  1,2,&mountList,                                      cmdOptionParseDeprecatedMountDevice,NULL,              "device to mount/unmount"                                                  ),
+  CMD_OPTION_DEPRECATED   ("stop-on-error",                0,  1,2,&jobOptions.noStopOnErrorFlag,                   cmdOptionParseDeprecatedStopOnError,NULL,              "no-stop-on-error"                                                         ),
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -921,7 +923,6 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPECIAL           ("delta-source",                 &deltaSourceList,-1,                                           configValueParseDeltaSource,NULL,NULL,NULL,&jobOptions.patternType),
 
-  CONFIG_VALUE_STRING            ("mount-device",                 &jobOptions.mountDeviceName,-1                                 ),
   CONFIG_VALUE_INTEGER64         ("max-storage-size",             &jobOptions.maxStorageSize,-1,                                 0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_INTEGER64         ("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_BOOLEAN           ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
@@ -1125,6 +1126,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("pid-file",                     &pidFileName,-1                                                ),
 
   // deprecated
+  CONFIG_VALUE_IGNORE            ("mount-device"),
   CONFIG_VALUE_IGNORE            ("schedule"),
   CONFIG_VALUE_IGNORE            ("overwrite-archive-files"),
 );
@@ -1494,8 +1496,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "file-server",
-                                 NULL, // errorOutputHandle
+                                 NULL, // outputHandle
                                  NULL, // errorPrefix
+                                 NULL, // warningPrefix
                                  &serverNode->server
                                 )
              )
@@ -1557,8 +1560,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "ftp-server",
-                                 NULL, // errorOutputHandle
+                                 NULL, // outputHandle
                                  NULL, // errorPrefix
+                                 NULL, // warningPrefix
                                  &serverNode->server
                                 )
              )
@@ -1620,8 +1624,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "ssh-server",
-                                 NULL, // errorOutputHandle
+                                 NULL, // outputHandle
                                  NULL, // errorPrefix
+                                 NULL, // warningPrefix
                                  &serverNode->server
                                 )
              )
@@ -1683,8 +1688,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "webdav-server",
-                                 NULL, // errorOutputHandle
+                                 NULL, // outputHandle
                                  NULL, // errorPrefix
+                                 NULL, // warningPrefix
                                  &serverNode->server
                                 )
              )
@@ -1746,8 +1752,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                  String_cString(value),
                                  CONFIG_VALUES,
                                  "device",
-                                 NULL, // errorOutputHandle
+                                 NULL, // outputHandle
                                  NULL, // errorPrefix
+                                 NULL, // warningPrefix
                                  &deviceNode->device
                                 )
              )
@@ -1792,8 +1799,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                              String_cString(value),
                              CONFIG_VALUES,
                              NULL, // section name
-                             NULL, // errorOutputHandle,
+                             NULL, // outputHandle,
                              NULL, // errorPrefix,
+                             NULL, // warningPrefix
                              NULL  // variable
                             )
          )
@@ -2121,7 +2129,7 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
     return FALSE;
   }
 
-  // append to mount list
+  // init mount node
   mountNode = LIST_NEW_NODE(MountNode);
   if (mountNode == NULL)
   {
@@ -2131,6 +2139,8 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   mountNode->name          = mountName;
   mountNode->alwaysUnmount = alwaysUnmount;
   mountNode->mounted       = FALSE;
+
+  // append to mount list
   List_append((MountList*)variable,mountNode);
 
   return TRUE;
@@ -2597,7 +2607,7 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 }
 
 /***********************************************************************\
-* Name   : cmdOptionParseOverwriteArchiveFiles
+* Name   : cmdOptionParseDeprecatedMountDevice
 * Purpose: command line option call back for archive files overwrite mode
 * Input  : -
 * Output : -
@@ -2607,19 +2617,32 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 
 //TODO
 #ifndef WERROR
-LOCAL bool cmdOptionParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
+  MountNode *mountNode;
+
   assert(variable != NULL);
   assert(value != NULL);
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
+  // init mount node
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  mountNode->id            = Misc_getId();
+  mountNode->name          = String_newCString(value);
+  mountNode->alwaysUnmount = TRUE;
+  mountNode->mounted       = FALSE;
+
+  // append to mount list
+  List_append((MountList*)variable,mountNode);
 
   return TRUE;
 }
@@ -4355,7 +4378,6 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
   jobOptions->cryptPublicKeyFileName          = NULL;
   jobOptions->cryptPrivateKeyFileName         = NULL;
-  jobOptions->mountDeviceName                 = NULL;
   jobOptions->preProcessScript                = NULL;
   jobOptions->postProcessScript               = NULL;
   jobOptions->maxStorageSize                  = 0LL;
@@ -4389,8 +4411,6 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   jobOptions->cryptPassword                       = Password_duplicate(fromJobOptions->cryptPassword);
   jobOptions->cryptPublicKeyFileName              = String_duplicate(fromJobOptions->cryptPublicKeyFileName);
   jobOptions->cryptPrivateKeyFileName             = String_duplicate(fromJobOptions->cryptPrivateKeyFileName);
-
-  jobOptions->mountDeviceName                     = String_duplicate(fromJobOptions->mountDeviceName);
 
   jobOptions->preProcessScript                    = String_duplicate(fromJobOptions->preProcessScript);
   jobOptions->postProcessScript                   = String_duplicate(fromJobOptions->postProcessScript);
@@ -4478,8 +4498,6 @@ void doneJobOptions(JobOptions *jobOptions)
 
   String_delete(jobOptions->postProcessScript);
   String_delete(jobOptions->preProcessScript);
-
-  String_delete(jobOptions->mountDeviceName);
 
   String_delete(jobOptions->cryptPrivateKeyFileName);
   String_delete(jobOptions->cryptPublicKeyFileName);
@@ -6214,7 +6232,7 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
     return FALSE;
   }
 
-  // append to mount list
+  // init mount node
   mountNode = LIST_NEW_NODE(MountNode);
   if (mountNode == NULL)
   {
@@ -6224,6 +6242,8 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   mountNode->name          = mountName;
   mountNode->alwaysUnmount = alwaysUnmount;
   mountNode->mounted       = FALSE;
+
+  // append to mount list
   List_append((MountList*)variable,mountNode);
 
   return TRUE;
@@ -6943,8 +6963,9 @@ LOCAL bool readFromJob(ConstString fileName)
                              String_cString(value),
                              CONFIG_VALUES,
                              NULL, // sectionName,
-                             NULL, // errorOutputHandle,
+                             NULL, // outputHandle,
                              NULL, // errorPrefix,
+                             NULL, // warningPrefix
                              NULL  // variable
                             )
          )

@@ -486,6 +486,7 @@ typedef struct
   StringMap             argumentMap;
 } CommandMsg;
 
+// parse special options
 LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
 LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
@@ -498,92 +499,94 @@ LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const ch
 LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable);
 LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
 LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+// handle deprecated options
+LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
-  CONFIG_STRUCT_VALUE_STRING   ("UUID",                    JobNode,uuid                                    ),
-  CONFIG_STRUCT_VALUE_STRING   ("remote-host-name",        JobNode,remoteHost.name                         ),
-  CONFIG_STRUCT_VALUE_INTEGER  ("remote-host-port",        JobNode,remoteHost.port,                        0,65535,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("remote-host-force-ssl",   JobNode,remoteHost.forceSSL                     ),
-  CONFIG_STRUCT_VALUE_STRING   ("archive-name",            JobNode,archiveName                             ),
-  CONFIG_STRUCT_VALUE_SELECT   ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_STRING    ("UUID",                    JobNode,uuid                                    ),
+  CONFIG_STRUCT_VALUE_STRING    ("remote-host-name",        JobNode,remoteHost.name                         ),
+  CONFIG_STRUCT_VALUE_INTEGER   ("remote-host-port",        JobNode,remoteHost.port,                        0,65535,NULL),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("remote-host-force-ssl",   JobNode,remoteHost.forceSSL                     ),
+  CONFIG_STRUCT_VALUE_STRING    ("archive-name",            JobNode,archiveName                             ),
+  CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
-  CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",   JobNode,jobOptions.incrementalListFileName      ),
+  CONFIG_STRUCT_VALUE_STRING    ("incremental-list-file",   JobNode,jobOptions.incrementalListFileName      ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64 ("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",         JobNode,jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("destination",             JobNode,jobOptions.destination                  ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("owner",                   JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("directory-strip",         JobNode,jobOptions.directoryStripCount,         -1,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_STRING    ("destination",             JobNode,jobOptions.destination                  ),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("owner",                   JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",            JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT    ("pattern-type",            JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-algorithm",      JobNode,jobOptions.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("compress-algorithm",      JobNode,jobOptions.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",        JobNode,jobOptions.cryptPublicKeyFileName       ),
+  CONFIG_STRUCT_VALUE_SELECT    ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SELECT    ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT    ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING    ("crypt-public-key",        JobNode,jobOptions.cryptPublicKeyFileName       ),
 
-  CONFIG_STRUCT_VALUE_STRING   ("mount-device",            JobNode,jobOptions.mountDeviceName              ),
+  CONFIG_STRUCT_VALUE_STRING    ("pre-command",             JobNode,jobOptions.preProcessScript             ),
+  CONFIG_STRUCT_VALUE_STRING    ("post-command",            JobNode,jobOptions.postProcessScript            ),
 
-  CONFIG_STRUCT_VALUE_STRING   ("pre-command",             JobNode,jobOptions.preProcessScript             ),
-  CONFIG_STRUCT_VALUE_STRING   ("post-command",            JobNode,jobOptions.postProcessScript            ),
+  CONFIG_STRUCT_VALUE_STRING    ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
 
-  CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
+  CONFIG_STRUCT_VALUE_STRING    ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKey,         configValueParseKey,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-public-key-data",     JobNode,jobOptions.sshServer.publicKey,         configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL   ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKey,         configValueParseKey,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key-data",     JobNode,jobOptions.sshServer.publicKey,         configValueParseKey,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key-data",    JobNode,jobOptions.sshServer.privateKey,        configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING    ("include-file-command",    JobNode,includeFileCommand                      ),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING    ("include-image-command",   JobNode,includeImageCommand                     ),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING    ("exclude-command",         JobNode,excludeCommand                          ),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("include-file-command",    JobNode,includeFileCommand                      ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("include-image-command",   JobNode,includeImageCommand                     ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("exclude-command",         JobNode,excludeCommand                          ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER64 ("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64 ("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
+  CONFIG_STRUCT_VALUE_SELECT    ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("overwrite-files",         JobNode,jobOptions.overwriteEntriesFlag         ),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
 
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
-  CONFIG_STRUCT_VALUE_SELECT   ("archive-file-mode",       JobNode,jobOptions.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",         JobNode,jobOptions.overwriteEntriesFlag         ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
-
-  CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
-  CONFIG_STRUCT_VALUE_STRING   ("UUID",                    ScheduleNode,uuid                               ),
-  CONFIG_STRUCT_VALUE_STRING   ("parentUUID",              ScheduleNode,parentUUID                         ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
-  CONFIG_STRUCT_VALUE_SELECT   ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
-  CONFIG_STRUCT_VALUE_INTEGER  ("interval",                ScheduleNode,interval,                          0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("text",                    ScheduleNode,customText                         ),
-  CONFIG_STRUCT_VALUE_INTEGER  ("min-keep",                ScheduleNode,minKeep,                           0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_INTEGER  ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_INTEGER  ("max-age",                 ScheduleNode,maxAge,                            0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("no-storage",              ScheduleNode,noStorage                          ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("enabled",                 ScheduleNode,enabled                            ),
+  CONFIG_VALUE_BEGIN_SECTION("s chedule",-1),
+  CONFIG_STRUCT_VALUE_STRING    ("UUID",                    ScheduleNode,uuid                               ),
+  CONFIG_STRUCT_VALUE_STRING    ("parentUUID",              ScheduleNode,parentUUID                         ),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
+  CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_INTEGER   ("interval",                ScheduleNode,interval,                          0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_STRING    ("text",                    ScheduleNode,customText                         ),
+  CONFIG_STRUCT_VALUE_INTEGER   ("min-keep",                ScheduleNode,minKeep,                           0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("max-keep",                ScheduleNode,maxKeep,                           0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 ScheduleNode,maxAge,                            0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",              ScheduleNode,noStorage                          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_STRUCT_VALUE_STRING   ("comment",                 JobNode,comment                                 ),
+  CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,comment                                 ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",                JobNode,scheduleList,                           configValueParseSchedule,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_IGNORE   ("overwrite-archive-files"                                                  ),
+  CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              "mount",configValueParseDeprecatedMountDevice,NULL),
+  CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                JobNode,scheduleList,                           "schedule section",configValueParseDeprecatedSchedule,NULL),
+  CONFIG_STRUCT_VALUE_IGNORE    ("overwrite-archive-files"                                                  ),
 );
 
 /***************************** Variables *******************************/
@@ -1456,7 +1459,50 @@ if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string val
 }
 
 /***********************************************************************\
-* Name   : configValueParseSchedule
+* Name   : configValueParseDeprecatedMountDevice
+* Purpose: config value option call back for parsing mount-device
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  // init mount node
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  mountNode->id            = Misc_getId();
+  mountNode->name          = String_newCString(value);
+  mountNode->alwaysUnmount = TRUE;
+  mountNode->mounted       = FALSE;
+
+  // append to mount list
+  List_append((MountList*)variable,mountNode);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedSchedule
 * Purpose: config value option call back for parsing schedule
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1469,7 +1515,7 @@ if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string val
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   ScheduleNode *scheduleNode;
   String       s;
@@ -1981,6 +2027,7 @@ fprintf(stderr,"%s, %d: IS_JOB_REMOTE=%d\n",__FILE__,__LINE__,IS_JOB_REMOTE(jobN
                                                   jobNode->archiveName,
                                                   &jobNode->includeEntryList,
                                                   &jobNode->excludePatternList,
+                                                  &jobNode->mountList,
                                                   &jobNode->compressExcludePatternList,
                                                   &jobNode->deltaSourceList,
                                                   &jobNode->jobOptions,
@@ -2576,7 +2623,6 @@ LOCAL bool readJob(JobNode *jobNode)
   if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
   clearKey(&jobNode->jobOptions.sshServer.publicKey);
   clearKey(&jobNode->jobOptions.sshServer.privateKey);
-  String_clear(jobNode->jobOptions.mountDeviceName);
   String_clear(jobNode->jobOptions.preProcessScript);
   String_clear(jobNode->jobOptions.postProcessScript);
   jobNode->jobOptions.device.volumeSize            = 0LL;
@@ -2633,8 +2679,7 @@ LOCAL bool readJob(JobNode *jobNode)
                                  String_cString(value),
                                  JOB_CONFIG_VALUES,
                                  "schedule",
-                                 NULL, // errorOutputHandle
-                                 NULL, // errorPrefix
+                                 stderr,"ERROR: ","Warning: ",
                                  scheduleNode
                                 )
              )
@@ -2689,8 +2734,7 @@ LOCAL bool readJob(JobNode *jobNode)
                              String_cString(value),
                              JOB_CONFIG_VALUES,
                              NULL, // sectionName
-                             NULL, // errorOutputHandle
-                             NULL, // errorPrefix
+                             stderr,"ERROR: ","Warning: ",
                              jobNode
                             )
          )
@@ -6511,8 +6555,9 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
                          String_cString(value),
                          CONFIG_VALUES,
                          NULL, // sectionName
-                         NULL, // errorOutputHandle
+                         NULL, // outputHandle
                          NULL, // errorPrefix
+                         NULL, // warningPrefix
                          &globalOptions
                         )
      )
@@ -8502,8 +8547,9 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
                           String_cString(value),
                           JOB_CONFIG_VALUES,
                           NULL, // sectionName
-                          NULL, // errorOutputHandle
+                          NULL, // outputHandle
                           NULL, // errorPrefix
+                          NULL, // warningPrefix
                           jobNode
                          )
        )
@@ -11736,8 +11782,9 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
                           String_cString(value),
                           JOB_CONFIG_VALUES,
                           "schedule",
-                          NULL, // errorOutputHandle
+                          NULL, // outputHandle
                           NULL, // errorPrefix
+                          NULL, // warningPrefix
                           scheduleNode
                          )
        )

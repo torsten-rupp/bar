@@ -1578,7 +1578,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   AutoFree_init(&autoFreeList);
   Storage_duplicateSpecifier(&storageHandle->storageSpecifier,storageSpecifier);
   storageHandle->jobOptions                = jobOptions;
-  storageHandle->mountedDeviceFlag         = FALSE;
   storageHandle->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
   storageHandle->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
   storageHandle->getPasswordFunction       = getPasswordFunction;
@@ -1598,22 +1597,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     storageHandle->volumeState             = STORAGE_VOLUME_STATE_LOADED;
   }
   AUTOFREE_ADD(&autoFreeList,&storageHandle->storageSpecifier,{ Storage_doneSpecifier(&storageHandle->storageSpecifier); });
-
-  // mount device if needed
-  if ((jobOptions != NULL) && !String_isEmpty(jobOptions->mountDeviceName))
-  {
-    if (!Device_isMounted(jobOptions->mountDeviceName))
-    {
-      error = Device_mount(jobOptions->mountDeviceName);
-      if (error != ERROR_NONE)
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
-      storageHandle->mountedDeviceFlag = TRUE;
-      AUTOFREE_ADD(&autoFreeList,&storageHandle->storageSpecifier,{ Device_umount(jobOptions->mountDeviceName); });
-    }
-  }
 
   // init protocol specific values
   switch (storageHandle->storageSpecifier.type)
@@ -1691,7 +1674,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
 #endif /* NDEBUG */
 {
   Errors error;
-  Errors tmpError;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
@@ -1739,16 +1721,6 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
       break;
-  }
-
-  // unmount device if mounted before
-  if ((storageHandle->jobOptions != NULL) && storageHandle->mountedDeviceFlag)
-  {
-    tmpError = Device_umount(storageHandle->jobOptions->mountDeviceName);
-    if (tmpError != ERROR_NONE)
-    {
-      if (error == ERROR_NONE) error = tmpError;
-    }
   }
 
   Storage_doneSpecifier(&storageHandle->storageSpecifier);

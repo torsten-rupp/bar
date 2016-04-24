@@ -494,8 +494,6 @@ struct JobOptions
   String                       preProcessScript;              // script to execute before start of job
   String                       postProcessScript;             // script to execute after after termination of job
 
-//TODO: obsolete
-  String                       mountDeviceName;               // device to mount/unmount
   FileServer                   fileServer;                    // job specific file server settings
   FTPServer                    ftpServer;                     // job specific FTP server settings
   SSHServer                    sshServer;                     // job specific SSH server settings

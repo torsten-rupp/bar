@@ -578,6 +578,7 @@ Errors Remote_jobStart(const RemoteHost                *remoteHost,
                        ConstString                     storageName,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
+                       MountList                       *mountList,
                        const PatternList               *compressExcludePatternList,
                        DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
@@ -597,6 +598,7 @@ Errors Remote_jobStart(const RemoteHost                *remoteHost,
   EntryNode       *entryNode;
   const char      *entryTypeText;
   PatternNode     *patternNode;
+  MountNode       *mountNode;
   DeltaSourceNode *deltaSourceNode;
 //  bool            quitFlag;
 
@@ -661,7 +663,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                                                );
   if (error == ERROR_NONE) error = Remote_setJobOptionPassword (remoteHost,jobUUID,"crypt-password",         jobOptions->cryptPassword               );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"crypt-public-key",       jobOptions->cryptPublicKeyFileName      );
-  if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"mount-device",           jobOptions->mountDeviceName             );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"pre-command",            jobOptions->preProcessScript            );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"post-command",           jobOptions->postProcessScript           );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"ftp-login-name",         jobOptions->ftpServer.loginName         );
@@ -719,6 +720,18 @@ fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_
                                                            jobUUID,
                                                            ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->patternType,NULL),
                                                            patternNode->string
+                                                          );
+  }
+
+  if (error == ERROR_NONE) error = Remote_executeCommand(remoteHost,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
+  LIST_ITERATE(mountList,mountNode)
+  {
+    if (error == ERROR_NONE) error = Remote_executeCommand(remoteHost,
+                                                           NULL,
+                                                           "MOUNT_LIST_ADD jobUUID=%S name=%'S alwaysUnmount=%y",
+                                                           jobUUID,
+                                                           mountNode->name,
+                                                           mountNode->alwaysUnmount
                                                           );
   }
 
