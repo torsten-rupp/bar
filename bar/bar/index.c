@@ -3719,8 +3719,8 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                NULL,  // userId,
                                NULL,  // groupId,
                                NULL,  // permission,
-                               NULL,  // fragmentOrBlockOffset,
-                               NULL   // fragmentOrBlockSize
+                               NULL,  // fragmentOffset,
+                               NULL   // fragmentSize
                               )
         )
   {
@@ -4070,8 +4070,8 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                             NULL,  // userId,
                             NULL,  // groupId,
                             NULL,  // permission,
-                            NULL,  // fragmentOrBlockOffset,
-                            NULL   // fragmentOrBlockSize
+                            NULL,  // fragmentOffset,
+                            NULL   // fragmentSize
                            )
         )
   {
@@ -7680,7 +7680,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterIds          = String_new();
   indexTypeSetString = String_new();
 
-//Database_debugEnable(1);
+Database_debugEnable(1);
   if (String_isEmpty(ftsName) && (entryIdCount == 0))
   {
     // no pattern/no entries selected
@@ -7928,7 +7928,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
   }
-//Database_debugEnable(0);
+Database_debugEnable(0);
 
   // free resources
   String_delete(indexTypeSetString);
@@ -8022,8 +8022,8 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   filter             = String_newCString("1");
   filterIds          = String_new();
   indexTypeSetString = String_new();
-//  filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-//  filterAppend(filterIds,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
+  filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterIds,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
   filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","entries.storageId IN (%S)",storageIdsString);  // Note: use entries.storageId instead of storage.id: this is must faster
   if (newestOnly)
   {
@@ -8049,7 +8049,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
-//Database_debugEnable(1);
+Database_debugEnable(1);
   if (newestOnly)
   {
     error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
@@ -8071,6 +8071,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                      imageEntries.blockSize, \
                                      imageEntries.blockOffset, \
                                      imageEntries.blockCount, \
+                                     directoryEntries.totalEntrySizeNewest, \
                                      linkEntries.destinationName, \
                                      hardlinkEntries.size \
                               FROM entriesNewest \
@@ -8079,6 +8080,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.entryId \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.entryId \
+                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
                                 LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
                               WHERE %S \
@@ -8111,6 +8113,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                      imageEntries.blockSize, \
                                      imageEntries.blockOffset, \
                                      imageEntries.blockCount, \
+                                     directoryEntries.totalEntrySize, \
                                      linkEntries.destinationName, \
                                      hardlinkEntries.size \
                               FROM entries \
@@ -8119,6 +8122,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
                                 LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                               WHERE %S \
@@ -8130,7 +8134,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              limit
                             );
   }
-//Database_debugEnable(0);
+Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
@@ -8172,8 +8176,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         uint32            *userId,
                         uint32            *groupId,
                         uint32            *permission,
-                        uint64            *fragmentOffsetOrBlockOffset,
-                        uint64            *fragmentSizeOrBlockCount
+                        uint64            *fragmentOffset,
+                        uint64            *fragmentSize
                        )
 {
   IndexTypes indexType;
@@ -8181,6 +8185,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   uint64     fileSize_,imageSize_,hardlinkSize_;
   uint64     fragmentOffset_,fragmentSize_;
   uint64     blockOffset_,blockCount_;
+  uint64     directorySize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -8195,7 +8200,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %llu %d %S %llu %d %d %d %llu %llu %llu %llu %d %d %llu %llu %S",
+                           "%lld %S %llu %d %S %llu %d %d %d %llu %llu %llu %llu %d %llu %llu %llu %llu %S %llu",
                            &databaseId,
                            storageName,
                            storageDateTime,
@@ -8213,6 +8218,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                            NULL,  // imageEntryBlockSize,
                            &blockOffset_,
                            &blockCount_,
+                           &directorySize_,
                            destinationName,
                            &hardlinkSize_
                           )
@@ -8231,28 +8237,29 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   {
     switch (indexType)
     {
-      case INDEX_TYPE_FILE:     (*size) = fileSize_;     break;
-      case INDEX_TYPE_IMAGE:    (*size) = imageSize_;    break;
-      case INDEX_TYPE_HARDLINK: (*size) = hardlinkSize_; break;
-      default:                  (*size) = 0LL;           break;
+      case INDEX_TYPE_FILE:      (*size) = fileSize_;      break;
+      case INDEX_TYPE_IMAGE:     (*size) = imageSize_;     break;
+      case INDEX_TYPE_DIRECTORY: (*size) = directorySize_; break;
+      case INDEX_TYPE_HARDLINK:  (*size) = hardlinkSize_;  break;
+      default:                   (*size) = 0LL;            break;
     }
   }
-  if (fragmentOffsetOrBlockOffset != NULL)
+  if (fragmentOffset != NULL)
   {
     switch (indexType)
     {
-      case INDEX_TYPE_FILE:  (*fragmentOffsetOrBlockOffset) = fragmentOffset_; break;
-      case INDEX_TYPE_IMAGE: (*fragmentOffsetOrBlockOffset) = blockOffset_;    break;
-      default:               (*fragmentOffsetOrBlockOffset) = 0LL;             break;
+      case INDEX_TYPE_FILE:  (*fragmentOffset) = fragmentOffset_; break;
+      case INDEX_TYPE_IMAGE: (*fragmentOffset) = blockOffset_;    break;
+      default:               (*fragmentOffset) = 0LL;             break;
     }
   }
-  if (fragmentSizeOrBlockCount != NULL)
+  if (fragmentSize != NULL)
   {
     switch (indexType)
     {
-      case INDEX_TYPE_FILE:  (*fragmentSizeOrBlockCount) = fragmentSize_; break;
-      case INDEX_TYPE_IMAGE: (*fragmentSizeOrBlockCount) = blockCount_;   break;
-      default:               (*fragmentSizeOrBlockCount) = 0LL;           break;
+      case INDEX_TYPE_FILE:  (*fragmentSize) = fragmentSize_; break;
+      case INDEX_TYPE_IMAGE: (*fragmentSize) = blockCount_;   break;
+      default:               (*fragmentSize) = 0LL;           break;
     }
   }
 

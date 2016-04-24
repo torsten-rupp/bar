@@ -1140,22 +1140,20 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextEntry
 * Purpose: get next entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId                     - index id of entry
-*          storageName                 - storage name (can be NULL)
-*          storageDateTime             - storage date/time stamp [s]
-*          entryName                   - entry name
-*          destinationName             - destination name (for link
-*                                        entries)
-*          fileSystemType              - file system type (for image
-*                                        entries)
-*          size                        - size [bytes]
-*          timeModified                - modified date/time stamp [s]
-*          userId                      - user id
-*          groupId                     - group id
-*          permission                  - permission flags
-*          fragmentOffsetOrBlockOffset - fragment [bytes]/block offset
-*          fragmentSizeOrBlockCount    - fragment size [bytes]/block
-*                                        count
+* Output : indexId          - index id of entry
+*          storageName      - storage name (can be NULL)
+*          storageDateTime  - storage date/time stamp [s]
+*          entryName        - entry name
+*          destinationName  - destination name (for link entries)
+*          fileSystemType   - file system type (for image entries)
+*          size             - file/image/hardlink size [bytes]
+*                             or directory size [bytes]
+*          timeModified     - modified date/time stamp [s]
+*          userId           - user id
+*          groupId          - group id
+*          permission       - permission flags
+*          fragmentOffset   - fragment offset [bytes]/[blocks]
+*          fragmentSize     - fragment size [bytes]/[blocks]
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1172,8 +1170,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         uint32            *userId,
                         uint32            *groupId,
                         uint32            *permission,
-                        uint64            *fragmentOrBlockOffset,
-                        uint64            *fragmentSizeOrBlockCount
+                        uint64            *fragmentOffset,
+                        uint64            *fragmentSize
                        );
 
 /***********************************************************************\
