@@ -677,6 +677,7 @@ TLS_DIR
 CONFIG_DIR
 INSTALL_BIN_DIR
 INSTALL_DIR
+HAVE_USLEEP
 HAVE_BFD
 HAVE_BREAKPAD
 HAVE_PTHREADS_W32
@@ -2513,6 +2514,7 @@ shift; shift
 host_os=$*
 IFS=$ac_save_IFS
 case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
+
 
 
 
@@ -17777,7 +17779,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_usleep" >&5
 $as_echo "$ac_cv_func_usleep" >&6; }
   if test "$ac_cv_func_usleep" != no; then :
-
+  HAVE_USLEEP=1;
 $as_echo "#define HAVE_USLEEP 1" >>confdefs.h
 
 elif :; then :
