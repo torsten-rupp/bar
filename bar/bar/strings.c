@@ -156,10 +156,11 @@ typedef struct
 
 /***************************** Variables *******************************/
 #ifndef NDEBUG
-  LOCAL pthread_once_t  debugStringInitFlag = PTHREAD_ONCE_INIT;
-  LOCAL pthread_mutex_t debugStringLock;
-  LOCAL DebugStringList debugStringAllocList;
-  LOCAL DebugStringList debugStringFreeList;
+  LOCAL pthread_once_t      debugStringInitFlag = PTHREAD_ONCE_INIT;
+  LOCAL pthread_mutexattr_t debugListLockAttributes;
+  LOCAL pthread_mutex_t     debugStringLock;
+  LOCAL DebugStringList     debugStringAllocList;
+  LOCAL DebugStringList     debugStringFreeList;
   #ifdef MAX_STRINGS_CHECK
     LOCAL ulong debugMaxStringNextWarningCount;
   #endif /* MAX_STRINGS_CHECK */
@@ -188,7 +189,9 @@ typedef struct
 
 LOCAL void debugStringInit(void)
 {
-  pthread_mutex_init(&debugStringLock,NULL);
+  pthread_mutexattr_init(&debugListLockAttributes);
+  pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&debugStringLock,&debugListLockAttributes);
   List_init(&debugStringAllocList);
   debugStringAllocList.memorySize = 0L;
   memset(debugStringAllocList.hash,0,sizeof(debugStringAllocList.hash));
@@ -2267,7 +2270,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
         {
           fprintf(stderr,"DEBUG WARNING: %lu strings allocated!\n",debugStringCount);
           debugMaxStringNextWarningCount += WARN_MAX_STRINGS_DELTA;
-//String_debugPrintAllocated();
+//String_debugDumpInfo(stderr);
           sleep(1);
         }
       #endif /* MAX_STRINGS_CHECK */
