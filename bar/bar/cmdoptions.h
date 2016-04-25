@@ -192,8 +192,8 @@ CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<help level>,<priority>,<var
 CMD_OPTION_ENUM           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>,            <description>                       )
 CMD_OPTION_CSTRING        (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>,<description argument>)
 CMD_OPTION_STRING         (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>,<description argument>)
-CMD_OPTION_SPECIAL        (<long name>,<short name>,<help level>,<priority>,<function>,                    <description>,<description argument>)
-CMD_OPTION_DEPRECATED     (<long name>,<short name>,<help level>,<priority>,<function>)
+CMD_OPTION_SPECIAL        (<long name>,<short name>,<help level>,<priority>,<function>,<user data>         <description>,<description argument>)
+CMD_OPTION_DEPRECATED     (<long name>,<short name>,<help level>,<priority>,<function>,<user data>         <description>,<new option name>     )
 
 const CommandLineUnit COMMAND_LINE_UNITS[] =
 {
@@ -243,7 +243,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("help",     'h',0,0,helpFlag,   FALSE,                                        "output this help"),
 
-  CMD_OPTION_DEPRECATED   ("deprecated",0,0,1,deprecatedValue,parseDeprecated,NULL),
+  CMD_OPTION_DEPRECATED   ("deprecated",0,0,1,deprecatedValue,parseDeprecated,NULL,"new name"),
 };
 
 */
