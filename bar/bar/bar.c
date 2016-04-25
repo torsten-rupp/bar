@@ -708,6 +708,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
+// handle deprecated configuration values
+
 const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
 (
   {"T",1024LL*1024LL*1024LL*1024LL},
@@ -935,6 +937,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BOOLEAN           ("overwrite-files",              &jobOptions.overwriteEntriesFlag,-1                            ),
   CONFIG_VALUE_BOOLEAN           ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                             ),
   CONFIG_VALUE_BOOLEAN           ("no-bar-on-medium",             &jobOptions.noBAROnMediumFlag,-1                               ),
+  CONFIG_VALUE_BOOLEAN           ("no-stop-on-error",             &jobOptions.noStopOnErrorFlag,-1                               ),
   CONFIG_VALUE_BOOLEAN           ("quiet",                        &globalOptions.quietFlag,-1                                    ),
   CONFIG_VALUE_INTEGER           ("verbose",                      &globalOptions.verboseLevel,-1,                                0,6,NULL),
 
@@ -1126,9 +1129,10 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("pid-file",                     &pidFileName,-1                                                ),
 
   // deprecated
-  CONFIG_VALUE_IGNORE            ("mount-device"),
+  CONFIG_VALUE_DEPRECATED        ("mount-device",                 &mountList,-1,                                                 configValueParseDeprecatedMountDevice,NULL,"mount"),
   CONFIG_VALUE_IGNORE            ("schedule"),
   CONFIG_VALUE_IGNORE            ("overwrite-archive-files"),
+  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                &jobOptions.noStopOnErrorFlag,-1,                              configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error"),
 );
 
 /*---------------------------------------------------------------------*/
@@ -2129,19 +2133,18 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
     return FALSE;
   }
 
-  // init mount node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
+  if (!String_isEmpty(mountName))
   {
-    HALT_INSUFFICIENT_MEMORY();
+    // add to mount list
+    mountNode = newMountNode(mountName,alwaysUnmount);
+    assert(mountNode != NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+    List_append((MountList*)variable,mountNode);
   }
-  mountNode->id            = Misc_getId();
-  mountNode->name          = mountName;
-  mountNode->alwaysUnmount = alwaysUnmount;
-  mountNode->mounted       = FALSE;
 
-  // append to mount list
-  List_append((MountList*)variable,mountNode);
+  // free resources
+  String_delete(mountName);
 
   return TRUE;
 }
@@ -2615,8 +2618,6 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 * Notes  : -
 \***********************************************************************/
 
-//TODO
-#ifndef WERROR
 LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   MountNode *mountNode;
@@ -2630,23 +2631,18 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, c
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  // init mount node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
+  if (!stringIsEmpty(value))
   {
-    HALT_INSUFFICIENT_MEMORY();
+    // add to mount list
+    mountNode = newMountNodeCString(value,TRUE);
+    assert(mountNode != NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+    List_append((MountList*)variable,mountNode);
   }
-  mountNode->id            = Misc_getId();
-  mountNode->name          = String_newCString(value);
-  mountNode->alwaysUnmount = TRUE;
-  mountNode->mounted       = FALSE;
-
-  // append to mount list
-  List_append((MountList*)variable,mountNode);
 
   return TRUE;
 }
-#endif
 
 /***********************************************************************\
 * Name   : cmdOptionParseDeprecatedStopOnError
@@ -5430,67 +5426,6 @@ void freeServer(uint serverId)
   }
 }
 
-void freeMountNode(MountNode *mountNode, void *userData)
-{
-  assert(mountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(mountNode->name);
-}
-
-MountNode *newMountNode(ConstString name, bool alwaysUnmount)
-{
-  MountNode *mountNode;
-
-  assert(name != NULL);
-
-  // allocate mount node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  mountNode->id            = Misc_getId();
-  mountNode->name          = String_duplicate(name);
-  mountNode->alwaysUnmount = alwaysUnmount;
-  mountNode->mounted       = FALSE;
-
-  return mountNode;
-}
-
-MountNode *duplicateMountNode(MountNode *fromMountNode,
-                              void      *userData
-                             )
-{
-  MountNode *mountNode;
-
-  assert(fromMountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  // allocate node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  mountNode->id            = Misc_getId();
-  mountNode->name          = String_duplicate(fromMountNode->name);
-  mountNode->alwaysUnmount = fromMountNode->alwaysUnmount;
-  mountNode->mounted       = FALSE;
-
-  return mountNode;
-}
-
-void deleteMountNode(MountNode *mountNode)
-{
-  assert(mountNode != NULL);
-
-  freeMountNode(mountNode,NULL);
-  LIST_DELETE_NODE(mountNode);
-}
-
 bool isServerAllocationPending(uint serverId)
 {
   bool          pendingFlag;
@@ -5513,6 +5448,68 @@ bool isServerAllocationPending(uint serverId)
   }
 
   return pendingFlag;
+}
+
+MountNode *newMountNode(ConstString mountName, bool alwaysUnmount)
+{
+  assert(mountName != NULL);
+
+  return newMountNodeCString(String_cString(mountName),alwaysUnmount);
+}
+
+MountNode *newMountNodeCString(const char *mountName, bool alwaysUnmount)
+{
+  MountNode *mountNode;
+
+  assert(mountName != NULL);
+  assert(!stringIsEmpty(mountName));
+
+  // allocate mount node
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  mountNode->id            = Misc_getId();
+  mountNode->name          = String_newCString(mountName);
+  mountNode->alwaysUnmount = alwaysUnmount;
+  mountNode->mounted       = FALSE;
+
+  return mountNode;
+}
+
+MountNode *duplicateMountNode(MountNode *fromMountNode,
+                              void      *userData
+                             )
+{
+  MountNode *mountNode;
+
+  assert(fromMountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  // allocate node
+  mountNode = newMountNode(fromMountNode->name,fromMountNode->alwaysUnmount);
+  assert(mountNode != NULL);
+
+  return mountNode;
+}
+
+void deleteMountNode(MountNode *mountNode)
+{
+  assert(mountNode != NULL);
+
+  freeMountNode(mountNode,NULL);
+  LIST_DELETE_NODE(mountNode);
+}
+
+void freeMountNode(MountNode *mountNode, void *userData)
+{
+  assert(mountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(mountNode->name);
 }
 
 Errors getPasswordConsole(String        name,
@@ -6232,19 +6229,16 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
     return FALSE;
   }
 
-  // init mount node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
+  if (!String_isEmpty(mountName))
   {
-    HALT_INSUFFICIENT_MEMORY();
+    // add to mount list
+    mountNode = newMountNode(mountName,alwaysUnmount);
+    assert(mountNode != NULL);
+    List_append((MountList*)variable,mountNode);
   }
-  mountNode->id            = Misc_getId();
-  mountNode->name          = mountName;
-  mountNode->alwaysUnmount = alwaysUnmount;
-  mountNode->mounted       = FALSE;
 
-  // append to mount list
-  List_append((MountList*)variable,mountNode);
+  // free resources
+  String_delete(mountName);
 
   return TRUE;
 }
@@ -6686,6 +6680,29 @@ bool configValueFormatKey(void **formatUserData, void *userData, String line)
   }
 }
 
+bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (!stringIsEmpty(value))
+  {
+    // add to mount list
+    mountNode = newMountNodeCString(value,TRUE);
+    assert(mountNode != NULL);
+    List_append((MountList*)variable,mountNode);
+  }
+
+  return TRUE;
+}
+
 //TODO
 #ifndef WERROR
 bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
@@ -6701,6 +6718,28 @@ bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const
   return TRUE;
 }
 #endif
+
+bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(bool*)variable) = !(   (value == NULL)
+                         || stringEquals(value,"1")
+                         || stringEqualsIgnoreCase(value,"true")
+                         || stringEqualsIgnoreCase(value,"on")
+                         || stringEqualsIgnoreCase(value,"yes")
+                        );
+
+  return TRUE;
+}
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType)
 {

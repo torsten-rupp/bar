@@ -667,59 +667,6 @@ void deleteServerNode(ServerNode *serverNode);
 
 void freeServerNode(ServerNode *serverNode, void *userData);
 
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : freeMountNode
-* Purpose: free mount node
-* Input  : mountNode - mount node
-*          userData  - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void freeMountNode(MountNode *mountNode, void *userData);
-
-/***********************************************************************\
-* Name   : newMountNode
-* Purpose: new mount node
-* Input  : name          - name
-*          alwaysUnmount - TRUE for always unmount
-* Output : -
-* Return : mount node
-* Notes  : -
-\***********************************************************************/
-
-MountNode *newMountNode(ConstString name, bool alwaysUnmount);
-
-/***********************************************************************\
-* Name   : duplicateMountNode
-* Purpose: duplicate schedule node
-* Input  : fromMountNode - from mount node
-*          userData      - user data (not used)
-* Output : -
-* Return : duplicated mount node
-* Notes  : -
-\***********************************************************************/
-
-MountNode *duplicateMountNode(MountNode *fromMountNode,
-                              void      *userData
-                             );
-
-/***********************************************************************\
-* Name   : deleteMountNode
-* Purpose: delete mount node
-* Input  : mountNode - mount node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void deleteMountNode(MountNode *mountNode);
-
-// ----------------------------------------------------------------------
-
 /***********************************************************************\
 * Name   : getServerSettings
 * Purpose: get server settings
@@ -897,6 +844,58 @@ bool isServerAllocationPending(uint serverId);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : newMountNode
+* Purpose: new mount node
+* Input  : mountName     - mount name
+*          alwaysUnmount - TRUE for always unmount
+* Output : -
+* Return : mount node
+* Notes  : -
+\***********************************************************************/
+
+MountNode *newMountNode(ConstString mountName, bool alwaysUnmount);
+MountNode *newMountNodeCString(const char *mountName, bool alwaysUnmount);
+
+/***********************************************************************\
+* Name   : duplicateMountNode
+* Purpose: duplicate schedule node
+* Input  : fromMountNode - from mount node
+*          userData      - user data (not used)
+* Output : -
+* Return : duplicated mount node
+* Notes  : -
+\***********************************************************************/
+
+MountNode *duplicateMountNode(MountNode *fromMountNode,
+                              void      *userData
+                             );
+
+/***********************************************************************\
+* Name   : deleteMountNode
+* Purpose: delete mount node
+* Input  : mountNode - mount node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void deleteMountNode(MountNode *mountNode);
+
+/***********************************************************************\
+* Name   : freeMountNode
+* Purpose: free mount node
+* Input  : mountNode - mount node
+*          userData  - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeMountNode(MountNode *mountNode, void *userData);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : getPasswordConsole
 * Purpose: get name/password from console
 * Input  : name          - name variable (can be NULL)
@@ -968,7 +967,7 @@ bool parseDateMonth(ConstString s, int *month);
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
 * Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1026,7 +1025,7 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
 * Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1081,7 +1080,7 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
 * Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1138,7 +1137,7 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line);
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
 * Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1195,7 +1194,7 @@ bool configValueFormatImageEntryPattern(void **formatUserData, void *userData, S
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
 * Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1250,7 +1249,7 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
 * Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1306,7 +1305,7 @@ bool configValueFormatMount(void **formatUserData, void *userData, String line);
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
 * Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1362,7 +1361,7 @@ bool configValueFormatDeltaSource(void **formatUserData, void *userData, String 
 *          maxErrorMessageLength - max. length of error message text
 * Output : errorMessage - error message text
 * Output : -
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1378,7 +1377,7 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
 *          name     - config name
 *          value    - config value
 * Output : -
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1435,7 +1434,7 @@ bool configValueFormatDeltaCompressAlgorithm(void **formatUserData, void *userDa
 *          name     - config name
 *          value    - config value
 * Output : -
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1491,7 +1490,7 @@ bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userDat
 *          name     - config name
 *          value    - config value
 * Output : -
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1547,7 +1546,7 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
 *          name     - config name
 *          value    - config value
 * Output : -
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1604,12 +1603,29 @@ bool configValueFormatKey(void **formatUserData, void *userData, String line);
 *          name     - config name
 *          value    - config value
 * Output : -
-* Return : TRUE if config value parsed and stored in variable, FALSE
+* Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueParseDeprecated...
+* Purpose: config value option call back for deprecated configuration
+*          values
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : initFilePattern

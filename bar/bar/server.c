@@ -500,8 +500,7 @@ LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userDa
 LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
 LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
 
-// handle deprecated options
-LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+// handle deprecated configuration values
 LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
@@ -584,9 +583,10 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,comment                                 ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              "mount",configValueParseDeprecatedMountDevice,NULL),
-  CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                JobNode,scheduleList,                           "schedule section",configValueParseDeprecatedSchedule,NULL),
+  CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              configValueParseDeprecatedMountDevice,NULL,"mount"),
+  CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                JobNode,scheduleList,                           configValueParseDeprecatedSchedule,NULL,"schedule section"),
   CONFIG_STRUCT_VALUE_IGNORE    ("overwrite-archive-files"                                                  ),
+  CONFIG_STRUCT_VALUE_DEPRECATED("stop-on-error",           JobNode,jobOptions.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error"),
 );
 
 /***************************** Variables *******************************/
@@ -1456,49 +1456,6 @@ if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string val
   }
 
   return scheduleNode;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedMountDevice
-* Purpose: config value option call back for parsing mount-device
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  MountNode *mountNode;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  // init mount node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  mountNode->id            = Misc_getId();
-  mountNode->name          = String_newCString(value);
-  mountNode->alwaysUnmount = TRUE;
-  mountNode->mounted       = FALSE;
-
-  // append to mount list
-  List_append((MountList*)variable,mountNode);
-
-  return TRUE;
 }
 
 /***********************************************************************\
