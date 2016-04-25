@@ -843,7 +843,7 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   #endif /* not NDEBUG */
 if (n > 10)
 {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,n);
 //asm("int3");
 }
 
