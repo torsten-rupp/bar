@@ -4183,35 +4183,16 @@ Dprintf.dprintf("");
   private void showUUIDIndexToolTip(UUIDIndexData uuidIndexData, int x, int y)
   {
     Label label;
-Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
 
     if (widgetStorageTreeToolTip != null)
     {
       widgetStorageTreeToolTip.dispose();
     }
+
     widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
     widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
     widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
     Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
-    widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
-    {
-      public void mouseEnter(MouseEvent mouseEvent)
-      {
-      }
-
-      public void mouseExit(MouseEvent mouseEvent)
-      {
-        if (widgetStorageTreeToolTip != null)
-        {
-          widgetStorageTreeToolTip.dispose();
-          widgetStorageTreeToolTip = null;
-        }
-      }
-
-      public void mouseHover(MouseEvent mouseEvent)
-      {
-      }
-    });
 
     label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
     label.setForeground(COLOR_INFO_FORGROUND);
@@ -4266,6 +4247,37 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
     widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
     widgetStorageTreeToolTip.setVisible(true);
+
+    widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetStorageTreeToolTip != null)
+        {
+          // check if inside sub-widget
+          Point point = new Point(mouseEvent.x,mouseEvent.y);
+          for (Control control : widgetStorageTreeToolTip.getChildren())
+          {
+            if (control.getBounds().contains(point))
+            {
+              return;
+            }
+          }
+
+          // close tooltip
+          widgetStorageTreeToolTip.dispose();
+          widgetStorageTreeToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
   }
 
   /** show entity index tool tip
@@ -4280,29 +4292,11 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     {
       widgetStorageTreeToolTip.dispose();
     }
+
     widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
     widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
     widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
     Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
-    widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
-    {
-      public void mouseEnter(MouseEvent mouseEvent)
-      {
-      }
-
-      public void mouseExit(MouseEvent mouseEvent)
-      {
-        if (widgetStorageTreeToolTip != null)
-        {
-          widgetStorageTreeToolTip.dispose();
-          widgetStorageTreeToolTip = null;
-        }
-      }
-
-      public void mouseHover(MouseEvent mouseEvent)
-      {
-      }
-    });
 
     label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
     label.setForeground(COLOR_INFO_FORGROUND);
@@ -4347,6 +4341,37 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
     widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
     widgetStorageTreeToolTip.setVisible(true);
+
+    widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetStorageTreeToolTip != null)
+        {
+          // check if inside sub-widget
+          Point point = new Point(mouseEvent.x,mouseEvent.y);
+          for (Control control : widgetStorageTreeToolTip.getChildren())
+          {
+            if (control.getBounds().contains(point))
+            {
+              return;
+            }
+          }
+
+          // close tooltip
+          widgetStorageTreeToolTip.dispose();
+          widgetStorageTreeToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
   }
 
   /** show storage index tool tip
@@ -4361,29 +4386,11 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     {
       widgetStorageTableToolTip.dispose();
     }
+
     widgetStorageTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
     widgetStorageTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
     widgetStorageTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
     Widgets.layout(widgetStorageTableToolTip,0,0,TableLayoutData.NSWE);
-    widgetStorageTableToolTip.addMouseTrackListener(new MouseTrackListener()
-    {
-      public void mouseEnter(MouseEvent mouseEvent)
-      {
-      }
-
-      public void mouseExit(MouseEvent mouseEvent)
-      {
-        if (widgetStorageTableToolTip != null)
-        {
-          widgetStorageTableToolTip.dispose();
-          widgetStorageTableToolTip = null;
-        }
-      }
-
-      public void mouseHover(MouseEvent mouseEvent)
-      {
-      }
-    });
 
     label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Job")+":");
     label.setForeground(COLOR_INFO_FORGROUND);
@@ -4478,6 +4485,37 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     Point size = widgetStorageTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
     widgetStorageTableToolTip.setBounds(x,y,size.x,size.y);
     widgetStorageTableToolTip.setVisible(true);
+
+    widgetStorageTableToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetStorageTableToolTip != null)
+        {
+          // check if inside sub-widget
+          Point point = new Point(mouseEvent.x,mouseEvent.y);
+          for (Control control : widgetStorageTableToolTip.getChildren())
+          {
+            if (control.getBounds().contains(point))
+            {
+              return;
+            }
+          }
+
+          // close tooltip
+          widgetStorageTableToolTip.dispose();
+          widgetStorageTableToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
   }
 
   /** show entry data tool tip
@@ -4494,31 +4532,14 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
 
     if (widgetEntryTableToolTip != null)
     {
+Dprintf.dprintf("");
       widgetEntryTableToolTip.dispose();
     }
+
     widgetEntryTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
     widgetEntryTableToolTip.setBackground(COLOR_BACKGROUND);
     widgetEntryTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
     Widgets.layout(widgetEntryTableToolTip,0,0,TableLayoutData.NSWE);
-    widgetEntryTableToolTip.addMouseTrackListener(new MouseTrackListener()
-    {
-      public void mouseEnter(MouseEvent mouseEvent)
-      {
-      }
-
-      public void mouseExit(MouseEvent mouseEvent)
-      {
-        if (widgetEntryTableToolTip != null)
-        {
-          widgetEntryTableToolTip.dispose();
-          widgetEntryTableToolTip = null;
-        }
-      }
-
-      public void mouseHover(MouseEvent mouseEvent)
-      {
-      }
-    });
 
     label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Storage")+":");
     label.setForeground(COLOR_FORGROUND);
@@ -4586,6 +4607,38 @@ Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
     Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
     widgetEntryTableToolTip.setBounds(x,y,size.x,size.y);
     widgetEntryTableToolTip.setVisible(true);
+
+    widgetEntryTableToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+        if (widgetEntryTableToolTip != null)
+        {
+          // check if inside sub-widget
+          Point point = new Point(mouseEvent.x,mouseEvent.y);
+          for (Control control : widgetEntryTableToolTip.getChildren())
+          {
+            if (control.getBounds().contains(point))
+            {
+Dprintf.dprintf("");
+              return;
+            }
+          }
+
+          // close tooltip
+          widgetEntryTableToolTip.dispose();
+          widgetEntryTableToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
   }
 
   /** create restore tab
@@ -5782,11 +5835,6 @@ Dprintf.dprintf("remove");
         @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
-          if (widgetEntryTableToolTip != null)
-          {
-            widgetEntryTableToolTip.dispose();
-            widgetEntryTableToolTip = null;
-          }
         }
         @Override
         public void mouseHover(MouseEvent mouseEvent)
@@ -5875,6 +5923,42 @@ Dprintf.dprintf("remove");
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             restoreEntries(selectedEntryIdSet);
+          }
+        });
+
+        Widgets.addMenuSeparator(menu);
+
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Info")+"\u2026");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TableItem tableItems[] = widgetEntryTable.getSelection();
+            if (tableItems.length > 0)
+            {
+              if (widgetEntryTableToolTip != null)
+              {
+                widgetEntryTableToolTip.dispose();
+                widgetEntryTableToolTip = null;
+              }
+
+              if (tableItems[0] != null)
+              {
+                EntryData entryData = (EntryData)tableItems[0].getData();
+                if (entryData != null)
+                {
+                  Point point = display.getCursorLocation();//widgetEntryTable.toDisplay(selectionEvent.x+16,selectionEvent.y);
+                  if (point.x > 16) point.x -= 16;
+                  if (point.y > 16) point.y -= 16;
+                  showEntryToolTip(entryData,point.x,point.y);
+                }
+              }
+            }
           }
         });
       }
