@@ -8852,8 +8852,6 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
                 tmpError = Chunk_close(&archiveEntryInfo->file.chunkFile.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               }
-//TODO: remove
-assert((archiveEntryInfo->file.chunkFileEntry.size == 0) || (archiveEntryInfo->file.chunkFileData.fragmentSize > 0));
 
               // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
