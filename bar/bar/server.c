@@ -585,6 +585,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   // deprecated
   CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              configValueParseDeprecatedMountDevice,NULL,"mount"),
   CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                JobNode,scheduleList,                           configValueParseDeprecatedSchedule,NULL,"schedule section"),
+//TODO
   CONFIG_STRUCT_VALUE_IGNORE    ("overwrite-archive-files"                                                  ),
   CONFIG_STRUCT_VALUE_DEPRECATED("stop-on-error",           JobNode,jobOptions.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error"),
 );
