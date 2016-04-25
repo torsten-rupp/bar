@@ -1004,7 +1004,6 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
                                );
     if (sqliteResult == SQLITE_LOCKED)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       xxx=0;
       do
       {
@@ -1525,12 +1524,12 @@ void Database_doneAll(void)
   assert(sqliteResult == SQLITE_OK);
 
   // enable recursive triggers
-  error = sqliteExecute(databaseHandle->handle,
-                        "PRAGMA recursive_triggers=ON",
-                        CALLBACK(NULL,NULL),
-                        databaseHandle->timeout
-                       );
-  assert(error == ERROR_NONE);
+  sqliteResult = sqlite3_exec(databaseHandle->handle,
+                              "PRAGMA recursive_triggers=ON",
+                              CALLBACK(NULL,NULL),
+                              NULL
+                             );
+  assert(sqliteResult == SQLITE_OK);
 
   #ifdef DATABASE_DEBUG
     fprintf(stderr,"Database debug: open '%s'\n",fileName);
@@ -2931,233 +2930,224 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle->databaseHandle->handle != NULL);
   assert(format != NULL);
 
-  va_start(arguments,format);
-//  BLOCK_DOX(result,
-//            DATABASE_LOCK(databaseQueryHandle->databaseHandle,"%s",String_cString(databaseQueryHandle->sqlString)),
-//            DATABASE_UNLOCK(databaseQueryHandle->databaseHandle),
-//  {
-//    bool result;
-
-    DATABASE_DEBUG_TIME_START(databaseQueryHandle);
-    if (sqliteStep(databaseQueryHandle->databaseHandle->handle,databaseQueryHandle->statementHandle,databaseQueryHandle->databaseHandle->timeout) == SQLITE_ROW)
+  DATABASE_DEBUG_TIME_START(databaseQueryHandle);
+  if (sqliteStep(databaseQueryHandle->databaseHandle->handle,databaseQueryHandle->statementHandle,databaseQueryHandle->databaseHandle->timeout) == SQLITE_ROW)
+  {
+    // get data
+    va_start(arguments,format);
+    column = 0;
+    while ((*format) != '\0')
     {
-      // get data
-      column = 0;
-      while ((*format) != '\0')
+      // find next format specifier
+      while (((*format) != '\0') && ((*format) != '%'))
       {
-        // find next format specifier
-        while (((*format) != '\0') && ((*format) != '%'))
+        format++;
+      }
+
+      if ((*format) == '%')
+      {
+        format++;
+
+        // skip align specifier
+        if (    ((*format) != '\0')
+             && (   ((*format) == '-')
+                 || ((*format) == '-')
+                )
+           )
         {
           format++;
         }
 
-        if ((*format) == '%')
+        // get length specifier
+        maxLength = -1;
+        if (    ((*format) != '\0')
+             && isdigit(*format)
+           )
         {
-          format++;
-
-          // skip align specifier
-          if (    ((*format) != '\0')
-               && (   ((*format) == '-')
-                   || ((*format) == '-')
-                  )
-             )
+          maxLength = 0;
+          while (   ((*format) != '\0')
+                 && isdigit(*format)
+                )
           {
+            maxLength = maxLength*10+(uint)((*format)-'0');
             format++;
           }
+        }
 
-          // get length specifier
-          maxLength = -1;
-          if (    ((*format) != '\0')
-               && isdigit(*format)
-             )
-          {
-            maxLength = 0;
-            while (   ((*format) != '\0')
-                   && isdigit(*format)
-                  )
-            {
-              maxLength = maxLength*10+(uint)((*format)-'0');
-              format++;
-            }
-          }
-
-          // check for longlong/long flag
-          longLongFlag = FALSE;
-          longFlag     = FALSE;
+        // check for longlong/long flag
+        longLongFlag = FALSE;
+        longFlag     = FALSE;
+        if ((*format) == 'l')
+        {
+          format++;
           if ((*format) == 'l')
           {
             format++;
-            if ((*format) == 'l')
+            longLongFlag = TRUE;
+          }
+          else
+          {
+            longFlag = TRUE;
+          }
+        }
+
+        // handle format type
+        switch (*format)
+        {
+          case 'b':
+            // bool
+            format++;
+
+            value.b = va_arg(arguments,bool*);
+            if (value.b != NULL)
             {
-              format++;
-              longLongFlag = TRUE;
+              (*value.b) = (sqlite3_column_int(databaseQueryHandle->statementHandle,column) == 1);
+            }
+            break;
+          case 'd':
+            // integer
+            format++;
+
+            if      (longLongFlag)
+            {
+              value.ll = va_arg(arguments,int64*);
+              if (value.ll != NULL)
+              {
+                (*value.ll) = (int64)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
+              }
+            }
+            else if (longFlag)
+            {
+              value.l = va_arg(arguments,long*);
+              if (value.l != NULL)
+              {
+                (*value.l) = (long)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
+              }
             }
             else
             {
-              longFlag = TRUE;
+              value.i = va_arg(arguments,int*);
+              if (value.i != NULL)
+              {
+                (*value.i) = sqlite3_column_int(databaseQueryHandle->statementHandle,column);
+              }
             }
-          }
+            break;
+          case 'u':
+            // unsigned integer
+            format++;
 
-          // handle format type
-          switch (*format)
-          {
-            case 'b':
-              // bool
-              format++;
-
-              value.b = va_arg(arguments,bool*);
-              if (value.b != NULL)
+            if      (longLongFlag)
+            {
+              value.ull = va_arg(arguments,uint64*);
+              if (value.ull != NULL)
               {
-                (*value.b) = (sqlite3_column_int(databaseQueryHandle->statementHandle,column) == 1);
+                (*value.ull) = (uint64)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
               }
-              break;
-            case 'd':
-              // integer
-              format++;
-
-              if      (longLongFlag)
+            }
+            else if (longFlag)
+            {
+              value.ul = va_arg(arguments,ulong*);
+              if (value.ul != NULL)
               {
-                value.ll = va_arg(arguments,int64*);
-                if (value.ll != NULL)
-                {
-                  (*value.ll) = (int64)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
-                }
+                (*value.ul) = (ulong)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
               }
-              else if (longFlag)
+            }
+            else
+            {
+              value.ui = va_arg(arguments,uint*);
+              if (value.ui != NULL)
               {
-                value.l = va_arg(arguments,long*);
-                if (value.l != NULL)
-                {
-                  (*value.l) = (long)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
-                }
+                (*value.ui) = (uint)sqlite3_column_int(databaseQueryHandle->statementHandle,column);
+              }
+            }
+            break;
+          case 'f':
+            // float/double
+            format++;
+
+            if (longFlag)
+            {
+              value.d = va_arg(arguments,double*);
+              if (value.d != NULL)
+              {
+                (*value.d) = atof((const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column));
+              }
+            }
+            else
+            {
+              value.f = va_arg(arguments,float*);
+              if (value.f != NULL)
+              {
+                (*value.f) = (float)atof((const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column));
+              }
+            }
+            break;
+          case 'c':
+            // char
+            format++;
+
+            value.ch = va_arg(arguments,char*);
+            if (value.ch != NULL)
+            {
+              (*value.ch) = ((char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column))[0];
+            }
+            break;
+          case 's':
+            // C string
+            format++;
+
+            value.s = va_arg(arguments,char*);
+            if (value.s != NULL)
+            {
+              if (maxLength >= 0)
+              {
+                strncpy(value.s,(const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column),maxLength-1);
+                value.s[maxLength-1] = '\0';
               }
               else
               {
-                value.i = va_arg(arguments,int*);
-                if (value.i != NULL)
-                {
-                  (*value.i) = sqlite3_column_int(databaseQueryHandle->statementHandle,column);
-                }
+                strcpy(value.s,(const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column));
               }
-              break;
-            case 'u':
-              // unsigned integer
-              format++;
+            }
+            break;
+          case 'S':
+            // string
+            format++;
 
-              if      (longLongFlag)
-              {
-                value.ull = va_arg(arguments,uint64*);
-                if (value.ull != NULL)
-                {
-                  (*value.ull) = (uint64)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
-                }
-              }
-              else if (longFlag)
-              {
-                value.ul = va_arg(arguments,ulong*);
-                if (value.ul != NULL)
-                {
-                  (*value.ul) = (ulong)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
-                }
-              }
-              else
-              {
-                value.ui = va_arg(arguments,uint*);
-                if (value.ui != NULL)
-                {
-                  (*value.ui) = (uint)sqlite3_column_int(databaseQueryHandle->statementHandle,column);
-                }
-              }
-              break;
-            case 'f':
-              // float/double
-              format++;
+            value.string = va_arg(arguments,String);
+            if (value.string != NULL)
+            {
+              String_setCString(value.string,(const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column));
+            }
+            break;
+          case 'p':
+            // text via pointer
+            format++;
 
-              if (longFlag)
-              {
-                value.d = va_arg(arguments,double*);
-                if (value.d != NULL)
-                {
-                  (*value.d) = atof((const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column));
-                }
-              }
-              else
-              {
-                value.f = va_arg(arguments,float*);
-                if (value.f != NULL)
-                {
-                  (*value.f) = (float)atof((const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column));
-                }
-              }
-              break;
-            case 'c':
-              // char
-              format++;
-
-              value.ch = va_arg(arguments,char*);
-              if (value.ch != NULL)
-              {
-                (*value.ch) = ((char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column))[0];
-              }
-              break;
-            case 's':
-              // C string
-              format++;
-
-              value.s = va_arg(arguments,char*);
-              if (value.s != NULL)
-              {
-                if (maxLength >= 0)
-                {
-                  strncpy(value.s,(const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column),maxLength-1);
-                  value.s[maxLength-1] = '\0';
-                }
-                else
-                {
-                  strcpy(value.s,(const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column));
-                }
-              }
-              break;
-            case 'S':
-              // string
-              format++;
-
-              value.string = va_arg(arguments,String);
-              if (value.string != NULL)
-              {
-                String_setCString(value.string,(const char*)sqlite3_column_text(databaseQueryHandle->statementHandle,column));
-              }
-              break;
-            case 'p':
-              // text via pointer
-              format++;
-
-              value.p = va_arg(arguments,void*);
-              if (value.p != NULL)
-              {
-                (*value.p) = (void*)sqlite3_column_text(databaseQueryHandle->statementHandle,column);
-              }
-              break;
-            default:
-              return FALSE;
-              break; /* not reached */
-          }
-
-          column++;
+            value.p = va_arg(arguments,void*);
+            if (value.p != NULL)
+            {
+              (*value.p) = (void*)sqlite3_column_text(databaseQueryHandle->statementHandle,column);
+            }
+            break;
+          default:
+            return FALSE;
+            break; /* not reached */
         }
+
+        column++;
       }
-
-      result = TRUE;
     }
-    else
-    {
-      result = FALSE;
-    }
-    DATABASE_DEBUG_TIME_END(databaseQueryHandle);
+    va_end(arguments);
 
-//    return result;
-//  });
-  va_end(arguments);
+    result = TRUE;
+  }
+  else
+  {
+    result = FALSE;
+  }
+  DATABASE_DEBUG_TIME_END(databaseQueryHandle);
 
   return result;
 }
