@@ -142,9 +142,9 @@ typedef struct
   } specialValue;
   struct
   {
-    const char *newName;                          // new name
     bool(*parse)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
     void       *userData;                         // user data for parse deprecated
+    const char *newName;                          // new name
   } deprecatedValue;
 } ConfigValue;
 
@@ -164,6 +164,7 @@ CONFIG_VALUE_SET            (<name>,<variable>,<offset>|-1,<set>                
 CONFIG_VALUE_CSTRING        (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_STRING         (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_SPECIAL        (<name>,<function>,<offset>|-1,<parse>,<formatInit>,<formatDone>,<format>,<userData>)
+CONFIG_VALUE_DEPRECATED     (<name>,<function>,<offset>|-1,<parse>,<userData>,<newName>                         )
 
 const ConfigValueUnit COMMAND_LINE_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
 (
@@ -799,15 +800,15 @@ typedef struct
 *          offset          - offset in structure or -1
 *          type            - structure type
 *          member          - structure memory name
-*          newName         - new name or NULL
 *          parse           - parse function
 *          userData        - user data for parse/format functions
+*          newName         - new name or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_DEPRECATED(name,variablePointer,offset,newName,parse,userData) \
+#define CONFIG_VALUE_DEPRECATED(name,variablePointer,offset,parse,userData,newName) \
   { \
     CONFIG_VALUE_TYPE_DEPRECATED,\
     name,\
@@ -823,10 +824,10 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {newName,parse,userData}\
+    {parse,userData,newName}\
   }
-#define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,newName,parse,userData) \
-  CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),newName,parse,userData)
+#define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName) \
+  CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),parse,userData,newName)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_BEGIN_SECTION, CONFIG_VALUE_END_SECTION
