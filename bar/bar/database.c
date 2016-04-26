@@ -1764,7 +1764,14 @@ fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
       }
       return error;
     }
-    assert(fromStatementHandle != NULL);
+    #ifndef NDEBUG
+      if (fromStatementHandle == NULL)
+      {
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        abort();
+//      assert(fromStatementHandle != NULL);
+      }
+    #endif /* not NDEBUG */
 
     // copy rows
     while ((sqliteResult = sqliteStep(fromDatabaseHandle->handle,fromStatementHandle,fromDatabaseHandle->timeout)) == SQLITE_ROW)
@@ -1911,7 +1918,14 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
         }
         return error;
       }
-      assert(toStatementHandle != NULL);
+      #ifndef NDEBUG
+        if (toStatementHandle == NULL)
+        {
+          fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+          abort();
+//          assert(toStatementHandle != NULL);
+        }
+      #endif /* not NDEBUG */
 
       // set to value
       n = 0;
@@ -2455,7 +2469,14 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     {
       return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
-    assert(statementHandle != NULL);
+    #ifndef NDEBUG
+      if (statementHandle == NULL)
+      {
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        abort();
+//        assert(statementHandle != NULL);
+      }
+    #endif /* not NDEBUG */
 
     // copy table rows
     while (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
@@ -2873,7 +2894,14 @@ databaseRowUserData,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
-    assert(databaseQueryHandle->statementHandle != NULL);
+    #ifndef NDEBUG
+      if (databaseQueryHandle->statementHandle == NULL)
+      {
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        abort();
+//      assert(databaseQueryHandle->statementHandle != NULL);
+      }
+    #endif /* not NDEBUG */
 
     return error;
   });
@@ -3251,7 +3279,14 @@ bool Database_exists(DatabaseHandle *databaseHandle,
     {
       HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
     }
-    assert(statementHandle != NULL);
+    #ifndef NDEBUG
+      if (statementHandle == NULL)
+      {
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        abort();
+//        assert(statementHandle != NULL);
+      }
+    #endif /* not NDEBUG */
 
     sqlite3_finalize(statementHandle);
 
@@ -3328,7 +3363,14 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
-    assert(statementHandle != NULL);
+    #ifndef NDEBUG
+      if (statementHandle == NULL)
+      {
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        abort();
+//        assert(statementHandle != NULL);
+      }
+    #endif /* not NDEBUG */
 
     if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
@@ -3500,7 +3542,14 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
-    assert(statementHandle != NULL);
+    #ifndef NDEBUG
+      if (statementHandle == NULL)
+      {
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        abort();
+//        assert(statementHandle != NULL);
+      }
+    #endif /* not NDEBUG */
 
     if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
@@ -3672,7 +3721,14 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
-    assert(statementHandle != NULL);
+    #ifndef NDEBUG
+      if (statementHandle == NULL)
+      {
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        abort();
+//        assert(statementHandle != NULL);
+      }
+    #endif /* not NDEBUG */
 
     if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
