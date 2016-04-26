@@ -7680,7 +7680,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterIds          = String_new();
   indexTypeSetString = String_new();
 
-Database_debugEnable(1);
+//Database_debugEnable(1);
   if (String_isEmpty(ftsName) && (entryIdCount == 0))
   {
     // no pattern/no entries selected
@@ -7888,7 +7888,7 @@ Database_debugEnable(1);
     filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
     filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
     filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestOnly ? "entryId" : "id",ftsName);
+    filterAppend(filter,!String_isEmpty(ftsName),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestOnly ? "newestEntries.entryId" : "entries.id",ftsName);
 //    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
     filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -7898,13 +7898,20 @@ Database_debugEnable(1);
     {
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
-                               "SELECT COUNT(id),TOTAL(size) \
+                               "SELECT COUNT(%s),TOTAL(%s) \
                                   FROM %s \
+                                    LEFT JOIN storage ON storage.id=%s.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND type IN (%S) \
+                                        AND %s.type IN (%S) \
                                ",
+                               newestOnly ? "entriesNewest.id" : "entries.id",
+                               newestOnly ? "entriesNewest.size" : "entries.size",
+                               newestOnly ? "entriesNewest" : "entries",
                                newestOnly ? "entriesNewest" : "entries",
                                filter,
+                               newestOnly ? "entriesNewest" : "entries",
                                getIndexTypeSetString(indexTypeSetString,indexTypeSet)
                               );
       if (error != ERROR_NONE)
@@ -7928,7 +7935,7 @@ Database_debugEnable(1);
       return ERROR_NONE;
     });
   }
-Database_debugEnable(0);
+//Database_debugEnable(0);
 
   // free resources
   String_delete(indexTypeSetString);
