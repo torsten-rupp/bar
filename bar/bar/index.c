@@ -7680,7 +7680,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterIds          = String_new();
   indexTypeSetString = String_new();
 
-//Database_debugEnable(1);
+Database_debugEnable(1);
   if (String_isEmpty(ftsName) && (entryIdCount == 0))
   {
     // no pattern/no entries selected
@@ -7888,7 +7888,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
     filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
     filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestOnly ? "newestEntries.entryId" : "entries.id",ftsName);
+    filterAppend(filter,!String_isEmpty(ftsName),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestOnly ? "entriesNewest.entryId" : "entries.id",ftsName);
 //    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
     filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -7935,7 +7935,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
   }
-//Database_debugEnable(0);
+Database_debugEnable(0);
 
   // free resources
   String_delete(indexTypeSetString);
@@ -8056,7 +8056,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
-Database_debugEnable(1);
+//Database_debugEnable(1);
   if (newestOnly)
   {
     error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
@@ -8087,7 +8087,7 @@ Database_debugEnable(1);
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.entryId \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.entryId \
-                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
                                 LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
                               WHERE %S \
@@ -8141,7 +8141,7 @@ Database_debugEnable(1);
                              limit
                             );
   }
-Database_debugEnable(0);
+//Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
