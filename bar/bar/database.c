@@ -1767,7 +1767,7 @@ fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
     #ifndef NDEBUG
       if (fromStatementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(fromDatabaseHandle->handle),sqlite3_errmsg(fromDatabaseHandle->handle),String_cString(sqlSelectString));
         abort();
 //      assert(fromStatementHandle != NULL);
       }
@@ -1921,7 +1921,7 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
       #ifndef NDEBUG
         if (toStatementHandle == NULL)
         {
-          fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+          fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(toDatabaseHandle->handle),sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
           abort();
 //          assert(toStatementHandle != NULL);
         }
@@ -3851,6 +3851,7 @@ void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle)
   assert(databaseQueryHandle != NULL);
 
 //  DATABASE_DEBUG_SQLX(databaseQueryHandle->databaseHandle,"SQL query",databaseQueryHandle->sqlString);
+  fprintf(stderr,"DEBUG database: %s: %s\n",databaseQueryHandle->databaseHandle->fileName,String_cString(databaseQueryHandle->sqlString)); \
 }
 
 #endif /* not NDEBUG */
