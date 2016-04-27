@@ -2519,6 +2519,15 @@ Dprintf.dprintf("");
     {
       assert storagePattern != null;
 
+      // clear count
+      storageCount = -1;
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          widgetStorageTabFolderTitle.redraw();
+        }
+      });
       // get storages info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
@@ -3169,7 +3178,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
 
   /** entry data
    */
-  class EntryData extends IndexData
+  class EntryIndexData extends IndexData
   {
     String        storageName;
     long          storageDateTime;
@@ -3189,7 +3198,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    EntryData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    EntryIndexData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
       super(entryId);
       this.storageName     = storageName;
@@ -3210,7 +3219,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    EntryData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    EntryIndexData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
       this(entryId,storageName,storageDateTime,entryType,name,dateTime,0L);
     }
@@ -3248,113 +3257,9 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
     }
   };
 
-  /** entry data map
-   */
-  class EntryDataMapX extends HashMap<String,WeakReference<EntryData>>
-  {
-    /** update entry data
-     * @param indexId index entry id
-     * @param storageName archive name
-     * @param storageDateTime archive date/time (timestamp)
-     * @param entryType entry type
-     * @param name entry name
-     * @param dateTime date/time (timestamp)
-     * @param size size [bytes]
-     */
-    synchronized public EntryData update(long indexId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
-    {
-      String hashKey = getHashKey(storageName,entryType,name);
-
-      WeakReference<EntryData> reference = get(hashKey);
-      EntryData entryData = (reference != null) ? get(hashKey).get() : null;
-      if (entryData != null)
-      {
-        entryData.id              = indexId;
-        entryData.storageName     = storageName;
-        entryData.storageDateTime = storageDateTime;
-        entryData.entryType       = entryType;
-        entryData.name            = name;
-        entryData.dateTime        = dateTime;
-        entryData.size            = size;
-      }
-      else
-      {
-        entryData = new EntryData(indexId,
-                                  storageName,
-                                  storageDateTime,
-                                  entryType,
-                                  name,
-                                  dateTime,
-                                  size
-                                 );
-        put(hashKey,new WeakReference<EntryData>(entryData));
-      }
-
-      return entryData;
-    }
-
-    /** update entry data
-     * @param indexId index entry id
-     * @param storageName archive name
-     * @param storageDateTime archive date/time (timestamp)
-     * @param entryType entry type
-     * @param name entry name
-     * @param dateTime date/time (timestamp)
-     */
-    synchronized public EntryData update(long indexId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
-    {
-      String hashKey = getHashKey(storageName,entryType,name);
-
-      WeakReference<EntryData> reference = get(hashKey);
-      EntryData entryData = (reference != null) ? get(hashKey).get() : null;
-      if (entryData != null)
-      {
-        entryData.id              = indexId;
-        entryData.storageName     = storageName;
-        entryData.storageDateTime = storageDateTime;
-        entryData.entryType       = entryType;
-        entryData.name            = name;
-        entryData.dateTime        = dateTime;
-      }
-      else
-      {
-        entryData = new EntryData(indexId,
-                                  storageName,
-                                  storageDateTime,
-                                  entryType,
-                                  name,
-                                  dateTime
-                                 );
-        put(hashKey,new WeakReference<EntryData>(entryData));
-      }
-
-      return entryData;
-    }
-
-    /** get hash key from data
-     * @param storageName storage name
-     * @param entryType entry type
-     * @param name name
-     * @return hash key string
-     */
-    private String getHashKey(String storageName, EntryTypes entryType, String name)
-    {
-      return storageName+entryType.toString()+name;
-    }
-
-    /** get hash key from entry data
-     * @param entryData
-     * @return hash key string
-     */
-    private String getHashKey(EntryData entryData)
-    {
-      return getHashKey(entryData.storageName,entryData.entryType,entryData.name);
-    }
-  }
-
   /** entry data comparator
    */
-  static class EntryDataComparator implements Comparator<EntryData>
+  static class EntryIndexDataComparator implements Comparator<EntryIndexData>
   {
     // sort modes
     enum SortModes
@@ -3372,7 +3277,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
      * @param table entry table
      * @param sortColumn sorting column
      */
-    EntryDataComparator(Table table, TableColumn sortColumn)
+    EntryIndexDataComparator(Table table, TableColumn sortColumn)
     {
       if      (table.getColumn(0) == sortColumn) sortMode = SortModes.ARCHIVE;
       else if (table.getColumn(1) == sortColumn) sortMode = SortModes.NAME;
@@ -3385,37 +3290,37 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
     /** create entry data comparator
      * @param table entry table
      */
-    EntryDataComparator(Table table)
+    EntryIndexDataComparator(Table table)
     {
       this(table,table.getSortColumn());
     }
 
     /** compare entry data
-     * @param entryData1, entryData2 entry data to compare
-     * @return -1 iff entryData1 < entryData2,
-                0 iff entryData1 = entryData2,
-                1 iff entryData1 > entryData2
+     * @param entryIndexData1, entryIndexData2 entry data to compare
+     * @return -1 iff entryIndexData1 < entryIndexData2,
+                0 iff entryIndexData1 = entryIndexData2,
+                1 iff entryIndexData1 > entryIndexData2
      */
-    public int compare(EntryData entryData1, EntryData entryData2)
+    public int compare(EntryIndexData entryIndexData1, EntryIndexData entryIndexData2)
     {
 Dprintf.dprintf("");
-if ((entryData1 == null) || (entryData2 == null)) return 0;
+if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       switch (sortMode)
       {
         case ARCHIVE:
-          return entryData1.storageName.compareTo(entryData2.storageName);
+          return entryIndexData1.storageName.compareTo(entryIndexData2.storageName);
         case NAME:
-          return entryData1.name.compareTo(entryData2.name);
+          return entryIndexData1.name.compareTo(entryIndexData2.name);
         case TYPE:
-          return entryData1.entryType.compareTo(entryData2.entryType);
+          return entryIndexData1.entryType.compareTo(entryIndexData2.entryType);
         case SIZE:
-          if      (entryData1.size < entryData2.size) return -1;
-          else if (entryData1.size > entryData2.size) return  1;
-          else                                        return  0;
+          if      (entryIndexData1.size < entryIndexData2.size) return -1;
+          else if (entryIndexData1.size > entryIndexData2.size) return  1;
+          else                                                  return  0;
         case DATE:
-          if      (entryData1.dateTime < entryData2.dateTime) return -1;
-          else if (entryData1.dateTime > entryData2.dateTime) return  1;
-          else                                                return  0;
+          if      (entryIndexData1.dateTime < entryIndexData2.dateTime) return -1;
+          else if (entryIndexData1.dateTime > entryIndexData2.dateTime) return  1;
+          else                                                          return  0;
         default:
           return 0;
       }
@@ -3518,7 +3423,7 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
-            // get update count, offsets to update
+            // check if update count, offsets to update
             updateTotalEntryCount = this.updateTotalEntryCount;
             updateOffsets.addAll(this.updateOffsets);
             setUpdateIndicator = this.setUpdateIndicator;
@@ -3562,6 +3467,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
     public long getTotalEntryCount()
     {
       return totalEntryCount;
+    }
+
+    /** check if total entry count is currently updated
+     * @return true if total entry count is currently updated
+     */
+    public boolean isUpdateTotalEntryCount()
+    {
+      return updateTotalEntryCount;
     }
 
     /** get entry type
@@ -3714,6 +3627,16 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
 
       long oldTotalEntryCount = totalEntryCount;
 
+      // clear count
+      totalEntryCount = -1;
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          widgetEntryTableTitle.redraw();
+        }
+      });
+
       // get entries info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
@@ -3768,6 +3691,17 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
           }
         });
       }
+      else
+      {
+        // set count
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            widgetEntryTableTitle.redraw();
+          }
+        });
+      }
     }
 
     /** refresh entry table items
@@ -3819,14 +3753,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                            long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
 
                                            // add entry data index
-                                           final EntryData entryData = new EntryData(entryId,
-                                                                                     storageName,
-                                                                                     storageDateTime,
-                                                                                     EntryTypes.FILE,
-                                                                                     fileName,
-                                                                                     dateTime,
-                                                                                     size
-                                                                                    );
+                                           final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    storageName,
+                                                                                                    storageDateTime,
+                                                                                                    EntryTypes.FILE,
+                                                                                                    fileName,
+                                                                                                    dateTime,
+                                                                                                    size
+                                                                                                   );
 
                                            display.syncExec(new Runnable()
                                            {
@@ -3835,14 +3769,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                TableItem tableItem = widgetEntryTable.getItem(index);
 
                                                Widgets.updateTableItem(tableItem,
-                                                                       (Object)entryData,
-                                                                       entryData.storageName,
-                                                                       entryData.name,
+                                                                       (Object)entryIndexData,
+                                                                       entryIndexData.storageName,
+                                                                       entryIndexData.name,
                                                                        "FILE",
-                                                                       Units.formatByteSize(entryData.size),
-                                                                       simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                                                       Units.formatByteSize(entryIndexData.size),
+                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -3858,14 +3792,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                            long   blockCount      = valueMap.getLong  ("blockCount"     );
 
                                            // add entry data index
-                                           final EntryData entryData = new EntryData(entryId,
-                                                                                     storageName,
-                                                                                     storageDateTime,
-                                                                                     EntryTypes.IMAGE,
-                                                                                     imageName,
-                                                                                     0L,
-                                                                                     size
-                                                                                    );
+                                           final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    storageName,
+                                                                                                    storageDateTime,
+                                                                                                    EntryTypes.IMAGE,
+                                                                                                    imageName,
+                                                                                                    0L,
+                                                                                                    size
+                                                                                                   );
 
                                            // update/insert table item
                                            display.syncExec(new Runnable()
@@ -3875,14 +3809,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                TableItem tableItem = widgetEntryTable.getItem(index);
 
                                                Widgets.updateTableItem(tableItem,
-                                                                       (Object)entryData,
-                                                                       entryData.storageName,
-                                                                       entryData.name,
+                                                                       (Object)entryIndexData,
+                                                                       entryIndexData.storageName,
+                                                                       entryIndexData.name,
                                                                        "IMAGE",
-                                                                       Units.formatByteSize(entryData.size),
-                                                                       simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                                                       Units.formatByteSize(entryIndexData.size),
+                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -3896,13 +3830,13 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                            long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                                            // add entry data index
-                                           final EntryData entryData = new EntryData(entryId,
-                                                                                     storageName,
-                                                                                     storageDateTime,
-                                                                                     EntryTypes.DIRECTORY,
-                                                                                     directoryName,
-                                                                                     dateTime
-                                                                                    );
+                                           final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    storageName,
+                                                                                                    storageDateTime,
+                                                                                                    EntryTypes.DIRECTORY,
+                                                                                                    directoryName,
+                                                                                                    dateTime
+                                                                                                   );
 
                                            // update/insert table item
                                            display.syncExec(new Runnable()
@@ -3912,14 +3846,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                TableItem tableItem = widgetEntryTable.getItem(index);
 
                                                Widgets.updateTableItem(tableItem,
-                                                                       (Object)entryData,
-                                                                       entryData.storageName,
-                                                                       entryData.name,
+                                                                       (Object)entryIndexData,
+                                                                       entryIndexData.storageName,
+                                                                       entryIndexData.name,
                                                                        "DIR",
                                                                        "",
-                                                                       simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -3934,13 +3868,13 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                            long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                                            // add entry data index
-                                           final EntryData entryData = new EntryData(entryId,
-                                                                                     storageName,
-                                                                                     storageDateTime,
-                                                                                     EntryTypes.LINK,
-                                                                                     linkName,
-                                                                                     dateTime
-                                                                                    );
+                                           final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    storageName,
+                                                                                                    storageDateTime,
+                                                                                                    EntryTypes.LINK,
+                                                                                                    linkName,
+                                                                                                    dateTime
+                                                                                                   );
 
                                            // update/insert table item
                                            display.syncExec(new Runnable()
@@ -3950,14 +3884,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                TableItem tableItem = widgetEntryTable.getItem(index);
 
                                                Widgets.updateTableItem(tableItem,
-                                                                       (Object)entryData,
-                                                                       entryData.storageName,
-                                                                       entryData.name,
+                                                                       (Object)entryIndexData,
+                                                                       entryIndexData.storageName,
+                                                                       entryIndexData.name,
                                                                        "LINK",
                                                                        "",
-                                                                       simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -3974,14 +3908,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                            long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
 
                                            // add entry data index
-                                           final EntryData entryData = new EntryData(entryId,
-                                                                                     storageName,
-                                                                                     storageDateTime,
-                                                                                     EntryTypes.HARDLINK,
-                                                                                     fileName,
-                                                                                     dateTime,
-                                                                                     size
-                                                                                    );
+                                           final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    storageName,
+                                                                                                    storageDateTime,
+                                                                                                    EntryTypes.HARDLINK,
+                                                                                                    fileName,
+                                                                                                    dateTime,
+                                                                                                    size
+                                                                                                   );
 
                                            // update/insert table item
                                            display.syncExec(new Runnable()
@@ -3991,14 +3925,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                TableItem tableItem = widgetEntryTable.getItem(index);
 
                                                Widgets.updateTableItem(tableItem,
-                                                                       (Object)entryData,
-                                                                       entryData.storageName,
-                                                                       entryData.name,
+                                                                       (Object)entryIndexData,
+                                                                       entryIndexData.storageName,
+                                                                       entryIndexData.name,
                                                                        "HARDLINK",
-                                                                       Units.formatByteSize(entryData.size),
-                                                                       simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                                                       Units.formatByteSize(entryIndexData.size),
+                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -4013,12 +3947,12 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                            long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                                            // add entry data index
-                                           final EntryData entryData = new EntryData(entryId,
-                                                                                     storageName,
-                                                                                     storageDateTime,
-                                                                                     EntryTypes.SPECIAL,
-                                                                                     name,dateTime
-                                                                                    );
+                                           final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    storageName,
+                                                                                                    storageDateTime,
+                                                                                                    EntryTypes.SPECIAL,
+                                                                                                    name,dateTime
+                                                                                                   );
 
                                            // update/insert table item
                                            display.syncExec(new Runnable()
@@ -4028,14 +3962,14 @@ if ((entryData1 == null) || (entryData2 == null)) return 0;
                                                TableItem tableItem = widgetEntryTable.getItem(index);
 
                                                Widgets.updateTableItem(tableItem,
-                                                                       (Object)entryData,
-                                                                       entryData.storageName,
-                                                                       entryData.name,
+                                                                       (Object)entryIndexData,
+                                                                       entryIndexData.storageName,
+                                                                       entryIndexData.name,
                                                                        "DEVICE",
-                                                                       Units.formatByteSize(entryData.size),
-                                                                       simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                                                       Units.formatByteSize(entryIndexData.size),
+                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryData.id));
+                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -4522,10 +4456,11 @@ Dprintf.dprintf("");
    * @param entryIndexData entry index data
    * @param x,y positions
    */
-  private void showEntryToolTip(EntryData entryData, int x, int y)
+  private void showEntryToolTip(EntryIndexData entryIndexData, int x, int y)
   {
-    Label label;
-    Control   control;
+    int     row;
+    Label   label;
+    Control control;
 
     final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
@@ -4541,68 +4476,91 @@ Dprintf.dprintf("");
     widgetEntryTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
     Widgets.layout(widgetEntryTableToolTip,0,0,TableLayoutData.NSWE);
 
+    row = 0;
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Job")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetEntryTableToolTip,"???");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Entity")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetEntryTableToolTip,"???");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
     label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Storage")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,0,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetEntryTableToolTip,entryData.storageName);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.storageName);
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,0,1,TableLayoutData.WE);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
 
     label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Created")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,1,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryData.storageDateTime*1000L)));
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryIndexData.storageDateTime*1000L)));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,1,1,TableLayoutData.WE);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
 
     control = Widgets.newSpacer(widgetEntryTableToolTip);
-    Widgets.layout(control,2,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
+    Widgets.layout(control,row,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
+    row++;
 
     label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,3,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetEntryTableToolTip,entryData.entryType.toString());
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.entryType.toString());
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,3,1,TableLayoutData.WE);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
 
     label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Name")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,4,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetEntryTableToolTip,entryData.name);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.name);
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,4,1,TableLayoutData.WE);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
 
     label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Size")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,5,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entryData.size),entryData.size));
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entryIndexData.size),entryIndexData.size));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,5,1,TableLayoutData.WE);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
 
     label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Date")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,6,0,TableLayoutData.W);
-
-    label = Widgets.newLabel(widgetEntryTableToolTip,(entryData.dateTime > 0) ? simpleDateFormat.format(new Date(entryData.dateTime*1000L)) : "-");
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L)) : "-");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,6,1,TableLayoutData.WE);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
 
     Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
     widgetEntryTableToolTip.setBounds(x,y,size.x,size.y);
@@ -4624,7 +4582,6 @@ Dprintf.dprintf("");
           {
             if (control.getBounds().contains(point))
             {
-Dprintf.dprintf("");
               return;
             }
           }
@@ -4735,6 +4692,7 @@ Dprintf.dprintf("");
           TabFolder widget = (TabFolder)paintEvent.widget;
           GC        gc     = paintEvent.gc;
           Rectangle bounds = widget.getBounds();
+          int       count;
           String    text;
           Point     size;
 
@@ -4745,7 +4703,8 @@ Dprintf.dprintf("");
                       8
                      );
 
-          text = BARControl.tr("Count: {0}",updateStorageTreeTableThread.getStorageCount());
+          count = updateStorageTreeTableThread.getStorageCount();
+          text = (count >= 0) ? BARControl.tr("Count: {0}",count) : "-";
           size = Widgets.getTextSize(gc,text);
           gc.drawText(text,
                       bounds.width-size.x-8,
@@ -5719,6 +5678,7 @@ Dprintf.dprintf("remove");
           // number of entries
           text = BARControl.tr("Count: {0}",updateEntryTableThread.getTotalEntryCount());
           size = Widgets.getTextSize(gc,text);
+          if (updateEntryTableThread.isUpdateTotalEntryCount()) gc.setForeground(COLOR_MODIFIED);
           gc.drawText(text,
                       bounds.width-size.x-8,
                       (bounds.height-size.y)/2
@@ -5738,8 +5698,8 @@ Dprintf.dprintf("remove");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
-          EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable,tableColumn);
+          TableColumn              tableColumn         = (TableColumn)selectionEvent.widget;
+          EntryIndexDataComparator entryIndexDataComparator = new EntryIndexDataComparator(widgetEntryTable,tableColumn);
           synchronized(widgetEntryTable)
           {
             {
@@ -5747,7 +5707,7 @@ Dprintf.dprintf("remove");
             }
             try
             {
-              Widgets.sortTableColumn(widgetEntryTable,tableColumn,entryDataComparator);
+              Widgets.sortTableColumn(widgetEntryTable,tableColumn,entryIndexDataComparator);
             }
             finally
             {
@@ -5795,8 +5755,8 @@ Dprintf.dprintf("remove");
           {
             tableItem.setChecked(!tableItem.getChecked());
 
-            EntryData entryData = (EntryData)tableItem.getData();
-            selectedEntryIdSet.set(entryData.id,tableItem.getChecked());
+            EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
+            selectedEntryIdSet.set(entryIndexData.id,tableItem.getChecked());
 
             checkedEntryEvent.trigger();
           }
@@ -5814,11 +5774,11 @@ Dprintf.dprintf("remove");
           TableItem tableItem = (TableItem)selectionEvent.item;
           if (tableItem != null)
           {
-            EntryData entryData = (EntryData)tableItem.getData();
-            if (entryData != null)
+            EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
+            if (entryIndexData != null)
             {
               tableItem.setChecked(!tableItem.getChecked());
-              selectedEntryIdSet.set(entryData.id,tableItem.getChecked());
+              selectedEntryIdSet.set(entryIndexData.id,tableItem.getChecked());
             }
           }
 
@@ -5850,11 +5810,11 @@ Dprintf.dprintf("remove");
 
           if ((tableItem != null) && (mouseEvent.x > table.getBounds().width/2))
           {
-            EntryData entryData = (EntryData)tableItem.getData();
-            if (entryData != null)
+            EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
+            if (entryIndexData != null)
             {
               Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
-              showEntryToolTip(entryData,point.x,point.y);
+              showEntryToolTip(entryIndexData,point.x,point.y);
             }
           }
         }
@@ -5949,13 +5909,13 @@ Dprintf.dprintf("remove");
 
               if (tableItems[0] != null)
               {
-                EntryData entryData = (EntryData)tableItems[0].getData();
-                if (entryData != null)
+                EntryIndexData entryIndexData = (EntryIndexData)tableItems[0].getData();
+                if (entryIndexData != null)
                 {
                   Point point = display.getCursorLocation();//widgetEntryTable.toDisplay(selectionEvent.x+16,selectionEvent.y);
                   if (point.x > 16) point.x -= 16;
                   if (point.y > 16) point.y -= 16;
-                  showEntryToolTip(entryData,point.x,point.y);
+                  showEntryToolTip(entryIndexData,point.x,point.y);
                 }
               }
             }
@@ -8420,35 +8380,35 @@ Dprintf.dprintf("valueMap=%s",valueMap);
   /** get checked entries
    * @return checked data entries
    */
-  private EntryData[] getCheckedEntries()
+  private EntryIndexData[] getCheckedEntries()
   {
-    ArrayList<EntryData> entryDataArray = new ArrayList<EntryData>();
+    ArrayList<EntryIndexData> entryIndexDataArray = new ArrayList<EntryIndexData>();
 
 Dprintf.dprintf("");
     for (TableItem tableItem : widgetEntryTable.getItems())
     {
       if (tableItem.getChecked())
       {
-        entryDataArray.add((EntryData)tableItem.getData());
+        entryIndexDataArray.add((EntryIndexData)tableItem.getData());
       }
     }
 
-    return entryDataArray.toArray(new EntryData[entryDataArray.size()]);
+    return entryIndexDataArray.toArray(new EntryIndexData[entryIndexDataArray.size()]);
   }
 
   /** find index for insert of item in sorted entry data list
-   * @param entryData data of tree item
+   * @param entryIndexData data of tree item
    * @return index in table
    */
-  private int findEntryListIndex(EntryData entryData)
+  private int findEntryListIndex(EntryIndexData entryIndexData)
   {
 Dprintf.dprintf("");
-    TableItem           tableItems[]        = widgetEntryTable.getItems();
-    EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable);
+    TableItem                tableItems[]             = widgetEntryTable.getItems();
+    EntryIndexDataComparator entryIndexDataComparator = new EntryIndexDataComparator(widgetEntryTable);
 
     int index = 0;
     while (   (index < tableItems.length)
-           && (entryDataComparator.compare(entryData,(EntryData)tableItems[index].getData()) > 0)
+           && (entryIndexDataComparator.compare(entryIndexData,(EntryIndexData)tableItems[index].getData()) > 0)
           )
     {
       index++;
@@ -8462,101 +8422,101 @@ Dprintf.dprintf("");
   private void refreshEntryList()
   {
 // ??? statt findFileListIndex
-    EntryDataComparator entryDataComparator = new EntryDataComparator(widgetEntryTable);
+    EntryIndexDataComparator entryIndexDataComparator = new EntryIndexDataComparator(widgetEntryTable);
 
     // update
 Dprintf.dprintf("");
     widgetEntryTable.removeAll();
 /*
-    synchronized(entryDataMap)
+    synchronized(entryIndexDataMap)
     {
-      for (WeakReference<EntryData> entryDataR : entryDataMap.values())
+      for (WeakReference<EntryIndexData> entryIndexDataR : entryIndexDataMap.values())
       {
-        EntryData entryData = entryDataR.get();
-        switch (entryData.entryType)
+        EntryIndexData entryIndexData = entryIndexDataR.get();
+        switch (entryIndexData.entryType)
         {
           case FILE:
             Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryData),
-                                    (Object)entryData,
-                                    entryData.storageName,
-                                    entryData.name,
+                                    findEntryListIndex(entryIndexData),
+                                    (Object)entryIndexData,
+                                    entryIndexData.storageName,
+                                    entryIndexData.name,
                                     "FILE",
-                                    Units.formatByteSize(entryData.size),
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                    Units.formatByteSize(entryIndexData.size),
+                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case IMAGE:
             Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryData),
-                                    (Object)entryData,
-                                    entryData.storageName,
-                                    entryData.name,
+                                    findEntryListIndex(entryIndexData),
+                                    (Object)entryIndexData,
+                                    entryIndexData.storageName,
+                                    entryIndexData.name,
                                     "IMAGE",
-                                    Units.formatByteSize(entryData.size),
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                    Units.formatByteSize(entryIndexData.size),
+                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case DIRECTORY:
             Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryData),
-                                    (Object)entryData,
-                                    entryData.storageName,
-                                    entryData.name,
+                                    findEntryListIndex(entryIndexData),
+                                    (Object)entryIndexData,
+                                    entryIndexData.storageName,
+                                    entryIndexData.name,
                                     "DIR",
                                     "",
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case LINK:
             Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryData),
-                                    (Object)entryData,
-                                    entryData.storageName,
-                                    entryData.name,
+                                    findEntryListIndex(entryIndexData),
+                                    (Object)entryIndexData,
+                                    entryIndexData.storageName,
+                                    entryIndexData.name,
                                     "LINK",
                                     "",
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case SPECIAL:
             Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryData),
-                                    (Object)entryData,
-                                    entryData.storageName,
-                                    entryData.name,
+                                    findEntryListIndex(entryIndexData),
+                                    (Object)entryIndexData,
+                                    entryIndexData.storageName,
+                                    entryIndexData.name,
                                     "SPECIAL",
-                                    Units.formatByteSize(entryData.size),
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                    Units.formatByteSize(entryIndexData.size),
+                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case DEVICE:
             Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryData),
-                                    (Object)entryData,
-                                    entryData.storageName,
-                                    entryData.name,
+                                    findEntryListIndex(entryIndexData),
+                                    (Object)entryIndexData,
+                                    entryIndexData.storageName,
+                                    entryIndexData.name,
                                     "DEVICE",
-                                    Units.formatByteSize(entryData.size),
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                    Units.formatByteSize(entryIndexData.size),
+                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case SOCKET:
             Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryData),
-                                    (Object)entryData,
-                                    entryData.storageName,
-                                    entryData.name,
+                                    findEntryListIndex(entryIndexData),
+                                    (Object)entryIndexData,
+                                    entryIndexData.storageName,
+                                    entryIndexData.name,
                                     "SOCKET",
                                     "",
-                                    simpleDateFormat.format(new Date(entryData.dateTime*1000L))
+                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
         }
 
         Widgets.setTableItemChecked(widgetEntryTable,
-                                    (Object)entryData,
-                                    entryData.isChecked()
+                                    (Object)entryIndexData,
+                                    entryIndexData.isChecked()
                                    );
       }
     }
