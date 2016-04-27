@@ -939,12 +939,12 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextStorage
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
-* Output : jobUUID             - unique job UUID (can be NULL)
-*          scheduleUUID        - unique schedule UUID (can be NULL)
-*          uuidId              - index id of UUID entry (can be NULL)
-*          entityId            - index id of entity entry (can be NULL)
+* Output : uuidId
+*          jobUUID             - job UUID (can be NULL)
+*          entityId            - index id of entity (can be NULL)
+*          scheduleUUID        - schedule UUID (can be NULL)
 *          archiveType         - archive type (can be NULL)
-*          storageId           - index id of storage entry (can be NULL)
+*          storageId           - index id of storage (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          totalEntryCount     - total number of entries (can be NULL)
@@ -959,10 +959,10 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          String           jobUUID,
-                          String           scheduleUUID,
                           IndexId          *uuidId,
+                          String           jobUUID,
                           IndexId          *entityId,
+                          String           scheduleUUID,
                           ArchiveTypes     *archiveType,
                           IndexId          *storageId,
                           String           storageName,
@@ -1029,7 +1029,12 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 * Purpose: get storage index name/entries/size
 * Input  : indexHandle - index handle
 *          storageId   - index id of storage index
-* Output:  storageName         - storage name (can be NULL)
+* Output:  uuidId              - index if of uuid
+*          jobUUID             - job UUID (can be NULL)
+*          entityId            - index id of entity (can be NULL)
+*          scheduleUUID        - schedule UUID (can be NULL)
+*          archiveType         - archive type (can be NULL)
+*          storageName         - storage name (can be NULL)
 *          createdDateTime     - created date/time (can be NULL)
 -*         size                - size of stroage (can be NULL)
 *          totalEntryCount     - total number of entries (can be NULL)
@@ -1042,17 +1047,22 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_getStorage(IndexHandle *indexHandle,
-                        IndexId     storageId,
-                        String      storageName,
-                        uint64      *createdDateTime,
-                        uint64      *size,
-                        uint64      *totalEntryCount,
-                        uint64      *totalEntrySize,
-                        IndexStates *indexState,
-                        IndexModes  *indexMode,
-                        uint64      *lastCheckedDateTime,
-                        String      errorMessage
+Errors Index_getStorage(IndexHandle  *indexHandle,
+                        IndexId      storageId,
+                        IndexId      *uuidId,
+                        String       jobUUID,
+                        IndexId      *entityId,
+                        String       scheduleUUID,
+                        ArchiveTypes archiveType,
+                        String       storageName,
+                        uint64       *createdDateTime,
+                        uint64       *size,
+                        uint64       *totalEntryCount,
+                        uint64       *totalEntrySize,
+                        IndexStates  *indexState,
+                        IndexModes   *indexMode,
+                        uint64       *lastCheckedDateTime,
+                        String       errorMessage
                        );
 
 /***********************************************************************\
@@ -1140,9 +1150,15 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextEntry
 * Purpose: get next entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId          - index id of entry
+* Output : uuidId           - index if of uuid
+*          jobUUID          - job UUID (can be NULL)
+*          entityId         - index id of entity (can be NULL)
+*          scheduleUUID     - schedule UUID (can be NULL)
+*          archiveType      - archive type (can be NULL)
+*          storageId        - index id of storage (can be NULL)
 *          storageName      - storage name (can be NULL)
 *          storageDateTime  - storage date/time stamp [s]
+*          entryId          - index id of entry
 *          entryName        - entry name
 *          destinationName  - destination name (for link entries)
 *          fileSystemType   - file system type (for image entries)
@@ -1159,9 +1175,15 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
-                        IndexId           *indexId,
+                        IndexId           *uuidId,
+                        String            jobUUID,
+                        IndexId           *entityId,
+                        String            scheduleUUID,
+                        ArchiveTypes      *archiveType,
+                        IndexId           *storageId,
                         String            storageName,
                         uint64            *storageDateTime,
+                        IndexId           *entryId,
                         String            entryName,
                         String            destinationName,
                         FileSystemTypes   *fileSystemType,
