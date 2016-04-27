@@ -289,15 +289,20 @@ typedef struct
 } IndexCryptPasswordList;
 
 // index database entry node
-typedef struct IndexNode
+typedef struct IndexEntryNode
 {
-  LIST_NODE_HEADER(struct IndexNode);
+  LIST_NODE_HEADER(struct IndexEntryNode);
 
-  IndexId indexId;
-  String  storageName;
-  uint64  storageDateTime;
-  String  name;
-  uint64  timeModified;
+  IndexId      uuidId;
+  String       jobUUID;
+  IndexId      entityId;
+  String       scheduleUUID;
+  ArchiveTypes archiveType;
+  IndexId      entryId;
+  String       storageName;
+  uint64       storageDateTime;
+  String       name;
+  uint64       timeModified;
   union
   {
     struct
@@ -348,13 +353,13 @@ typedef struct IndexNode
       uint32 permission;
     } special;
   };
-} IndexNode;
+} IndexEntryNode;
 
 // index database node list
 typedef struct
 {
-  LIST_HEADER(IndexNode);
-} IndexList;
+  LIST_HEADER(IndexEntryNode);
+} IndexEntryList;
 
 // client types
 typedef enum
@@ -4213,10 +4218,10 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // jobUUID
-                              NULL,  // scheduleUUID
                               NULL,  // uuidId
+                              NULL,  // jobUUID
                               NULL,  // entityId
+                              NULL,  // scheduleUUID
                               NULL,  // archiveType
                               &storageId,
                               NULL,  // storageName
@@ -5331,10 +5336,10 @@ LOCAL void autoIndexUpdateThreadCode(void)
       now      = Misc_getCurrentDateTime();
       dateTime = String_new();
       while (   Index_getNextStorage(&indexQueryHandle,
-                                     NULL,  // jobUUID
-                                     NULL,  // scheduleUUID
                                      NULL,  // uuidId
+                                     NULL,  // jobUUID
                                      NULL,  // entityId
+                                     NULL,  // scheduleUUID
                                      NULL,  // archiveType
                                      &storageId,
                                      storageName,
@@ -12990,10 +12995,10 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
   while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // jobUUID
-                              NULL,  // scheduleUUID
                               NULL,  // uuidId
+                              NULL,  // jobUUID
                               NULL,  // entityId
+                              NULL,  // scheduleUUID
                               NULL,  // archiveType
                               &storageId,
                               storageName,
@@ -13142,10 +13147,10 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
           return;
         }
         while (Index_getNextStorage(&indexQueryHandle2,
-                                    NULL,  // jobUUID
-                                    NULL,  // scheduleUUID
                                     NULL,  // uuidId
+                                    NULL,  // jobUUID
                                     NULL,  // entityId
+                                    NULL,  // scheduleUUID
                                     NULL,  // archiveType
                                     &storageId,
                                     NULL,  // storageName
@@ -13186,10 +13191,10 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
         return;
       }
       while (Index_getNextStorage(&indexQueryHandle,
-                                  NULL,  // jobUUID
-                                  NULL,  // scheduleUUID
                                   NULL,  // uuidId
+                                  NULL,  // jobUUID
                                   NULL,  // entityId
+                                  NULL,  // scheduleUUID
                                   NULL,  // archiveType
                                   &storageId,
                                   NULL,  // storageName
@@ -13313,10 +13318,10 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
           return;
         }
         while (Index_getNextStorage(&indexQueryHandle2,
-                                    NULL,  // jobUUID
-                                    NULL,  // scheduleUUID
                                     NULL,  // uuidId
+                                    NULL,  // jobUUID
                                     NULL,  // entityId
+                                    NULL,  // scheduleUUID
                                     NULL,  // archiveType
                                     &storageId,
                                     NULL,  // storageName
@@ -13357,10 +13362,10 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
         return;
       }
       while (Index_getNextStorage(&indexQueryHandle,
-                                  NULL,  // jobUUID
-                                  NULL,  // scheduleUUID
                                   NULL,  // uuidId
+                                  NULL,  // jobUUID
                                   NULL,  // entityId
+                                  NULL,  // scheduleUUID
                                   NULL,  // archiveType
                                   &storageId,
                                   NULL,  // storageName
@@ -13497,9 +13502,15 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
   while (Index_getNextEntry(&indexQueryHandle,
-                            &entryId,
+                            NULL, // uuidId,
+                            NULL, // jobUUID,
+                            NULL, // entityId,
+                            NULL, // scheduleUUID,
+                            NULL, // archiveType,
+                            NULL, // storageId,
                             NULL, // storageName
                             NULL, // storageDateTime
+                            &entryId,
                             entryName,
                             NULL,  // destinationName
                             NULL,  // fileSystemType
@@ -14076,10 +14087,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
         if (error == ERROR_NONE)
         {
           while (Index_getNextStorage(&indexQueryHandle,
-                                      NULL,  // jobUUID
-                                      NULL,  // scheduleUUID
                                       NULL,  // uuidId
+                                      NULL,  // jobUUID
                                       NULL,  // entityId
+                                      NULL,  // scheduleUUID
                                       NULL,  // archiveType
                                       NULL,  // storageId
                                       storageName,
@@ -14115,9 +14126,15 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       if (error == ERROR_NONE)
       {
         while (Index_getNextEntry(&indexQueryHandle,
-                                  NULL, // indexId,
+                                  NULL, // uuidId,
+                                  NULL, // jobUUID,
+                                  NULL, // entityId,
+                                  NULL, // scheduleUUID,
+                                  NULL, // archiveType,
+                                  NULL, // storageId,
                                   storageName, // storageName
                                   NULL, // storageDateTime
+                                  NULL, // entryId,
                                   entryName,
                                   NULL,  // destinationName
                                   NULL,  // fileSystemType
@@ -15090,10 +15107,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextStorage(&indexQueryHandle,
-                                 jobUUID,
-                                 scheduleUUID,
                                  &uuidId,
+                                 jobUUID,
                                  &entityId,
+                                 scheduleUUID,
                                  &archiveType,
                                  &storageId,
                                  storageName,
@@ -15619,10 +15636,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // jobUUID
-                                   NULL,  // scheduleUUID
                                    NULL,  // uuidId
+                                   NULL,  // jobUUID
                                    NULL,  // entityId
+                                   NULL,  // scheduleUUID
                                    NULL,  // archiveType
                                    &storageId,
                                    NULL,  // storageName
@@ -15674,10 +15691,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // jobUUID
-                                NULL,  // scheduleUUID
                                 NULL,  // uuidId
+                                NULL,  // jobUUID
                                 NULL,  // entityId
+                                NULL,  // scheduleUUID
                                 NULL,  // archiveType
                                 &storageId,
                                 NULL,  // storageName
@@ -15729,10 +15746,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // jobUUID
-                                NULL,  // scheduleUUID
                                 NULL,  // uuidId
+                                NULL,  // jobUUID
                                 NULL,  // entityId
+                                NULL,  // scheduleUUID
                                 NULL,  // archiveType
                                 &storageId,
                                 NULL,  // storageName
@@ -15796,9 +15813,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
+                                NULL,  // uuidId
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
-                                NULL,  // uuidId
                                 NULL,  // entityId
                                 NULL,  // archiveType
                                 &storageId,
@@ -15862,9 +15879,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       return;
     }
     while (Index_getNextStorage(&indexQueryHandle,
+                                NULL,  // uuidId
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
-                                NULL,  // uuidId
                                 NULL,  // entityId
                                 NULL,  // archiveType
                                 &storageId,
@@ -16000,9 +16017,9 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
+                                   NULL,  // uuidId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
-                                   NULL,  // uuidId
                                    NULL,  // entityId
                                    NULL,  // archiveType
                                    &storageId,
@@ -16332,22 +16349,22 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     while (0)
 
   /***********************************************************************\
-  * Name   : freeIndexNode
+  * Name   : freeIndexEntryNode
   * Purpose: free allocated index node
-  * Input  : indexNode - index node
+  * Input  : IndexEntryNode - index node
   * Input  : userData  - not used
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  void freeIndexNode(IndexNode *indexNode, void *userData)
+  void freeIndexEntryNode(IndexEntryNode *indexEntryNode, void *userData)
   {
-    assert(indexNode != NULL);
+    assert(indexEntryNode != NULL);
 
     UNUSED_VARIABLE(userData);
 
-    switch (Index_getType(indexNode->indexId))
+    switch (Index_getType(indexEntryNode->entryId))
     {
       case INDEX_TYPE_FILE:
         break;
@@ -16356,7 +16373,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       case INDEX_TYPE_DIRECTORY:
         break;
       case INDEX_TYPE_LINK:
-        String_delete(indexNode->link.destinationName);
+        String_delete(indexEntryNode->link.destinationName);
         break;
       case INDEX_TYPE_HARDLINK:
         break;
@@ -16368,47 +16385,49 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         #endif /* NDEBUG */
         break;
     }
-    String_delete(indexNode->name);
-    String_delete(indexNode->storageName);
+    String_delete(indexEntryNode->name);
+    String_delete(indexEntryNode->storageName);
+    String_delete(indexEntryNode->scheduleUUID);
+    String_delete(indexEntryNode->jobUUID);
   }
 
   /***********************************************************************\
   * Name   : newIndexEntryNode
   * Purpose: create new index entry node
-  * Input  : indexList    - index list
-  *          indexId      - index id
-  *          storageName  - storage name
-  *          name         - entry name
-  *          timeModified - modification time stamp [s]
+  * Input  : indexEntryList - index entry list
+  *          entryId        - entry id
+  *          storageName    - storage name
+  *          name           - entry name
+  *          timeModified   - modification time stamp [s]
   * Output : -
   * Return : index node or NULL
   * Notes  : -
   \***********************************************************************/
 
-  IndexNode *newIndexEntryNode(IndexList         *indexList,
-                               IndexId           indexId,
-                               const String      storageName,
-                               const String      name,
-                               uint64            timeModified
-                              )
+  IndexEntryNode *newIndexEntryNode(IndexEntryList    *indexEntryList,
+                                    IndexId           entryId,
+                                    const String      storageName,
+                                    const String      name,
+                                    uint64            timeModified
+                                   )
   {
-    IndexNode *indexNode;
-    bool       foundFlag;
-    IndexNode *nextIndexNode;
+    IndexEntryNode *indexEntryNode;
+    bool           foundFlag;
+    IndexEntryNode *nextIndexEntryNode;
 
     // allocate node
-    indexNode = LIST_NEW_NODE(IndexNode);
-    if (indexNode == NULL)
+    indexEntryNode = LIST_NEW_NODE(IndexEntryNode);
+    if (indexEntryNode == NULL)
     {
       return NULL;
     }
 
     // initialize
-    indexNode->indexId      = indexId;
-    indexNode->storageName  = String_duplicate(storageName);
-    indexNode->name         = String_duplicate(name);
-    indexNode->timeModified = timeModified;
-    switch (Index_getType(indexNode->indexId))
+    indexEntryNode->entryId      = entryId;
+    indexEntryNode->storageName  = String_duplicate(storageName);
+    indexEntryNode->name         = String_duplicate(name);
+    indexEntryNode->timeModified = timeModified;
+    switch (Index_getType(indexEntryNode->entryId))
     {
       case INDEX_TYPE_FILE:
         break;
@@ -16417,7 +16436,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       case INDEX_TYPE_DIRECTORY:
         break;
       case INDEX_TYPE_LINK:
-        indexNode->link.destinationName = String_new();
+        indexEntryNode->link.destinationName = String_new();
         break;
       case INDEX_TYPE_HARDLINK:
         break;
@@ -16431,26 +16450,26 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // insert into list
-    foundFlag     = FALSE;
-    nextIndexNode = indexList->head;
-    while (   (nextIndexNode != NULL)
+    foundFlag          = FALSE;
+    nextIndexEntryNode = indexEntryList->head;
+    while (   (nextIndexEntryNode != NULL)
            && !foundFlag
           )
     {
-      switch (String_compare(nextIndexNode->storageName,indexNode->storageName,NULL,NULL))
+      switch (String_compare(nextIndexEntryNode->storageName,indexEntryNode->storageName,NULL,NULL))
       {
         case -1:
           // next
-          nextIndexNode = nextIndexNode->next;
+          nextIndexEntryNode = nextIndexEntryNode->next;
           break;
         case  0:
         case  1:
           // compare
-          switch (String_compare(nextIndexNode->name,indexNode->name,NULL,NULL))
+          switch (String_compare(nextIndexEntryNode->name,indexEntryNode->name,NULL,NULL))
           {
             case -1:
               // next
-              nextIndexNode = nextIndexNode->next;
+              nextIndexEntryNode = nextIndexEntryNode->next;
               break;
             case  0:
             case  1:
@@ -16461,71 +16480,71 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
           break;
       }
     }
-    List_insert(indexList,indexNode,nextIndexNode);
+    List_insert(indexEntryList,indexEntryNode,nextIndexEntryNode);
 
-    return indexNode;
+    return indexEntryNode;
   }
 
   /***********************************************************************\
   * Name   : findIndexEntryNode
   * Purpose: find index entry node
-  * Input  : indexList - index list
-  *          indexId   - index id
-  *          name      - entry name
+  * Input  : indexEntryList - index entry list
+  *          entryId        - entry id
+  *          name           - entry name
   * Output : -
   * Return : index node or NULL
   * Notes  : -
   \***********************************************************************/
 
-  IndexNode *findIndexEntryNode(IndexList     *indexList,
-                                IndexId       indexId,
-                                const String  name
-                               )
+  IndexEntryNode *findIndexEntryNode(IndexEntryList *indexEntryList,
+                                     IndexId        entryId,
+                                     const String   name
+                                    )
   {
-    IndexNode *foundIndexNode;
-    IndexNode *indexNode;
+    IndexEntryNode *foundIndexEntryNode;
+    IndexEntryNode *indexEntryNode;
 
-    assert(indexList != NULL);
+    assert(indexEntryList != NULL);
     assert(name != NULL);
 
-    foundIndexNode = NULL;
-    indexNode = indexList->head;
-    while (   (indexNode != NULL)
-           && (foundIndexNode == NULL)
+    foundIndexEntryNode = NULL;
+    indexEntryNode = indexEntryList->head;
+    while (   (indexEntryNode != NULL)
+           && (foundIndexEntryNode == NULL)
           )
     {
-      if      (Index_getType(indexNode->indexId) < Index_getType(indexId))
+      if      (Index_getType(indexEntryNode->entryId) < Index_getType(entryId))
       {
         // next
-        indexNode = indexNode->next;
+        indexEntryNode = indexEntryNode->next;
       }
-      else if (Index_getType(indexNode->indexId) == Index_getType(indexId))
+      else if (Index_getType(indexEntryNode->entryId) == Index_getType(entryId))
       {
         // compare
-        switch (String_compare(indexNode->name,name,NULL,NULL))
+        switch (String_compare(indexEntryNode->name,name,NULL,NULL))
         {
           case -1:
             // next
-            indexNode = indexNode->next;
+            indexEntryNode = indexEntryNode->next;
             break;
           case  0:
             // found
-            foundIndexNode = indexNode;
+            foundIndexEntryNode = indexEntryNode;
             break;
           case  1:
             // not found
-            indexNode = NULL;
+            indexEntryNode = NULL;
             break;
         }
       }
       else
       {
         // not found
-        indexNode = NULL;
+        indexEntryNode = NULL;
       }
     }
 
-    return foundIndexNode;
+    return foundIndexEntryNode;
   }
 
   String           entryPatternString;
@@ -16535,8 +16554,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   uint64           offset;
   uint64           limit;
   uint             entryCount;
-  IndexList        indexList;
-  IndexNode        *indexNode;
+  IndexEntryList   indexEntryList;
+  IndexEntryNode   *indexEntryNode;
   String           regexpString;
   String           storageName;
   uint64           storageDateTime;
@@ -16545,7 +16564,10 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   FileSystemTypes  fileSystemType;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  IndexId          indexId;
+  IndexId          uuidId,entityId,storageId,entryId;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes     archiveType;
   uint64           size;
   uint64           timeModified;
   uint             userId,groupId;
@@ -16596,7 +16618,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
 
   // initialize variables
   entryCount      = 0;
-  List_init(&indexList);
+  List_init(&indexEntryList);
   regexpString    = String_new();
   storageName     = String_new();
   name            = String_new();
@@ -16620,15 +16642,21 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     String_delete(name);
     String_delete(storageName);
     String_delete(regexpString);
-    List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+    List_done(&indexEntryList,CALLBACK((ListNodeFreeFunction)freeIndexEntryNode,NULL));
     String_delete(entryPatternString);
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntry(&indexQueryHandle,
-                               &indexId,
+                               &uuidId,
+                               jobUUID,
+                               &entityId,
+                               scheduleUUID,
+                               &archiveType,
+                               &storageId,
                                storageName,
                                &storageDateTime,
+                               &entryId,
                                name,
                                destinationName,
                                &fileSystemType,
@@ -16645,50 +16673,50 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     if (newestOnly)
     {
       // find/allocate index node
-      indexNode = findIndexEntryNode(&indexList,indexId,name);
-      if (indexNode == NULL)
+      indexEntryNode = findIndexEntryNode(&indexEntryList,entryId,name);
+      if (indexEntryNode == NULL)
       {
-        indexNode = newIndexEntryNode(&indexList,indexId,storageName,name,timeModified);
+        indexEntryNode = newIndexEntryNode(&indexEntryList,entryId,storageName,name,timeModified);
         entryCount++;
       }
-      if (indexNode == NULL) break;
+      if (indexEntryNode == NULL) break;
 
       // update index node
-      if (timeModified >= indexNode->timeModified)
+      if (timeModified >= indexEntryNode->timeModified)
       {
-        indexNode->indexId             = indexId;
-        String_set(indexNode->storageName,storageName);
-        indexNode->storageDateTime     = storageDateTime;
-        indexNode->timeModified        = timeModified;
-        indexNode->file.size           = size;
-        indexNode->file.userId         = userId;
-        indexNode->file.groupId        = groupId;
-        indexNode->file.permission     = permission;
-        indexNode->file.fragmentOffset = fragmentOrBlockOffset;
-        indexNode->file.fragmentSize   = fragmentOrBlockSize;
+        indexEntryNode->entryId             = entryId;
+        String_set(indexEntryNode->storageName,storageName);
+        indexEntryNode->storageDateTime     = storageDateTime;
+        indexEntryNode->timeModified        = timeModified;
+        indexEntryNode->file.size           = size;
+        indexEntryNode->file.userId         = userId;
+        indexEntryNode->file.groupId        = groupId;
+        indexEntryNode->file.permission     = permission;
+        indexEntryNode->file.fragmentOffset = fragmentOrBlockOffset;
+        indexEntryNode->file.fragmentSize   = fragmentOrBlockSize;
       }
     }
     else
     {
-      switch (Index_getType(indexId))
+      switch (Index_getType(entryId))
       {
         case INDEX_TYPE_FILE:
-          SEND_FILE_ENTRY(indexId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentOrBlockSize);
+          SEND_FILE_ENTRY(entryId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentOrBlockSize);
           break;
         case INDEX_TYPE_IMAGE:
-          SEND_IMAGE_ENTRY(indexId,storageName,storageDateTime,name,fileSystemType,size,fragmentOrBlockOffset,fragmentOrBlockSize);
+          SEND_IMAGE_ENTRY(entryId,storageName,storageDateTime,name,fileSystemType,size,fragmentOrBlockOffset,fragmentOrBlockSize);
           break;
         case INDEX_TYPE_DIRECTORY:
-          SEND_DIRECTORY_ENTRY(indexId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
+          SEND_DIRECTORY_ENTRY(entryId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
           break;
         case INDEX_TYPE_LINK:
-          SEND_LINK_ENTRY(indexId,storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
+          SEND_LINK_ENTRY(entryId,storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
           break;
         case INDEX_TYPE_HARDLINK:
-          SEND_HARDLINK_ENTRY(indexId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentOrBlockSize);
+          SEND_HARDLINK_ENTRY(entryId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentOrBlockSize);
           break;
         case INDEX_TYPE_SPECIAL:
-          SEND_SPECIAL_ENTRY(indexId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
+          SEND_SPECIAL_ENTRY(entryId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
           break;
         default:
           #ifndef NDEBUG
@@ -16702,84 +16730,84 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   Index_doneList(&indexQueryHandle);
 
   // send data
-  indexNode = indexList.head;
-  while (   (indexNode != NULL)
+  indexEntryNode = indexEntryList.head;
+  while (   (indexEntryNode != NULL)
          && !isCommandAborted(clientInfo,id)
         )
   {
-    switch (Index_getType(indexNode->indexId))
+    switch (Index_getType(indexEntryNode->entryId))
     {
       case INDEX_TYPE_FILE:
-        SEND_FILE_ENTRY(indexNode->indexId,
-                        indexNode->storageName,
-                        indexNode->storageDateTime,
-                        indexNode->name,
-                        indexNode->file.size,
-                        indexNode->timeModified,
-                        indexNode->file.userId,
-                        indexNode->file.groupId,
-                        indexNode->file.permission,
-                        indexNode->file.fragmentOffset,
-                        indexNode->file.fragmentSize
+        SEND_FILE_ENTRY(indexEntryNode->entryId,
+                        indexEntryNode->storageName,
+                        indexEntryNode->storageDateTime,
+                        indexEntryNode->name,
+                        indexEntryNode->file.size,
+                        indexEntryNode->timeModified,
+                        indexEntryNode->file.userId,
+                        indexEntryNode->file.groupId,
+                        indexEntryNode->file.permission,
+                        indexEntryNode->file.fragmentOffset,
+                        indexEntryNode->file.fragmentSize
                        );
         break;
       case INDEX_TYPE_IMAGE:
-        SEND_IMAGE_ENTRY(indexNode->indexId,
-                         indexNode->storageName,
-                         indexNode->storageDateTime,
-                         indexNode->name,
-                         indexNode->image.fileSystemType,
-                         indexNode->image.size,
-                         indexNode->image.blockOffset,
-                         indexNode->image.blockCount
+        SEND_IMAGE_ENTRY(indexEntryNode->entryId,
+                         indexEntryNode->storageName,
+                         indexEntryNode->storageDateTime,
+                         indexEntryNode->name,
+                         indexEntryNode->image.fileSystemType,
+                         indexEntryNode->image.size,
+                         indexEntryNode->image.blockOffset,
+                         indexEntryNode->image.blockCount
                         );
         break;
       case INDEX_TYPE_DIRECTORY:
-        SEND_DIRECTORY_ENTRY(indexNode->indexId,
-                             indexNode->storageName,
-                             indexNode->storageDateTime,
-                             indexNode->name,
-                             indexNode->timeModified,
-                             indexNode->directory.userId,
-                             indexNode->directory.groupId,
-                             indexNode->directory.permission
+        SEND_DIRECTORY_ENTRY(indexEntryNode->entryId,
+                             indexEntryNode->storageName,
+                             indexEntryNode->storageDateTime,
+                             indexEntryNode->name,
+                             indexEntryNode->timeModified,
+                             indexEntryNode->directory.userId,
+                             indexEntryNode->directory.groupId,
+                             indexEntryNode->directory.permission
                             );
         break;
       case INDEX_TYPE_LINK:
-        SEND_LINK_ENTRY(indexNode->indexId,
-                        indexNode->storageName,
-                        indexNode->storageDateTime,
-                        indexNode->name,
-                        indexNode->link.destinationName,
-                        indexNode->timeModified,
-                        indexNode->link.userId,
-                        indexNode->link.groupId,
-                        indexNode->link.permission
+        SEND_LINK_ENTRY(indexEntryNode->entryId,
+                        indexEntryNode->storageName,
+                        indexEntryNode->storageDateTime,
+                        indexEntryNode->name,
+                        indexEntryNode->link.destinationName,
+                        indexEntryNode->timeModified,
+                        indexEntryNode->link.userId,
+                        indexEntryNode->link.groupId,
+                        indexEntryNode->link.permission
                        );
         break;
       case INDEX_TYPE_HARDLINK:
-        SEND_HARDLINK_ENTRY(indexNode->indexId,
-                            indexNode->storageName,
-                            indexNode->storageDateTime,
-                            indexNode->name,
-                            indexNode->hardLink.size,
-                            indexNode->timeModified,
-                            indexNode->hardLink.userId,
-                            indexNode->hardLink.groupId,
-                            indexNode->hardLink.permission,
-                            indexNode->hardLink.fragmentOffset,
-                            indexNode->hardLink.fragmentSize
+        SEND_HARDLINK_ENTRY(indexEntryNode->entryId,
+                            indexEntryNode->storageName,
+                            indexEntryNode->storageDateTime,
+                            indexEntryNode->name,
+                            indexEntryNode->hardLink.size,
+                            indexEntryNode->timeModified,
+                            indexEntryNode->hardLink.userId,
+                            indexEntryNode->hardLink.groupId,
+                            indexEntryNode->hardLink.permission,
+                            indexEntryNode->hardLink.fragmentOffset,
+                            indexEntryNode->hardLink.fragmentSize
                            );
         break;
       case INDEX_TYPE_SPECIAL:
-        SEND_SPECIAL_ENTRY(indexNode->indexId,
-                           indexNode->storageName,
-                           indexNode->storageDateTime,
-                           indexNode->name,
-                           indexNode->timeModified,
-                           indexNode->special.userId,
-                           indexNode->special.groupId,
-                           indexNode->special.permission
+        SEND_SPECIAL_ENTRY(indexEntryNode->entryId,
+                           indexEntryNode->storageName,
+                           indexEntryNode->storageDateTime,
+                           indexEntryNode->name,
+                           indexEntryNode->timeModified,
+                           indexEntryNode->special.userId,
+                           indexEntryNode->special.groupId,
+                           indexEntryNode->special.permission
                           );
         break;
       default:
@@ -16788,7 +16816,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         #endif /* NDEBUG */
         break;
     }
-    indexNode = indexNode->next;
+    indexEntryNode = indexEntryNode->next;
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -16798,7 +16826,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   String_delete(name);
   String_delete(storageName);
   String_delete(regexpString);
-  List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
+  List_done(&indexEntryList,CALLBACK((ListNodeFreeFunction)freeIndexEntryNode,NULL));
   String_delete(entryPatternString);
 }
 
