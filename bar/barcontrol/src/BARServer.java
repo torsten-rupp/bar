@@ -1289,6 +1289,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       // ignored
     }
+    catch (Throwable throwable)
+    {
+      if (Settings.debugLevel > 0)
+      {
+        BARServer.disconnect();
+        System.err.println("ERROR: "+throwable.getMessage());
+        BARControl.printStackTrace(throwable);
+        System.exit(1);
+      }
+    }
 
     try
     {
@@ -1304,6 +1314,16 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     catch (IOException exception)
     {
       // ignored
+    }
+    catch (Throwable throwable)
+    {
+      if (Settings.debugLevel > 0)
+      {
+        BARServer.disconnect();
+        System.err.println("ERROR: "+throwable.getMessage());
+        BARControl.printStackTrace(throwable);
+        System.exit(1);
+      }
     }
   }
 
