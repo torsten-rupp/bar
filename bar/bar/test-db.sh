@@ -4,10 +4,11 @@ SQLITE3=./bar-sqlite3
 make $SQLITE3 > /dev/null
 
 databaseFile=bar-index.db
-testBase=1
-testDelete=1
-testAssign=1
-testDirectory=1
+testBase=0
+testDelete=0
+testAssign=0
+testDirectory=0
+testFTS=1
 
 DATETIME1=`date -d "2016-01-01 01:01:01" +%s`
 DATETIME2=`date -d "2016-02-02 02:02:02" +%s`
@@ -642,6 +643,24 @@ if test $testDirectory -eq 1; then
   printValues
   echo "----------------------------------------------------------------------"
 fi
+
+if test $testFTS -eq 1; then
+  # test full-text-search
+  $SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'/d1/d2/test_123.abc',$DATETIME1);"
+  $SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'/d3/d4/abc-123.xyz',$DATETIME1);"
+  $SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'a1b2c3d4',$DATETIME1);"
+  $SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId1,$TYPE_FILE,'aabbccdd',$DATETIME1);"
+
+#  $SQLITE3 $databaseFile "SELECT entryId,name FROM FTS_entries WHERE FTS_entries MATCH 'none'"
+#  $SQLITE3 $databaseFile "SELECT entryId,name FROM FTS_entries WHERE FTS_entries MATCH 'test*'"
+  $SQLITE3 $databaseFile "SELECT entryId,name FROM FTS_entries WHERE FTS_entries MATCH '123'"
+#  $SQLITE3 $databaseFile "SELECT entryId,name FROM FTS_entries WHERE FTS_entries MATCH '12*'"
+#  $SQLITE3 $databaseFile "SELECT entryId,name FROM FTS_entries WHERE FTS_entries MATCH 'test* 12*'"
+  $SQLITE3 $databaseFile "SELECT entryId,name FROM FTS_entries WHERE FTS_entries MATCH 'a1b2*'"
+  $SQLITE3 $databaseFile "SELECT entryId,name FROM FTS_entries WHERE FTS_entries MATCH 'aabbcc*'"
+fi
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
