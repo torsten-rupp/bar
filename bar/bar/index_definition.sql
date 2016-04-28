@@ -386,6 +386,7 @@ CREATE VIRTUAL TABLE FTS_entries USING FTS4(
   entryId,
   name,
 
+//  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
   tokenize=unicode61
 );
 

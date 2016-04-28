@@ -2348,7 +2348,7 @@ Dprintf.dprintf("");
 
       // get storage list for entity
       final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s",
+      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld storagePattern=%'S indexStateSet=%s indexModeSet=%s",
                                                    entityIndexData[0].id,
                                                    storagePattern,
                                                    storageIndexStateSet.nameList("|"),
@@ -2956,7 +2956,8 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
       {
         final Menu subMenu = uuidIndexData.getSubMenu();
 
-        BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S pattern=*",
+        BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%lld jobUUID=%'S pattern=*",
+                                                     uuidIndexData.jobUUID
                                                      uuidIndexData.jobUUID
                                                     ),
                                  1,  // debugLevel
@@ -3728,6 +3729,8 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                        case FILE:
                                          {
                                            long   entryId         = valueMap.getLong  ("entryId"        );
+//                                           String jobUUID         = valueMap.getString("storageName"    );
+//                                           String entityType      = valueMap.getString("storageName"    );
                                            String storageName     = valueMap.getString("storageName"    );
                                            long   storageDateTime = valueMap.getLong  ("storageDateTime");
                                            String fileName        = valueMap.getString("name"           );
@@ -6511,7 +6514,7 @@ Dprintf.dprintf("remove");
         EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
 // TODO
 assert storagePattern != null;
-        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%d maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
+        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%lld maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
                                                      entityIndexData.id,
                                                      -1,
                                                      storagePattern,
@@ -6920,7 +6923,7 @@ assert storagePattern != null;
             }
             else if (indexData instanceof EntityIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s entityId=%d",
+              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s entityId=%lld",
                                                                    "*",
                                                                    indexData.id
                                                                   ),
@@ -6930,7 +6933,7 @@ assert storagePattern != null;
             }
             else if (indexData instanceof StorageIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%d",
+              error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%lld",
                                                                    "*",
                                                                    indexData.id
                                                                   ),
@@ -6965,7 +6968,7 @@ assert storagePattern != null;
       if (Dialogs.confirm(shell,BARControl.tr("Refresh all indizes with error state?")))
       {
         String[] errorMessage = new String[1];
-        int error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%d",
+        int error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=%s storageId=%lld",
                                                                  "ERROR",
                                                                  0
                                                                 ),
@@ -7147,7 +7150,7 @@ assert storagePattern != null;
                 }
                 else if (indexData instanceof EntityIndexData)
                 {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%d",
+                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%lld",
                                                                         indexData.id
                                                                        ),
                                                     0,  // debugLevel
@@ -7156,7 +7159,7 @@ assert storagePattern != null;
                 }
                 else if (indexData instanceof StorageIndexData)
                 {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%d",
+                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%lld",
                                                                         indexData.id
                                                                       ),
                                                    0,  // debugLevel
@@ -7450,7 +7453,7 @@ assert storagePattern != null;
                 }
                 else if (indexData instanceof EntityIndexData)
                 {
-                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%d",
+                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%lld",
                                                                        indexData.id
                                                                       ),
                                                    0,  // debugLevel
@@ -7459,7 +7462,7 @@ assert storagePattern != null;
                 }
                 else if (indexData instanceof StorageIndexData)
                 {
-                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%d",
+                  error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%lld",
                                                                         indexData.id
                                                                        ),
                                                     0,  // debugLevel
