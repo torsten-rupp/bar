@@ -2519,15 +2519,16 @@ Dprintf.dprintf("");
     {
       assert storagePattern != null;
 
-      // clear count
-      storageCount = -1;
+      // set update inidicator
       display.syncExec(new Runnable()
       {
         public void run()
         {
+          widgetStorageTabFolderTitle.setForeground(COLOR_MODIFIED);
           widgetStorageTabFolderTitle.redraw();
         }
       });
+
       // get storages info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
@@ -2550,6 +2551,7 @@ Dprintf.dprintf("");
       {
         public void run()
         {
+          widgetStorageTabFolderTitle.setForeground(null);
           widgetStorageTabFolderTitle.redraw();
 
           widgetStorageTable.setRedraw(false);
@@ -3469,14 +3471,6 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       return totalEntryCount;
     }
 
-    /** check if total entry count is currently updated
-     * @return true if total entry count is currently updated
-     */
-    public boolean isUpdateTotalEntryCount()
-    {
-      return updateTotalEntryCount;
-    }
-
     /** get entry type
      * @return entry type
      */
@@ -3625,14 +3619,14 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
     {
       assert entryPattern != null;
 
-      long oldTotalEntryCount = totalEntryCount;
+      final long oldTotalEntryCount = totalEntryCount;
 
-      // clear count
-      totalEntryCount = -1;
+      // set update indicator
       display.syncExec(new Runnable()
       {
         public void run()
         {
+          widgetEntryTableTitle.setForeground(COLOR_MODIFIED);
           widgetEntryTableTitle.redraw();
         }
       });
@@ -3670,15 +3664,16 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
         }
       }
 
-      if (oldTotalEntryCount != totalEntryCount)
+      // set count
+      display.syncExec(new Runnable()
       {
-        // set count
-        display.syncExec(new Runnable()
+        public void run()
         {
-          public void run()
-          {
-            widgetEntryTableTitle.redraw();
+          widgetEntryTableTitle.setForeground(null);
+          widgetEntryTableTitle.redraw();
 
+          if (oldTotalEntryCount != totalEntryCount)
+          {
             widgetEntryTable.setRedraw(false);
 
             widgetEntryTable.setItemCount(0);
@@ -3689,19 +3684,8 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
             widgetEntryTable.setRedraw(true);
           }
-        });
-      }
-      else
-      {
-        // set count
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            widgetEntryTableTitle.redraw();
-          }
-        });
-      }
+        }
+      });
     }
 
     /** refresh entry table items
@@ -4696,16 +4680,23 @@ Dprintf.dprintf("");
           String    text;
           Point     size;
 
+          // get current foreground color
+          Color foreground = widgetEntryTableTitle.getForeground();
+
+          // title
           text = BARControl.tr("Storage");
           size = Widgets.getTextSize(gc,text);
+          gc.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
           gc.drawText(text,
                       (bounds.width-size.x)/2,
                       8
                      );
 
+          // number of entries
           count = updateStorageTreeTableThread.getStorageCount();
           text = (count >= 0) ? BARControl.tr("Count: {0}",count) : "-";
           size = Widgets.getTextSize(gc,text);
+          gc.setForeground(foreground);
           gc.drawText(text,
                       bounds.width-size.x-8,
                       8
@@ -5667,9 +5658,13 @@ Dprintf.dprintf("remove");
           String    text;
           Point     size;
 
+          // get current foreground color
+          Color foreground = widgetEntryTableTitle.getForeground();
+
           // title
           text = BARControl.tr("Entries");
           size = Widgets.getTextSize(gc,text);
+          gc.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
           gc.drawText(text,
                       (bounds.width-size.x)/2,
                       (bounds.height-size.y)/2
@@ -5678,7 +5673,7 @@ Dprintf.dprintf("remove");
           // number of entries
           text = BARControl.tr("Count: {0}",updateEntryTableThread.getTotalEntryCount());
           size = Widgets.getTextSize(gc,text);
-          if (updateEntryTableThread.isUpdateTotalEntryCount()) gc.setForeground(COLOR_MODIFIED);
+          gc.setForeground(foreground);
           gc.drawText(text,
                       bounds.width-size.x-8,
                       (bounds.height-size.y)/2
