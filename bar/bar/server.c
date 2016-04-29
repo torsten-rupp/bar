@@ -9380,7 +9380,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            id=<n> entryType=<type> patternType=<type> pattern=<text>
+*            id=<n> entryType=<type> pattern=<text> patternType=<type>
 *            ...
 \***********************************************************************/
 
@@ -9418,11 +9418,11 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     LIST_ITERATE(&jobNode->includeEntryList,entryNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "id=%u entryType=%s patternType=%s pattern=%'S",
+                       "id=%u entryType=%s pattern=%'S patternType=%s",
                        entryNode->id,
                        EntryList_entryTypeToString(entryNode->type,"unknown"),
-                       Pattern_patternTypeToString(entryNode->pattern.type,"unknown"),
-                       entryNode->string
+                       entryNode->string,
+                       Pattern_patternTypeToString(entryNode->pattern.type,"unknown")
                       );
     }
   }
@@ -9738,7 +9738,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            id=<n> patternType=<type> pattern=<text>
+*            id=<n> pattern=<text> patternType=<type>
 *            ...
 \***********************************************************************/
 
@@ -9776,10 +9776,10 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     LIST_ITERATE(&jobNode->excludePatternList,patternNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "id=%u patternType=%s pattern=%'S",
+                       "id=%u pattern=%'S patternType=%s",
                        patternNode->id,
-                       Pattern_patternTypeToString(patternNode->pattern.type,"unknown"),
-                       patternNode->string
+                       patternNode->string,
+                       Pattern_patternTypeToString(patternNode->pattern.type,"unknown")
                       );
     }
   }
@@ -10393,7 +10393,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            id=<n> patternType=<type> pattern=<text>
+*            id=<n> pattern=<text> patternType=<type>
 *            ...
 \***********************************************************************/
 
@@ -10431,11 +10431,11 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     LIST_ITERATE(&jobNode->deltaSourceList,deltaSourceNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "id=%u patternType=%s pattern=%'S",
+                       "id=%u pattern=%'S patternType=%s",
                        deltaSourceNode->id,
 //TODO
-                       Pattern_patternTypeToString(PATTERN_TYPE_GLOB,"unknown"),
-                       deltaSourceNode->storageName
+                       deltaSourceNode->storageName,
+                       Pattern_patternTypeToString(PATTERN_TYPE_GLOB,"unknown")
                       );
     }
   }
@@ -10591,8 +10591,8 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          deltaSourceId;
-  PatternTypes  patternType;
   String        patternString;
+  PatternTypes  patternType;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -10727,7 +10727,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            patternType=<type> pattern=<text>
+*            pattern=<text> patternType=<type>
 *            ...
 \***********************************************************************/
 
@@ -10765,9 +10765,9 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     LIST_ITERATE(&jobNode->compressExcludePatternList,patternNode)
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "patternType=%s pattern=%'S",
-                       Pattern_patternTypeToString(patternNode->pattern.type,"unknown"),
-                       patternNode->string
+                       "pattern=%'S patternType=%s",
+                       patternNode->string,
+                       Pattern_patternTypeToString(patternNode->pattern.type,"unknown")
                       );
     }
   }
@@ -10850,8 +10850,8 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
 LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  PatternTypes  patternType;
   String        patternString;
+  PatternTypes  patternType;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   uint          patternId;
@@ -10923,8 +10923,8 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          patternId;
-  PatternTypes  patternType;
   String        patternString;
+  PatternTypes  patternType;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -15893,7 +15893,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            entryPattern=<text>
+*            pattern=<text>
 *            indexType=<type>|*
 *            newestOnly=yes|no
 *          Result:
@@ -15918,7 +15918,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryPattern=<text>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -15988,7 +15988,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            entryPattern=<text>
+*            pattern=<text>
 *            indexType=<text>|*
 *            newestOnly=yes|no
 *            [offset=<n>]
@@ -16352,7 +16352,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   entryPatternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",entryPatternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryPattern=<text>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(entryPatternString);
     return;
   }
