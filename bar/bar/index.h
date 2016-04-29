@@ -719,6 +719,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 * Purpose: list uuid entries and aggregated data of entities
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
+*          name             - storage name pattern (glob, can be NULL)
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -729,6 +730,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
+                           ConstString      name,
                            uint64           offset,
                            uint64           limit
                           );
@@ -792,6 +794,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          jobUUID          - job UUID or NULL
 *          scheduleUUID     - unique schedule id (can be NULL)
+*          name             - storage name pattern (glob, can be NULL)
 *          ordering         - ordering
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
@@ -806,6 +809,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexId          uuidId,
                               ConstString      jobUUID,
                               ConstString      scheduleUUID,
+                              ConstString      name,
                               DatabaseOrdering ordering,
                               ulong            offset,
                               uint64           limit

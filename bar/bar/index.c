@@ -4949,6 +4949,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  NULL, // scheduldUUID
+                                 NULL,  // name
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -5118,6 +5119,7 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  NULL, // scheduldUUID
+                                 NULL,  // name
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -5591,11 +5593,11 @@ UNUSED_VARIABLE(jobUUID);
                                      entities.totalEntrySize \
                               FROM entities \
                                 LEFT JOIN uuids ON uuids.jobUUID=entityId.jobUUID \
-                              WHERE %s \
+                              WHERE %S \
                               GROUP BY entities.id \
                               LIMIT 0,1 \
                              ",
-                             String_cString(filter)
+                             filter
                             );
     if (error != ERROR_NONE)
     {
@@ -6331,10 +6333,14 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
+                           ConstString      name,
                            uint64           offset,
                            uint64           limit
                           )
 {
+  String ftsName;
+  String regexpName;
+  String filter;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -6349,7 +6355,16 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
+//TODO required?
   initIndexQueryHandle(indexQueryHandle,indexHandle);
+
+  // get FTS/regex patterns
+  ftsName    = getFTSString   (String_new(),name);
+  regexpName = getREGEXPString(String_new(),name);
+
+  // get filter
+  filter = String_newCString("1");
+  filterAppend(filter,!String_isEmpty(name),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -6357,24 +6372,36 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   // prepare list
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT id, \
-                                   jobUUID, \
-                                   UNIXTIMESTAMP(lastCreated), \
-                                   lastErrorMessage, \
-                                   totalEntryCount, \
-                                   totalEntrySize \
+                           "SELECT uuids.id, \
+                                   uuids.jobUUID, \
+                                   UNIXTIMESTAMP(uuids.lastCreated), \
+                                   uuids.lastErrorMessage, \
+                                   uuids.totalEntryCount, \
+                                   uuids.totalEntrySize \
                             FROM uuids \
+                              LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                              LEFT JOIN storage ON storage.entityId=entities.id \
+                            WHERE %S \
+                            GROUP BY uuids.id \
                             LIMIT %llu,%llu \
                            ",
+                           filter,
                            offset,
                            limit
                           );
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
+    String_delete(regexpName);
+    String_delete(ftsName);
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
+
+  // free resources
+  String_delete(regexpName);
+  String_delete(ftsName);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -6534,11 +6561,14 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexId          uuidId,
                               ConstString      jobUUID,
                               ConstString      scheduleUUID,
+                              ConstString      name,
                               DatabaseOrdering ordering,
                               ulong            offset,
                               uint64           limit
                              )
 {
+  String ftsName;
+  String regexpName;
   String filter;
   Errors error;
 
@@ -6555,13 +6585,19 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
+//TODO required?
   initIndexQueryHandle(indexQueryHandle,indexHandle);
+
+  // get FTS/regex patterns
+  ftsName    = getFTSString   (String_new(),name);
+  regexpName = getREGEXPString(String_new(),name);
 
   // get filter
   filter = String_newCString("1");
   filterAppend(filter,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filter,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
+  filterAppend(filter,!String_isEmpty(name),"AND","EXISTS(SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -6580,25 +6616,30 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.totalEntrySize \
                             FROM entities \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE %s \
+                            WHERE %S \
                             ORDER BY entities.created %s \
                             LIMIT %llu,%llu \
                            ",
-                           String_cString(filter),
+                           filter,
                            getOrderingString(ordering),
                            offset,
                            limit
                           );
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(filter);
+    String_delete(regexpName);
+    String_delete(ftsName);
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
   // free resources
   String_delete(filter);
+  String_delete(regexpName);
+  String_delete(ftsName);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -6905,11 +6946,11 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                               FROM storage \
                                 LEFT JOIN entities ON entities.id=storage.entityId \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE %s \
+                              WHERE %S \
                              ",
-                             String_cString(filter)
+                             filter
                             );
-  //Database_debugPrintQueryInfo(&databaseQueryHandle);
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
     if (error != ERROR_NONE)
     {
       return error;
@@ -7067,12 +7108,12 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                             FROM storage \
                               LEFT JOIN entities ON entities.id=storage.entityId \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE %s \
+                            WHERE %S \
                             GROUP BY storage.id \
                             ORDER BY storage.created DESC \
                             LIMIT %llu,%llu \
                            ",
-                           String_cString(filter),
+                           filter,
                            offset,
                            limit
                           );
@@ -7096,6 +7137,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   String_delete(uuidIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
+  doneIndexQueryHandle(indexQueryHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -8181,7 +8223,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              limit
                             );
   }
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
@@ -8507,9 +8549,9 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                             FROM entries \
                               LEFT JOIN storage ON storage.id=entries.storageId \
                               LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
-                            WHERE %s \
+                            WHERE %S \
                            ",
-                           String_cString(filter)
+                           filter
                           );
   if (error != ERROR_NONE)
   {
@@ -8714,9 +8756,9 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             FROM entries \
                               LEFT JOIN storage ON storage.id=images.storageId \
                               LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
-                            WHERE %s \
+                            WHERE %S \
                            ",
-                           String_cString(filter)
+                           filter
                           );
   if (error != ERROR_NONE)
   {
@@ -8915,9 +8957,9 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                             FROM entries \
                               LEFT JOIN storage ON storage.id=entries.storageId \
                               LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                            WHERE %s \
+                            WHERE %S \
                            ",
-                           String_cString(filter)
+                           filter
                           );
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
@@ -9118,9 +9160,9 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                             FROM entries \
                               LEFT JOIN storage ON storage.id=links.storageId \
                               LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
-                            WHERE %s \
+                            WHERE %S \
                            ",
-                           String_cString(filter)
+                           filter
                           );
   if (error != ERROR_NONE)
   {
@@ -9323,9 +9365,9 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                             FROM entries \
                               LEFT JOIN storage ON storage.id=hardlinks.storageId \
                               LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
-                            WHERE %s \
+                            WHERE %S \
                            ",
-                           String_cString(filter)
+                           filter
                           );
   if (error != ERROR_NONE)
   {
@@ -9529,9 +9571,9 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                             FROM entries \
                               LEFT JOIN storage ON storage.id=special.storageId \
                               LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
-                            WHERE %s \
+                            WHERE %S \
                            ",
-                           String_cString(filter)
+                           filter
                           );
   if (error != ERROR_NONE)
   {
@@ -10544,6 +10586,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
                                    uuidId,
                                    NULL,  // jobUUID,
                                    NULL,  // scheduldUUID
+                                   NULL,  // name
                                    DATABASE_ORDERING_ASCENDING,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -10705,8 +10748,6 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
 {
   Errors  error;
   bool    existsFlag;
-  uint    i;
-  IndexId id;
 
   assert(indexHandle != NULL);
   #ifdef NDEBUG
