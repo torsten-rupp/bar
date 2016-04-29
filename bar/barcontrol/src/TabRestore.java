@@ -1961,7 +1961,7 @@ Dprintf.dprintf("cirrect?");
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S",
                                                    storagePattern
                                                   ),
-0,//                               1,  // debugLevel
+                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -3633,12 +3633,12 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       // get entries info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO entryPattern=%'S indexType=%s newestOnly=%y",
+      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO pattern=%'S indexType=%s newestOnly=%y",
                                                        entryPattern,
                                                        entryType.toString(),
                                                        newestOnly
                                                       ),
-                                   1,  // debugLevel
+0,//                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -3706,14 +3706,14 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       // update entry table segment
       final String[] errorMessage = new String[1];
       final int[]    n            = new int[1];
-      BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryPattern=%'S indexType=%s newestOnly=%y offset=%d limit=%d",
+      BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST pattern=%'S indexType=%s newestOnly=%y offset=%d limit=%d",
                                                    entryPattern,
                                                    entryType.toString(),
                                                    newestOnly,
                                                    offset,
                                                    limit
                                                   ),
-                               1,  // debugLevel
+0,//                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
