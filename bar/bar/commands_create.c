@@ -3442,11 +3442,11 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL, // job UUID
-                                NULL, // schedule UUID
                                 &oldUUIDId,
+                                NULL, // job UUID
                                 &oldEntityId,
-                                NULL, // archive type
+                                NULL, // scheduleUUID
+                                NULL, // archiveType
                                 &oldStorageId,
                                 oldStorageName,
                                 NULL, // createdDateTime
@@ -3523,11 +3523,11 @@ fprintf(stderr,"%s, %d: deleteStorageId=%llu\n",__FILE__,__LINE__,deleteStorageI
     return error;
   }
   while (Index_getNextStorage(&indexQueryHandle,
-                              NULL, // job UUID
-                              NULL, // schedule UUID
                               &oldUUIDId,
+                              NULL, // job UUID
                               &oldEntityId,
-                              NULL, // archive type
+                              NULL, // schedule UUID
+                              NULL, // archiveType
                               &oldStorageId,
                               oldStorageName,
                               NULL, // createdDateTime
@@ -3669,10 +3669,10 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // jobUUID,
-                                NULL,  // scheduleUUID,
                                 &uuidId,
+                                NULL,  // jobUUID,
                                 &entityId,
+                                NULL,  // scheduleUUID,
                                 NULL,  // archiveType,
                                 &storageId,
                                 storageName,
@@ -3842,10 +3842,10 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // jobUUID,
-                                NULL,  // scheduleUUID,
                                 &uuidId,
+                                NULL,  // jobUUID,
                                 &entityId,
+                                NULL,  // scheduleUUID,
                                 NULL,  // archiveType,
                                 &storageId,
                                 storageName,
@@ -4031,10 +4031,10 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // jobUUID,
-                                NULL,  // scheduleUUID,
                                 &uuidId,
+                                NULL,  // jobUUID,
                                 &entityId,
+                                NULL,  // scheduleUUID,
                                 NULL,  // archiveType,
                                 &storageId,
                                 storageName,
@@ -4212,10 +4212,10 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
       break;
     }
     while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // jobUUID,
-                                NULL,  // scheduleUUID,
                                 &uuidId,
+                                NULL,  // jobUUID,
                                 &entityId,
+                                NULL,  // scheduleUUID,
                                 NULL,  // archiveType,
                                 &storageId,
                                 storageName,
@@ -4689,7 +4689,7 @@ fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
       }
 
       // update index database archive name and size
-fprintf(stderr,"%s, %d: --- update storage %s: %llu\n",__FILE__,__LINE__,String_cString(printableStorageName),archiveSize);
+fprintf(stderr,"%s, %d: --- update storage %lld %s: %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),String_cString(printableStorageName),archiveSize);
       error = Index_storageUpdate(createInfo->indexHandle,
                                   storageId,
                                   printableStorageName,
@@ -6870,6 +6870,7 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // create new entity
+  entityId = INDEX_ID_NONE;
   if (indexHandle != NULL)
   {
 #warning TODO
@@ -6906,6 +6907,7 @@ Errors Command_create(ConstString                  jobUUID,
 //                      IndexId                      entityId,
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
   }
+fprintf(stderr,"%s, %d: add to enty %lld\n",__FILE__,__LINE__,Index_getDatabaseId(entityId));
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
