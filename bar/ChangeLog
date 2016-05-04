@@ -34,6 +34,7 @@
     --stop-on-error is now deprecated
   * webDAV: fixed race condition in receive data
   * create temporary log file in system temporary directory
+  * upgrade libssh2: 1.7.0
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store
