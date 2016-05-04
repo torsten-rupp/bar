@@ -8658,6 +8658,10 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
            && !isCommandAborted(clientInfo,id)
           )
     {
+      if (!Index_findByJobUUID())
+      {
+      }
+
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "jobUUID=%S name=%'S state=%'s remoteHostName=%'S remoteHostPort=%d remoteHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
                        jobNode->uuid,
