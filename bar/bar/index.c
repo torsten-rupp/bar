@@ -2192,17 +2192,17 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                             NULL,  // indexState
                                                             NULL  // lastCheckedDateTime
                                                            )
-                                   && Index_findByJobUUID(newIndexHandle,
-                                                          jobUUID,
-                                                          NULL,  // scheduleUUDI
-                                                          NULL,  // uuidId
-                                                          &entityId,
-                                                          NULL,  // createdDateTime
-                                                          NULL,  // archiveType
-                                                          NULL,  // lastErrorMessage
-                                                          NULL,  // totalEntryCount
-                                                          NULL  // totalEntrySize
-                                                         )
+                                   && Index_findEntityByJobUUID(newIndexHandle,
+                                                                NULL,  // uuidId
+                                                                jobUUID,
+                                                                &entityId,
+                                                                NULL,  // scheduleUUDI
+                                                                NULL,  // createdDateTime
+                                                                NULL,  // archiveType
+                                                                NULL,  // lastErrorMessage
+                                                                NULL,  // totalEntryCount
+                                                                NULL  // totalEntrySize
+                                                               )
                                   )
                                {
                                  error = ERROR_NONE;
@@ -2986,17 +2986,17 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             NULL,  // indexState
                                                             NULL  // lastCheckedDateTime
                                                            )
-                                   && Index_findByJobUUID(newIndexHandle,
-                                                          jobUUID,
-                                                          NULL,  // scheduleUUDI
-                                                          NULL,  // uuidId
-                                                          &entityId,
-                                                          NULL,  // createdDateTime
-                                                          NULL,  // archiveType
-                                                          NULL,  // lastErrorMessage
-                                                          NULL,  // totalEntryCount
-                                                          NULL  // totalEntrySize,
-                                                         )
+                                   && Index_findEntityByJobUUID(newIndexHandle,
+                                                                NULL,  // uuidId
+                                                                jobUUID,
+                                                                &entityId,
+                                                                NULL,  // scheduleUUDI
+                                                                NULL,  // createdDateTime
+                                                                NULL,  // archiveType
+                                                                NULL,  // lastErrorMessage
+                                                                NULL,  // totalEntryCount
+                                                                NULL  // totalEntrySize,
+                                                               )
                                   )
                                {
                                  error = ERROR_NONE;
@@ -3525,16 +3525,16 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   printableStorageName = String_new();
 
   error = ERROR_NONE;
-  while (Index_findByState(indexHandle,
-                           INDEX_STATE_SET(INDEX_STATE_UPDATE),
-                           NULL,  // jobUUID
-                           NULL,  // scheduleUUID
-                           NULL,  // uuidId
-                           NULL,  // entityId
-                           &storageId,
-                           NULL,  // storageName
-                           NULL  // lastCheckedDateTime
-                          )
+  while (Index_findStorageByState(indexHandle,
+                                  INDEX_STATE_SET(INDEX_STATE_UPDATE),
+                                  NULL,  // uuidId
+                                  NULL,  // jobUUID
+                                  NULL,  // entityId
+                                  NULL,  // scheduleUUID
+                                  &storageId,
+                                  NULL,  // storageName
+                                  NULL  // lastCheckedDateTime
+                                 )
          && (error == ERROR_NONE)
         )
   {
@@ -3605,16 +3605,16 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   printableStorageName = String_new();
 
   error = ERROR_NONE;
-  while (Index_findByState(indexHandle,
-                           INDEX_STATE_SET(INDEX_STATE_CREATE),
-                           NULL,  // jobUUID
-                           NULL,  // scheduleUUID
-                           NULL,  // uuidId
-                           NULL,  // entityId
-                           &storageId,
-                           storageName,
-                           NULL  // lastCheckedDateTime
-                          )
+  while (Index_findStorageByState(indexHandle,
+                                  INDEX_STATE_SET(INDEX_STATE_CREATE),
+                                  NULL,  // uuidId
+                                  NULL,  // jobUUID
+                                  NULL,  // entityId
+                                  NULL,  // scheduleUUID
+                                  &storageId,
+                                  storageName,
+                                  NULL  // lastCheckedDateTime
+                                 )
          && (error == ERROR_NONE)
         )
   {
@@ -5527,17 +5527,17 @@ bool Index_containsType(const IndexId indexIds[],
   return FALSE;
 }
 
-bool Index_findByJobUUID(IndexHandle  *indexHandle,
-                         ConstString  jobUUID,
-                         ConstString  scheduleUUID,
-                         IndexId      *uuidId,
-                         IndexId      *entityId,
-                         ArchiveTypes *archiveType,
-                         uint64       *createdDateTime,
-                         String       lastErrorMessage,
-                         ulong        *totalEntryCount,
-                         uint64       *totalEntrySize
-                        )
+bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
+                               IndexId      *uuidId,
+                               ConstString  jobUUID,
+                               IndexId      *entityId,
+                               ConstString  scheduleUUID,
+                               ArchiveTypes *archiveType,
+                               uint64       *createdDateTime,
+                               String       lastErrorMessage,
+                               ulong        *totalEntryCount,
+                               uint64       *totalEntrySize
+                              )
 {
   String              filter;
   Errors              error;
@@ -5796,16 +5796,16 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
   return foundFlag;
 }
 
-bool Index_findByState(IndexHandle   *indexHandle,
-                       IndexStateSet indexStateSet,
-                       String        jobUUID,
-                       String        scheduleUUID,
-                       IndexId       *uuidId,
-                       IndexId       *entityId,
-                       IndexId       *storageId,
-                       String        storageName,
-                       uint64        *lastCheckedDateTime
-                      )
+bool Index_findStorageByState(IndexHandle   *indexHandle,
+                              IndexStateSet indexStateSet,
+                              IndexId       *uuidId,
+                              String        jobUUID,
+                              IndexId       *entityId,
+                              String        scheduleUUID,
+                              IndexId       *storageId,
+                              String        storageName,
+                              uint64        *lastCheckedDateTime
+                             )
 {
   Errors              error;
   String              indexStateSetString;

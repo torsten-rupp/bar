@@ -4921,16 +4921,16 @@ LOCAL void indexThreadCode(void)
 
     // update index entries
     while (   !quitFlag
-           && Index_findByState(indexHandle,
-                                INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
-                                NULL,  // jobUUID
-                                NULL,  // scheduleUUID
-                                NULL,  // uuidId
-                                NULL,  // entityId
-                                &storageId,
-                                storageName,
-                                NULL  // lastCheckedDateTime
-                               )
+           && Index_findStorageByState(indexHandle,
+                                       INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
+                                       NULL,  // uuidId
+                                       NULL,  // jobUUID
+                                       NULL,  // entityId
+                                       NULL,  // scheduleUUID
+                                       &storageId,
+                                       storageName,
+                                       NULL  // lastCheckedDateTime
+                                      )
           )
     {
       // pause
@@ -8658,9 +8658,9 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
            && !isCommandAborted(clientInfo,id)
           )
     {
-      if (!Index_findByJobUUID())
-      {
-      }
+//      if (!Index_findEntityByJobUUID())
+//      {
+//      }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "jobUUID=%S name=%'S state=%'s remoteHostName=%'S remoteHostPort=%d remoteHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",

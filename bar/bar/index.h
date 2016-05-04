@@ -453,8 +453,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 #endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : Index_findByJobUUID
-* Purpose: find info by job UUID
+* Name   : Index_findEntityByJobUUID
+* Purpose: find entity info by job UUID
 * Input  : indexHandle      - index handle
 *          jobUUID          - unique job id (can be NULL)
 *          scheduleUUID     - unique schedule id (can be NULL)
@@ -469,17 +469,17 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findByJobUUID(IndexHandle  *indexHandle,
-                         ConstString  jobUUID,
-                         ConstString  scheduleUUID,
-                         IndexId      *uuidId,
-                         IndexId      *entityId,
-                         ArchiveTypes *archiveType,
-                         uint64       *createdDateTime,
-                         String       lastErrorMessage,
-                         ulong        *totalEntryCount,
-                         uint64       *totalEntrySize
-                        );
+bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
+                               IndexId      *uuidId,
+                               ConstString  jobUUID,
+                               IndexId      *entityId,
+                               ConstString  scheduleUUID,
+                               ArchiveTypes *archiveType,
+                               uint64       *createdDateTime,
+                               String       lastErrorMessage,
+                               ulong        *totalEntryCount,
+                               uint64       *totalEntrySize
+                              );
 
 /***********************************************************************\
 * Name   : Index_findByStorageId
@@ -541,8 +541,8 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
                             );
 
 /***********************************************************************\
-* Name   : Index_findByState
-* Purpose: find info by state
+* Name   : Index_findStorageByState
+* Purpose: find storage info by state
 * Input  : indexHandle - index handle
 *          indexState  - index state
 * Output : jobUUID             - unique job id (can be NULL)
@@ -556,16 +556,16 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findByState(IndexHandle   *indexHandle,
-                       IndexStateSet indexStateSet,
-                       String        jobUUID,
-                       String        scheduleUUID,
-                       IndexId       *uuidId,
-                       IndexId       *entityId,
-                       IndexId       *storageId,
-                       String        storageName,
-                       uint64        *lastCheckedDateTime
-                      );
+bool Index_findStorageByState(IndexHandle   *indexHandle,
+                              IndexStateSet indexStateSet,
+                              IndexId       *uuidId,
+                              String        jobUUID,
+                              IndexId       *entityId,
+                              String        scheduleUUID,
+                              IndexId       *storageId,
+                              String        storageName,
+                              uint64        *lastCheckedDateTime
+                             );
 
 /***********************************************************************\
 * Name   : Index_getState
