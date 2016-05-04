@@ -23,14 +23,16 @@ import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.MenuEvent;
+import org.eclipse.swt.events.MenuListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.events.ShellAdapter;
+import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
@@ -115,10 +117,12 @@ class JobData
   String cryptType;
   String cryptPasswordMode;
   long   lastExecutedDateTime;
+  long   averageExecutionTime;
+  int    executionCount;
   long   estimatedRestTime;
 
   // date/time format
-  private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   /** create job data
    * @param uuid job UUID
@@ -149,6 +153,8 @@ class JobData
     this.cryptType              = cryptType;
     this.cryptPasswordMode      = cryptPasswordMode;
     this.lastExecutedDateTime   = lastExecutedDateTime;
+    this.averageExecutionTime   = 0;
+    this.executionCount         = 0;
     this.estimatedRestTime      = estimatedRestTime;
   }
 
@@ -197,7 +203,7 @@ class JobData
   {
     if (lastExecutedDateTime > 0)
     {
-      return simpleDateFormat.format(new Date(lastExecutedDateTime*1000));
+      return SIMPLE_DATE_FORMAT.format(new Date(lastExecutedDateTime*1000));
     }
     else
     {
@@ -425,6 +431,7 @@ public class TabStatus
   // widgets
   public  Composite   widgetTab;
   private Table       widgetJobTable;
+  private Shell       widgetJobTableToolTip = null;
   private Menu        widgetJobTableHeaderMenu;
   private Menu        widgetJobTableBodyMenu;
   private Shell       widgetMessageToolTip = null;
@@ -850,7 +857,61 @@ public class TabStatus
           jobDelete();
         }
       });
+
+      Widgets.addMenuSeparator(widgetJobTableBodyMenu);
+
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Info")+"\u2026");
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          TableItem tableItems[] = widgetJobTable.getSelection();
+          if (tableItems.length > 0)
+          {
+            if (widgetJobTableToolTip != null)
+            {
+              widgetJobTableToolTip.dispose();
+              widgetJobTableToolTip = null;
+            }
+
+            if (tableItems[0] != null)
+            {
+              JobData jobData = (JobData)tableItems[0].getData();
+              if (jobData != null)
+              {
+//TODO
+                Point point = display.getCursorLocation();//widgetJobTable.toDisplay(selectionEvent.x+16,selectionEvent.y);
+                if (point.x > 16) point.x -= 16;
+                if (point.y > 16) point.y -= 16;
+                showJobToolTip(jobData,point.x,point.y);
+              }
+            }
+          }
+        }
+      });
     }
+    widgetJobTableBodyMenu.addMenuListener(new MenuListener()
+    {
+      @Override
+      public void menuShown(MenuEvent menuEvent)
+      {
+Dprintf.dprintf("");
+        if (widgetJobTableToolTip != null)
+        {
+          widgetJobTableToolTip.dispose();
+          widgetJobTableToolTip = null;
+        }
+      }
+      @Override
+      public void menuHidden(MenuEvent menuEvent)
+      {
+      }
+    });
     widgetJobTable.addListener(SWT.MenuDetect, new Listener()
     {
       @Override
@@ -2130,6 +2191,143 @@ public class TabStatus
       tabJobs.jobDelete(selectedJobData);
       updateJobList();
     }
+  }
+
+  /** show job tool tip
+   * @param entryIndexData entry index data
+   * @param x,y positions
+   */
+  private void showJobToolTip(JobData jobData, int x, int y)
+  {
+    int     row;
+    Label   label;
+    Control control;
+
+    final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+
+    if (widgetJobTableToolTip != null)
+    {
+      widgetJobTableToolTip.dispose();
+    }
+
+    widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+    widgetJobTableToolTip.setBackground(COLOR_BACKGROUND);
+    widgetJobTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
+    Widgets.layout(widgetJobTableToolTip,0,0,TableLayoutData.NSWE);
+
+    row = 0;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Job")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetJobTableToolTip,jobData.name);
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Entities")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetJobTableToolTip,"???");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Storage")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(0/*TODO*/),0/*TODO*/));
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last executed")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetJobTableToolTip,jobData.formatLastExecutedDateTime());
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    control = Widgets.newSpacer(widgetJobTableToolTip);
+    Widgets.layout(control,row,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
+    row++;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last execution time")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetJobTableToolTip,"???");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Execution count")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetJobTableToolTip,Integer.toString(jobData.executionCount));
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Average execution time")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%d:%02d:%02d",jobData.averageExecutionTime/(60*60),jobData.averageExecutionTime%(60*60)/60,jobData.averageExecutionTime%60));
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    Point size = widgetJobTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+    widgetJobTableToolTip.setBounds(x,y,size.x,size.y);
+    widgetJobTableToolTip.setVisible(true);
+
+    widgetJobTableToolTip.addMouseTrackListener(new MouseTrackListener()
+    {
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+Dprintf.dprintf("");
+      }
+
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+Dprintf.dprintf("");
+        if (widgetJobTableToolTip != null)
+        {
+          // check if inside sub-widget
+          Point point = new Point(mouseEvent.x,mouseEvent.y);
+          for (Control control : widgetJobTableToolTip.getChildren())
+          {
+            if (control.getBounds().contains(point))
+            {
+              return;
+            }
+          }
+
+          // close tooltip
+          widgetJobTableToolTip.dispose();
+          widgetJobTableToolTip = null;
+        }
+      }
+
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+      }
+    });
   }
 }
 
