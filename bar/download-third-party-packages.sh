@@ -30,7 +30,7 @@ LZO_VERSION=2.09
 LIBGPG_ERROR_VERSION=1.20
 LIBGCRYPT_VERSION=1.6.4
 GMP_VERSION=6.0.0a
-LIBSSH2_VERSION=1.6.0
+LIBSSH2_VERSION=1.7.0
 PCRE_VERSION=8.38
 ICU_VERSION=56.1
 MTX_VERSION=1.3.12
@@ -619,7 +619,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/packages
      if test ! -f libssh2-$LIBSSH2_VERSION.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://www.libssh2.org/download/libssh2-$LIBSSH2_VERSION.tar.gz'
+       $WGET $WGET_OPTIONS "http://www.libssh2.org/download/libssh2-$LIBSSH2_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf libssh2-$LIBSSH2_VERSION.tar.gz
