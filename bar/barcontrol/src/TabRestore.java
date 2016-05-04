@@ -48,9 +48,9 @@ import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
-import org.eclipse.swt.events.ModifyEvent;
-import org.eclipse.swt.events.MenuListener;
 import org.eclipse.swt.events.MenuEvent;
+import org.eclipse.swt.events.MenuListener;
+import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
@@ -849,7 +849,7 @@ public class TabRestore
                                (Object)uuidIndexData,
                                uuidIndexData.name,
                                Units.formatByteSize(uuidIndexData.totalEntrySize),
-                               (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                               (uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                ""
                               );
       }
@@ -982,7 +982,7 @@ public class TabRestore
                                (Object)entityIndexData,
                                entityIndexData.archiveType.toString(),
                                Units.formatByteSize(entityIndexData.totalEntrySize),
-                               (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
+                               (entityIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
                                ""
                               );
       }
@@ -1152,7 +1152,7 @@ Dprintf.dprintf("");
                                (Object)storageIndexData,
                                storageIndexData.name,
                                Units.formatByteSize(storageIndexData.totalEntrySize),
-                               (storageIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
+                               (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                storageIndexData.indexState.toString()
                               );
       }
@@ -1168,7 +1168,7 @@ Dprintf.dprintf("");
                                  (Object)storageIndexData,
                                  storageIndexData.name,
                                  Units.formatByteSize(storageIndexData.totalEntrySize),
-                                 simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
+                                 SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                  storageIndexData.indexState.toString()
                                 );
       }
@@ -1308,7 +1308,7 @@ Dprintf.dprintf("");
                               (Object)this,
                               name,
                               Units.formatByteSize(totalEntrySize),
-                              simpleDateFormat.format(new Date(lastCreatedDateTime*1000L)),
+                              SIMPLE_DATE_FORMAT.format(new Date(lastCreatedDateTime*1000L)),
                               indexState.toString()
                              );
 
@@ -2049,7 +2049,7 @@ Dprintf.dprintf("");
                                                         true,  // folderFlag
                                                         uuidIndexData.name,
                                                         Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                                        (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                        (uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                                         ""
                                                        );
 //TODO
@@ -2064,7 +2064,7 @@ Dprintf.dprintf("");
                                          (Object)uuidIndexData,
                                          uuidIndexData.name,
                                          Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                         (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                         (uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                          ""
                                         );
                   removeUUIDTreeItemSet.remove(uuidTreeItem);
@@ -2085,7 +2085,7 @@ Dprintf.dprintf("");
                                                             true,  // folderFlag
                                                             uuidIndexData.name,
                                                             Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                                            (uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                            (uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
                                                             ""
                                                            );
 //TODO
@@ -2243,7 +2243,7 @@ Dprintf.dprintf("");
                                                         true,
                                                         entityIndexData.archiveType.toString(),
                                                         Units.formatByteSize(entityIndexData.totalEntrySize),
-                                                        (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                        (entityIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
                                                         ""
                                                        );
 //TODO
@@ -2258,7 +2258,7 @@ Dprintf.dprintf("");
                                        (Object)entityIndexData,
                                        entityIndexData.archiveType.toString(),
                                        Units.formatByteSize(entityIndexData.totalEntrySize),
-                                       (entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
+                                       (entityIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
                                        ""
                                       );
                 removeEntityTreeItemSet.remove(entityTreeItem);
@@ -2435,7 +2435,7 @@ Dprintf.dprintf("");
                                                            false,
                                                            storageIndexData.name,
                                                            Units.formatByteSize(storageIndexData.totalEntrySize),
-                                                           (storageIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                           (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                                            storageIndexData.indexState.toString()
                                                           );
                   storageTreeItem.setChecked(selectedIndexIdSet.contains(storageIndexData.id));
@@ -2448,7 +2448,7 @@ Dprintf.dprintf("");
                                          (Object)storageIndexData,
                                          storageIndexData.name,
                                          Units.formatByteSize(storageIndexData.totalEntrySize),
-                                         (storageIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
+                                         (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                          storageIndexData.indexState.toString()
                                         );
                   removeStorageTreeItemSet.remove(storageTreeItem);
@@ -2653,7 +2653,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                    (Object)storageIndexData,
                                                                    storageIndexData.name,
                                                                    Units.formatByteSize(storageIndexData.totalEntrySize),
-                                                                   simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
+                                                                   SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                                                    storageIndexData.indexState.toString()
                                                                   );
                                            tableItem.setChecked(selectedIndexIdSet.contains(storageIndexData.id));
@@ -2995,7 +2995,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                              menuItem = Widgets.insertMenuItem(subMenu,
                                                                                findStorageMenuIndex(subMenu,entityIndexData),
                                                                                (Object)entityIndexData,
-                                                                               ((entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
+                                                                               ((entityIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
                                                                               );
                                              menuItem.addSelectionListener(new SelectionListener()
                                              {
@@ -3759,7 +3759,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                                                        entryIndexData.name,
                                                                        "FILE",
                                                                        Units.formatByteSize(entryIndexData.size),
-                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                                                       SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
                                                tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
@@ -3799,7 +3799,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                                                        entryIndexData.name,
                                                                        "IMAGE",
                                                                        Units.formatByteSize(entryIndexData.size),
-                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                                                       SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
                                                tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
@@ -3836,7 +3836,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                                                        entryIndexData.name,
                                                                        "DIR",
                                                                        "",
-                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                                                       SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
                                                tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
@@ -3874,7 +3874,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                                                        entryIndexData.name,
                                                                        "LINK",
                                                                        "",
-                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                                                       SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
                                                tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
@@ -3915,7 +3915,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                                                        entryIndexData.name,
                                                                        "HARDLINK",
                                                                        Units.formatByteSize(entryIndexData.size),
-                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                                                       SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
                                                tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
@@ -3952,7 +3952,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                                                        entryIndexData.name,
                                                                        "DEVICE",
                                                                        Units.formatByteSize(entryIndexData.size),
-                                                                       simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                                                       SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
                                                tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
                                              }
@@ -4038,7 +4038,7 @@ Dprintf.dprintf("");
   private final Image IMAGE_UNMARK_ALL;
 
   // date/time format
-  private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   // index data comparator
   final Comparator<IndexData> indexIdComperator = new Comparator<IndexData>()
@@ -4128,7 +4128,7 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,1,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,(uuidIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-");
+    label = Widgets.newLabel(widgetStorageTreeToolTip,(uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -4222,7 +4222,7 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,0,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.lastCreatedDateTime > 0) ? simpleDateFormat.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-");
+    label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,0,1,TableLayoutData.WE);
@@ -4336,7 +4336,7 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,2,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTableToolTip,simpleDateFormat.format(new Date(storageIndexData.lastCreatedDateTime*1000L)));
+    label = Widgets.newLabel(widgetStorageTableToolTip,SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)));
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -4386,7 +4386,7 @@ Dprintf.dprintf("");
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,7,0,TableLayoutData.W);
 
-    label = Widgets.newLabel(widgetStorageTableToolTip,(storageIndexData.lastCheckedDateTime > 0) ? simpleDateFormat.format(new Date(storageIndexData.lastCheckedDateTime*1000L)) : "-");
+    label = Widgets.newLabel(widgetStorageTableToolTip,(storageIndexData.lastCheckedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCheckedDateTime*1000L)) : "-");
     label.setForeground(COLOR_INFO_FORGROUND);
     label.setBackground(COLOR_INFO_BACKGROUND);
     Widgets.layout(label,7,1,TableLayoutData.WE);
@@ -4452,7 +4452,6 @@ Dprintf.dprintf("");
 
     if (widgetEntryTableToolTip != null)
     {
-Dprintf.dprintf("");
       widgetEntryTableToolTip.dispose();
     }
 
@@ -4497,7 +4496,7 @@ Dprintf.dprintf("");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetEntryTableToolTip,simpleDateFormat.format(new Date(entryIndexData.storageDateTime*1000L)));
+    label = Widgets.newLabel(widgetEntryTableToolTip,SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.storageDateTime*1000L)));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4541,7 +4540,7 @@ Dprintf.dprintf("");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.dateTime > 0) ? simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L)) : "-");
+    label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.dateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)) : "-");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4555,10 +4554,12 @@ Dprintf.dprintf("");
     {
       public void mouseEnter(MouseEvent mouseEvent)
       {
+Dprintf.dprintf("");
       }
 
       public void mouseExit(MouseEvent mouseEvent)
       {
+Dprintf.dprintf("");
         if (widgetEntryTableToolTip != null)
         {
           // check if inside sub-widget
@@ -5908,6 +5909,7 @@ Dprintf.dprintf("remove");
                 EntryIndexData entryIndexData = (EntryIndexData)tableItems[0].getData();
                 if (entryIndexData != null)
                 {
+//TODO
                   Point point = display.getCursorLocation();//widgetEntryTable.toDisplay(selectionEvent.x+16,selectionEvent.y);
                   if (point.x > 16) point.x -= 16;
                   if (point.y > 16) point.y -= 16;
@@ -8440,7 +8442,7 @@ Dprintf.dprintf("");
                                     entryIndexData.name,
                                     "FILE",
                                     Units.formatByteSize(entryIndexData.size),
-                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case IMAGE:
@@ -8451,7 +8453,7 @@ Dprintf.dprintf("");
                                     entryIndexData.name,
                                     "IMAGE",
                                     Units.formatByteSize(entryIndexData.size),
-                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case DIRECTORY:
@@ -8462,7 +8464,7 @@ Dprintf.dprintf("");
                                     entryIndexData.name,
                                     "DIR",
                                     "",
-                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case LINK:
@@ -8473,7 +8475,7 @@ Dprintf.dprintf("");
                                     entryIndexData.name,
                                     "LINK",
                                     "",
-                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case SPECIAL:
@@ -8484,7 +8486,7 @@ Dprintf.dprintf("");
                                     entryIndexData.name,
                                     "SPECIAL",
                                     Units.formatByteSize(entryIndexData.size),
-                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case DEVICE:
@@ -8495,7 +8497,7 @@ Dprintf.dprintf("");
                                     entryIndexData.name,
                                     "DEVICE",
                                     Units.formatByteSize(entryIndexData.size),
-                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
           case SOCKET:
@@ -8506,7 +8508,7 @@ Dprintf.dprintf("");
                                     entryIndexData.name,
                                     "SOCKET",
                                     "",
-                                    simpleDateFormat.format(new Date(entryIndexData.dateTime*1000L))
+                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
         }
