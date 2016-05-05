@@ -342,6 +342,8 @@ LOCAL bool getIntegerValue(int                   *value,
   assert(value != NULL);
   assert(string != NULL);
 
+  UNUSED_VARIABLE(warningPrefix);
+
   // split number, unit
   i = strlen(string);
   if (i > 0)
@@ -431,6 +433,8 @@ LOCAL bool getInteger64Value(int64                 *value,
 
   assert(value != NULL);
   assert(string != NULL);
+
+  UNUSED_VARIABLE(warningPrefix);
 
   // split number, unit
   i = strlen(string);
