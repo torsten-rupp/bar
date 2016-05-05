@@ -2182,7 +2182,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                UNUSED_VARIABLE(fromColumnList);
                                UNUSED_VARIABLE(userData);
 
-                               if (   Index_findByStorageId(oldIndexHandle,
+                               if (   Index_findStorageById(oldIndexHandle,
                                                             INDEX_ID_STORAGE(Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             NULL,  // jobUUID
                                                             NULL,  // scheduleUUDI
@@ -2193,8 +2193,8 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                             NULL  // lastCheckedDateTime
                                                            )
                                    && Index_findEntityByJobUUID(newIndexHandle,
-                                                                NULL,  // uuidId
                                                                 jobUUID,
+                                                                NULL,  // uuidId
                                                                 &entityId,
                                                                 NULL,  // scheduleUUDI
                                                                 NULL,  // createdDateTime
@@ -2976,7 +2976,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                UNUSED_VARIABLE(fromColumnList);
                                UNUSED_VARIABLE(userData);
 
-                               if (   Index_findByStorageId(oldIndexHandle,
+                               if (   Index_findStorageById(oldIndexHandle,
                                                             INDEX_ID_STORAGE(Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE)),
                                                             jobUUID,
                                                             NULL,  // scheduleUUDI
@@ -2987,8 +2987,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             NULL  // lastCheckedDateTime
                                                            )
                                    && Index_findEntityByJobUUID(newIndexHandle,
-                                                                NULL,  // uuidId
                                                                 jobUUID,
+                                                                NULL,  // uuidId
                                                                 &entityId,
                                                                 NULL,  // scheduleUUDI
                                                                 NULL,  // createdDateTime
@@ -3666,7 +3666,6 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   ulong            n;
   IndexQueryHandle indexQueryHandle;
   IndexId          entryId;
-  IndexId          indexId;
 
   assert(indexHandle != NULL);
 
@@ -3682,7 +3681,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   n = 0L;
 
   // clean-up
-  error = Index_beginTransaction(indexHandle,"purge orphaned entries");
+  error = Index_beginTransaction(indexHandle);
   if (error != ERROR_NONE)
   {
     String_delete(storageName);
@@ -3702,7 +3701,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                );
   if (error != ERROR_NONE)
   {
-    Index_rollbackTransaction(indexHandle,"purge orphaned entries");
+    Index_rollbackTransaction(indexHandle);
     String_delete(storageName);
     return error;
   }
@@ -3738,7 +3737,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
     }
   }
   Index_doneList(&indexQueryHandle);
-  Index_endTransaction(indexHandle,"purge orphaned entries");
+  Index_endTransaction(indexHandle);
 
   if (n > 0L) plogMessage(NULL,  // logHandle
                           LOG_TYPE_INDEX,
@@ -5486,25 +5485,25 @@ void Index_close(IndexHandle *indexHandle)
   }
 }
 
-Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name)
+Errors Index_beginTransaction(IndexHandle *indexHandle)
 {
   assert(indexHandle != NULL);
 
-  return Database_beginTransaction(&indexHandle->databaseHandle,name);
+  return Database_beginTransaction(&indexHandle->databaseHandle);
 }
 
-Errors Index_endTransaction(IndexHandle *indexHandle, const char *name)
+Errors Index_endTransaction(IndexHandle *indexHandle)
 {
   assert(indexHandle != NULL);
 
-  return Database_endTransaction(&indexHandle->databaseHandle,name);
+  return Database_endTransaction(&indexHandle->databaseHandle);
 }
 
-Errors Index_rollbackTransaction(IndexHandle *indexHandle, const char *name)
+Errors Index_rollbackTransaction(IndexHandle *indexHandle)
 {
   assert(indexHandle != NULL);
 
-  return Database_rollbackTransaction(&indexHandle->databaseHandle,name);
+  return Database_rollbackTransaction(&indexHandle->databaseHandle);
 }
 
 bool Index_containsType(const IndexId indexIds[],
@@ -5527,9 +5526,95 @@ bool Index_containsType(const IndexId indexIds[],
   return FALSE;
 }
 
+bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
+                             ConstString  jobUUID,
+                             IndexId      *uuidId,
+                             uint64       *lastCreatedDateTime,
+                             String       lastErrorMessage,
+                             ulong        *executionCount,
+                             uint64       *averageDuration,
+                             ulong        *totalEntityCount,
+                             ulong        *totalStorageCount,
+                             uint64       *totalStorageSize,
+                             ulong        *totalEntryCount,
+                             uint64       *totalEntrySize
+                            )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  bool                result;
+  DatabaseId          uuidId_;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
+//TODO get errorMessage
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT uuids.id, \
+                                     UNIXTIMESTAMP(uuids.lastCreated), \
+                                     uuids.lastErrorMessage, \
+                                     (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
+                                     (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID), \
+                                     uuids.totalEntityCount, \
+                                     uuids.totalStorageCount, \
+                                     uuids.totalStorageSize, \
+                                     uuids.totalEntryCount, \
+                                     uuids.totalEntrySize \
+                              FROM uuids \
+                              WHERE uuids.jobUUID=%'S \
+                              GROUP BY uuids.id \
+                             ",
+                             jobUUID
+                            );
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    result = Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %lld %S %lu %llu %lu %lu %llu %lu %llu",
+                                 &uuidId_,
+                                 lastCreatedDateTime,
+                                 lastErrorMessage,
+                                 executionCount,
+                                 averageDuration,
+                                 totalEntityCount,
+                                 totalStorageCount,
+                                 totalStorageSize,
+                                 totalEntryCount,
+                                 totalEntrySize
+                                );
+
+    Database_finalize(&databaseQueryHandle);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
+
+  // free resources
+
+  return result;
+}
+
 bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
-                               IndexId      *uuidId,
                                ConstString  jobUUID,
+                               IndexId      *uuidId,
                                IndexId      *entityId,
                                ConstString  scheduleUUID,
                                ArchiveTypes *archiveType,
@@ -5547,9 +5632,6 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
 
   assert(indexHandle != NULL);
 
-//TODO
-UNUSED_VARIABLE(jobUUID);
-
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
@@ -5558,7 +5640,7 @@ UNUSED_VARIABLE(jobUUID);
 
   // get filter
   filter = String_newCString("1");
-  filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","jobUUID=%'S",scheduleUUID);
+  filterAppend(filter,!String_isEmpty(jobUUID),"AND","jobUUID=%'S",jobUUID);
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","scheduleUUID=%'S",scheduleUUID);
 
 //TODO get errorMessage
@@ -5618,7 +5700,7 @@ UNUSED_VARIABLE(jobUUID);
   return result;
 }
 
-bool Index_findByStorageId(IndexHandle *indexHandle,
+bool Index_findStorageById(IndexHandle *indexHandle,
                            IndexId     storageId,
                            String      jobUUID,
                            String      scheduleUUID,
@@ -5696,7 +5778,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
   return result;
 }
 
-bool Index_findByStorageName(IndexHandle            *indexHandle,
+bool Index_findStorageByName(IndexHandle            *indexHandle,
                              const StorageSpecifier *storageSpecifier,
                              ConstString            archiveName,
                              IndexId                *uuidId,
@@ -6121,12 +6203,14 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                                    scheduleUUID, \
                                    UNIXTIMESTAMP(lastCreated), \
                                    errorMessage, \
+                                   duration, \
                                    totalEntryCount, \
-                                   totalEntrySize, \
-                                   duration \
+                                   totalEntrySize \
                             FROM uuids \
+                            WHERE jobUUID=%'S \
                             LIMIT %llu,%llu \
                            ",
+                           jobUUID,
                            offset,
                            limit
                           );
@@ -6148,9 +6232,9 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           String           scheduleUUID,
                           uint64           *createdDateTime,
                           String           errorMessage,
+                          uint64           *duration,
                           ulong            *totalEntryCount,
-                          uint64           *totalEntrySize,
-                          uint64           *duration
+                          uint64           *totalEntrySize
                          )
 {
   DatabaseId databaseId;
@@ -6165,15 +6249,15 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %S %llu %S %lu %llu %llu",
+                           "%lld %S %S %llu %S %llu %lu %llu",
                            &databaseId,
                            jobUUID,
                            scheduleUUID,
                            createdDateTime,
                            errorMessage,
+                           duration,
                            totalEntryCount,
-                           totalEntrySize,
-                           duration
+                           totalEntrySize
                           )
      )
   {
@@ -6190,9 +6274,9 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                         ArchiveTypes archiveType,
                         uint64       createdDateTime,
                         const char   *errorMessage,
+                        uint64       duration,
                         ulong        totalEntryCount,
                         uint64       totalEntrySize,
-                        uint64       duration,
                         IndexId      *historyId
                        )
 {
@@ -6219,9 +6303,9 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                 type, \
                                 created, \
                                 errorMessage, \
+                                duration, \
                                 totalEntryCount, \
-                                totalEntrySize, \
-                                duration \
+                                totalEntrySize \
                                ) \
                              VALUES \
                                ( \
@@ -6230,8 +6314,8 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                 %d, \
                                 %llu, \
                                 %'s, \
-                                %lu, \
                                 %llu, \
+                                %lu, \
                                 %llu \
                                ); \
                             ",
@@ -6240,9 +6324,9 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                             archiveType,
                             createdDateTime,
                             errorMessage,
+                            duration,
                             totalEntryCount,
-                            totalEntrySize,
-                            duration
+                            totalEntrySize
                            );
   });
   if (error != ERROR_NONE)
@@ -6259,8 +6343,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
                            IndexId     historyId
                           )
 {
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
+  Errors error;
 
   assert(indexHandle != NULL);
 
@@ -7464,6 +7547,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                              "SELECT uuids.id, \
                                      uuids.jobUUID, \
                                      entities.id, \
+                                     entities.scheduleUUID, \
                                      entities.type, \
                                      storage.name, \
                                      UNIXTIMESTAMP(storage.created), \
@@ -7486,10 +7570,11 @@ Errors Index_getStorage(IndexHandle *indexHandle,
       return error;
     }
     if (!Database_getNextRow(&databaseQueryHandle,
-                             "%llu %S %llu %d %S %llu %llu %ld %llu %d %d %llu %S",
+                             "%llu %S %llu %S %d %S %llu %llu %ld %llu %d %d %llu %S",
                              &uuidId_,
                              jobUUID,
                              &entityId_,
+                             scheduleUUID,
                              archiveType,
                              storageName,
                              createdDateTime,

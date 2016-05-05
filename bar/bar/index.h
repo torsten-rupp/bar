@@ -60,11 +60,11 @@ typedef enum
 {
   INDEX_STATE_NONE,
 
-  INDEX_STATE_OK,
-  INDEX_STATE_CREATE,
-  INDEX_STATE_UPDATE_REQUESTED,
-  INDEX_STATE_UPDATE,
-  INDEX_STATE_ERROR,
+  INDEX_STATE_OK               = INDEX_CONST_STATE_OK,
+  INDEX_STATE_CREATE           = INDEX_CONST_STATE_CREATE,
+  INDEX_STATE_UPDATE_REQUESTED = INDEX_CONST_STATE_UPDATE_REQUESTED,
+  INDEX_STATE_UPDATE           = INDEX_CONST_STATE_UPDATE,
+  INDEX_STATE_ERROR            = INDEX_CONST_STATE_ERROR,
 
   INDEX_STATE_UNKNOWN
 } IndexStates;
@@ -85,8 +85,8 @@ typedef uint64 IndexStateSet;
 // index modes
 typedef enum
 {
-  INDEX_MODE_MANUAL,
-  INDEX_MODE_AUTO,
+  INDEX_MODE_MANUAL = INDEX_CONST_MODE_MANUAL,
+  INDEX_MODE_AUTO   = INDEX_CONST_MODE_AUTO,
 
   INDEX_MODE_UNKNOWN
 } IndexModes;
@@ -378,7 +378,7 @@ void Index_close(IndexHandle *indexHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name);
+Errors Index_beginTransaction(IndexHandle *indexHandle);
 
 /***********************************************************************\
 * Name   : Index_endTransaction
@@ -389,7 +389,7 @@ Errors Index_beginTransaction(IndexHandle *indexHandle, const char *name);
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_endTransaction(IndexHandle *indexHandle, const char *name);
+Errors Index_endTransaction(IndexHandle *indexHandle);
 
 /***********************************************************************\
 * Name   : Index_rollbackTransaction
@@ -400,7 +400,7 @@ Errors Index_endTransaction(IndexHandle *indexHandle, const char *name);
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_rollbackTransaction(IndexHandle *indexHandle, const char *name);
+Errors Index_rollbackTransaction(IndexHandle *indexHandle);
 
 /***********************************************************************\
 * Name   : Index_getType
@@ -453,10 +453,46 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 #endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
 
 /***********************************************************************\
+* Name   : Index_findUUIDByJobUUID
+* Purpose: find uuid info by job UUID
+* Input  : indexHandle - index handle
+*          jobUUID     - unique job id
+* Output : uuidId              - index id of UUID entry (can be NULL)
+*          lastCreatedDateTime - created date/time stamp [s] (can be
+*                                NULL)
+*          lastErrorMessage    - last error message (can be NULL)
+*          executionCount      - number job execution (can be NULL)
+*          averageDuration     - average execution time [s] (can be NULL)
+*          totalEntityCount    - total number of entities (can be NULL)
+*          totalStorageCount   - total number of storage archives (can be
+*                                NULL)
+*          totalStorageSize    - total size of storage archives [bytes]
+*                                (can be NULL)
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total size [bytes] (can be NULL)
+* Return : TRUE if index found, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
+                             ConstString  jobUUID,
+                             IndexId      *uuidId,
+                             uint64       *lastCreatedDateTime,
+                             String       lastErrorMessage,
+                             ulong        *executionCount,
+                             uint64       *averageDuration,
+                             ulong        *totalEntityCount,
+                             ulong        *totalStorageCount,
+                             uint64       *totalStorageSize,
+                             ulong        *totalEntryCount,
+                             uint64       *totalEntrySize
+                            );
+
+/***********************************************************************\
 * Name   : Index_findEntityByJobUUID
 * Purpose: find entity info by job UUID
 * Input  : indexHandle      - index handle
-*          jobUUID          - unique job id (can be NULL)
+*          jobUUID          - unique job id
 *          scheduleUUID     - unique schedule id (can be NULL)
 * Output : uuidId           - index id of UUID entry (can be NULL)
 *          entityId         - index id of entity entry (can be NULL)
@@ -470,8 +506,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 \***********************************************************************/
 
 bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
-                               IndexId      *uuidId,
                                ConstString  jobUUID,
+                               IndexId      *uuidId,
                                IndexId      *entityId,
                                ConstString  scheduleUUID,
                                ArchiveTypes *archiveType,
@@ -498,7 +534,7 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findByStorageId(IndexHandle *indexHandle,
+bool Index_findStorageById(IndexHandle *indexHandle,
                            IndexId     storageId,
                            String      jobUUID,
                            String      scheduleUUID,
@@ -513,7 +549,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
 * Name   : Index_findByStorageName
 * Purpose: find info by storage name
 * Input  : indexHandle      - index handle
-*          storageSpecifier - storage specifier to compare
+*          storageSpecifier - storage specifier
 *          archiveName      - archive name or NULL
 * Output : entityId            - index id of entity (can be NULL)
 *          jobUUID             - unique job id (can be NULL)
@@ -528,7 +564,7 @@ bool Index_findByStorageId(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findByStorageName(IndexHandle            *indexHandle,
+bool Index_findStorageByName(IndexHandle            *indexHandle,
                              const StorageSpecifier *storageSpecifier,
                              ConstString            archiveName,
                              IndexId                *uuidId,
@@ -543,8 +579,8 @@ bool Index_findByStorageName(IndexHandle            *indexHandle,
 /***********************************************************************\
 * Name   : Index_findStorageByState
 * Purpose: find storage info by state
-* Input  : indexHandle - index handle
-*          indexState  - index state
+* Input  : indexHandle   - index handle
+*          indexStateSet - index state set
 * Output : jobUUID             - unique job id (can be NULL)
 *          scheduleUUID        - unique schedule id (can be NULL)
 *          entityId            - index id of entity (can be NULL)
@@ -649,14 +685,14 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextHistory
 * Purpose: get next history entry
 * Input  : IndexQueryHandle - index query handle
-* Output : uuidId              - index id of UUID entry
-*          jobUUID             - unique job id (can be NULL)
-*          scheduleUUID        - unique schedule id (can be NULL)
-*          lastCreatedDateTime - create date/time stamp [s] (can be NULL)
-*          lastErrorMessage    - last storage error message (can be NULL)
-*          totalEntryCount     - total number of entries (can be NULL)
-*          totalEntrySize      - total storage size [bytes] (can be NULL)
-*          duration            - duration [s]
+* Output : uuidId          - index id of UUID entry
+*          jobUUID         - unique job id (can be NULL)
+*          scheduleUUID    - unique schedule id (can be NULL)
+*          createdDateTime - create date/time stamp [s] (can be NULL)
+*          errorMessage    - last storage error message (can be NULL)
+*          duration        - duration [s]
+*          totalEntryCount - total number of entries (can be NULL)
+*          totalEntrySize  - total storage size [bytes] (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -667,9 +703,9 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           String           scheduleUUID,
                           uint64           *createdDateTime,
                           String           errorMessage,
+                          uint64           *duration,
                           ulong            *totalEntryCount,
-                          uint64           *totalEntrySize,
-                          uint64           *duration
+                          uint64           *totalEntrySize
                          );
 
 /***********************************************************************\
@@ -695,9 +731,9 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                         ArchiveTypes archiveType,
                         uint64       createdDateTime,
                         const char   *errorMessage,
+                        uint64       duration,
                         ulong        totalEntryCount,
                         uint64       totalEntrySize,
-                        uint64       duration,
                         IndexId      *historyId
                        );
 
