@@ -117,8 +117,6 @@ class JobData
   String cryptType;
   String cryptPasswordMode;
   long   lastExecutedDateTime;
-  long   averageExecutionTime;
-  int    executionCount;
   long   estimatedRestTime;
 
   // date/time format
@@ -153,8 +151,6 @@ class JobData
     this.cryptType              = cryptType;
     this.cryptPasswordMode      = cryptPasswordMode;
     this.lastExecutedDateTime   = lastExecutedDateTime;
-    this.averageExecutionTime   = 0;
-    this.executionCount         = 0;
     this.estimatedRestTime      = estimatedRestTime;
   }
 
@@ -421,6 +417,9 @@ public class TabStatus
 
   // colors
   private final Color COLOR_ERROR;
+
+  // date/time format
+  private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   // global variable references
   private Shell                 shell;
@@ -1834,7 +1833,7 @@ Dprintf.dprintf("");
       // get job info
       final String resultErrorMessage[] = new String[1];
       final ValueMap resultMap          = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",selectedJobData.uuid),
+      int error = BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
                                            1,  // debugLevel
                                            resultErrorMessage,
                                            resultMap
@@ -2211,6 +2210,27 @@ Dprintf.dprintf("");
       widgetJobTableToolTip.dispose();
     }
 
+    final String resultErrorMessage[] = new String[1];
+    final ValueMap resultMap          = new ValueMap();
+    int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobUUID=%s",jobData.uuid),
+                                         0,  // debugLevel
+                                         resultErrorMessage,
+                                         resultMap
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
+    long lastCreatedDateTime = resultMap.getLong("lastCreatedDateTime");
+    long executionCount      = resultMap.getLong("executionCount");
+    long averageDuration     = resultMap.getLong("averageDuration");
+    long totalEntityCount    = resultMap.getLong("totalEntityCount");
+    long totalStorageCount   = resultMap.getLong("totalStorageCount");
+    long totalStorageSize    = resultMap.getLong("totalStorageSize");
+    long totalEntryCount     = resultMap.getLong("totalEntryCount");
+    long totalEntrySize      = resultMap.getLong("totalEntrySize");
+
+
     widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
     widgetJobTableToolTip.setBackground(COLOR_BACKGROUND);
     widgetJobTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
@@ -2232,7 +2252,7 @@ Dprintf.dprintf("");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,"???");
+    label = Widgets.newLabel(widgetJobTableToolTip,Long.toString(totalEntityCount));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -2242,31 +2262,39 @@ Dprintf.dprintf("");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(0/*TODO*/),0/*TODO*/));
+    label = Widgets.newLabel(widgetJobTableToolTip,Long.toString(totalStorageCount));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last executed")+":");
-    label.setForeground(COLOR_FORGROUND);
-    label.setBackground(COLOR_BACKGROUND);
-    Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,jobData.formatLastExecutedDateTime());
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(totalStorageSize),totalStorageSize));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
-    control = Widgets.newSpacer(widgetJobTableToolTip);
-    Widgets.layout(control,row,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
-    row++;
-
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last execution time")+":");
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Entries")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,"???");
+    label = Widgets.newLabel(widgetJobTableToolTip,Long.toString(totalEntryCount));
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(totalEntrySize),totalEntrySize));
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,1,TableLayoutData.WE);
+    row++;
+
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last created")+":");
+    label.setForeground(COLOR_FORGROUND);
+    label.setBackground(COLOR_BACKGROUND);
+    Widgets.layout(label,row,0,TableLayoutData.W);
+    label = Widgets.newLabel(widgetJobTableToolTip,(lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(lastCreatedDateTime*1000)) : "");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -2276,7 +2304,7 @@ Dprintf.dprintf("");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,Integer.toString(jobData.executionCount));
+    label = Widgets.newLabel(widgetJobTableToolTip,Long.toString(executionCount));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -2286,7 +2314,7 @@ Dprintf.dprintf("");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%d:%02d:%02d",jobData.averageExecutionTime/(60*60),jobData.averageExecutionTime%(60*60)/60,jobData.averageExecutionTime%60));
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format("%02d:%02d:%02d",averageDuration/(60*60),averageDuration%(60*60)/60,averageDuration%60));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
