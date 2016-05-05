@@ -97,17 +97,7 @@ typedef union
 /***************************** Variables *******************************/
 
 #ifndef NDEBUG
-  LOCAL uint  databaseDebugCounter = 0;
-
-  LOCAL pthread_mutex_t databaseThreadInfoLock = PTHREAD_MUTEX_INITIALIZER;
-  LOCAL struct
-  {
-    #ifdef HAVE_BACKTRACE
-      void const *stackTrace[16];
-      int        stackTraceSize;
-    #endif /* HAVE_BACKTRACE */
-  }                     databaseThreadInfo[MAX_THREADS];
-  LOCAL uint            databaseThreadInfoCount = 0;
+  LOCAL uint databaseDebugCounter = 0;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -597,7 +587,7 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
 
   // get text to convert, optional date/time format
   text   = (const char*)sqlite3_value_text(argv[0]);
-  format = (argc >= 2) ? argv[1] : NULL;
+  format = (argc >= 2) ? (const char *)argv[1] : NULL;
 
   // convert to Unix timestamp
   if (text != NULL)
@@ -979,7 +969,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   #define SLEEP_TIME 1000L
 
   const char          *nextSqlCommand;
-  DatabaseRowCallback databaseRowCallback;
+//  DatabaseRowCallback databaseRowCallback;
   Errors              error;
   int                 sqliteResult;
   sqlite3_stmt        *statementHandle;
@@ -991,6 +981,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
+//TODO
 #if 0
   databaseRowCallback.function = databaseRowFunction;
   databaseRowCallback.userData = databaseRowUserData;
@@ -1665,8 +1656,6 @@ Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
                           ...
                          )
 {
-  #define TRANSACTION_NAME "COPY_TABLE"
-
   Errors             error;
   DatabaseColumnList fromColumnList,toColumnList;
   DatabaseColumnNode *columnNode;
@@ -1739,7 +1728,7 @@ ulong xxx=0;
 #if 1
     if (transactionFlag)
     {
-      error = Database_beginTransaction(toDatabaseHandle,TRANSACTION_NAME);
+      error = Database_beginTransaction(toDatabaseHandle);
       if (error != ERROR_NONE)
       {
         return error;
@@ -1760,7 +1749,7 @@ fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
       error = ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle));
       if (transactionFlag)
       {
-        (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+        (void)Database_rollbackTransaction(toDatabaseHandle);
       }
       return error;
     }
@@ -1868,7 +1857,7 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
           sqlite3_finalize(fromStatementHandle);
           if (transactionFlag)
           {
-            (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+            (void)Database_rollbackTransaction(toDatabaseHandle);
           }
           return error;
         }
@@ -1914,7 +1903,7 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
         sqlite3_finalize(fromStatementHandle);
         if (transactionFlag)
         {
-          (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+          (void)Database_rollbackTransaction(toDatabaseHandle);
         }
         return error;
       }
@@ -1974,7 +1963,7 @@ fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHa
         sqlite3_finalize(fromStatementHandle);
         if (transactionFlag)
         {
-          (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+          (void)Database_rollbackTransaction(toDatabaseHandle);
         }
         return error;
       }
@@ -2019,7 +2008,7 @@ fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
           sqlite3_finalize(fromStatementHandle);
           if (transactionFlag)
           {
-            (void)Database_rollbackTransaction(toDatabaseHandle,TRANSACTION_NAME);
+            (void)Database_rollbackTransaction(toDatabaseHandle);
           }
           return error;
         }
@@ -2029,7 +2018,7 @@ fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
 #if 1
     if (transactionFlag)
     {
-      error = Database_endTransaction(toDatabaseHandle,TRANSACTION_NAME);
+      error = Database_endTransaction(toDatabaseHandle);
       if (error != ERROR_NONE)
       {
 //        sqlite3_finalize(toStatementHandle);
@@ -2512,7 +2501,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
             case DATABASE_TYPE_DOUBLE:
             case DATABASE_TYPE_DATETIME:
             case DATABASE_TYPE_TEXT:
-              formatSQLString(sqlString,"%'s",sqlite3_column_text(databaseHandle->handle,column));
+              formatSQLString(sqlString,"%'s",sqlite3_column_text(statementHandle,column));
               break;
             case DATABASE_TYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -2605,14 +2594,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 }
 
 #ifdef NDEBUG
-  Errors Database_beginTransaction(DatabaseHandle *databaseHandle,
-                                   const char *name
-                                  )
+  Errors Database_beginTransaction(DatabaseHandle *databaseHandle)
 #else /* not NDEBUG */
   Errors __Database_beginTransaction(const char   *__fileName__,
                                      uint         __lineNb__,
-                                     DatabaseHandle *databaseHandle,
-                                     const char *name
+                                     DatabaseHandle *databaseHandle
                                     )
 #endif /* NDEBUG */
 {
@@ -2625,11 +2611,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   #ifndef NDEBUG
     if (databaseHandle->transaction.fileName != NULL)
     {
-      fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread %p at %s, %ld and previously thread %p at %s, %ld!\n",
-              pthread_self(),
+      fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread 0x%lx at %s, %u and previously thread 0x%lx at %s, %u!\n",
+              (ulong)pthread_self(),
               __fileName__,
               __lineNb__,
-              databaseHandle->transaction.threadId,
+              (ulong)databaseHandle->transaction.threadId,
               databaseHandle->transaction.fileName,
               databaseHandle->transaction.lineNb
              );
@@ -2676,7 +2662,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
-Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
+Errors Database_endTransaction(DatabaseHandle *databaseHandle)
 {
   String sqlString;
   Errors error;
@@ -2723,7 +2709,7 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
   return ERROR_NONE;
 }
 
-Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *name)
+Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle)
 {
   String sqlString;
   Errors error;
@@ -3762,7 +3748,6 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
   String  sqlString;
   va_list arguments;
   Errors  error;
-  int     sqliteResult;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);

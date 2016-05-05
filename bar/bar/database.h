@@ -421,14 +421,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Database_beginTransaction(DatabaseHandle *databaseHandle,
-                                   const char *name
-                                  );
+  Errors Database_beginTransaction(DatabaseHandle *databaseHandle);
 #else /* not NDEBUG */
   Errors __Database_beginTransaction(const char     *__fileName__,
                                      uint           __lineNb__,
-                                     DatabaseHandle *databaseHandle,
-                                     const char     *name
+                                     DatabaseHandle *databaseHandle
                                     );
 #endif /* NDEBUG */
 
@@ -441,7 +438,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name);
+Errors Database_endTransaction(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_rollbackTransaction
@@ -452,7 +449,7 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle, const char *name)
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle, const char *name);
+Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_execute
