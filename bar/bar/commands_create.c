@@ -3410,7 +3410,6 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
   IndexId          oldStorageId;
   String           oldStorageName;
   StorageSpecifier oldStorageSpecifier;
-  IndexId          purgeUUIDId,purgeEntityId,deleteStorageId;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
 
@@ -4628,7 +4627,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     {
       // check if append, get append storage
       if (   appendFlag
-          && Index_findByStorageName(createInfo->indexHandle,
+          && Index_findStorageByName(createInfo->indexHandle,
                                      createInfo->storageSpecifier,
                                      storageMsg.archiveName,
                                      NULL,  // uuidId
@@ -6873,9 +6872,11 @@ Errors Command_create(ConstString                  jobUUID,
   entityId = INDEX_ID_NONE;
   if (indexHandle != NULL)
   {
+#ifndef WERROR
 #warning TODO
+#endif
 #if 1
-    error = Index_beginTransaction(indexHandle,"CREATE");
+    error = Index_beginTransaction(indexHandle);
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
@@ -7039,7 +7040,7 @@ fprintf(stderr,"%s, %d: add to enty %lld\n",__FILE__,__LINE__,Index_getDatabaseI
   if (indexHandle != NULL)
   {
 #if 1
-    error = Index_endTransaction(indexHandle,"CREATE");
+    error = Index_endTransaction(indexHandle);
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
