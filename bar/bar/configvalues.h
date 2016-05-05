@@ -855,6 +855,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 
 #define CONFIG_VALUE_END_SECTION() \
@@ -873,6 +874,7 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL}\
   }
 
 /***********************************************************************\
