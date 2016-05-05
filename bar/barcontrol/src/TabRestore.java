@@ -537,17 +537,25 @@ public class TabRestore
 
     protected SortModes sortMode;
 
-    /** create storage data comparator
+    /** create index data comparator
+     * @param sortMode sort mode
+     */
+    IndexDataComparator(SortModes sortMode)
+    {
+      this.sortMode = sortMode;;
+    }
+
+    /** create index data comparator
      * @param tree storage tree
      * @param sortColumn sort column
      */
     IndexDataComparator(Tree tree, TreeColumn sortColumn)
     {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SortModes.CREATED_DATETIME;
-      else if (tree.getColumn(3) == sortColumn) sortMode = SortModes.STATE;
-      else                                      sortMode = SortModes.NAME;
+      if      (tree.getColumn(0) == sortColumn) this.sortMode = SortModes.NAME;
+      else if (tree.getColumn(1) == sortColumn) this.sortMode = SortModes.SIZE;
+      else if (tree.getColumn(2) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
+      else if (tree.getColumn(3) == sortColumn) this.sortMode = SortModes.STATE;
+      else                                      this.sortMode = SortModes.NAME;
     }
 
     /** create index data comparator
@@ -556,11 +564,11 @@ public class TabRestore
      */
     IndexDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
-      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
-      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.CREATED_DATETIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.STATE;
-      else                                       sortMode = SortModes.NAME;
+      if      (table.getColumn(0) == sortColumn) this.sortMode = SortModes.NAME;
+      else if (table.getColumn(1) == sortColumn) this.sortMode = SortModes.SIZE;
+      else if (table.getColumn(2) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
+      else if (table.getColumn(3) == sortColumn) this.sortMode = SortModes.STATE;
+      else                                       this.sortMode = SortModes.NAME;
     }
 
     /** create index data comparator
@@ -587,12 +595,12 @@ public class TabRestore
     }
 
     /** get index data comparator instance
-     * @param tree tree widget
+     * @param sortMode sort mode
      * @return index data comparator
      */
-    static IndexDataComparator getInstance()
+    static IndexDataComparator getInstance(SortModes sortMode)
     {
-      return new IndexDataComparator();
+      return new IndexDataComparator(sortMode);
     }
 
     /** get index data comparator instance
@@ -631,6 +639,15 @@ public class TabRestore
       return indexDataComparator[0];
     }
 
+    /** get index data comparator instance
+     * @param tree tree widget
+     * @return index data comparator
+     */
+    static IndexDataComparator getInstance()
+    {
+      return new IndexDataComparator();
+    }
+
     /** compare index data
      * @param indexData1, indexData2 index data to compare
      * @return -1 iff indexData1 < indexData2,
@@ -640,29 +657,45 @@ public class TabRestore
     @Override
     public int compare(IndexData indexData1, IndexData indexData2)
     {
-      switch (sortMode)
+      SortModes nextSortMode = sortMode;
+      int       result;
+
+      result = 0;
+      do
       {
-        case ID:
-          return new Long(indexData1.id).compareTo(indexData2.id);
-        case NAME:
-          String name1 = indexData1.getName();
-          String name2 = indexData2.getName();
-          return name1.compareTo(name2);
-        case SIZE:
-          long size1 = indexData1.getEntrySize();
-          long size2 = indexData2.getEntrySize();
-          return new Long(size1).compareTo(size2);
-        case CREATED_DATETIME:
-          long date1 = indexData1.getDateTime();
-          long date2 = indexData2.getDateTime();
-          return new Long(date1).compareTo(date2);
-        case STATE:
-          IndexStates indexState1 = indexData1.getState();
-          IndexStates indexState2 = indexData2.getState();
-          return indexState1.compareTo(indexState2);
-        default:
-          return 0;
+        switch (nextSortMode)
+        {
+          case ID:
+            result = new Long(indexData1.id).compareTo(indexData2.id);
+            nextSortMode = SortModes.NAME;
+            break;
+          case NAME:
+            String name1 = indexData1.getName();
+            String name2 = indexData2.getName();
+            result = name1.compareTo(name2);
+            nextSortMode = SortModes.SIZE;
+          case SIZE:
+            long size1 = indexData1.getEntrySize();
+            long size2 = indexData2.getEntrySize();
+            result = new Long(size1).compareTo(size2);
+            nextSortMode = SortModes.CREATED_DATETIME;
+          case CREATED_DATETIME:
+            long date1 = indexData1.getDateTime();
+            long date2 = indexData2.getDateTime();
+            result = new Long(date1).compareTo(date2);
+            nextSortMode = SortModes.STATE;
+          case STATE:
+            IndexStates indexState1 = indexData1.getState();
+            IndexStates indexState2 = indexData2.getState();
+            result = indexState1.compareTo(indexState2);
+            return result;
+          default:
+            return result;
+        }
       }
+      while (result == 0);
+
+      return result;
     }
 
     /** convert data to string
@@ -2208,7 +2241,7 @@ Dprintf.dprintf("");
       if (isUpdateTriggered()) return;
 
       // get comperator
-      final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(widgetStorageTree);
+      final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(IndexDataComparator.SortModes.CREATED_DATETIME);
 
       // get pre-sorted array with index data
       final EntityIndexData entityIndexDataArray[] = entityIndexDataList.toArray(new EntityIndexData[entityIndexDataList.size()]);
@@ -2237,6 +2270,7 @@ Dprintf.dprintf("");
               if (entityTreeItem == null)
               {
                 // insert tree item
+Dprintf.dprintf("entityIndexData=%s %d",entityIndexData,findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator));
                 entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
                                                         findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator),
                                                         (Object)entityIndexData,
@@ -6374,250 +6408,6 @@ Dprintf.dprintf("remove");
     }
 
     return indexDataHashSet;
-  }
-
-  /** update storage tree item
-   * @param treeItem tree item to update
-   * @param storagePattern storage pattern or null
-   */
-//TODO: remove
-  private void XupdateStorageTree(final TreeItem treeItem, String storagePattern)
-  {
-    {
-      BARControl.waitCursor();
-    }
-    try
-    {
-      if      (treeItem.getData() instanceof UUIDIndexData)
-      {
-        // get job index data
-        final HashSet<TreeItem> removeEntityTreeItemSet = new HashSet<TreeItem>();
-        display.syncExec(new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            for (TreeItem entityTreeItem : treeItem.getItems())
-            {
-              assert entityTreeItem.getData() instanceof EntityIndexData;
-              removeEntityTreeItemSet.add(entityTreeItem);
-            }
-          }
-        });
-
-        // update job list
-        UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
-        BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%lld storagePattern=%'S",
-                                                     uuidIndexData.id,
-                                                     (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "")
-                                                    ),
-                                 1,  // debugLevel
-                                 new CommandResultHandler()
-                                 {
-                                   public int handleResult(int i, ValueMap valueMap)
-                                   {
-                                     try
-                                     {
-                                       long                  entityId            = valueMap.getLong  ("entityId"                               );
-                                       String                jobUUID             = valueMap.getString("jobUUID"                                );
-                                       String                scheuduleUUID       = valueMap.getString("scheduleUUID"                           );
-                                       Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                                       long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
-                                       String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
-                                       long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
-                                       long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
-
-                                       // add entity data index
-                                       final EntityIndexData entityIndexData = new EntityIndexData(entityId,
-                                                                                                   archiveType,
-                                                                                                   lastCreatedDateTime,
-                                                                                                   lastErrorMessage,
-                                                                                                   totalEntryCount,
-                                                                                                   totalEntrySize
-                                                                                                  );
-
-                                       // insert/update tree item
-                                       display.syncExec(new Runnable()
-                                       {
-                                         @Override
-                                         public void run()
-                                         {
-                                           TreeItem entityTreeItem = Widgets.getTreeItem(widgetStorageTree,indexIdComperator,entityIndexData);
-                                           if (entityTreeItem == null)
-                                           {
-                                             // insert tree item
-                                             entityTreeItem = Widgets.insertTreeItem(treeItem,
-                                                                                     findStorageTreeIndex(treeItem,entityIndexData),
-                                                                                     (Object)entityIndexData,
-                                                                                     true
-                                                                                    );
-                                             entityIndexData.setTreeItem(entityTreeItem);
-                                           }
-                                           else
-                                           {
-                                             assert entityTreeItem.getData() instanceof EntityIndexData;
-
-                                             // keep tree item
-                                             removeEntityTreeItemSet.remove(entityTreeItem);
-                                           }
-                                         }
-                                       });
-                                     }
-                                     catch (IllegalArgumentException exception)
-                                     {
-                                       if (Settings.debugLevel > 0)
-                                       {
-                                         System.err.println("ERROR: "+exception.getMessage());
-                                         System.exit(1);
-                                       }
-                                     }
-
-                                     return Errors.NONE;
-                                   }
-                                 }
-                                );
-
-        // remove not existing entries
-        display.syncExec(new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            for (TreeItem treeItem : removeEntityTreeItemSet)
-            {
-              IndexData indexData = (IndexData)treeItem.getData();
-              Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              selectedIndexIdSet.set(indexData.id,false);
-//TODO: remove?
-              indexData.clearTreeItem();
-            }
-          }
-        });
-      }
-      else if (treeItem.getData() instanceof EntityIndexData)
-      {
-        // get job index data
-        final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
-        display.syncExec(new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            for (TreeItem storageTreeItem : treeItem.getItems())
-            {
-              assert treeItem.getData() instanceof StorageIndexData;
-              removeStorageTreeItemSet.add(storageTreeItem);
-            }
-          }
-        });
-
-        // update storage list
-        EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
-// TODO
-assert storagePattern != null;
-        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%lld maxCount=%d storagePattern=%'S indexStateSet=%s indexModeSet=%s offset=0",
-                                                     entityIndexData.id,
-                                                     -1,
-                                                     storagePattern,
-                                                     "*",
-                                                     "*"
-                                                    ),
-                                               1,  // debugLevel
-                                 new CommandResultHandler()
-                                 {
-                                   public int handleResult(int i, ValueMap valueMap)
-                                   {
-                                     try
-                                     {
-                                       long                  storageId           = valueMap.getLong  ("storageId"                              );
-                                       String                jobUUID             = valueMap.getString("jobUUID"                                );
-                                       String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
-                                       String                jobName             = valueMap.getString("jobName"                                );
-                                       Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                                       String                name                = valueMap.getString("name"                                   );
-                                       long                  dateTime            = valueMap.getLong  ("dateTime"                               );
-                                       long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
-                                       long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
-                                       IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
-                                       IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
-                                       long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
-                                       String                errorMessage_       = valueMap.getString("errorMessage"                           );
-
-                                       // add storage index data
-                                       final StorageIndexData storageIndexData = new StorageIndexData(storageId,
-                                                                                                      jobName,
-                                                                                                      archiveType,
-                                                                                                      name,
-                                                                                                      dateTime,
-                                                                                                      totalEntryCount,
-                                                                                                      totalEntrySize,
-                                                                                                      indexState,
-                                                                                                      indexMode,
-                                                                                                      lastCheckedDateTime,
-                                                                                                      errorMessage_
-                                                                                                     );
-
-                                       // insert/update tree item
-                                       display.syncExec(new Runnable()
-                                       {
-                                         @Override
-                                         public void run()
-                                         {
-                                           TreeItem storageTreeItem = Widgets.getTreeItem(widgetStorageTree,indexIdComperator,storageIndexData);
-                                           if (storageTreeItem == null)
-                                           {
-                                             // insert tree item
-                                             storageTreeItem = Widgets.insertTreeItem(treeItem,
-                                                                                      findStorageTreeIndex(treeItem,storageIndexData),
-                                                                                      (Object)storageIndexData,
-                                                                                      false
-                                                                                     );
-                                             storageIndexData.setTreeItem(storageTreeItem);
-                                           }
-                                           else
-                                           {
-                                             // keep tree item
-                                             removeStorageTreeItemSet.remove(storageTreeItem);
-                                           }
-                                         }
-                                       });
-                                     }
-                                     catch (IllegalArgumentException exception)
-                                     {
-                                       if (Settings.debugLevel > 0)
-                                       {
-                                         System.err.println("ERROR: "+exception.getMessage());
-                                         System.exit(1);
-                                       }
-                                     }
-
-                                     return Errors.NONE;
-                                   }
-                                 }
-                                );
-
-        // remove not existing entries
-        display.syncExec(new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            for (TreeItem treeItem : removeStorageTreeItemSet)
-            {
-              IndexData indexData = (IndexData)treeItem.getData();
-              Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              selectedIndexIdSet.set(indexData.id,false);
-//TODO: remove?
-              indexData.clearTreeItem();
-            }
-          }
-        });
-      }
-    }
-    finally
-    {
-      BARControl.resetCursor();
-    }
   }
 
   /** create entity for job and assing selected/checked job/entity/storage to job
