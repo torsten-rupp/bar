@@ -6722,8 +6722,6 @@ bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const
 
 bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  MountNode *mountNode;
-
   assert(variable != NULL);
   assert(value != NULL);
 
