@@ -4354,7 +4354,7 @@ LOCAL void cleanupIndexThreadCode(void)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Start upgrade index database\n"
+                    "Started upgrade index database\n"
                    );
       }
       plogMessage(NULL,  // logHandle
@@ -5337,6 +5337,7 @@ bool Index_parseType(const char *name, IndexTypes *indexType)
 
 Errors Index_init(const char *fileName)
 {
+  bool   createFlag;
   Errors error;
   int64  indexVersion;
   String oldDatabaseFileName;
@@ -5352,58 +5353,70 @@ Errors Index_init(const char *fileName)
   }
 
   // check if index exists
+  createFlag = FALSE;
   if (File_existsCString(__databaseFileName))
   {
     // get index version
     error = getIndexVersion(__databaseFileName,&indexVersion);
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      return error;
+      if (indexVersion < INDEX_VERSION)
+      {
+        // rename existing index for upgrade
+        oldDatabaseFileName = String_new();
+        n = 0;
+        do
+        {
+          oldDatabaseFileName = String_newCString(__databaseFileName);
+          String_appendCString(oldDatabaseFileName,".old");
+          String_format(oldDatabaseFileName,"%03d",n);
+          n++;
+        }
+        while (File_exists(oldDatabaseFileName));
+        (void)File_renameCString(__databaseFileName,
+                                 String_cString(oldDatabaseFileName),
+                                 NULL
+                                );
+        String_delete(oldDatabaseFileName);
+
+        // upgrade version -> create new
+        createFlag = TRUE;
+      }
     }
-
-    if (indexVersion < INDEX_VERSION)
+    else
     {
-      // rename existing index for upgrade
-      oldDatabaseFileName = String_new();
-      n = 0;
-      do
-      {
-        oldDatabaseFileName = String_newCString(__databaseFileName);
-        String_appendCString(oldDatabaseFileName,".old");
-        String_format(oldDatabaseFileName,"%03d",n);
-        n++;
-      }
-      while (File_exists(oldDatabaseFileName));
-      (void)File_renameCString(__databaseFileName,
-                               String_cString(oldDatabaseFileName),
-                               NULL
-                              );
-      String_delete(oldDatabaseFileName);
-
-      // create new index
-      error = createIndex(__databaseFileName);
-      if (error != ERROR_NONE)
-      {
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_ERROR,
-                    "INDEX",
-                    "Create new index database '$s' fail: %s\n",
-                    __databaseFileName,
-                    Error_getText(error)
-                   );
-        return error;
-      }
+      // corrupt -> create new
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_ERROR,
+                  "INDEX",
+                  "Index database '%s' is corrupt - create new\n",
+                  __databaseFileName
+                 );
+      createFlag = TRUE;
     }
   }
   else
   {
+    // does not exists -> create new
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_ERROR,
+                "INDEX",
+                "Create index database '%s'\n",
+                __databaseFileName
+               );
+    createFlag = TRUE;
+  }
+
+  if (createFlag)
+  {
+    // create new index
     error = createIndex(__databaseFileName);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
-                  "Create index database '$s' fail: %s\n",
+                  "Create new index database '%s' fail: %s\n",
                   __databaseFileName,
                   Error_getText(error)
                  );
