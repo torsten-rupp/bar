@@ -1293,7 +1293,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       if (Settings.debugLevel > 0)
       {
-        BARServer.disconnect();
         System.err.println("ERROR: "+throwable.getMessage());
         BARControl.printStackTrace(throwable);
         System.exit(1);
