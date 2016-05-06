@@ -1743,9 +1743,16 @@ ulong xxx=0;
                                       &fromStatementHandle,
                                       NULL
                                      );
-    if (sqliteResult != SQLITE_OK)
+    if      (sqliteResult == SQLITE_OK)
     {
-fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
+      // nothing to do
+    }
+    else if (sqliteResult == SQLITE_MISUSE)
+    {
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(fromDatabaseHandle->handle));
+    }
+    else
+    {
       error = ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle));
       if (transactionFlag)
       {
@@ -1758,7 +1765,6 @@ fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
       {
         fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(fromDatabaseHandle->handle),sqlite3_errmsg(fromDatabaseHandle->handle),String_cString(sqlSelectString));
         abort();
-//      assert(fromStatementHandle != NULL);
       }
     #endif /* not NDEBUG */
 
@@ -1897,7 +1903,15 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
                                         &toStatementHandle,
                                         NULL
                                        );
-      if (sqliteResult != SQLITE_OK)
+      if      (sqliteResult == SQLITE_OK)
+      {
+        // nothing to do
+      }
+      else if (sqliteResult == SQLITE_MISUSE)
+      {
+        HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(toDatabaseHandle->handle));
+      }
+      else
       {
         error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         sqlite3_finalize(fromStatementHandle);
@@ -1912,7 +1926,6 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
         {
           fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(toDatabaseHandle->handle),sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
           abort();
-//          assert(toStatementHandle != NULL);
         }
       #endif /* not NDEBUG */
 
@@ -2454,7 +2467,15 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                       &statementHandle,
                                       NULL
                                      );
-    if (sqliteResult != SQLITE_OK)
+    if      (sqliteResult == SQLITE_OK)
+    {
+      // nothing to do
+    }
+    else if (sqliteResult == SQLITE_MISUSE)
+    {
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+    }
+    else
     {
       return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
@@ -2463,7 +2484,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       {
         fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
         abort();
-//        assert(statementHandle != NULL);
       }
     #endif /* not NDEBUG */
 
@@ -2870,7 +2890,7 @@ databaseRowUserData,
     DATABASE_DEBUG_TIME_END(databaseQueryHandle);
     if      (sqliteResult == SQLITE_OK)
     {
-      error = ERROR_NONE;
+      // nothing to do
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
@@ -2878,18 +2898,17 @@ databaseRowUserData,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (databaseQueryHandle->statementHandle == NULL)
       {
         fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
         abort();
-//      assert(databaseQueryHandle->statementHandle != NULL);
       }
     #endif /* not NDEBUG */
 
-    return error;
+    return ERROR_NONE;
   });
   if (error != ERROR_NONE)
   {
@@ -3265,12 +3284,15 @@ bool Database_exists(DatabaseHandle *databaseHandle,
     {
       HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
     }
+    else
+    {
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+    }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
         fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
         abort();
-//        assert(statementHandle != NULL);
       }
     #endif /* not NDEBUG */
 
@@ -3339,7 +3361,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                                      );
     if      (sqliteResult == SQLITE_OK)
     {
-      error = ERROR_NONE;
+      // nothing to do
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
@@ -3347,14 +3369,13 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
         fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
         abort();
-//        assert(statementHandle != NULL);
       }
     #endif /* not NDEBUG */
 
@@ -3365,7 +3386,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
     sqlite3_finalize(statementHandle);
 
-    return error;
+    return ERROR_NONE;
   });
   if (error != ERROR_NONE)
   {
@@ -3518,7 +3539,7 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
                                      );
     if      (sqliteResult == SQLITE_OK)
     {
-      error = ERROR_NONE;
+      // nothing to do
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
@@ -3526,14 +3547,13 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
         fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
         abort();
-//        assert(statementHandle != NULL);
       }
     #endif /* not NDEBUG */
 
@@ -3544,7 +3564,7 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
 
     sqlite3_finalize(statementHandle);
 
-    return error;
+    return ERROR_NONE;
   });
   if (error != ERROR_NONE)
   {
@@ -3697,7 +3717,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
                                      );
     if      (sqliteResult == SQLITE_OK)
     {
-      error = ERROR_NONE;
+      // nothing to do
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
@@ -3705,14 +3725,13 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
         fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
         abort();
-//        assert(statementHandle != NULL);
       }
     #endif /* not NDEBUG */
 
@@ -3723,7 +3742,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
     sqlite3_finalize(statementHandle);
 
-    return error;
+    return ERROR_NONE;
   });
   if (error != ERROR_NONE)
   {
