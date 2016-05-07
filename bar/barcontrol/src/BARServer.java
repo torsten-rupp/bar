@@ -756,25 +756,20 @@ class ReadThread extends Thread
       }
       catch (IOException exception)
       {
-        // communication impossible, cancel all commands with error and wait for termination
+        // communication impossible -> quit and cancel all commands with error
         synchronized(commandHashMap)
         {
-          while (!quitFlag)
-          {
-            for (Command command : commandHashMap.values())
-            {
-              synchronized(command)
-              {
-                command.errorCode     = Errors.NETWORK_RECEIVE;
-                command.errorMessage  = exception.getMessage();
-                command.completedFlag = true;
-                command.notifyAll();
-              }
-            }
+          quitFlag = true;
 
-Dprintf.dprintf("lkfasfsdfsfadsfdasadfsdf");
-quitFlag = true;
-//            try { commandHashMap.wait(); } catch (InterruptedException interruptedException) { /* ignored */ }
+          for (Command command : commandHashMap.values())
+          {
+            synchronized(command)
+            {
+              command.errorCode     = Errors.NETWORK_RECEIVE;
+              command.errorMessage  = exception.getMessage();
+              command.completedFlag = true;
+              command.notifyAll();
+            }
           }
         }
       }
