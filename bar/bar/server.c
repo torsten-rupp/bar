@@ -288,79 +288,6 @@ typedef struct
   LIST_HEADER(IndexCryptPasswordNode);
 } IndexCryptPasswordList;
 
-// index database entry node
-typedef struct IndexEntryNode
-{
-  LIST_NODE_HEADER(struct IndexEntryNode);
-
-  IndexId      uuidId;
-  String       jobUUID;
-  IndexId      entityId;
-  String       scheduleUUID;
-  ArchiveTypes archiveType;
-  IndexId      entryId;
-  String       storageName;
-  uint64       storageDateTime;
-  String       name;
-  uint64       timeModified;
-  union
-  {
-    struct
-    {
-      uint64   size;
-      uint32   userId;
-      uint32   groupId;
-      uint32   permission;
-      uint64   fragmentOffset;
-      uint64   fragmentSize;
-    } file;
-    struct
-    {
-      FileSystemTypes fileSystemType;
-      uint64          size;
-      uint            blockSize;
-      uint64          blockOffset;
-      uint64          blockCount;
-    } image;
-    struct
-    {
-      uint32 userId;
-      uint32 groupId;
-      uint32 permission;
-    } directory;
-    struct
-    {
-      String destinationName;
-      uint32 userId;
-      uint32 groupId;
-      uint32 permission;
-    } link;
-    struct
-    {
-      uint64 size;
-      uint32 userId;
-      uint32 groupId;
-      uint32 permission;
-      uint64 fragmentOffset;
-      uint64 fragmentSize;
-    } hardLink;
-    struct
-    {
-      ulong  major;
-      ulong  minor;
-      uint32 userId;
-      uint32 groupId;
-      uint32 permission;
-    } special;
-  };
-} IndexEntryNode;
-
-// index database node list
-typedef struct
-{
-  LIST_HEADER(IndexEntryNode);
-} IndexEntryList;
-
 // client types
 typedef enum
 {
@@ -1347,7 +1274,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
+LOCAL bool parseScheduleArchiveType(ConstString s, ArchiveTypes *archiveType)
 {
   assert(s != NULL);
   assert(archiveType != NULL);
@@ -1381,7 +1308,7 @@ LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
 *          archive type names: normal, full, incremental, differential
 \***********************************************************************/
 
-LOCAL ScheduleNode *parseSchedule(const String s)
+LOCAL ScheduleNode *parseSchedule(ConstString s)
 {
   ScheduleNode *scheduleNode;
   bool         errorFlag;
@@ -1519,9 +1446,9 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
 *          week day names: mon, tue, wed, thu, fri, sat, sun
 \***********************************************************************/
 
-LOCAL ScheduleNode *parseScheduleDateTime(const String date,
-                                          const String weekDays,
-                                          const String time
+LOCAL ScheduleNode *parseScheduleDateTime(ConstString date,
+                                          ConstString weekDays,
+                                          ConstString time
                                          )
 {
   ScheduleNode *scheduleNode;
@@ -1825,15 +1752,14 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
 * Name   : copyJob
 * Purpose: copy job node
 * Input  : jobNode  - job node
-*          fileName - file name or NULL
-*          name     - name of job
+*          fileName - file name
 * Output : -
-* Return : job node
+* Return : new job node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *copyJob(JobNode      *jobNode,
-                       const String fileName
+LOCAL JobNode *copyJob(JobNode     *jobNode,
+                       ConstString fileName
                       )
 {
   JobNode *newJobNode;
@@ -2176,7 +2102,7 @@ LOCAL void jobDeleted(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *findJobByName(const String name)
+LOCAL JobNode *findJobByName(ConstString name)
 {
   JobNode *jobNode;
 
@@ -2203,7 +2129,7 @@ LOCAL JobNode *findJobByName(const String name)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *findJobByUUID(const String uuid)
+LOCAL JobNode *findJobByUUID(ConstString uuid)
 {
   JobNode *jobNode;
 
@@ -2231,7 +2157,7 @@ LOCAL JobNode *findJobByUUID(const String uuid)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, const String scheduleUUID)
+LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
 {
   ScheduleNode *scheduleNode;
 
@@ -4267,7 +4193,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
 \***********************************************************************/
 
 LOCAL Errors deleteUUID(IndexHandle *indexHandle,
-                        const String jobUUID
+                        ConstString jobUUID
                        )
 {
   Errors           error;
@@ -5764,7 +5690,7 @@ LOCAL bool decryptPassword(Password *password, const ClientInfo *clientInfo, Con
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkPassword(const ClientInfo *clientInfo, const String encryptType, const String encryptedPassword, const Password *password)
+LOCAL bool checkPassword(const ClientInfo *clientInfo, ConstString encryptType, ConstString encryptedPassword, const Password *password)
 {
   byte encryptedBuffer[1024];
   uint encryptedBufferLength;
@@ -5914,7 +5840,7 @@ LOCAL const char *getJobStateText(JobStates jobState, const JobOptions *jobOptio
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DirectoryInfoNode *newDirectoryInfo(const String pathName)
+LOCAL DirectoryInfoNode *newDirectoryInfo(ConstString pathName)
 {
   DirectoryInfoNode *directoryInfoNode;
 
@@ -5973,7 +5899,7 @@ LOCAL void freeDirectoryInfoNode(DirectoryInfoNode *directoryInfoNode, void *use
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DirectoryInfoNode *findDirectoryInfo(DirectoryInfoList *directoryInfoList, const String pathName)
+LOCAL DirectoryInfoNode *findDirectoryInfo(DirectoryInfoList *directoryInfoList, ConstString pathName)
 {
   DirectoryInfoNode *directoryInfoNode;
 
@@ -14151,7 +14077,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   * Notes  : -
   \***********************************************************************/
 
-  UUIDDataNode *findUUIDDataNode(const UUIDDataList *uuidDataList, const String jobUUID)
+  UUIDDataNode *findUUIDDataNode(const UUIDDataList *uuidDataList, ConstString jobUUID)
   {
     UUIDDataNode *uuidDataNode;
 
@@ -14845,11 +14771,11 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
 *            [offset=<n>]
 *            [limit=<n>]
 *          Result:
-*            jobUUID=<uuid>
-*            scheduleUUID=<uuid>
-*            jobName=<name>
 *            uuidId=<id>
+*            jobUUID=<uuid>
+*            jobName=<name>
 *            entityId=<id>
+*            scheduleUUID=<uuid>
 *            archiveType=<type>
 *            storageId=<id>
 *            name=<name>
@@ -15033,12 +14959,12 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     }
 
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "jobUUID=%S scheduleUUID=%S jobName=%'S uuidId=%llu entityId=%llu archiveType='%s' storageId=%llu name=%'S dateTime=%llu totalEntryCount=%lu totalEntrySize=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
-                     jobUUID,
-                     scheduleUUID,
-                     jobName,
+                     "uuidId=%llu jobUUID=%S jobName=%'S entityId=%llu scheduleUUID=%S archiveType='%s' storageId=%llu name=%'S dateTime=%llu totalEntryCount=%lu totalEntrySize=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                      uuidId,
+                     jobUUID,
+                     jobName,
                      entityId,
+                     scheduleUUID,
                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                      storageId,
                      printableStorageName,
@@ -15114,6 +15040,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   Storage_initSpecifier(&storageSpecifier);
 
   // create index for matching files
+//TODO
 #ifndef WERROR
 #warning remove
 #endif
@@ -16109,35 +16036,43 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
 *            [offset=<n>]
 *            [limit=<n>]
 *          Result:
-*            entryType=FILE entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bytes]> dateTime=<time stamp> \
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> name=<name> entryType=FILE size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
-*            entryType=IMAGE entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> size=<n [bztes]> dateTime=<time stamp> \
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=IMAGE name=<name> size=<n [bztes]> dateTime=<time stamp> \
 *            blockOffset=<n [bytes]> blockCount=<n>
 *
-*            entryType=DIRECTORY entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp> \
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=DIRECTORY name=<name> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 *
-*            entryType=LINK entryId=<n> storageName=<name> storageDateTime=<time stamp> linkName=<name> name=<name> \
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=LINK linkName=<name> name=<name> \
 *            dateTime=<time stamp> userId=<n> groupId=<n> permission=<n>
 *
-*            entryType=HARDLINK entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp>
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=HARDLINK name=<name> dateTime=<time stamp>
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
-*            entryType=SPECIAL entryId=<n> storageName=<name> storageDateTime=<time stamp> name=<name> dateTime=<time stamp> \
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=SPECIAL name=<name> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  #define SEND_FILE_ENTRY(entryId,storageName,storageDateTime,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
+  #define SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=FILE entryId=%lld storageName=%'S storageDateTime=%llu name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
-                       entryId, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
                        storageName, \
                        storageDateTime, \
+                       entryId, \
                        name, \
                        size, \
                        dateTime, \
@@ -16149,14 +16084,16 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                       ); \
     } \
     while (0)
-  #define SEND_IMAGE_ENTRY(entryId,storageName,storageDateTime,name,fileSystemType,size,blockOffset,blockCount) \
+  #define SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,fileSystemType,size,blockOffset,blockCount) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=IMAGE entryId=%lld storageName=%'S storageDateTime=%llu name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
-                       entryId, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
                        storageName, \
                        storageDateTime, \
+                       entryId, \
                        name, \
                        FileSystem_getName(fileSystemType), \
                        size, \
@@ -16165,14 +16102,16 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                       ); \
     } \
     while (0)
-  #define SEND_DIRECTORY_ENTRY(entryId,storageName,storageDateTime,name,dateTime,userId,groupId,permission) \
+  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,dateTime,userId,groupId,permission) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=DIRECTORY entryId=%lld storageName=%'S storageDateTime=%llu name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       entryId, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
                        storageName, \
                        storageDateTime, \
+                       entryId, \
                        name, \
                        dateTime, \
                        userId, \
@@ -16181,14 +16120,16 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                       ); \
     } \
     while (0)
-  #define SEND_LINK_ENTRY(entryId,storageName,storageDateTime,name,destinationName,dateTime,userId,groupId,permission) \
+  #define SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,destinationName,dateTime,userId,groupId,permission) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=LINK entryId=%lld storageName=%'S storageDateTime=%llu name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       entryId, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
                        storageName, \
                        storageDateTime, \
+                       entryId, \
                        name, \
                        destinationName, \
                        dateTime, \
@@ -16198,14 +16139,16 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                       ); \
     } \
     while (0)
-  #define SEND_HARDLINK_ENTRY(entryId,storageName,storageDateTime,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
+  #define SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=HARDLINK entryId=%lld storageName=%'S storageDateTime=%llu name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
-                       entryId, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
                        storageName, \
                        storageDateTime, \
+                       entryId, \
                        name, \
                        size, \
                        dateTime, \
@@ -16217,14 +16160,16 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                       ); \
     } \
     while (0)
-  #define SEND_SPECIAL_ENTRY(entryId,storageName,storageDateTime,name,dateTime,userId,groupId,permission) \
+  #define SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,dateTime,userId,groupId,permission) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "entryType=SPECIAL entryId=%lld storageName=%'S storageDateTime=%llu name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       entryId, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
                        storageName, \
                        storageDateTime, \
+                       entryId, \
                        name, \
                        dateTime, \
                        userId, \
@@ -16234,222 +16179,22 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     } \
     while (0)
 
-  /***********************************************************************\
-  * Name   : freeIndexEntryNode
-  * Purpose: free allocated index node
-  * Input  : IndexEntryNode - index node
-  * Input  : userData  - not used
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  void freeIndexEntryNode(IndexEntryNode *indexEntryNode, void *userData)
-  {
-    assert(indexEntryNode != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    switch (Index_getType(indexEntryNode->entryId))
-    {
-      case INDEX_TYPE_FILE:
-        break;
-      case INDEX_TYPE_IMAGE:
-        break;
-      case INDEX_TYPE_DIRECTORY:
-        break;
-      case INDEX_TYPE_LINK:
-        String_delete(indexEntryNode->link.destinationName);
-        break;
-      case INDEX_TYPE_HARDLINK:
-        break;
-      case INDEX_TYPE_SPECIAL:
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-    String_delete(indexEntryNode->name);
-    String_delete(indexEntryNode->storageName);
-    String_delete(indexEntryNode->scheduleUUID);
-    String_delete(indexEntryNode->jobUUID);
-  }
-
-  /***********************************************************************\
-  * Name   : newIndexEntryNode
-  * Purpose: create new index entry node
-  * Input  : indexEntryList - index entry list
-  *          entryId        - entry id
-  *          storageName    - storage name
-  *          name           - entry name
-  *          timeModified   - modification time stamp [s]
-  * Output : -
-  * Return : index node or NULL
-  * Notes  : -
-  \***********************************************************************/
-
-  IndexEntryNode *newIndexEntryNode(IndexEntryList    *indexEntryList,
-                                    IndexId           entryId,
-                                    const String      storageName,
-                                    const String      name,
-                                    uint64            timeModified
-                                   )
-  {
-    IndexEntryNode *indexEntryNode;
-    bool           foundFlag;
-    IndexEntryNode *nextIndexEntryNode;
-
-    // allocate node
-    indexEntryNode = LIST_NEW_NODE(IndexEntryNode);
-    if (indexEntryNode == NULL)
-    {
-      return NULL;
-    }
-
-    // initialize
-    indexEntryNode->entryId      = entryId;
-    indexEntryNode->storageName  = String_duplicate(storageName);
-    indexEntryNode->name         = String_duplicate(name);
-    indexEntryNode->timeModified = timeModified;
-    switch (Index_getType(indexEntryNode->entryId))
-    {
-      case INDEX_TYPE_FILE:
-        break;
-      case INDEX_TYPE_IMAGE:
-        break;
-      case INDEX_TYPE_DIRECTORY:
-        break;
-      case INDEX_TYPE_LINK:
-        indexEntryNode->link.destinationName = String_new();
-        break;
-      case INDEX_TYPE_HARDLINK:
-        break;
-      case INDEX_TYPE_SPECIAL:
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-
-    // insert into list
-    foundFlag          = FALSE;
-    nextIndexEntryNode = indexEntryList->head;
-    while (   (nextIndexEntryNode != NULL)
-           && !foundFlag
-          )
-    {
-      switch (String_compare(nextIndexEntryNode->storageName,indexEntryNode->storageName,NULL,NULL))
-      {
-        case -1:
-          // next
-          nextIndexEntryNode = nextIndexEntryNode->next;
-          break;
-        case  0:
-        case  1:
-          // compare
-          switch (String_compare(nextIndexEntryNode->name,indexEntryNode->name,NULL,NULL))
-          {
-            case -1:
-              // next
-              nextIndexEntryNode = nextIndexEntryNode->next;
-              break;
-            case  0:
-            case  1:
-              // found
-              foundFlag = TRUE;
-              break;
-          }
-          break;
-      }
-    }
-    List_insert(indexEntryList,indexEntryNode,nextIndexEntryNode);
-
-    return indexEntryNode;
-  }
-
-  /***********************************************************************\
-  * Name   : findIndexEntryNode
-  * Purpose: find index entry node
-  * Input  : indexEntryList - index entry list
-  *          entryId        - entry id
-  *          name           - entry name
-  * Output : -
-  * Return : index node or NULL
-  * Notes  : -
-  \***********************************************************************/
-
-  IndexEntryNode *findIndexEntryNode(IndexEntryList *indexEntryList,
-                                     IndexId        entryId,
-                                     const String   name
-                                    )
-  {
-    IndexEntryNode *foundIndexEntryNode;
-    IndexEntryNode *indexEntryNode;
-
-    assert(indexEntryList != NULL);
-    assert(name != NULL);
-
-    foundIndexEntryNode = NULL;
-    indexEntryNode = indexEntryList->head;
-    while (   (indexEntryNode != NULL)
-           && (foundIndexEntryNode == NULL)
-          )
-    {
-      if      (Index_getType(indexEntryNode->entryId) < Index_getType(entryId))
-      {
-        // next
-        indexEntryNode = indexEntryNode->next;
-      }
-      else if (Index_getType(indexEntryNode->entryId) == Index_getType(entryId))
-      {
-        // compare
-        switch (String_compare(indexEntryNode->name,name,NULL,NULL))
-        {
-          case -1:
-            // next
-            indexEntryNode = indexEntryNode->next;
-            break;
-          case  0:
-            // found
-            foundIndexEntryNode = indexEntryNode;
-            break;
-          case  1:
-            // not found
-            indexEntryNode = NULL;
-            break;
-        }
-      }
-      else
-      {
-        // not found
-        indexEntryNode = NULL;
-      }
-    }
-
-    return foundIndexEntryNode;
-  }
-
   String           entryPatternString;
   bool             indexTypeAny;
   IndexTypes       indexType;
   bool             newestOnly;
   uint64           offset;
   uint64           limit;
+  IndexId          prevUUIDId;
+  String           jobName;
   uint             entryCount;
-  IndexEntryList   indexEntryList;
-  IndexEntryNode   *indexEntryNode;
-  String           regexpString;
   String           storageName;
   uint64           storageDateTime;
   String           name;
   String           destinationName;
-  FileSystemTypes  fileSystemType;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
+  FileSystemTypes  fileSystemType;
   IndexId          uuidId,entityId,storageId,entryId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -16458,7 +16203,9 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   uint64           timeModified;
   uint             userId,groupId;
   uint             permission;
-  uint64           fragmentOrBlockOffset,fragmentOrBlockSize;
+  uint64           fragmentOrBlockOffset,fragmentSizeOrBlockCount;
+  SemaphoreLock    semaphoreLock;
+  const JobNode    *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -16504,12 +16251,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
 
   // initialize variables
   entryCount      = 0;
-  List_init(&indexEntryList);
-  regexpString    = String_new();
+  prevUUIDId      = INDEX_ID_NONE;
+  jobName         = String_new();
   storageName     = String_new();
   name            = String_new();
   destinationName = String_new();
-
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
                                 Array_cArray(&clientInfo->indexIdArray),
@@ -16527,17 +16273,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list entries fail: %s",Error_getText(error));
     String_delete(name);
     String_delete(storageName);
-    String_delete(regexpString);
-    List_done(&indexEntryList,CALLBACK((ListNodeFreeFunction)freeIndexEntryNode,NULL));
     String_delete(entryPatternString);
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntry(&indexQueryHandle,
                                &uuidId,
-                               jobUUID,
+                               NULL,  // jobUUID,
                                &entityId,
-                               scheduleUUID,
+                               NULL,  // scheduleUUID,
                                &archiveType,
                                &storageId,
                                storageName,
@@ -16552,149 +16296,47 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                &groupId,
                                &permission,
                                &fragmentOrBlockOffset,
-                               &fragmentOrBlockSize
+                               &fragmentSizeOrBlockCount
                               )
         )
   {
-    if (newestOnly)
+    // get job name
+    if (uuidId != prevUUIDId)
     {
-      // find/allocate index node
-      indexEntryNode = findIndexEntryNode(&indexEntryList,entryId,name);
-      if (indexEntryNode == NULL)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        indexEntryNode = newIndexEntryNode(&indexEntryList,entryId,storageName,name,timeModified);
-        entryCount++;
+        jobNode = findJobByUUID(jobUUID);
+        if (jobNode != NULL){
+          String_set(jobName,jobNode->name);
+        }
+        else
+        {
+          String_clear(jobName);
+        }
       }
-      if (indexEntryNode == NULL) break;
-
-      // update index node
-      if (timeModified >= indexEntryNode->timeModified)
-      {
-        indexEntryNode->entryId             = entryId;
-        String_set(indexEntryNode->storageName,storageName);
-        indexEntryNode->storageDateTime     = storageDateTime;
-        indexEntryNode->timeModified        = timeModified;
-        indexEntryNode->file.size           = size;
-        indexEntryNode->file.userId         = userId;
-        indexEntryNode->file.groupId        = groupId;
-        indexEntryNode->file.permission     = permission;
-        indexEntryNode->file.fragmentOffset = fragmentOrBlockOffset;
-        indexEntryNode->file.fragmentSize   = fragmentOrBlockSize;
-      }
+      prevUUIDId = uuidId;
     }
-    else
-    {
-      switch (Index_getType(entryId))
-      {
-        case INDEX_TYPE_FILE:
-          SEND_FILE_ENTRY(entryId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentOrBlockSize);
-          break;
-        case INDEX_TYPE_IMAGE:
-          SEND_IMAGE_ENTRY(entryId,storageName,storageDateTime,name,fileSystemType,size,fragmentOrBlockOffset,fragmentOrBlockSize);
-          break;
-        case INDEX_TYPE_DIRECTORY:
-          SEND_DIRECTORY_ENTRY(entryId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
-          break;
-        case INDEX_TYPE_LINK:
-          SEND_LINK_ENTRY(entryId,storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
-          break;
-        case INDEX_TYPE_HARDLINK:
-          SEND_HARDLINK_ENTRY(entryId,storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentOrBlockSize);
-          break;
-        case INDEX_TYPE_SPECIAL:
-          SEND_SPECIAL_ENTRY(entryId,storageName,storageDateTime,name,timeModified,userId,groupId,permission);
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
-      }
-      entryCount++;
-    }
-  }
-  Index_doneList(&indexQueryHandle);
 
-  // send data
-  indexEntryNode = indexEntryList.head;
-  while (   (indexEntryNode != NULL)
-         && !isCommandAborted(clientInfo,id)
-        )
-  {
-    switch (Index_getType(indexEntryNode->entryId))
+    // send entry data
+    switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:
-        SEND_FILE_ENTRY(indexEntryNode->entryId,
-                        indexEntryNode->storageName,
-                        indexEntryNode->storageDateTime,
-                        indexEntryNode->name,
-                        indexEntryNode->file.size,
-                        indexEntryNode->timeModified,
-                        indexEntryNode->file.userId,
-                        indexEntryNode->file.groupId,
-                        indexEntryNode->file.permission,
-                        indexEntryNode->file.fragmentOffset,
-                        indexEntryNode->file.fragmentSize
-                       );
+        SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_IMAGE:
-        SEND_IMAGE_ENTRY(indexEntryNode->entryId,
-                         indexEntryNode->storageName,
-                         indexEntryNode->storageDateTime,
-                         indexEntryNode->name,
-                         indexEntryNode->image.fileSystemType,
-                         indexEntryNode->image.size,
-                         indexEntryNode->image.blockOffset,
-                         indexEntryNode->image.blockCount
-                        );
+        SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_DIRECTORY:
-        SEND_DIRECTORY_ENTRY(indexEntryNode->entryId,
-                             indexEntryNode->storageName,
-                             indexEntryNode->storageDateTime,
-                             indexEntryNode->name,
-                             indexEntryNode->timeModified,
-                             indexEntryNode->directory.userId,
-                             indexEntryNode->directory.groupId,
-                             indexEntryNode->directory.permission
-                            );
+        SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_LINK:
-        SEND_LINK_ENTRY(indexEntryNode->entryId,
-                        indexEntryNode->storageName,
-                        indexEntryNode->storageDateTime,
-                        indexEntryNode->name,
-                        indexEntryNode->link.destinationName,
-                        indexEntryNode->timeModified,
-                        indexEntryNode->link.userId,
-                        indexEntryNode->link.groupId,
-                        indexEntryNode->link.permission
-                       );
+        SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,destinationName,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_HARDLINK:
-        SEND_HARDLINK_ENTRY(indexEntryNode->entryId,
-                            indexEntryNode->storageName,
-                            indexEntryNode->storageDateTime,
-                            indexEntryNode->name,
-                            indexEntryNode->hardLink.size,
-                            indexEntryNode->timeModified,
-                            indexEntryNode->hardLink.userId,
-                            indexEntryNode->hardLink.groupId,
-                            indexEntryNode->hardLink.permission,
-                            indexEntryNode->hardLink.fragmentOffset,
-                            indexEntryNode->hardLink.fragmentSize
-                           );
+        SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_SPECIAL:
-        SEND_SPECIAL_ENTRY(indexEntryNode->entryId,
-                           indexEntryNode->storageName,
-                           indexEntryNode->storageDateTime,
-                           indexEntryNode->name,
-                           indexEntryNode->timeModified,
-                           indexEntryNode->special.userId,
-                           indexEntryNode->special.groupId,
-                           indexEntryNode->special.permission
-                          );
+        SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,timeModified,userId,groupId,permission);
         break;
       default:
         #ifndef NDEBUG
@@ -16702,17 +16344,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         #endif /* NDEBUG */
         break;
     }
-    indexEntryNode = indexEntryNode->next;
+    entryCount++;
   }
-
+  Index_doneList(&indexQueryHandle);
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(destinationName);
   String_delete(name);
   String_delete(storageName);
-  String_delete(regexpString);
-  List_done(&indexEntryList,CALLBACK((ListNodeFreeFunction)freeIndexEntryNode,NULL));
   String_delete(entryPatternString);
 }
 
@@ -17278,7 +16918,7 @@ LOCAL void initBatchClient(ClientInfo *clientInfo,
 \***********************************************************************/
 
 LOCAL void initNetworkClient(ClientInfo   *clientInfo,
-                             const String name,
+                             ConstString  name,
                              uint         port,
                              SocketHandle socketHandle
                             )
@@ -17429,7 +17069,7 @@ LOCAL ClientNode *newClient(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ClientNode *newNetworkClient(const String name,
+LOCAL ClientNode *newNetworkClient(ConstString  name,
                                    uint         port,
                                    SocketHandle socketHandle
                                   )
@@ -17487,7 +17127,7 @@ LOCAL void freeAuthorizationFailNode(AuthorizationFailNode *authorizationFailNod
 * Notes  : -
 \***********************************************************************/
 
-LOCAL AuthorizationFailNode *newAuthorizationFailNode(const String clientName)
+LOCAL AuthorizationFailNode *newAuthorizationFailNode(ConstString clientName)
 {
   AuthorizationFailNode *authorizationFailNode;
 
@@ -17533,7 +17173,7 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void processCommand(ClientInfo *clientInfo, const String command)
+LOCAL void processCommand(ClientInfo *clientInfo, ConstString command)
 {
   CommandMsg commandMsg;
 
