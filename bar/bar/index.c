@@ -3696,7 +3696,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL,  // entryPattern,
                                 FALSE,  // newestOnly
-                                0LL,
+                                0LL,  // offset
                                 INDEX_UNLIMITED
                                );
   if (error != ERROR_NONE)
@@ -4055,7 +4055,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL,  // entryPattern,
                                 FALSE,  // newestOnly
-                                0LL,
+                                0LL,  // offset
                                 INDEX_UNLIMITED
                                );
   if (error != ERROR_NONE)
@@ -8268,8 +8268,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         uint32            *userId,
                         uint32            *groupId,
                         uint32            *permission,
-                        uint64            *fragmentOffset,
-                        uint64            *fragmentSize
+                        uint64            *fragmentOrBlockOffset,
+                        uint64            *fragmentSizeOrBlockCount
                        )
 {
   IndexTypes indexType;
@@ -8342,22 +8342,22 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
       default:                   (*size) = 0LL;            break;
     }
   }
-  if (fragmentOffset != NULL)
+  if (fragmentOrBlockOffset != NULL)
   {
     switch (indexType)
     {
-      case INDEX_TYPE_FILE:  (*fragmentOffset) = fragmentOffset_; break;
-      case INDEX_TYPE_IMAGE: (*fragmentOffset) = blockOffset_;    break;
-      default:               (*fragmentOffset) = 0LL;             break;
+      case INDEX_TYPE_FILE:  (*fragmentOrBlockOffset) = fragmentOffset_; break;
+      case INDEX_TYPE_IMAGE: (*fragmentOrBlockOffset) = blockOffset_;    break;
+      default:               (*fragmentOrBlockOffset) = 0LL;             break;
     }
   }
-  if (fragmentSize != NULL)
+  if (fragmentSizeOrBlockCount != NULL)
   {
     switch (indexType)
     {
-      case INDEX_TYPE_FILE:  (*fragmentSize) = fragmentSize_; break;
-      case INDEX_TYPE_IMAGE: (*fragmentSize) = blockCount_;   break;
-      default:               (*fragmentSize) = 0LL;           break;
+      case INDEX_TYPE_FILE:  (*fragmentSizeOrBlockCount) = fragmentSize_; break;
+      case INDEX_TYPE_IMAGE: (*fragmentSizeOrBlockCount) = blockCount_;   break;
+      default:               (*fragmentSizeOrBlockCount) = 0LL;           break;
     }
   }
 

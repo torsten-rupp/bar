@@ -1190,26 +1190,27 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextEntry
 * Purpose: get next entry
 * Input  : indexQueryHandle - index query handle
-* Output : uuidId           - index if of uuid
-*          jobUUID          - job UUID (can be NULL)
-*          entityId         - index id of entity (can be NULL)
-*          scheduleUUID     - schedule UUID (can be NULL)
-*          archiveType      - archive type (can be NULL)
-*          storageId        - index id of storage (can be NULL)
-*          storageName      - storage name (can be NULL)
-*          storageDateTime  - storage date/time stamp [s]
-*          entryId          - index id of entry
-*          entryName        - entry name
-*          destinationName  - destination name (for link entries)
-*          fileSystemType   - file system type (for image entries)
-*          size             - file/image/hardlink size [bytes]
-*                             or directory size [bytes]
-*          timeModified     - modified date/time stamp [s]
-*          userId           - user id
-*          groupId          - group id
-*          permission       - permission flags
-*          fragmentOffset   - fragment offset [bytes]/[blocks]
-*          fragmentSize     - fragment size [bytes]/[blocks]
+* Output : uuidId                   - index if of uuid
+*          jobUUID                  - job UUID (can be NULL)
+*          entityId                 - index id of entity (can be NULL)
+*          scheduleUUID             - schedule UUID (can be NULL)
+*          archiveType              - archive type (can be NULL)
+*          storageId                - index id of storage (can be NULL)
+*          storageName              - storage name (can be NULL)
+*          storageDateTime          - storage date/time stamp [s]
+*          entryId                  - index id of entry
+*          entryName                - entry name
+*          destinationName          - destination name (for link entries)
+*          fileSystemType           - file system type (for image
+*                                     entries)
+*          size                     - file/image/hardlink size [bytes]
+*                                     or directory size [bytes]
+*          timeModified             - modified date/time stamp [s]
+*          userId                   - user id
+*          groupId                  - group id
+*          permission               - permission flags
+*          fragmentOrBlockOffset    - fragment offset [bytes]/[blocks]
+*          fragmentSizeOrBlockCount - fragment size [bytes]/[blocks]
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1232,8 +1233,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         uint32            *userId,
                         uint32            *groupId,
                         uint32            *permission,
-                        uint64            *fragmentOffset,
-                        uint64            *fragmentSize
+                        uint64            *fragmentOrBlockOffset,
+                        uint64            *fragmentSizeOrBlockCount
                        );
 
 /***********************************************************************\
