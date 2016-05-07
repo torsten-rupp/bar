@@ -831,11 +831,6 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   #ifndef NDEBUG
 //    fprintf(stderr,"Warning: database busy handler called %p: %d\n",pthread_self(),n);
   #endif /* not NDEBUG */
-if (n > 10)
-{
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,n);
-//asm("int3");
-}
 
   delay(SLEEP_TIME);
 
@@ -862,7 +857,6 @@ LOCAL void unlockNotifyCallback(void *argv[], int argc)
   semaphore = (sem_t*)argv[0];
 
   assert(semaphore != NULL);
-fprintf(stderr,"%s, %d: jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj\n",__FILE__,__LINE__);
   sem_post(semaphore);
 }
 
@@ -951,7 +945,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
 * Purpose: excute SQLite3 statement
 * Input  : handle              - SQLite3 handle
 *          sqlString           - SQL string
-*          databaseRowFunction - row call-back function
+*          databaseRowFunction - row call-back function (can be NULL)
 *          databaseRowUserData - user data for row call-back
 *          timeout             - timeout [ms]
 * Output : -
@@ -968,56 +962,18 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
 {
   #define SLEEP_TIME 1000L
 
-  const char          *nextSqlCommand;
-//  DatabaseRowCallback databaseRowCallback;
-  Errors              error;
-  int                 sqliteResult;
-  sqlite3_stmt        *statementHandle;
-  uint                count;
-  const char          **names,**values;
-  uint                n;
-  uint                i;
+  const char   *nextSqlCommand;
+  Errors       error;
+  int          sqliteResult;
+  sqlite3_stmt *statementHandle;
+  uint         count;
+  const char   **names,**values;
+  uint         n;
+  uint         i;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-//TODO
-#if 0
-  databaseRowCallback.function = databaseRowFunction;
-  databaseRowCallback.userData = databaseRowUserData;
-  do
-  {
-    sqliteResult = sqlite3_exec(databaseHandle->handle,
-                                String_cString(sqlString),
-                                (databaseRowFunction != NULL) ? executeCallback : NULL,
-                                (databaseRowFunction != NULL) ? &databaseRowCallback : NULL,
-                                NULL
-                               );
-    if (sqliteResult == SQLITE_LOCKED)
-    {
-      xxx=0;
-      do
-      {
-        sqlite3_unlock_notify(databaseHandle->handle,unlockCallback,0);
-        delay(SLEEP_TIME);
-      }
-      while (xxx==0);
-    }
-  }
-  while (sqliteResult == SQLITE_LOCKED);
-  if      (sqliteResult == SQLITE_OK)
-  {
-    error = ERROR_NONE;
-  }
-  else if (sqliteResult == SQLITE_MISUSE)
-  {
-    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
-  }
-  else
-  {
-    error = ERRORX_(DATABASE,sqlite3_errcode(handle),"%s: %s",sqlite3_errmsg(handle),String_cString(sqlString));
-  }
-#else
   nextSqlCommand = stringTrim(sqlString);
   error          = ERROR_NONE;
   while (   (error == ERROR_NONE)
@@ -1061,7 +1017,6 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
           sqliteResult = sqlite3_step(statementHandle);
           if      (sqliteResult == SQLITE_LOCKED)
           {
-fprintf(stderr,"%s, %d:gsdgsdfgdfg \n",__FILE__,__LINE__);
             waitUnlockNotify(databaseHandle->handle);
             sqlite3_reset(statementHandle);
           }
@@ -1079,14 +1034,6 @@ fprintf(stderr,"%s, %d:gsdgsdfgdfg \n",__FILE__,__LINE__);
         while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
                && ((timeout == WAIT_FOREVER) || (n < (timeout+SLEEP_TIME-1L)/SLEEP_TIME))
               );
-if (sqliteResult == SQLITE_BUSY)
-{
-fprintf(stderr,"%s, %d: still SQLITE_BUSY %d %ld\n",__FILE__,__LINE__,n,timeout);
-debugDumpCurrentStackTrace(stderr,0,0);
-asm("int3");
-sqlite3_reset(statementHandle);
-sqliteResult = sqlite3_step(statementHandle);
-}
 
         // process row
         if      (sqliteResult == SQLITE_ROW)
@@ -1098,10 +1045,8 @@ sqliteResult = sqlite3_step(statementHandle);
               names[i]  = sqlite3_column_name(statementHandle,i);
               values[i] = (const char*)sqlite3_column_text(statementHandle,i);
             }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
             error = databaseRowFunction(count,names,values,databaseRowUserData);
-  //TODO callback
+//TODO callback
           }
         }
       }
@@ -1109,7 +1054,6 @@ asm("int3");
       if (sqliteResult != SQLITE_DONE)
       {
         error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
-fprintf(stderr,"%s, %d: %d %s -- %s\n",__FILE__,__LINE__,sqliteResult,Error_getText(error),sqlString);
       }
 
       // free call-back data
@@ -1132,7 +1076,6 @@ fprintf(stderr,"%s, %d: %d %s -- %s\n",__FILE__,__LINE__,sqliteResult,Error_getT
   }
 
   sqlite3_finalize(statementHandle);
-#endif
 
   return error;
 
@@ -2804,16 +2747,9 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
             DATABASE_UNLOCK(databaseHandle),
   {
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-//    databaseRowCallback.function = databaseRowFunction;
-//    databaseRowCallback.userData = databaseRowUserData;
-
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
-//TODO:
-//                         (databaseRowFunction != NULL) ? executeCallback : NULL,
-//                         (databaseRowFunction != NULL) ? &databaseRowCallback : NULL,
-databaseRowFunction,
-databaseRowUserData,
+                         CALLBACK(databaseRowFunction,databaseRowUserData),
                          databaseHandle->timeout
                         );
   });
