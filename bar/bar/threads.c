@@ -341,13 +341,13 @@ LOCAL void debugThreadDumpStackTrace(pthread_t threadId)
 /***********************************************************************\
 * Name   : debugThreadDumpAllStackTraces
 * Purpose: dump stacktraces of all threads
-* Input  : -
+* Input  : reason - reason text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void debugThreadDumpAllStackTraces(void)
+LOCAL void debugThreadDumpAllStackTraces(const char *reason)
 {
   const char      *name;
   struct timespec timeout;
@@ -392,13 +392,13 @@ LOCAL void debugThreadDumpAllStackTraces(void)
           {
             // trigger print stack trace in thread
             #ifndef NDEBUG
-//fprintf(stderr,"%s, %d: send %s %p\n",__FILE__,__LINE__,debugStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),debugStackTraceThreads[debugStackTraceThreadIndex].id);
+//fprintf(stderr,"%s, %d: send %s %p\n",__FILE__,__LINE__,debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
               if (pthread_kill(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id,SIGQUIT) == 0)
               {
                 // wait for done signal
-//fprintf(stderr,"%s, %d: wait %p: %s %p \n",__FILE__,__LINE__,pthread_self(),debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugStackTraceThreadIndex].id),debugStackTraceThreads[debugStackTraceThreadIndex].id);
+//fprintf(stderr,"%s, %d: wait %p: %s %p \n",__FILE__,__LINE__,pthread_self(),debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
                 clock_gettime(CLOCK_REALTIME,&timeout);
-                timeout.tv_sec += 2;
+                timeout.tv_sec += 5;
                 if (pthread_cond_timedwait(&debugThreadStackTraceDone,&debugThreadStackTraceLock,&timeout) != 0)
                 {
                   // wait for done fail
@@ -447,11 +447,12 @@ LOCAL void debugThreadDumpAllStackTraces(void)
             {
               name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
               fprintf(stderr,
-                    "Thread stack trace %02d/%02d: '%s' (0x%lx) *** CRASHED ***\n",
+                    "Thread stack trace %02d/%02d: '%s' (0x%lx)%s\n",
                     debugThreadStackTraceThreadIndex+1,
                     debugThreadStackTraceThreadCount,
                     (name != NULL) ? name : "<none>",
-                    debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id
+                    debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id,
+                    (reason != NULL) ? reason : ""
                    );
               #ifndef NDEBUG
                 debugDumpCurrentStackTrace(stderr,0,1);
@@ -491,7 +492,7 @@ LOCAL void debugThreadSignalSegVHandler(int signalNumber, siginfo_t *siginfo, vo
   {
     pthread_mutex_lock(&debugThreadSignalLock);
     {
-      debugThreadDumpAllStackTraces();
+      debugThreadDumpAllStackTraces(" *** CRASHED ***");
     }
     pthread_mutex_unlock(&debugThreadSignalLock);
   }
@@ -523,7 +524,7 @@ LOCAL void debugThreadSignalAbortHandler(int signalNumber, siginfo_t *siginfo, v
 #else /* not NDEBUG */
     pthread_mutex_lock(&debugThreadSignalLock);
     {
-      debugThreadDumpAllStackTraces();
+      debugThreadDumpAllStackTraces(" *** ABORTED ***");
     }
     pthread_mutex_unlock(&debugThreadSignalLock);
 #endif /* NDEBUG */
@@ -550,13 +551,16 @@ LOCAL void debugThreadSignalQuitHandler(int signalNumber, siginfo_t *siginfo, vo
 {
   if (signalNumber == SIGQUIT)
   {
-    debugThreadDumpAllStackTraces();
+    debugThreadDumpAllStackTraces(NULL);
   }
 
+  // Note: do not call previouos handler
+#if 0
   if (debugThreadSignalQuitPrevHandler.sa_sigaction != NULL)
   {
     debugThreadSignalQuitPrevHandler.sa_sigaction(signalNumber,siginfo,context);
   }
+#endif
 }
 
 /***********************************************************************\
