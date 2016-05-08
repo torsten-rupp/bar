@@ -1619,6 +1619,10 @@ Errors __File_openCString(const char *__fileName__,
 {
   int     fileDescriptor;
   Errors  error;
+  #ifdef HAVE_O_NOATIME
+  #else /* not HAVE_O_NOATIME */
+    struct stat stat;
+  #endif /* HAVE_O_NOATIME */
   String  pathName;
 
   assert(fileHandle != NULL);
