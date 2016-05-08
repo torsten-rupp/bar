@@ -7961,9 +7961,20 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
     filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
     filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","%s IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",newestOnly ? "entriesNewest.entryId" : "entries.id",ftsName);
-//    filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
-    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+    if (newestOnly)
+    {
+      filterAppend(filter,!String_isEmpty(ftsName),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//      filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entriesNewest.name)",regexpString);
+      filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+      filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+    }
+    else
+    {
+      filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//      filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
+      filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+      filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+    }
     BLOCK_DOX(error,
               Database_lock(&indexHandle->databaseHandle),
               Database_unlock(&indexHandle->databaseHandle),
@@ -7975,18 +7986,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN storage ON storage.id=%s.storageId \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     %S \
-                                        AND %s.type IN (%S) \
+                                  WHERE %S \
                                ",
                                newestOnly ? "entriesNewest" : "entries",
                                newestOnly ? "entriesNewest" : "entries",
                                newestOnly ? "entriesNewest" : "entries",
                                newestOnly ? "entriesNewest" : "entries",
-                               filter,
-                               newestOnly ? "entriesNewest" : "entries",
-                               getIndexTypeSetString(indexTypeSetString,indexTypeSet)
+                               filter
                               );
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (error != ERROR_NONE)
       {
         return error;
@@ -8101,20 +8109,19 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIds,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
   filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","entries.storageId IN (%S)",storageIdsString);  // Note: use entries.storageId instead of storage.id: this is must faster
+  filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
   if (newestOnly)
   {
     filterAppend(filter,!String_isEmpty(ftsName),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
-    filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
 //TODO: use entriesNewest.entryId?
-    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
     filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
   }
   else
   {
     filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
-    filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
     filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
     filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
   }
