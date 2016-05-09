@@ -13047,22 +13047,23 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
     return;
   }
-  while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // uuidId
-                              NULL,  // jobUUID
-                              NULL,  // entityId
-                              NULL,  // scheduleUUID
-                              NULL,  // archiveType
-                              &storageId,
-                              storageName,
-                              NULL,  // createdDateTime
-                              &totalEntryCount,
-                              &totalEntrySize,
-                              NULL,  // indexState
-                              NULL,  // indexMode
-                              NULL,  // lastCheckedDateTime
-                              NULL  // errorMessage
-                             )
+  while (   !isCommandAborted(clientInfo,id)
+         && Index_getNextStorage(&indexQueryHandle,
+                                 NULL,  // uuidId
+                                 NULL,  // jobUUID
+                                 NULL,  // entityId
+                                 NULL,  // scheduleUUID
+                                 NULL,  // archiveType
+                                 &storageId,
+                                 storageName,
+                                 NULL,  // createdDateTime
+                                 &totalEntryCount,
+                                 &totalEntrySize,
+                                 NULL,  // indexState
+                                 NULL,  // indexMode
+                                 NULL,  // lastCheckedDateTime
+                                 NULL  // errorMessage
+                                )
         )
   {
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
@@ -13297,27 +13298,28 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
     return;
   }
-  while (Index_getNextEntry(&indexQueryHandle,
-                            NULL, // uuidId,
-                            NULL, // jobUUID,
-                            NULL, // entityId,
-                            NULL, // scheduleUUID,
-                            NULL, // archiveType,
-                            NULL, // storageId,
-                            NULL, // storageName
-                            NULL, // storageDateTime
-                            &entryId,
-                            entryName,
-                            NULL,  // destinationName
-                            NULL,  // fileSystemType
-                            &size,  // size
-                            NULL,  // timeModified
-                            NULL,  // userId
-                            NULL,  // groupId
-                            NULL,  // permission
-                            NULL,  // fragmentOrBlockOffset
-                            NULL  // fragmentSizeOrBlockCount
-                           )
+  while (   !isCommandAborted(clientInfo,id)
+         && Index_getNextEntry(&indexQueryHandle,
+                               NULL, // uuidId,
+                               NULL, // jobUUID,
+                               NULL, // entityId,
+                               NULL, // scheduleUUID,
+                               NULL, // archiveType,
+                               NULL, // storageId,
+                               NULL, // storageName
+                               NULL, // storageDateTime
+                               &entryId,
+                               entryName,
+                               NULL,  // destinationName
+                               NULL,  // fileSystemType
+                               &size,  // size
+                               NULL,  // timeModified
+                               NULL,  // userId
+                               NULL,  // groupId
+                               NULL,  // permission
+                               NULL,  // fragmentOrBlockOffset
+                               NULL  // fragmentSizeOrBlockCount
+                              )
         )
   {
     switch (Index_getType(entryId))
@@ -13882,22 +13884,23 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                       );
         if (error == ERROR_NONE)
         {
-          while (Index_getNextStorage(&indexQueryHandle,
-                                      NULL,  // uuidId
-                                      NULL,  // jobUUID
-                                      NULL,  // entityId
-                                      NULL,  // scheduleUUID
-                                      NULL,  // archiveType
-                                      NULL,  // storageId
-                                      storageName,
-                                      NULL,  // createdDateTime
-                                      NULL,  // totalEntryCount
-                                      NULL,  // totalEntrySize
-                                      NULL,  // indexState,
-                                      NULL,  // indexMode,
-                                      NULL,  // lastCheckedDateTime,
-                                      NULL   // errorMessage
-                                     )
+          while (   !isCommandAborted(clientInfo,id)
+                 && Index_getNextStorage(&indexQueryHandle,
+                                         NULL,  // uuidId
+                                         NULL,  // jobUUID
+                                         NULL,  // entityId
+                                         NULL,  // scheduleUUID
+                                         NULL,  // archiveType
+                                         NULL,  // storageId
+                                         storageName,
+                                         NULL,  // createdDateTime
+                                         NULL,  // totalEntryCount
+                                         NULL,  // totalEntrySize
+                                         NULL,  // indexState,
+                                         NULL,  // indexMode,
+                                         NULL,  // lastCheckedDateTime,
+                                         NULL   // errorMessage
+                                        )
                 )
           {
             StringList_append(&storageNameList,storageName);
@@ -13921,27 +13924,28 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                    );
       if (error == ERROR_NONE)
       {
-        while (Index_getNextEntry(&indexQueryHandle,
-                                  NULL, // uuidId,
-                                  NULL, // jobUUID,
-                                  NULL, // entityId,
-                                  NULL, // scheduleUUID,
-                                  NULL, // archiveType,
-                                  NULL, // storageId,
-                                  storageName, // storageName
-                                  NULL, // storageDateTime
-                                  NULL, // entryId,
-                                  entryName,
-                                  NULL,  // destinationName
-                                  NULL,  // fileSystemType
-                                  NULL,  // size
-                                  NULL,  // timeModified
-                                  NULL,  // userId
-                                  NULL,  // groupId
-                                  NULL,  // permission
-                                  NULL,  // fragmentOrBlockOffset
-                                  NULL // fragmentSizeOrBlockCount
-                                 )
+        while (   !isCommandAborted(clientInfo,id)
+               && Index_getNextEntry(&indexQueryHandle,
+                                     NULL, // uuidId,
+                                     NULL, // jobUUID,
+                                     NULL, // entityId,
+                                     NULL, // scheduleUUID,
+                                     NULL, // archiveType,
+                                     NULL, // storageId,
+                                     storageName, // storageName
+                                     NULL, // storageDateTime
+                                     NULL, // entryId,
+                                     entryName,
+                                     NULL,  // destinationName
+                                     NULL,  // fileSystemType
+                                     NULL,  // size
+                                     NULL,  // timeModified
+                                     NULL,  // userId
+                                     NULL,  // groupId
+                                     NULL,  // permission
+                                     NULL,  // fragmentOrBlockOffset
+                                     NULL // fragmentSizeOrBlockCount
+                                    )
               )
         {
           if (!StringList_contain(&storageNameList,storageName))
@@ -15503,22 +15507,23 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       String_delete(patternString);
       return;
     }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // jobUUID
-                                NULL,  // entityId
-                                NULL,  // scheduleUUID
-                                NULL,  // archiveType
-                                &storageId,
-                                NULL,  // storageName
-                                NULL,  // createdDateTime
-                                NULL,  // totalEntryCount
-                                NULL,  // totalEntrySize
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
+    while (   !isCommandAborted(clientInfo,id)
+           && Index_getNextStorage(&indexQueryHandle,
+                                   NULL,  // uuidId
+                                   NULL,  // jobUUID
+                                   NULL,  // entityId
+                                   NULL,  // scheduleUUID
+                                   NULL,  // archiveType
+                                   &storageId,
+                                   NULL,  // storageName
+                                   NULL,  // createdDateTime
+                                   NULL,  // totalEntryCount
+                                   NULL,  // totalEntrySize
+                                   NULL,  // indexState
+                                   NULL,  // indexMode
+                                   NULL,  // lastCheckedDateTime
+                                   NULL  // errorMessage
+                                  )
           )
     {
       if (stateAny || (state == indexState))
@@ -15558,22 +15563,23 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       String_delete(patternString);
       return;
     }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // jobUUID
-                                NULL,  // entityId
-                                NULL,  // scheduleUUID
-                                NULL,  // archiveType
-                                &storageId,
-                                NULL,  // storageName
-                                NULL,  // createdDateTime
-                                NULL,  // totalEntryCount
-                                NULL,  // totalEntrySize
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
+    while (   !isCommandAborted(clientInfo,id)
+           && Index_getNextStorage(&indexQueryHandle,
+                                   NULL,  // uuidId
+                                   NULL,  // jobUUID
+                                   NULL,  // entityId
+                                   NULL,  // scheduleUUID
+                                   NULL,  // archiveType
+                                   &storageId,
+                                   NULL,  // storageName
+                                   NULL,  // createdDateTime
+                                   NULL,  // totalEntryCount
+                                   NULL,  // totalEntrySize
+                                   NULL,  // indexState
+                                   NULL,  // indexMode
+                                   NULL,  // lastCheckedDateTime
+                                   NULL  // errorMessage
+                                  )
           )
     {
       if (stateAny || (state == indexState))
@@ -15625,22 +15631,23 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       String_delete(patternString);
       return;
     }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // jobUUID
-                                NULL,  // scheduleUUID
-                                NULL,  // entityId
-                                NULL,  // archiveType
-                                &storageId,
-                                NULL,  // storageName
-                                NULL,  // createdDateTime
-                                NULL,  // totalEntryCount
-                                NULL,  // totalEntrySize
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
+    while (   !isCommandAborted(clientInfo,id)
+           && Index_getNextStorage(&indexQueryHandle,
+                                   NULL,  // uuidId
+                                   NULL,  // jobUUID
+                                   NULL,  // scheduleUUID
+                                   NULL,  // entityId
+                                   NULL,  // archiveType
+                                   &storageId,
+                                   NULL,  // storageName
+                                   NULL,  // createdDateTime
+                                   NULL,  // totalEntryCount
+                                   NULL,  // totalEntrySize
+                                   NULL,  // indexState
+                                   NULL,  // indexMode
+                                   NULL,  // lastCheckedDateTime
+                                   NULL  // errorMessage
+                                  )
           )
     {
       if (stateAny || (state == indexState))
@@ -15691,22 +15698,23 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       String_delete(patternString);
       return;
     }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // jobUUID
-                                NULL,  // scheduleUUID
-                                NULL,  // entityId
-                                NULL,  // archiveType
-                                &storageId,
-                                storageName,
-                                NULL,  // createdDateTime
-                                NULL,  // totalEntryCount
-                                NULL,  // totalEntrySize
-                                &indexState,
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL  // errorMessage
-                               )
+    while (   !isCommandAborted(clientInfo,id)
+           && Index_getNextStorage(&indexQueryHandle,
+                                   NULL,  // uuidId
+                                   NULL,  // jobUUID
+                                   NULL,  // scheduleUUID
+                                   NULL,  // entityId
+                                   NULL,  // archiveType
+                                   &storageId,
+                                   storageName,
+                                   NULL,  // createdDateTime
+                                   NULL,  // totalEntryCount
+                                   NULL,  // totalEntrySize
+                                   &indexState,
+                                   NULL,  // indexMode
+                                   NULL,  // lastCheckedDateTime
+                                   NULL  // errorMessage
+                                  )
           )
     {
       if (   (stateAny || (state == indexState))
