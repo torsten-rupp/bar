@@ -7754,15 +7754,16 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterIds          = String_new();
   indexTypeSetString = String_new();
 
-  if (String_isEmpty(ftsName) && (entryIdCount == 0))
+  // get filter
+  filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
+  filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
+  filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
+  String_delete(filterIds);
+
+  if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
     // no pattern/no entries selected
-
-    // get filter
-    filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-    filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-    filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
-    filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
 
     BLOCK_DOX(error,
               Database_lock(&indexHandle->databaseHandle),
@@ -7957,20 +7958,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     // pattern/entries selected
 
     // get filter
-    filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-    filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-    filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
-    filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
+    filterAppend(filter,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
     if (newestOnly)
     {
-      filterAppend(filter,!String_isEmpty(ftsName),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //      filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entriesNewest.name)",regexpString);
       filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
       filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
     else
     {
-      filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //      filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
       filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
       filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
@@ -7979,26 +7975,42 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               Database_lock(&indexHandle->databaseHandle),
               Database_unlock(&indexHandle->databaseHandle),
     {
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT COUNT(%s.id),TOTAL(%s.size) \
-                                  FROM %s \
-                                    LEFT JOIN storage ON storage.id=%s.storageId \
-                                    LEFT JOIN entities ON entities.id=storage.entityId \
-                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
-                               ",
-                               newestOnly ? "entriesNewest" : "entries",
-                               newestOnly ? "entriesNewest" : "entries",
-                               newestOnly ? "entriesNewest" : "entries",
-                               newestOnly ? "entriesNewest" : "entries",
-                               filter
-                              );
-Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (newestOnly)
+      {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT COUNT(entriesNewest.id),TOTAL(entriesNewest.size) \
+                                    FROM FTS_entries \
+                                      LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
+                                      LEFT JOIN entries ON entries.id=entriesNewest.entryId \
+                                      LEFT JOIN storage ON storage.id=entries.storageId \
+                                      LEFT JOIN entities ON entities.id=storage.entityId \
+                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                    WHERE %S \
+                                 ",
+                                 filter
+                                );
+      }
+      else
+      {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT COUNT(entries.id),TOTAL(entries.size) \
+                                    FROM FTS_entries \
+                                      LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                                      LEFT JOIN storage ON storage.id=entries.storageId \
+                                      LEFT JOIN entities ON entities.id=storage.entityId \
+                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                    WHERE %S \
+                                 ",
+                                 filter
+                                );
+      }
       if (error != ERROR_NONE)
       {
         return error;
       }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (Database_getNextRow(&databaseQueryHandle,
                               "%lf %lf",
                               &count_,
@@ -8019,7 +8031,6 @@ Database_debugPrintQueryInfo(&databaseQueryHandle);
 
   // free resources
   String_delete(indexTypeSetString);
-  String_delete(filterIds);
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
@@ -8112,126 +8123,247 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
   if (newestOnly)
   {
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//    filterAppend(filter,!String_isEmpty(ftsName),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
 //TODO: use entriesNewest.entryId?
-    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+//    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
     filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
   }
   else
   {
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//    filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
-    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+//    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
     filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
   }
   String_delete(filterIds);
-  String_delete(indexTypeSetString);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
-  if (newestOnly)
+  if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
-    error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT uuids.id, \
-                                     uuids.jobUUID, \
-                                     entities.id, \
-                                     entities.scheduleUUID, \
-                                     entities.type, \
-                                     storage.id, \
-                                     storage.name, \
-                                     UNIXTIMESTAMP(storage.created), \
-                                     entriesNewest.entryId, \
-                                     entriesNewest.type, \
-                                     entriesNewest.name, \
-                                     entriesNewest.timeLastChanged, \
-                                     entriesNewest.userId, \
-                                     entriesNewest.groupId, \
-                                     entriesNewest.permission, \
-                                     fileEntries.size, \
-                                     fileEntries.fragmentOffset, \
-                                     fileEntries.fragmentSize, \
-                                     imageEntries.size, \
-                                     imageEntries.fileSystemType, \
-                                     imageEntries.blockSize, \
-                                     imageEntries.blockOffset, \
-                                     imageEntries.blockCount, \
-                                     directoryEntries.totalEntrySizeNewest, \
-                                     linkEntries.destinationName, \
-                                     hardlinkEntries.size \
-                              FROM entriesNewest \
-                                LEFT JOIN storage ON storage.id=entriesNewest.storageId \
-                                LEFT JOIN entities ON entities.id=storage.entityId \
-                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.entryId \
-                                LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.entryId \
-                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
-                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
-                              WHERE %S \
-                              ORDER BY entriesNewest.name \
-                              LIMIT %llu,%llu; \
-                             ",
-                             filter,
-                             offset,
-                             limit
-                            );
+    // no pattern/no entries selected
+
+    if (newestOnly)
+    {
+      error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       uuids.jobUUID, \
+                                       entities.id, \
+                                       entities.scheduleUUID, \
+                                       entities.type, \
+                                       storage.id, \
+                                       storage.name, \
+                                       UNIXTIMESTAMP(storage.created), \
+                                       entriesNewest.entryId, \
+                                       entriesNewest.type, \
+                                       entriesNewest.name, \
+                                       entriesNewest.timeLastChanged, \
+                                       entriesNewest.userId, \
+                                       entriesNewest.groupId, \
+                                       entriesNewest.permission, \
+                                       fileEntries.size, \
+                                       fileEntries.fragmentOffset, \
+                                       fileEntries.fragmentSize, \
+                                       imageEntries.size, \
+                                       imageEntries.fileSystemType, \
+                                       imageEntries.blockSize, \
+                                       imageEntries.blockOffset, \
+                                       imageEntries.blockCount, \
+                                       directoryEntries.totalEntrySizeNewest, \
+                                       linkEntries.destinationName, \
+                                       hardlinkEntries.size \
+                                FROM entriesNewest \
+                                  LEFT JOIN storage ON storage.id=entriesNewest.storageId \
+                                  LEFT JOIN entities ON entities.id=storage.entityId \
+                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
+                                WHERE %S \
+                                ORDER BY entriesNewest.name \
+                                LIMIT %llu,%llu; \
+                               ",
+                               filter,
+                               offset,
+                               limit
+                              );
+    }
+    else
+    {
+      error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       uuids.jobUUID, \
+                                       entities.id, \
+                                       entities.scheduleUUID, \
+                                       entities.type, \
+                                       storage.id, \
+                                       storage.name, \
+                                       UNIXTIMESTAMP(storage.created), \
+                                       entries.id, \
+                                       entries.type, \
+                                       entries.name, \
+                                       entries.timeLastChanged, \
+                                       entries.userId, \
+                                       entries.groupId, \
+                                       entries.permission, \
+                                       fileEntries.size, \
+                                       fileEntries.fragmentOffset, \
+                                       fileEntries.fragmentSize, \
+                                       imageEntries.size, \
+                                       imageEntries.fileSystemType, \
+                                       imageEntries.blockSize, \
+                                       imageEntries.blockOffset, \
+                                       imageEntries.blockCount, \
+                                       directoryEntries.totalEntrySize, \
+                                       linkEntries.destinationName, \
+                                       hardlinkEntries.size \
+                                FROM entries \
+                                  LEFT JOIN storage ON storage.id=entries.storageId \
+                                  LEFT JOIN entities ON entities.id=storage.entityId \
+                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                                  LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                  LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                                  LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                                WHERE %S \
+                                ORDER BY entries.name \
+                                LIMIT %llu,%llu; \
+                               ",
+                               filter,
+                               offset,
+                               limit
+                              );
+    }
   }
   else
   {
-    error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT uuids.id, \
-                                     uuids.jobUUID, \
-                                     entities.id, \
-                                     entities.scheduleUUID, \
-                                     entities.type, \
-                                     storage.id, \
-                                     storage.name, \
-                                     UNIXTIMESTAMP(storage.created), \
-                                     entries.id, \
-                                     entries.type, \
-                                     entries.name, \
-                                     entries.timeLastChanged, \
-                                     entries.userId, \
-                                     entries.groupId, \
-                                     entries.permission, \
-                                     fileEntries.size, \
-                                     fileEntries.fragmentOffset, \
-                                     fileEntries.fragmentSize, \
-                                     imageEntries.size, \
-                                     imageEntries.fileSystemType, \
-                                     imageEntries.blockSize, \
-                                     imageEntries.blockOffset, \
-                                     imageEntries.blockCount, \
-                                     directoryEntries.totalEntrySize, \
-                                     linkEntries.destinationName, \
-                                     hardlinkEntries.size \
-                              FROM entries \
-                                LEFT JOIN storage ON storage.id=entries.storageId \
-                                LEFT JOIN entities ON entities.id=storage.entityId \
-                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
-                                LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
-                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
-                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
-                              WHERE %S \
-                              ORDER BY entries.name \
-                              LIMIT %llu,%llu; \
-                             ",
-                             filter,
-                             offset,
-                             limit
-                            );
+    // get filter
+    filterAppend(filter,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
+    if (newestOnly)
+    {
+//      filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
+//TODO: use entriesNewest.entryId?
+      filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+//      filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+    }
+    else
+    {
+//      filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
+      filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+//      filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+    }
+
+    if (newestOnly)
+    {
+      error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       uuids.jobUUID, \
+                                       entities.id, \
+                                       entities.scheduleUUID, \
+                                       entities.type, \
+                                       storage.id, \
+                                       storage.name, \
+                                       UNIXTIMESTAMP(storage.created), \
+                                       entriesNewest.entryId, \
+                                       entriesNewest.type, \
+                                       entriesNewest.name, \
+                                       entriesNewest.timeLastChanged, \
+                                       entriesNewest.userId, \
+                                       entriesNewest.groupId, \
+                                       entriesNewest.permission, \
+                                       fileEntries.size, \
+                                       fileEntries.fragmentOffset, \
+                                       fileEntries.fragmentSize, \
+                                       imageEntries.size, \
+                                       imageEntries.fileSystemType, \
+                                       imageEntries.blockSize, \
+                                       imageEntries.blockOffset, \
+                                       imageEntries.blockCount, \
+                                       directoryEntries.totalEntrySizeNewest, \
+                                       linkEntries.destinationName, \
+                                       hardlinkEntries.size \
+                                FROM FTS_entries \
+                                  LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
+                                  LEFT JOIN storage ON storage.id=entriesNewest.storageId \
+                                  LEFT JOIN entities ON entities.id=storage.entityId \
+                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
+                                WHERE %S \
+                                ORDER BY entriesNewest.name \
+                                LIMIT %llu,%llu; \
+                               ",
+                               filter,
+                               offset,
+                               limit
+                              );
+    }
+    else
+    {
+      error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       uuids.jobUUID, \
+                                       entities.id, \
+                                       entities.scheduleUUID, \
+                                       entities.type, \
+                                       storage.id, \
+                                       storage.name, \
+                                       UNIXTIMESTAMP(storage.created), \
+                                       entries.id, \
+                                       entries.type, \
+                                       entries.name, \
+                                       entries.timeLastChanged, \
+                                       entries.userId, \
+                                       entries.groupId, \
+                                       entries.permission, \
+                                       fileEntries.size, \
+                                       fileEntries.fragmentOffset, \
+                                       fileEntries.fragmentSize, \
+                                       imageEntries.size, \
+                                       imageEntries.fileSystemType, \
+                                       imageEntries.blockSize, \
+                                       imageEntries.blockOffset, \
+                                       imageEntries.blockCount, \
+                                       directoryEntries.totalEntrySize, \
+                                       linkEntries.destinationName, \
+                                       hardlinkEntries.size \
+                                FROM FTS_entries \
+                                  LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                                  LEFT JOIN storage ON storage.id=entries.storageId \
+                                  LEFT JOIN entities ON entities.id=storage.entityId \
+                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                                  LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                  LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                                  LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                                WHERE %S \
+                                ORDER BY entries.name \
+                                LIMIT %llu,%llu; \
+                               ",
+                               filter,
+                               offset,
+                               limit
+                              );
+    }
   }
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
+    String_delete(indexTypeSetString);
     String_delete(filter);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
@@ -8242,8 +8374,10 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   // free resources
+  String_delete(indexTypeSetString);
   String_delete(filter);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
