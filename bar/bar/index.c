@@ -4428,20 +4428,6 @@ LOCAL void cleanupIndexThreadCode(void)
   // regular clean-ups
   while (!quitFlag)
   {
-    // clean-up database
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Started regular clean-up index database\n"
-               );
-    (void)cleanUpOrphanedEntries(&indexHandle);
-    (void)cleanUpDuplicateIndizes(&indexHandle);
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Done regular clean-up index database\n"
-               );
-
     // sleep, check quit flag
     sleepTime = 0;
     while ((sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD) && !quitFlag)
@@ -4449,6 +4435,20 @@ LOCAL void cleanupIndexThreadCode(void)
       Misc_udelay(10LL*MISC_US_PER_SECOND);
       sleepTime += 10;
     }
+
+    // clean-up database
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Started regular clean-up index database\n"
+               );
+    if (!quitFlag) (void)cleanUpOrphanedEntries(&indexHandle);
+    if (!quitFlag) (void)cleanUpDuplicateIndizes(&indexHandle);
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Done regular clean-up index database\n"
+               );
   }
 
   // free resources
