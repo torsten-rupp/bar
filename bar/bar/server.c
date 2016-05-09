@@ -4143,6 +4143,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
+                                 DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -5270,6 +5271,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -13038,6 +13040,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
+                                 DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -13282,12 +13285,13 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
   // list entries
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
-                                NULL, // Array_cArray(clientInfo->indexIdArray),
-                                0, // Array_length(clientInfo->indexIdArray),
+                                NULL, // indexIds
+                                0, // indexIdCount
                                 Array_cArray(&clientInfo->entryIdArray),
                                 Array_length(&clientInfo->entryIdArray),
                                 INDEX_TYPE_SET_ANY_ENTRY,
-                                NULL, // pattern
+                                NULL, // name
+                                DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly,
                                 0,
                                 INDEX_UNLIMITED
@@ -13322,6 +13326,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                               )
         )
   {
+fprintf(stderr,"%s, %d: %lld\n",__FILE__,__LINE__,entryId);
     switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:      type = "FILE";      break;
@@ -13879,6 +13884,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
                                        NULL,  // name
+                                       DATABASE_ORDERING_NONE,
                                        0LL,  // offset
                                        INDEX_UNLIMITED
                                       );
@@ -13912,12 +13918,13 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     case ENTRIES:
       error = Index_initListEntries(&indexQueryHandle,
                                     indexHandle,
-                                    NULL, // Array_cArray(clientInfo->indexIdArray),
-                                    0, // Array_length(clientInfo->indexIdArray),
+                                    NULL, // indexIds
+                                    0, // indexIdCount
                                     Array_cArray(&clientInfo->entryIdArray),
                                     Array_length(&clientInfo->entryIdArray),
                                     INDEX_TYPE_SET_ANY_ENTRY,
-                                    NULL, // pattern
+                                    NULL, // name
+                                    DATABASE_ORDERING_NONE,
                                     FALSE,  // newestOnly,
                                     0,
                                     INDEX_UNLIMITED
@@ -14907,6 +14914,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                  patternString,
+                                 DATABASE_ORDERING_NONE,
                                  offset,
                                  limit
                                 );
@@ -15441,6 +15449,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15497,6 +15506,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15553,6 +15563,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15621,6 +15632,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15687,6 +15699,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -15825,6 +15838,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -16077,7 +16091,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
                        jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
                        storageName, \
                        storageDateTime, \
                        entryId, \
@@ -16098,7 +16112,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
                        jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
                        storageName, \
                        storageDateTime, \
                        entryId, \
@@ -16116,7 +16130,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
                        jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
                        storageName, \
                        storageDateTime, \
                        entryId, \
@@ -16134,7 +16148,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
                        jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
                        storageName, \
                        storageDateTime, \
                        entryId, \
@@ -16153,7 +16167,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
                        jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
                        storageName, \
                        storageDateTime, \
                        entryId, \
@@ -16195,7 +16209,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   uint64           limit;
   IndexId          prevUUIDId;
   String           jobName;
-  uint             entryCount;
   String           storageName;
   uint64           storageDateTime;
   String           name;
@@ -16258,7 +16271,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   }
 
   // initialize variables
-  entryCount      = 0;
   prevUUIDId      = INDEX_ID_NONE;
   jobName         = String_new();
   storageName     = String_new();
@@ -16272,6 +16284,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                 0,  // entryIdCount
                                 indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
                                 entryPatternString,
+                                DATABASE_ORDERING_NONE,
                                 newestOnly,
                                 offset,
                                 limit
@@ -16287,7 +16300,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntry(&indexQueryHandle,
                                &uuidId,
-                               NULL,  // jobUUID,
+                               jobUUID,
                                &entityId,
                                NULL,  // scheduleUUID,
                                &archiveType,
@@ -16308,13 +16321,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                               )
         )
   {
+fprintf(stderr,"%s, %d: %lld %s -- %s\n",__FILE__,__LINE__,uuidId,String_cString(jobUUID),String_cString(jobName));
     // get job name
     if (uuidId != prevUUIDId)
     {
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         jobNode = findJobByUUID(jobUUID);
-        if (jobNode != NULL){
+        if (jobNode != NULL)
+        {
           String_set(jobName,jobNode->name);
         }
         else
@@ -16324,6 +16339,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       }
       prevUUIDId = uuidId;
     }
+    if (String_isEmpty(jobName)) String_set(jobName,jobUUID);
 
     // send entry data
     switch (Index_getType(entryId))
@@ -16352,7 +16368,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         #endif /* NDEBUG */
         break;
     }
-    entryCount++;
   }
   Index_doneList(&indexQueryHandle);
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");

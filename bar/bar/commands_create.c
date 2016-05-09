@@ -3512,6 +3512,7 @@ fprintf(stderr,"%s, %d: deleteStorageId=%llu\n",__FILE__,__LINE__,deleteStorageI
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  archiveName,
+                                 DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -3654,6 +3655,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    INDEX_MODE_SET(INDEX_MODE_AUTO),
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -4016,6 +4018,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    INDEX_MODE_SET(INDEX_MODE_AUTO),
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
