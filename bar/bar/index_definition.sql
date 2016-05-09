@@ -387,7 +387,6 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   offset          INTEGER DEFAULT 0,       // Note: redundancy for faster access
   size            INTEGER DEFAULT 0,       // Note: redundancy for faster access
 
-//  FOREIGN KEY(entryId) REFERENCES entries(id),
   CONSTRAINT newest UNIQUE (name,offset,size)
 );
 CREATE INDEX ON entriesNewest (entryId,name,offset,size,timeLastChanged);
@@ -474,27 +473,6 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
       SET storageId=NEW.storageId
       WHERE entryId=OLD.id;
   END;
-
-//TODO: zusammen mit storageId?
-/*
-CREATE TRIGGER AFTER UPDATE OF size ON entries
-  BEGIN
-    // update count/size in storage
-    UPDATE storage
-      SET totalEntrySize   =totalEntrySize   -OLD.size,
-          totalFileSize    =totalFileSize    -CASE OLD.type WHEN $TYPE_FILE     THEN OLD.size ELSE 0 END,
-          totalImageSize   =totalImageSize   -CASE OLD.type WHEN $TYPE_IMAGE    THEN OLD.size ELSE 0 END,
-          totalHardlinkSize=totalHardlinkSize-CASE OLD.type WHEN $TYPE_HARDLINK THEN OLD.size ELSE 0 END
-      WHERE storage.id=OLD.storageId;
-
-    UPDATE storage
-      SET totalEntrySize   =totalEntrySize   +NEW.size,
-          totalFileSize    =totalFileSize    +CASE NEW.type WHEN $TYPE_FILE     THEN NEW.size ELSE 0 END,
-          totalImageSize   =totalImageSize   +CASE NEW.type WHEN $TYPE_IMAGE    THEN NEW.size ELSE 0 END,
-          totalHardlinkSize=totalHardlinkSize+CASE NEW.type WHEN $TYPE_HARDLINK THEN NEW.size ELSE 0 END
-      WHERE storage.id=NEW.storageId;
-  END;
-*/
 
 CREATE TRIGGER AFTER UPDATE OF name ON entries
   BEGIN
