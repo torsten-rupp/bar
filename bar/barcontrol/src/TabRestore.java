@@ -2031,9 +2031,7 @@ Dprintf.dprintf("cirrect?");
                                    // check if aborted
                                    if (isUpdateTriggered())
                                    {
-Dprintf.dprintf("");
-  //TODO
-  //                                     abort();
+                                     abort();
                                    }
 
                                    return Errors.NONE;
@@ -2709,8 +2707,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                      // check if aborted
                                      if (isUpdateTriggered() || (n[0] >= limit))
                                      {
-  //TODO
-  //                                     abort();
+                                       abort();
                                      }
 
                                      return Errors.NONE;
@@ -2799,7 +2796,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
 
       // update UUIDs menu items
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=*"),
-                               1,  // debugLevel
+0,//                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -3069,9 +3066,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                      // check if aborted
                                      if (isUpdateTriggered())
                                      {
-    Dprintf.dprintf("");
-    //TODO
-    //                                     abort();
+                                       abort();
                                      }
 
                                      return Errors.NONE;
@@ -3215,17 +3210,21 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
    */
   class EntryIndexData extends IndexData
   {
-    String        storageName;
-    long          storageDateTime;
-    EntryTypes    entryType;
-    String        name;
-    long          dateTime;
-    long          size;
-    boolean       checked;
-    RestoreStates restoreState;
+    String                jobName;
+    Settings.ArchiveTypes archiveType;
+    String                storageName;
+    long                  storageDateTime;
+    EntryTypes            entryType;
+    String                name;
+    long                  dateTime;
+    long                  size;
+    boolean               checked;
+    RestoreStates         restoreState;
 
     /** create entry data
      * @param entryId entry id
+     * @param jobName job name
+     * @param archiveType archive type
      * @param storageName storage archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
@@ -3233,9 +3232,11 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    EntryIndexData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    EntryIndexData(long entryId, String jobName, Settings.ArchiveTypes archiveType, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
       super(entryId);
+      this.jobName         = jobName;
+      this.archiveType     = archiveType;
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
       this.entryType       = entryType;
@@ -3248,15 +3249,17 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
 
     /** create entry data
      * @param entryId entry id
+     * @param jobName job name
+     * @param archiveType archive type
      * @param storageName archive name
      * @param storageDateTime archive date/time (timestamp)
      * @param entryType entry type
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    EntryIndexData(long entryId, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    EntryIndexData(long entryId, String jobName, Settings.ArchiveTypes archiveType, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
-      this(entryId,storageName,storageDateTime,entryType,name,dateTime,0L);
+      this(entryId,jobName,archiveType,storageName,storageDateTime,entryType,name,dateTime,0L);
     }
 
     /** get number of entries
@@ -3756,23 +3759,28 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
                                    try
                                    {
+                                     String                jobName         = valueMap.getString("jobName"        );
+                                     Settings.ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+                                     long   entryId                        = valueMap.getLong  ("entryId"        );
+//                                     String jobUUID                        = valueMap.getString("storageName"    );
+//                                     String entityType                     = valueMap.getString("storageName"    );
+                                     String                storageName     = valueMap.getString("storageName"    );
+                                     long                  storageDateTime = valueMap.getLong  ("storageDateTime");
+
                                      switch (valueMap.getEnum("entryType",EntryTypes.class))
                                      {
                                        case FILE:
                                          {
-                                           long   entryId         = valueMap.getLong  ("entryId"        );
-//                                           String jobUUID         = valueMap.getString("storageName"    );
-//                                           String entityType      = valueMap.getString("storageName"    );
-                                           String storageName     = valueMap.getString("storageName"    );
-                                           long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                                           String fileName        = valueMap.getString("name"           );
-                                           long   dateTime        = valueMap.getLong  ("dateTime"       );
-                                           long   size            = valueMap.getLong  ("size"           );
-                                           long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                                           long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+                                           String fileName       = valueMap.getString("name"          );
+                                           long   dateTime       = valueMap.getLong  ("dateTime"      );
+                                           long   size           = valueMap.getLong  ("size"          );
+                                           long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
+                                           long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
 
                                            // add entry data index
                                            final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    jobName,
+                                                                                                    archiveType,
                                                                                                     storageName,
                                                                                                     storageDateTime,
                                                                                                     EntryTypes.FILE,
@@ -3802,16 +3810,15 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                          break;
                                        case IMAGE:
                                          {
-                                           long   entryId         = valueMap.getLong  ("entryId"        );
-                                           String storageName     = valueMap.getString("storageName"    );
-                                           long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                                           String imageName       = valueMap.getString("name"           );
-                                           long   size            = valueMap.getLong  ("size"           );
-                                           long   blockOffset     = valueMap.getLong  ("blockOffset"    );
-                                           long   blockCount      = valueMap.getLong  ("blockCount"     );
+                                           String imageName   = valueMap.getString("name"       );
+                                           long   size        = valueMap.getLong  ("size"       );
+                                           long   blockOffset = valueMap.getLong  ("blockOffset");
+                                           long   blockCount  = valueMap.getLong  ("blockCount" );
 
                                            // add entry data index
                                            final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    jobName,
+                                                                                                    archiveType,
                                                                                                     storageName,
                                                                                                     storageDateTime,
                                                                                                     EntryTypes.IMAGE,
@@ -3842,14 +3849,13 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                          break;
                                        case DIRECTORY:
                                          {
-                                           long   entryId         = valueMap.getLong  ("entryId"        );
-                                           String storageName     = valueMap.getString("storageName"    );
-                                           long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                                           String directoryName   = valueMap.getString("name"           );
-                                           long   dateTime        = valueMap.getLong  ("dateTime"       );
+                                           String directoryName = valueMap.getString("name"    );
+                                           long   dateTime      = valueMap.getLong  ("dateTime");
 
                                            // add entry data index
                                            final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    jobName,
+                                                                                                    archiveType,
                                                                                                     storageName,
                                                                                                     storageDateTime,
                                                                                                     EntryTypes.DIRECTORY,
@@ -3879,15 +3885,14 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                          break;
                                        case LINK:
                                          {
-                                           long   entryId         = valueMap.getLong  ("entryId"        );
-                                           String storageName     = valueMap.getString("storageName"    );
-                                           long   storageDateTime = valueMap.getLong  ("storageDateTime");
                                            String linkName        = valueMap.getString("name"           );
                                            String destinationName = valueMap.getString("destinationName");
                                            long   dateTime        = valueMap.getLong  ("dateTime"       );
 
                                            // add entry data index
                                            final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    jobName,
+                                                                                                    archiveType,
                                                                                                     storageName,
                                                                                                     storageDateTime,
                                                                                                     EntryTypes.LINK,
@@ -3917,17 +3922,16 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                          break;
                                        case HARDLINK:
                                          {
-                                           long   entryId         = valueMap.getLong  ("entryId"        );
-                                           String storageName     = valueMap.getString("storageName"    );
-                                           long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                                           String fileName        = valueMap.getString("name"           );
-                                           long   dateTime        = valueMap.getLong  ("dateTime"       );
-                                           long   size            = valueMap.getLong  ("size"           );
-                                           long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                                           long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+                                           String fileName       = valueMap.getString("name"          );
+                                           long   dateTime       = valueMap.getLong  ("dateTime"      );
+                                           long   size           = valueMap.getLong  ("size"          );
+                                           long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
+                                           long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
 
                                            // add entry data index
                                            final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    jobName,
+                                                                                                    archiveType,
                                                                                                     storageName,
                                                                                                     storageDateTime,
                                                                                                     EntryTypes.HARDLINK,
@@ -3959,14 +3963,13 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                        case SPECIAL:
                                          {
 
-                                           long   entryId         = valueMap.getLong  ("entryId"        );
-                                           String storageName     = valueMap.getString("storageName"    );
-                                           long   storageDateTime = valueMap.getLong  ("storageDateTime");
-                                           String name            = valueMap.getString("name"           );
-                                           long   dateTime        = valueMap.getLong  ("dateTime"       );
+                                           String name     = valueMap.getString("name"    );
+                                           long   dateTime = valueMap.getLong  ("dateTime");
 
                                            // add entry data index
                                            final EntryIndexData entryIndexData = new EntryIndexData(entryId,
+                                                                                                    jobName,
+                                                                                                    archiveType,
                                                                                                     storageName,
                                                                                                     storageDateTime,
                                                                                                     EntryTypes.SPECIAL,
@@ -4010,8 +4013,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                    // check if aborted
                                    if (isUpdateTriggered() || (n[0] >= limit))
                                    {
-Dprintf.dprintf("");
-//                                     abort();
+                                     abort();
                                    }
 
                                    return Errors.NONE;
@@ -4500,17 +4502,17 @@ Dprintf.dprintf("");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetEntryTableToolTip,"???");
+    label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.jobName);
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
-    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Entity")+":");
+    label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetEntryTableToolTip,"???");
+    label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.archiveType.toString());
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4588,12 +4590,10 @@ Dprintf.dprintf("");
     {
       public void mouseEnter(MouseEvent mouseEvent)
       {
-Dprintf.dprintf("");
       }
 
       public void mouseExit(MouseEvent mouseEvent)
       {
-Dprintf.dprintf("");
         if (widgetEntryTableToolTip != null)
         {
           // check if inside sub-widget
@@ -5943,8 +5943,7 @@ Dprintf.dprintf("remove");
                 EntryIndexData entryIndexData = (EntryIndexData)tableItems[0].getData();
                 if (entryIndexData != null)
                 {
-//TODO
-                  Point point = display.getCursorLocation();//widgetEntryTable.toDisplay(selectionEvent.x+16,selectionEvent.y);
+                  Point point = display.getCursorLocation();
                   if (point.x > 16) point.x -= 16;
                   if (point.y > 16) point.y -= 16;
                   showEntryToolTip(entryIndexData,point.x,point.y);
