@@ -4428,7 +4428,6 @@ LOCAL void cleanupIndexThreadCode(void)
   // regular clean-ups
   while (!quitFlag)
   {
-#if 0
     // clean-up database
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
@@ -4442,7 +4441,6 @@ LOCAL void cleanupIndexThreadCode(void)
                 "INDEX",
                 "Done regular clean-up index database\n"
                );
-#endif
 
     // sleep, check quit flag
     sleepTime = 0;
