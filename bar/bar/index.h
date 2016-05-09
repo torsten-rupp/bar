@@ -831,7 +831,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 *          jobUUID          - job UUID or NULL
 *          scheduleUUID     - unique schedule id (can be NULL)
 *          name             - storage name pattern (glob, can be NULL)
-*          ordering         - ordering
+*          ordering         - ordering mode
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -971,6 +971,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexStateSet    indexStateSet,
                               IndexModeSet     indexModeSet,
                               ConstString      name,
+                              DatabaseOrdering ordering,
                               uint64           offset,
                               uint64           limit
                              );
@@ -1181,6 +1182,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              ConstString      name,
+                             DatabaseOrdering ordering,
                              bool             newestOnly,
                              uint64           offset,
                              uint64           limit

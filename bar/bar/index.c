@@ -3695,6 +3695,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                 0,  // entryIdCount
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL,  // entryPattern,
+                                DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly
                                 0LL,  // offset
                                 INDEX_UNLIMITED
@@ -3797,6 +3798,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
+                                 DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -4149,6 +4151,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -4188,6 +4191,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
                                      NULL,  // name
+                                     DATABASE_ORDERING_NONE,
                                      i,  // offset
                                      INDEX_UNLIMITED
                                     );
@@ -4714,36 +4718,9 @@ LOCAL String getREGEXPString(String string, ConstString patternText)
 }
 
 /***********************************************************************\
-* Name   : getOrderingString
-* Purpose: get SQL ordering string
-* Input  : ordering - database ordering
-* Output : -
-* Return : string
-* Notes  : -
-\***********************************************************************/
-
-LOCAL const char *getOrderingString(DatabaseOrdering ordering)
-{
-  const char *s = NULL;
-
-  switch (ordering)
-  {
-    case DATABASE_ORDERING_ASCENDING:  s = "ASC";  break;
-    case DATABASE_ORDERING_DESCENDING: s = "DESC"; break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
-  }
-
-  return s;
-}
-
-/***********************************************************************\
 * Name   : filterAppend
-* Purpose: append filter
-* Input  : filter       - filter string
+* Purpose: append to SQL filter string
+* Input  : filterString - filter string
 *          condition    - append iff true
 *          concatenator - concatenator string
 *          format       - format string (printf-style)
@@ -4753,21 +4730,60 @@ LOCAL const char *getOrderingString(DatabaseOrdering ordering)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void filterAppend(String filter, bool condition, const char *concatenator, const char *format, ...)
+LOCAL void filterAppend(String filterString, bool condition, const char *concatenator, const char *format, ...)
 {
   va_list arguments;
 
   if (condition)
   {
-    if (!String_isEmpty(filter))
+    if (!String_isEmpty(filterString))
     {
-      String_appendChar(filter,' ');
-      String_appendCString(filter,concatenator);
-      String_appendChar(filter,' ');
+      String_appendChar(filterString,' ');
+      String_appendCString(filterString,concatenator);
+      String_appendChar(filterString,' ');
     }
     va_start(arguments,format);
-    String_vformat(filter,format,arguments);
+    String_vformat(filterString,format,arguments);
     va_end(arguments);
+  }
+}
+
+/***********************************************************************\
+* Name   : appendOrdering
+* Purpose: append to SQL ordering string
+* Input  : filterString - filter string
+*          condition    - append iff true
+*          columnName   - column name
+*          ordering     - database ordering
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void appendOrdering(String orderString, bool condition, const char *columnName, DatabaseOrdering ordering)
+{
+  if (condition && (ordering != DATABASE_ORDERING_NONE))
+  {
+    if (String_isEmpty(orderString))
+    {
+      String_appendCString(orderString,"ORDER BY ");
+    }
+    else
+    {
+      String_appendChar(orderString,',');
+    }
+    String_appendCString(orderString,columnName);
+    switch (ordering)
+    {
+      case DATABASE_ORDERING_NONE:       /* nothing tod do */                       break;
+      case DATABASE_ORDERING_ASCENDING:  String_appendCString(orderString," ASC");  break;
+      case DATABASE_ORDERING_DESCENDING: String_appendCString(orderString," DESC"); break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
   }
 }
 
@@ -4865,6 +4881,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
+                                 DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );
@@ -5649,7 +5666,7 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
     return FALSE;
   }
 
-  // get filter
+  // get filters
   filter = String_newCString("1");
   filterAppend(filter,!String_isEmpty(jobUUID),"AND","jobUUID=%'S",jobUUID);
   filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","scheduleUUID=%'S",scheduleUUID);
@@ -6403,11 +6420,15 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 //TODO required?
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
 
-  // get filter
+  // get FTS/regex patterns
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
+
+  // get filters
   filter = String_newCString("1");
   filterAppend(filter,!String_isEmpty(name),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 
@@ -6605,7 +6626,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 {
   String ftsName;
   String regexpName;
-  String filter;
+  String filterString,orderString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -6621,16 +6642,24 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 //TODO required?
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+  filterString = String_newCString("1");
+  orderString  = String_new();
 
-  // get filter
-  filter = String_newCString("1");
-  filterAppend(filter,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
-  filterAppend(filter,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
-  filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
-  filterAppend(filter,!String_isEmpty(name),"AND","EXISTS(SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+  // get FTS/regex patterns
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
+
+  // get filters
+  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
+  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
+  filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
+  filterAppend(filterString,!String_isEmpty(name),"AND","EXISTS(SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+
+  // get ordering
+  appendOrdering(orderString,TRUE,"entities.created",ordering);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -6650,11 +6679,11 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                             FROM entities \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                             WHERE %S \
-                            ORDER BY entities.created %s \
+                            %S \
                             LIMIT %llu,%llu \
                            ",
-                           filter,
-                           getOrderingString(ordering),
+                           filterString,
+                           orderString,
                            offset,
                            limit
                           );
@@ -6662,7 +6691,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(filter);
+    String_delete(orderString);
+    String_delete(filterString);
     String_delete(regexpName);
     String_delete(ftsName);
     doneIndexQueryHandle(indexQueryHandle);
@@ -6670,7 +6700,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filter);
+  String_delete(orderString);
+  String_delete(filterString);
   String_delete(regexpName);
   String_delete(ftsName);
 
@@ -6908,9 +6939,13 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
     return indexHandle->upgradeError;
   }
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -7025,6 +7060,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               IndexStateSet    indexStateSet,
                               IndexModeSet     indexModeSet,
                               ConstString      name,
+                              DatabaseOrdering ordering,
                               uint64           offset,
                               uint64           limit
                              )
@@ -7033,9 +7069,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   String regexpName;
   String uuidIdsString,entityIdsString,storageIdsString;
   Errors error;
-  String filter,filterIds;
-  String indexStateSetString;
-  String indexModeSetString;
+  String filterString,orderString;
+  String string;
+  String filterIdsString;
   uint   i;
 
   assert(indexQueryHandle != NULL);
@@ -7053,9 +7089,16 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 //TODO required?
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+  filterString = String_newCString("1");
+  orderString  = String_new();
+  string       = String_new();
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -7083,24 +7126,22 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-  // get filter
-  filter              = String_newCString("1");
-  filterIds           = String_new();
-  indexStateSetString = String_new();
-  indexModeSetString  = String_new();
-  filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-  filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  filterAppend(filter,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
-  filterAppend(filter,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
-  filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
-  filterAppend(filter,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
-//  filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
-  filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
-  filterAppend(filter,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
-  String_delete(indexModeSetString);
-  String_delete(indexStateSetString);
-  String_delete(filterIds);
+  // get filters
+  filterIdsString = String_new();
+  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
+  filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
+  filterAppend(filterString,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
+  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+//  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
+  filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
+  filterAppend(filterString,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
+  String_delete(filterIdsString);
+
+  // get ordering
+  appendOrdering(orderString,TRUE,"storage.created",ordering);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -7128,10 +7169,11 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                             WHERE %S \
                             GROUP BY storage.id \
-                            ORDER BY storage.created DESC \
+                            %S \
                             LIMIT %llu,%llu \
                            ",
-                           filter,
+                           filterString,
+                           orderString,
                            offset,
                            limit
                           );
@@ -7139,7 +7181,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(filter);
+    String_delete(string);
+    String_delete(orderString);
+    String_delete(filterString);
     String_delete(storageIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
@@ -7149,7 +7193,9 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
     return error;
   }
 
-  String_delete(filter);
+  String_delete(string);
+  String_delete(orderString);
+  String_delete(filterString);
   String_delete(storageIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
@@ -7711,9 +7757,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     return indexHandle->upgradeError;
   }
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -7752,7 +7802,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterIds          = String_new();
   indexTypeSetString = String_new();
 
-  // get filter
+  // get filters
   filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
@@ -7955,7 +8005,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   {
     // pattern/entries selected
 
-    // get filter
+    // get filters
     filterAppend(filter,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
     if (newestOnly)
     {
@@ -8048,6 +8098,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                              uint             entryIdCount,
                              IndexTypeSet     indexTypeSet,
                              ConstString      name,
+                             DatabaseOrdering ordering,
                              bool             newestOnly,
                              uint64           offset,
                              uint64           limit
@@ -8057,9 +8108,12 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   String regexpName;
   String uuidIdsString,entityIdString,storageIdsString;
   String entryIdsString;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId storageId;
   uint   i;
-  String filter,filterIds;
-  String indexTypeSetString;
+  String filterString,orderString;
+  String string;
+  String filterIdsString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -8075,14 +8129,58 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
-  // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
-
-  // get id sets
+  // init variables
+  ftsName          = String_new();
+  regexpName       = String_new();
   uuidIdsString    = String_new();
   entityIdString   = String_new();
   storageIdsString = String_new();
+  filterString     = String_new();
+  orderString      = String_new();
+  string           = String_new();
+
+  // get FTS/regex patterns
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
+
+  // get id sets (Note: collecting storage ids is faster than SQL joins of tables)
+  String_setCString(filterString,"0");
+  filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT storage.id \
+                            FROM storage \
+                              LEFT JOIN entities ON entities.id=storage.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                            WHERE %S; \
+                           ",
+                           filterString
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(string);
+    String_delete(orderString);
+    String_delete(filterString);
+    String_delete(entryIdsString);
+    String_delete(storageIdsString);
+    String_delete(entityIdString);
+    String_delete(uuidIdsString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    return error;
+  }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+  while (Database_getNextRow(&databaseQueryHandle,
+                             "%llu",
+                             &storageId
+                            )
+        )
+  {
+    if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
+    String_format(storageIdsString,"%lld",storageId);
+  }
+  Database_finalize(&databaseQueryHandle);
   for (i = 0; i < indexIdCount; i++)
   {
     switch (Index_getType(indexIds[i]))
@@ -8111,30 +8209,39 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
 
-  // get filter
-  filter             = String_newCString("1");
-  filterIds          = String_new();
-  indexTypeSetString = String_new();
-  filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  filterAppend(filterIds,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
-  filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","entries.storageId IN (%S)",storageIdsString);  // Note: use entries.storageId instead of storage.id: this is must faster
-  filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
+  // get filters
+  String_clear(filterString);
+  filterIdsString = String_new();
+//  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+//  filterAppend(filterIdsString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
+  filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","entries.storageId IN (%S)",storageIdsString);  // Note: use entries.storageId instead of storage.id: this is must faster
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   if (newestOnly)
   {
 //    filterAppend(filter,!String_isEmpty(ftsName),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
 //TODO: use entriesNewest.entryId?
 //    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
-    filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+    filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(string,indexTypeSet));
   }
   else
   {
 //    filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
 //    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
 //    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
-    filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+    filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(string,indexTypeSet));
   }
-  String_delete(filterIds);
+  String_delete(filterIdsString);
+
+  // get ordering
+  if (newestOnly)
+  {
+    appendOrdering(orderString,TRUE,"entriesNewest.name",ordering);
+  }
+  else
+  {
+    appendOrdering(orderString,TRUE,"entries.name",ordering);
+  }
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -8184,10 +8291,11 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                   LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
                                   LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
                                 WHERE %S \
-                                ORDER BY entriesNewest.name \
+                                %S \
                                 LIMIT %llu,%llu; \
                                ",
-                               filter,
+                               filterString,
+                               orderString,
                                offset,
                                limit
                               );
@@ -8232,10 +8340,11 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                   LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                                   LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                                 WHERE %S \
-                                ORDER BY entries.name \
+                                %S \
                                 LIMIT %llu,%llu; \
                                ",
-                               filter,
+                               filterString,
+                               orderString,
                                offset,
                                limit
                               );
@@ -8243,20 +8352,20 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
   else
   {
-    // get filter
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
+    // pattern/entries selected
+
+    // get additional filters
+    filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
     if (newestOnly)
     {
-//      filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
+//      filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
 //TODO: use entriesNewest.entryId?
-      filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
-//      filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+      filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
     }
     else
     {
-//      filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
-      filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
-//      filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+//      filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
+      filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
     }
 
     if (newestOnly)
@@ -8300,10 +8409,11 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                   LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
                                   LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
                                 WHERE %S \
-                                ORDER BY entriesNewest.name \
+                                %S \
                                 LIMIT %llu,%llu; \
                                ",
-                               filter,
+                               filterString,
+                               orderString,
                                offset,
                                limit
                               );
@@ -8349,10 +8459,11 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
                                   LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                                   LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                                 WHERE %S \
-                                ORDER BY entries.name \
+                                %S \
                                 LIMIT %llu,%llu; \
                                ",
-                               filter,
+                               filterString,
+                               orderString,
                                offset,
                                limit
                               );
@@ -8361,8 +8472,9 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(indexTypeSetString);
-    String_delete(filter);
+    String_delete(string);
+    String_delete(orderString);
+    String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(entityIdString);
@@ -8372,11 +8484,12 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   // free resources
-  String_delete(indexTypeSetString);
-  String_delete(filter);
+  String_delete(string);
+  String_delete(orderString);
+  String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(entityIdString);
@@ -8627,9 +8740,14 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   storageIdsString = String_new();
@@ -8649,7 +8767,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-  // get filter
+  // get filters
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_FILE);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
@@ -8828,9 +8946,13 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   storageIdsString = String_new();
@@ -8850,7 +8972,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-  // get filter
+  // get filters
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
@@ -9019,9 +9141,13 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   storageIdsString = String_new();
@@ -9041,7 +9167,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-  // get filter
+  // get filters
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
@@ -9212,9 +9338,13 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   storageIdsString = String_new();
@@ -9235,7 +9365,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   }
   String_appendCString(entryIdsString,"))");
 
-  // get filter
+  // get filters
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
@@ -9407,9 +9537,13 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   storageIdsString = String_new();
@@ -9429,7 +9563,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-  // get filter
+  // get filters
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
@@ -9607,9 +9741,13 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   initIndexQueryHandle(indexQueryHandle,indexHandle);
 
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+
   // get FTS/regex patterns
-  ftsName    = getFTSString   (String_new(),name);
-  regexpName = getREGEXPString(String_new(),name);
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
 
   // get id sets
   storageIdsString = String_new();
@@ -9629,7 +9767,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
     }
   }
 
-  // get filter
+  // get filters
   filter = String_new();
   filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
   filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
@@ -10727,6 +10865,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   DATABASE_ORDERING_NONE,
                                    0LL,   // offset
                                    INDEX_UNLIMITED
                                   );
