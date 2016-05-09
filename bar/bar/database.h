@@ -61,6 +61,7 @@ typedef enum
 // ordering mode
 typedef enum
 {
+  DATABASE_ORDERING_NONE,
   DATABASE_ORDERING_ASCENDING,
   DATABASE_ORDERING_DESCENDING
 } DatabaseOrdering;
