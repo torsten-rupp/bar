@@ -2315,7 +2315,7 @@ Dprintf.dprintf("entityIndexData=%s %d",entityIndexData,findStorageTreeIndex(uui
               {
                 IndexData indexData = (IndexData)treeItem.getData();
                 Widgets.removeTreeItem(widgetStorageTree,treeItem);
-                selectedIndexIdSet.set(indexData.id,false);
+                setStorageList(indexData.id,false);
 //TODO: remove?
                 indexData.clearTreeItem();
               }
@@ -2499,7 +2499,7 @@ Dprintf.dprintf("entityIndexData=%s %d",entityIndexData,findStorageTreeIndex(uui
             {
               IndexData indexData = (IndexData)treeItem.getData();
               Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              selectedIndexIdSet.set(indexData.id,false);
+              setStorageList(indexData.id,false);
 //TODO: remove?
               indexData.clearTreeItem();
             }
@@ -3750,7 +3750,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                                    offset,
                                                    limit
                                                   ),
-0,//                               1,  // debugLevel
+                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -3759,13 +3759,11 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
                                    try
                                    {
-                                     String                jobName         = valueMap.getString("jobName"        );
+                                     String                jobName         = valueMap.getString("jobName"                                );
                                      Settings.ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                                     long   entryId                        = valueMap.getLong  ("entryId"        );
-//                                     String jobUUID                        = valueMap.getString("storageName"    );
-//                                     String entityType                     = valueMap.getString("storageName"    );
-                                     String                storageName     = valueMap.getString("storageName"    );
-                                     long                  storageDateTime = valueMap.getLong  ("storageDateTime");
+                                     long                  entryId         = valueMap.getLong  ("entryId"                                );
+                                     String                storageName     = valueMap.getString("storageName"                            );
+                                     long                  storageDateTime = valueMap.getLong  ("storageDateTime"                        );
 
                                      switch (valueMap.getEnum("entryType",EntryTypes.class))
                                      {
@@ -4833,9 +4831,8 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
-              // toggle check
+              // toggled check
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-              selectedIndexIdSet.set(storageIndexData.id,treeItem.getChecked());
               setStorageList(storageIndexData.id,treeItem.getChecked());
 
               // trigger update checked
@@ -4862,7 +4859,6 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
               IndexData indexData = (IndexData)treeItem.getData();
 
               // set/reset checked
-              selectedIndexIdSet.set(indexData.id,isChecked);
               if (treeItem.getExpanded())
               {
                 for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
@@ -4870,7 +4866,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                   subTreeItem.setChecked(isChecked);
                 }
               }
-              setStorageList(indexData.id,treeItem.getChecked());
+              setStorageList(indexData.id,isChecked);
 
               // trigger update checked
               checkedStorageEvent.trigger();
@@ -5147,7 +5143,6 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             if (storageIndexData != null)
             {
               // set/reset checked
-              selectedIndexIdSet.set(storageIndexData.id,tabletem.getChecked());
               setStorageList(storageIndexData.id,tabletem.getChecked());
 
               // trigger update checked
@@ -5172,7 +5167,6 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             if (storageIndexData != null)
             {
               // set/reset checked
-              selectedIndexIdSet.set(storageIndexData.id,tabletem.getChecked());
               setStorageList(storageIndexData.id,tabletem.getChecked());
 
               // trigger update checked
@@ -6194,6 +6188,7 @@ Dprintf.dprintf("remove");
                                0  // debugLevel
                               );
     }
+    selectedIndexIdSet.set(indexId,checked);
   }
 
   /** set selected storage entry
@@ -6238,8 +6233,7 @@ Dprintf.dprintf("remove");
           uuidTreeItem.setChecked(checked);
 
           UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
-          selectedIndexIdSet.set(uuidIndexData.id,checked);
-          if (checked) setStorageList(uuidIndexData.id,true);
+          setStorageList(uuidIndexData.id,checked);
 
           if (uuidTreeItem.getExpanded())
           {
@@ -6248,8 +6242,7 @@ Dprintf.dprintf("remove");
               entityTreeItem.setChecked(checked);
 
               EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-              selectedIndexIdSet.set(entityIndexData.id,checked);
-              if (checked) setStorageList(entityIndexData.id,true);
+              setStorageList(entityIndexData.id,checked);
 
               if (entityTreeItem.getExpanded())
               {
@@ -6258,8 +6251,7 @@ Dprintf.dprintf("remove");
                   storageTreeItem.setChecked(checked);
 
                   StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                  selectedIndexIdSet.set(storageIndexData.id,checked);
-                  if (checked) setStorageList(storageIndexData.id,true);
+                  setStorageList(storageIndexData.id,checked);
                 }
               }
             }
@@ -6326,8 +6318,7 @@ Dprintf.dprintf("remove");
                                                    {
                                                      long storageId = valueMap.getLong("storageId");
 
-                                                     selectedIndexIdSet.set(storageId,checked);
-                                                     if (checked) setStorageList(storageId,true);
+                                                     setStorageList(storageId,checked);
 
                                                      n[0]++;
                                                      busyDialog.updateProgressBar(n[0]);
@@ -7604,9 +7595,8 @@ Dprintf.dprintf("remove");
           // set storage entries to restore
           setStorageList(indexIdSet);
 
-          final String[] errorMessage = new String[1];
-
           // get archives
+          final String[] errorMessage = new String[1];
           BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
                                    0,  // debugLevel
                                    errorMessage,
@@ -8117,7 +8107,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                                                  updateEntryTableThread.getEntryType().toString(),
                                                                  updateEntryTableThread.getNewestOnly()
                                                                 ),
-                                             1,
+                                             1,  // debugLevel
                                              errorMessage,
                                              new CommandResultHandler()
                                              {
@@ -8546,7 +8536,7 @@ Dprintf.dprintf("");
 
           // get archives
           BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
-                                   0,  // debugLevel
+1,//                                   0,  // debugLevel
                                    new CommandResultHandler()
                                    {
                                      public int handleResult(int i, ValueMap valueMap)
