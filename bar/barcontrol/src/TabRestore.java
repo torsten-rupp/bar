@@ -2268,7 +2268,7 @@ Dprintf.dprintf("cirrect?");
               if (entityTreeItem == null)
               {
                 // insert tree item
-Dprintf.dprintf("entityIndexData=%s %d",entityIndexData,findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator));
+//Dprintf.dprintf("entityIndexData=%s %d",entityIndexData,findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator));
                 entityTreeItem = Widgets.insertTreeItem(uuidTreeItem,
                                                         findStorageTreeIndex(uuidTreeItem,entityIndexData,indexDataComparator),
                                                         (Object)entityIndexData,
@@ -4139,6 +4139,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
     if (widgetStorageTreeToolTip != null)
     {
+Dprintf.dprintf("");
       widgetStorageTreeToolTip.dispose();
     }
 
@@ -4203,10 +4204,12 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
     widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
     {
+      @Override
       public void mouseEnter(MouseEvent mouseEvent)
       {
       }
 
+      @Override
       public void mouseExit(MouseEvent mouseEvent)
       {
         if (widgetStorageTreeToolTip != null)
@@ -4227,6 +4230,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
         }
       }
 
+      @Override
       public void mouseHover(MouseEvent mouseEvent)
       {
       }
@@ -4243,6 +4247,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
     if (widgetStorageTreeToolTip != null)
     {
+Dprintf.dprintf("");
       widgetStorageTreeToolTip.dispose();
     }
 
@@ -4297,10 +4302,12 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
     widgetStorageTreeToolTip.addMouseTrackListener(new MouseTrackListener()
     {
+      @Override
       public void mouseEnter(MouseEvent mouseEvent)
       {
       }
 
+      @Override
       public void mouseExit(MouseEvent mouseEvent)
       {
         if (widgetStorageTreeToolTip != null)
@@ -4321,6 +4328,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
         }
       }
 
+      @Override
       public void mouseHover(MouseEvent mouseEvent)
       {
       }
@@ -4441,10 +4449,12 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
     widgetStorageTableToolTip.addMouseTrackListener(new MouseTrackListener()
     {
+      @Override
       public void mouseEnter(MouseEvent mouseEvent)
       {
       }
 
+      @Override
       public void mouseExit(MouseEvent mouseEvent)
       {
         if (widgetStorageTableToolTip != null)
@@ -4465,6 +4475,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
         }
       }
 
+      @Override
       public void mouseHover(MouseEvent mouseEvent)
       {
       }
@@ -4586,10 +4597,12 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
     widgetEntryTableToolTip.addMouseTrackListener(new MouseTrackListener()
     {
+      @Override
       public void mouseEnter(MouseEvent mouseEvent)
       {
       }
 
+      @Override
       public void mouseExit(MouseEvent mouseEvent)
       {
         if (widgetEntryTableToolTip != null)
@@ -4610,6 +4623,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
         }
       }
 
+      @Override
       public void mouseHover(MouseEvent mouseEvent)
       {
       }
@@ -4773,16 +4787,6 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("State"),   SWT.LEFT,  60,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
-//TODO remove
-      widgetStorageTabFolder.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-        }
-      });
       widgetStorageTree.addListener(SWT.Expand,new Listener()
       {
         @Override
@@ -4888,16 +4892,13 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
         public void mouseEnter(MouseEvent mouseEvent)
         {
         }
+
         @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
-          if (widgetStorageTreeToolTip != null)
-          {
-            widgetStorageTreeToolTip.dispose();
-            widgetStorageTreeToolTip = null;
-          }
         }
 
+        @Override
         public void mouseHover(MouseEvent mouseEvent)
         {
           Tree     tree     = (Tree)mouseEvent.widget;
@@ -4909,29 +4910,22 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
             widgetStorageTreeToolTip = null;
           }
 
-          // show if tree item available and mouse is in the right side
+          // show tooltip if tree item available and mouse is in the right side
           if ((treeItem != null) && (mouseEvent.x > tree.getBounds().width/2))
           {
+            Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
+
             if      (treeItem.getData() instanceof UUIDIndexData)
             {
-              UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
-
-              Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
-              showUUIDIndexToolTip(uuidIndexData,point.x,point.y);
+              showUUIDIndexToolTip((UUIDIndexData)treeItem.getData(),point.x,point.y);
             }
             else if (treeItem.getData() instanceof EntityIndexData)
             {
-              EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
-
-              Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
-              showEntityIndexToolTip(entityIndexData,point.x,point.y);
+              showEntityIndexToolTip((EntityIndexData)treeItem.getData(),point.x,point.y);
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
-              StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-
-              Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
-              showStorageIndexToolTip(storageIndexData,point.x,point.y);
+              showStorageIndexToolTip((StorageIndexData)treeItem.getData(),point.x,point.y);
             }
           }
         }
@@ -5045,6 +5039,7 @@ Dprintf.dprintf("toIndexData=%s",toIndexData);
 
               if      (toIndexData instanceof UUIDIndexData)
               {
+//TODO
 Dprintf.dprintf("");
               }
               else if (toIndexData instanceof EntityIndexData)
@@ -5189,15 +5184,12 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
         public void mouseEnter(MouseEvent mouseEvent)
         {
         }
+
         @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
-          if (widgetStorageTableToolTip != null)
-          {
-            widgetStorageTableToolTip.dispose();
-            widgetStorageTableToolTip = null;
-          }
         }
+
         @Override
         public void mouseHover(MouseEvent mouseEvent)
         {
@@ -5228,6 +5220,7 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
         public void keyPressed(KeyEvent keyEvent)
         {
         }
+
         @Override
         public void keyReleased(KeyEvent keyEvent)
         {
@@ -5477,6 +5470,50 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             deleteStorage();
+          }
+        });
+
+        Widgets.addMenuSeparator(menu);
+
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Info")+"\u2026");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TreeItem treeItems[] = widgetStorageTree.getSelection();
+            if (treeItems.length > 0)
+            {
+              if (widgetStorageTreeToolTip != null)
+              {
+                widgetStorageTreeToolTip.dispose();
+                widgetStorageTreeToolTip = null;
+              }
+
+              if (treeItems[0] != null)
+              {
+                Point point = display.getCursorLocation();
+                if (point.x > 16) point.x -= 16;
+                if (point.y > 16) point.y -= 16;
+
+                if      (treeItems[0].getData() instanceof UUIDIndexData)
+                {
+                  showUUIDIndexToolTip((UUIDIndexData)treeItems[0].getData(),point.x,point.y);
+                }
+                else if (treeItems[0].getData() instanceof EntityIndexData)
+                {
+                  showEntityIndexToolTip((EntityIndexData)treeItems[0].getData(),point.x,point.y);
+                }
+                else if (treeItems[0].getData() instanceof StorageIndexData)
+                {
+                  showStorageIndexToolTip((StorageIndexData)treeItems[0].getData(),point.x,point.y);
+                }
+              }
+            }
           }
         });
       }
@@ -5825,10 +5862,12 @@ Dprintf.dprintf("remove");
         public void mouseEnter(MouseEvent mouseEvent)
         {
         }
+
         @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
         }
+
         @Override
         public void mouseHover(MouseEvent mouseEvent)
         {
