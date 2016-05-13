@@ -7342,9 +7342,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-fprintf(stderr,"%s, %d: Index_deleteStorage %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
   // Note: do in single steps to avoid long global locking of database!
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
