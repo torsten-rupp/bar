@@ -6475,11 +6475,11 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
   // free resources
   String_delete(value);
   String_delete(name);
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -6513,9 +6513,9 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  // free resources
-
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
 }
 
 /***********************************************************************\
@@ -8628,6 +8628,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
       jobNode = jobNode->next;
     }
   }
+
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
@@ -12984,6 +12985,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
       break;
     }
   }
+
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // close archive
@@ -14060,101 +14062,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  // UUID data list
-  typedef struct UUIDDataNode
-  {
-    LIST_NODE_HEADER(struct UUIDDataNode);
-
-    IndexId indexId;
-    String  jobUUID;
-    String  name;
-    uint64  lastCreatedDateTime;
-    String  lastErrorMessage;
-    uint64  totalEntryCount;
-    uint64  totalEntrySize;
-  } UUIDDataNode;
-
-  typedef struct
-  {
-    LIST_HEADER(UUIDDataNode);
-  } UUIDDataList;
-
-  /***********************************************************************\
-  * Name   : findUUIDDataNode
-  * Purpose: find UUID node
-  * Input  : jobUUID - job UUID
-  * Output : -
-  * Return : UUID node or NULL if not found
-  * Notes  : -
-  \***********************************************************************/
-
-  UUIDDataNode *findUUIDDataNode(const UUIDDataList *uuidDataList, ConstString jobUUID)
-  {
-    UUIDDataNode *uuidDataNode;
-
-    assert(uuidDataList != NULL);
-    assert(jobUUID != NULL);
-
-    uuidDataNode = uuidDataList->head;
-    while ((uuidDataNode != NULL) && !String_equals(uuidDataNode->jobUUID,jobUUID))
-    {
-      uuidDataNode = uuidDataNode->next;
-    }
-
-    return uuidDataNode;
-  }
-
-  /***********************************************************************\
-  * Name   : freeUUIDDataNode
-  * Purpose: free allocated UUID data node
-  * Input  : uuidDataNode - UUID data node
-  * Input  : userData     - not used
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  void freeUUIDDataNode(UUIDDataNode *uuidDataNode, void *userData)
-  {
-    assert(uuidDataNode != NULL);
-    assert(uuidDataNode->jobUUID != NULL);
-    assert(uuidDataNode->name != NULL);
-    assert(uuidDataNode->lastErrorMessage != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    String_delete(uuidDataNode->lastErrorMessage);
-    String_delete(uuidDataNode->name);
-    String_delete(uuidDataNode->jobUUID);
-  }
-
-  /***********************************************************************\
-  * Name   : compareUUIDDataNode
-  * Purpose: compare UUID data nodes
-  * Input  : uuidDataNode1,uuidDataNode2 - UUID data node 1, UUID data
-  *                                        node2
-  * Input  : userData                    - not used
-  * Output : -
-  * Return : -1 iff uuidDataNode1 < uuidDataNode2
-  *           0 iff uuidDataNode1 = uuidDataNode2
-  *           1 iff uuidDataNode1 > uuidDataNode2
-  * Notes  : -
-  \***********************************************************************/
-
-  int compareUUIDDataNode(UUIDDataNode *uuidDataNode1, UUIDDataNode *uuidDataNode2, void *userData)
-  {
-    assert(uuidDataNode1 != NULL);
-    assert(uuidDataNode2 != NULL);
-    assert(uuidDataNode1->name != NULL);
-    assert(uuidDataNode2->name != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    return String_compare(uuidDataNode1->name,uuidDataNode2->name,CALLBACK(NULL,NULL));
-  }
-
   String           patternString;
-  UUIDDataList     uuidDataList;
   String           lastErrorMessage;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
@@ -14163,9 +14071,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   uint64           lastCreatedDateTime;
   ulong            totalEntryCount;
   uint64           totalEntrySize;
-//  SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
-//  UUIDDataNode     *uuidDataNode;
   String           name;
 
   assert(clientInfo != NULL);
@@ -14188,169 +14094,19 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
 
-//TODO: remove
-#ifndef WERROR
-#warning remove
-#endif
-#if 0
-  // initialize variables
-  List_init(&uuidDataList);
-  name             = String_new();
-  lastErrorMessage = String_new();
-
-  // get uuids from job list
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
-  {
-    LIST_ITERATE(&jobList,jobNode)
-    {
-      // add uuid data node
-      uuidDataNode = findUUIDDataNode(&uuidDataList,jobNode->uuid);
-      if (uuidDataNode == NULL)
-      {
-        uuidDataNode = LIST_NEW_NODE(UUIDDataNode);
-        if (uuidDataNode == NULL)
-        {
-          Semaphore_unlock(&jobList.lock);
-
-          String_delete(lastErrorMessage);
-          List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
-
-          sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
-
-          String_delete(patternString);
-          return;
-        }
-        uuidDataNode->indexId             = INDEX_ID_NONE;
-        uuidDataNode->jobUUID             = String_duplicate(jobNode->uuid);
-        uuidDataNode->name                = String_duplicate(jobNode->uuid);
-        uuidDataNode->lastCreatedDateTime = 0LL;
-        uuidDataNode->lastErrorMessage    = String_new();
-        uuidDataNode->totalEntryCount     = 0LL;
-        uuidDataNode->totalEntrySize      = 0LL;
-
-        List_append(&uuidDataList,uuidDataNode);
-      }
-
-      // clear uuid data
-      uuidDataNode->lastCreatedDateTime = 0LL;
-      String_clear(uuidDataNode->lastErrorMessage);
-      uuidDataNode->totalEntryCount     = 0LL;
-      uuidDataNode->totalEntrySize      = 0LL;
-    }
-  }
-
-  // get uuids from database
-  error = Index_initListUUIDs(&indexQueryHandle,
-                              indexHandle,
-                              NULL,  // name
-                              0,
-                              INDEX_UNLIMITED
-                             );
-  if (error != ERROR_NONE)
-  {
-    String_delete(lastErrorMessage);
-    List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
-
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
-
-    String_delete(patternString);
-    return;
-  }
-  while (   !isCommandAborted(clientInfo,id)
-         && Index_getNextUUID(&indexQueryHandle,
-                              &uuidId,
-                              jobUUID,
-                              &lastCreatedDateTime,
-                              lastErrorMessage,
-                              &totalEntryCount,
-                              &totalEntrySize
-                             )
-        )
-  {
-    // add uuid data node
-    uuidDataNode = findUUIDDataNode(&uuidDataList,jobUUID);
-    if (uuidDataNode == NULL)
-    {
-      uuidDataNode = LIST_NEW_NODE(UUIDDataNode);
-      if (uuidDataNode == NULL)
-      {
-        Index_doneList(&indexQueryHandle);
-        String_delete(lastErrorMessage);
-        List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
-
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get uuid list fail: insufficient memory");
-
-        String_delete(patternString);
-        return;
-      }
-      uuidDataNode->indexId             = uuidId;
-      uuidDataNode->jobUUID             = String_duplicate(jobUUID);
-      uuidDataNode->name                = String_duplicate(jobUUID);
-      uuidDataNode->lastCreatedDateTime = 0LL;
-      uuidDataNode->lastErrorMessage    = String_new();
-      uuidDataNode->totalEntryCount     = 0LL;
-      uuidDataNode->totalEntrySize      = 0LL;
-
-      List_append(&uuidDataList,uuidDataNode);
-    }
-
-    // update uuid data
-    uuidDataNode->lastCreatedDateTime = lastCreatedDateTime;
-    String_set(uuidDataNode->lastErrorMessage,lastErrorMessage);
-    uuidDataNode->totalEntryCount     = totalEntryCount;
-    uuidDataNode->totalEntrySize      = totalEntrySize;
-  }
-  Index_doneList(&indexQueryHandle);
-
-  // fill in current job names, sort list by names
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
-  {
-    LIST_ITERATE(&uuidDataList,uuidDataNode)
-    {
-      jobNode = findJobByUUID(uuidDataNode->jobUUID);
-      if (jobNode != NULL)
-      {
-        String_set(uuidDataNode->name,jobNode->name);
-      }
-    }
-  }
-  List_sort(&uuidDataList,CALLBACK((ListNodeCompareFunction)compareUUIDDataNode,NULL));
-
-  // send results
-  LIST_ITERATE(&uuidDataList,uuidDataNode)
-  {
-    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
-                     uuidDataNode->indexId,
-                     uuidDataNode->jobUUID,
-                     uuidDataNode->name,
-                     uuidDataNode->lastCreatedDateTime,
-                     uuidDataNode->lastErrorMessage,
-                     uuidDataNode->totalEntryCount,
-                     uuidDataNode->totalEntrySize
-                    );
-  }
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-
-  // free resources
-  String_delete(lastErrorMessage);
-  List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
-  String_delete(patternString);
-#else
+  // init variables
   name             = String_new();
   lastErrorMessage = String_new();
 
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
                               patternString,
-                              0,
+                              0LL,  // offset
                               INDEX_UNLIMITED
                              );
   if (error != ERROR_NONE)
   {
     String_delete(lastErrorMessage);
-    List_done(&uuidDataList,CALLBACK((ListNodeFreeFunction)freeUUIDDataNode,NULL));
 
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
 
@@ -14397,7 +14153,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   String_delete(name);
   String_delete(lastErrorMessage);
   String_delete(patternString);
-#endif
 }
 
 /***********************************************************************\
@@ -16321,7 +16076,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                               )
         )
   {
-fprintf(stderr,"%s, %d: %lld %s -- %s\n",__FILE__,__LINE__,uuidId,String_cString(jobUUID),String_cString(jobName));
     // get job name
     if (uuidId != prevUUIDId)
     {
