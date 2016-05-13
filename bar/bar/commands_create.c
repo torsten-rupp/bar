@@ -4650,8 +4650,8 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
                                INDEX_ID_NONE,  // enityId
                                storageMsg.storageId,
                                INDEX_ID_NONE,  // toEnityId
-                               storageId,
-                               ARCHIVE_TYPE_NONE
+                               ARCHIVE_TYPE_NONE,
+                               storageId
                               );
         if (error != ERROR_NONE)
         {
