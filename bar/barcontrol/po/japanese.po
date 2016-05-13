@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-05-13 09:52+0200\n"
+"POT-Creation-Date: 2016-05-13 13:35+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -2828,7 +2828,7 @@ msgid "Assign to job"
 msgstr "タスクに割り当て"
 
 #: src/TabRestore.java:5289
-msgid "Set job type…"
+msgid "Set job type"
 msgstr ""
 
 #: src/TabRestore.java:5359
