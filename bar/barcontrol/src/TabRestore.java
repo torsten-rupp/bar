@@ -666,24 +666,25 @@ public class TabRestore
         switch (nextSortMode)
         {
           case ID:
-            result = new Long(indexData1.id).compareTo(indexData2.id);
-            nextSortMode = SortModes.NAME;
-            break;
+            return new Long(indexData1.id).compareTo(indexData2.id);
           case NAME:
             String name1 = indexData1.getName();
             String name2 = indexData2.getName();
             result = name1.compareTo(name2);
             nextSortMode = SortModes.SIZE;
+            break;
           case SIZE:
             long size1 = indexData1.getEntrySize();
             long size2 = indexData2.getEntrySize();
             result = new Long(size1).compareTo(size2);
             nextSortMode = SortModes.CREATED_DATETIME;
+            break;
           case CREATED_DATETIME:
             long date1 = indexData1.getDateTime();
             long date2 = indexData2.getDateTime();
             result = new Long(date1).compareTo(date2);
             nextSortMode = SortModes.STATE;
+            break;
           case STATE:
             IndexStates indexState1 = indexData1.getState();
             IndexStates indexState2 = indexData2.getState();
@@ -1437,7 +1438,6 @@ Dprintf.dprintf("");
 
     return treeItems.length;
 */
-/*
     int index = 0;
     while (   (index < treeItems.length)
            && (indexDataComparator.compare(indexData,(IndexData)treeItems[index].getData()) > 0)
@@ -1447,8 +1447,9 @@ Dprintf.dprintf("");
     }
 
     return index;
-*/
+
 //TODO
+/*
 //Dprintf.dprintf("---------- %d",treeItems.length);
     int index = 0;
 
@@ -1480,6 +1481,7 @@ Dprintf.dprintf("");
 
 //Dprintf.dprintf("at=%d",index);
     return index;
+*/
   }
 
   /** find index for insert of item in sorted storage item list
@@ -2771,10 +2773,6 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       final HashSet<Menu>          removeUUIDMenuSet       = new HashSet<Menu>();
       final HashSet<UUIDIndexData> uuidIndexDataSet        = new HashSet<UUIDIndexData>();
       final HashSet<MenuItem>      removeEntityMenuItemSet = new HashSet<MenuItem>();
-//      Command                      command;
-//      String[]                     errorMessage            = new String[1];
-//      ValueMap                     valueMap                = new ValueMap();
-Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
 
       // get UUID menus
       display.syncExec(new Runnable()
@@ -2793,6 +2791,9 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
         }
       });
       if (isUpdateTriggered()) return;
+
+      // get comperator
+      final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(IndexDataComparator.SortModes.ID);
 
       // update UUIDs menu items
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=''"),
@@ -2826,7 +2827,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                      {
                                        public void run()
                                        {
-                                         Menu subMenu = Widgets.getMenu(widgetStorageTreeAssignToMenu,uuidIndexData);
+                                         Menu subMenu = Widgets.getMenu(widgetStorageTreeAssignToMenu,uuidIndexData,indexDataComparator);
                                          if (subMenu == null)
                                          {
                                            MenuItem menuItem;
@@ -2913,7 +2914,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                          {
                                            assert subMenu.getData() instanceof UUIDIndexData;
 
-                                           // keep menu item
+                                           // keep menu
                                            removeUUIDMenuSet.remove(subMenu);
                                          }
 
@@ -2951,8 +2952,8 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
           for (Menu menu : removeUUIDMenuSet)
           {
             UUIDIndexData uuidIndexData = (UUIDIndexData)menu.getData();
-//Dprintf.dprintf("remove uuidIndexData=%s",entityIndexData);
             Widgets.removeMenu(widgetStorageTreeAssignToMenu,menu);
+//TODO
 //            Widgets.removeMenu(widgetStorageTableAssignToMenu,menu);
             uuidIndexData.clearSubMenu();
           }
@@ -3019,7 +3020,7 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
                                        {
                                          public void run()
                                          {
-                                           MenuItem menuItem = Widgets.getMenuItem(subMenu,entityIndexData);
+                                           MenuItem menuItem = Widgets.getMenuItem(subMenu,entityIndexData,indexDataComparator);
                                            if (menuItem == null)
                                            {
                                              // insert menu item
@@ -4139,7 +4140,6 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
 
     if (widgetStorageTreeToolTip != null)
     {
-Dprintf.dprintf("");
       widgetStorageTreeToolTip.dispose();
     }
 
