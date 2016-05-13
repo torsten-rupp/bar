@@ -578,7 +578,7 @@ class Command
    */
   public String toString()
   {
-    return "Command {"+id+", errorCode="+errorCode+", error="+errorMessage+", completedFlag="+completedFlag+"}";
+    return "Command {id="+id+", errorCode="+errorCode+", error="+errorMessage+", completedFlag="+completedFlag+", results="+result.size()+"}";
   }
 }
 
@@ -684,7 +684,6 @@ class ReadThread extends Thread
           boolean completedFlag = (Integer.parseInt(parts[1]) != 0);
           int     errorCode     = Integer.parseInt(parts[2]);
           String  data          = parts[3].trim();
-
 
           // store result
           synchronized(commandHashMap)
