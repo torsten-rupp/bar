@@ -3434,7 +3434,7 @@ e composite widget
   /** get insert position in sorted list
    * @param list list
    * @param data data
-   * @param comparator table data comparator
+   * @param comparator data comparator
    * @return index in list
    */
   public static int getListItemIndex(List list, Object data, Comparator comparator)
@@ -8254,6 +8254,37 @@ private static void printTree(Tree tree)
   /** get menu item
    * @param menu menu
    * @param data data structure
+   * @param comparator data comparator
+   * @return menu item
+   */
+  public static Menu getMenu(Menu menu, final Object data, Comparator comparator)
+  {
+    for (MenuItem menuItem : menu.getItems())
+    {
+      Menu subMenu = menuItem.getMenu();
+      if (subMenu != null)
+      {
+        if (comparator.compare(subMenu.getData(),data) == 0)
+        {
+          return subMenu;
+        }
+        else
+        {
+          subMenu = getMenu(subMenu,data,comparator);
+          if (subMenu != null)
+          {
+            return subMenu;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** get menu item
+   * @param menu menu
+   * @param data data structure
    * @return menu item
    */
   public static Menu getMenu(Menu menu, final Object data)
@@ -8263,7 +8294,7 @@ private static void printTree(Tree tree)
       Menu subMenu = menuItem.getMenu();
       if (subMenu != null)
       {
-        if (subMenu.getData() == data)
+        if (subMenu.getData().equals(data))
         {
           return subMenu;
         }
@@ -8287,7 +8318,7 @@ private static void printTree(Tree tree)
    */
   public static void removeMenu(Menu menu, final Object data)
   {
-    if (menu.getData() == data)
+    if (menu.getData().equals(data))
     {
       menu.dispose();
     }
@@ -8666,6 +8697,40 @@ private static void printTree(Tree tree)
   /** get menu item
    * @param menu menu
    * @param data data structure
+   * @param comparator data comparator
+   * @return menu item
+   */
+  public static MenuItem getMenuItem(Menu menu, final Object data, Comparator comparator)
+  {
+    Menu     subMenu;
+    MenuItem subMenuItem;
+
+    for (MenuItem menuItem : menu.getItems())
+    {
+      if (comparator.compare(menuItem.getData(),data) == 0)
+      {
+        return menuItem;
+      }
+      else
+      {
+        subMenu = menuItem.getMenu();
+        if (subMenu != null)
+        {
+          subMenuItem = getMenuItem(subMenu,data,comparator);
+          if (subMenuItem != null)
+          {
+            return subMenuItem;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** get menu item
+   * @param menu menu
+   * @param data data structure
    * @return menu item
    */
   public static MenuItem getMenuItem(Menu menu, final Object data)
@@ -8675,7 +8740,7 @@ private static void printTree(Tree tree)
 
     for (MenuItem menuItem : menu.getItems())
     {
-      if (menuItem.getData() == data)
+      if (menuItem.getData().equals(data))
       {
         return menuItem;
       }
