@@ -8211,7 +8211,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
 
   // get filters
-  String_clear(filterString);
+  String_setCString(filterString,"1");
   filterIdsString = String_new();
 //  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
 //  filterAppend(filterIdsString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
@@ -8485,7 +8485,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   // free resources
   String_delete(string);
