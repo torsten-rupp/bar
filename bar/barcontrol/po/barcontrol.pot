@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-05-13 13:35+0200\n"
+"POT-Creation-Date: 2016-05-13 22:27+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2446,23 +2446,23 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabRestore.java:2842
+#: src/TabRestore.java:2843
 msgid "new normal"
 msgstr ""
 
-#: src/TabRestore.java:2859
+#: src/TabRestore.java:2860
 msgid "new full"
 msgstr ""
 
-#: src/TabRestore.java:2876
+#: src/TabRestore.java:2877
 msgid "new incremental"
 msgstr ""
 
-#: src/TabRestore.java:2893
+#: src/TabRestore.java:2894
 msgid "new differenial"
 msgstr ""
 
-#: src/TabRestore.java:3693 src/TabRestore.java:4694
+#: src/TabRestore.java:3694 src/TabRestore.java:4694
 #, java-format
 msgid "There are {0} entries. Only the first {1} are shown in the list."
 msgstr ""
