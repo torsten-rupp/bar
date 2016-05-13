@@ -7219,7 +7219,10 @@ private static void printTree(Tree tree)
     for (TreeItem subTreeItem : treeItem.getItems())
     {
       treeItemSet.add(subTreeItem);
-      getSubTreeItems(treeItemSet,subTreeItem);
+      if (subTreeItem.getExpanded())
+      {
+        getSubTreeItems(treeItemSet,subTreeItem);
+      }
     }
   }
 
