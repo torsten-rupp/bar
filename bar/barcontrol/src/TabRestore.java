@@ -4800,9 +4800,20 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
         public void handleEvent(final Event event)
         {
           final TreeItem treeItem = (TreeItem)event.item;
+
+          // remove all selected sub-ids
+          for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
+          {
+            setStorageList(((IndexData)subTreeItem.getData()).id,false);
+          }
+
+          // close sub-tree
           treeItem.removeAll();
           new TreeItem(treeItem,SWT.NONE);
           treeItem.setExpanded(false);
+
+          // trigger update checked
+          checkedStorageEvent.trigger();
         }
       });
       widgetStorageTree.addListener(SWT.MouseDoubleClick,new Listener()
@@ -4858,13 +4869,10 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
               boolean   isChecked = treeItem.getChecked();
               IndexData indexData = (IndexData)treeItem.getData();
 
-              // set/reset checked
-              if (treeItem.getExpanded())
+              // set/reset checked in sub-tree
+              for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
               {
-                for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
-                {
-                  subTreeItem.setChecked(isChecked);
-                }
+                subTreeItem.setChecked(isChecked);
               }
               setStorageList(indexData.id,isChecked);
 
