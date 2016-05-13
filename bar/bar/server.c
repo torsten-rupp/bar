@@ -15209,8 +15209,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              INDEX_ID_NONE,  // entityId,
                              INDEX_ID_NONE,  // storageId
                              toEntityId,
-                             INDEX_ID_NONE,  // toStorageId
-                             archiveType
+                             archiveType,
+                             INDEX_ID_NONE  // toStorageId
                             );
       if (error != ERROR_NONE)
       {
@@ -15239,8 +15239,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              INDEX_ID_NONE,  // entityId
                              INDEX_ID_NONE,  // storageId
                              toEntityId,
-                             INDEX_ID_NONE,  // toStorageId
-                             archiveType
+                             archiveType,
+                             INDEX_ID_NONE  // toStorageId
                             );
       if (error != ERROR_NONE)
       {
@@ -15261,8 +15261,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              entityId,
                              INDEX_ID_NONE,  // storageId
                              toEntityId,
-                             INDEX_ID_NONE,  // toStorageId
-                             archiveType
+                             archiveType,
+                             INDEX_ID_NONE  // toStorageId
                             );
       if (error != ERROR_NONE)
       {
@@ -15291,8 +15291,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              INDEX_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             INDEX_ID_NONE,  // toStorageId
-                             archiveType
+                             archiveType,
+                             INDEX_ID_NONE  // toStorageId
                             );
       if (error != ERROR_NONE)
       {
@@ -15312,8 +15312,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              INDEX_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             INDEX_ID_NONE,  // toStorageId
-                             archiveType
+                             archiveType,
+                             INDEX_ID_NONE  // toStorageId
                             );
       if (error != ERROR_NONE)
       {
@@ -15342,8 +15342,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              INDEX_ID_NONE,  // entityId
                              storageId,
                              toEntityId,
-                             INDEX_ID_NONE,  // toStorageId
-                             archiveType
+                             archiveType,
+                             INDEX_ID_NONE  // toStorageId
                             );
       if (error != ERROR_NONE)
       {

@@ -5041,8 +5041,8 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 * Purpose: assign all storage entries of entity to other entity
 * Input  : indexHandle   - index handle
 *          entityId      - entity id
-*          toArchiveType - archive type or ARCHIVE_TYPE_NONE
 *          toEntityId    - to entity id
+*          toArchiveType - archive type or ARCHIVE_TYPE_NONE
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -5050,39 +5050,43 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 
 LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
                                   IndexId      entityId,
-                                  ArchiveTypes toArchiveType,
-                                  IndexId      toEntityId
+                                  IndexId      toEntityId,
+                                  ArchiveTypes toArchiveType
                                  )
 {
   Errors error;
 
   assert(indexHandle != NULL);
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getType(toEntityId) == INDEX_TYPE_ENTITY);
+  assert((toEntityId == INDEX_ID_NONE) || Index_getType(toEntityId) == INDEX_TYPE_ENTITY);
 
   // assign to entity
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           "UPDATE storage \
-                            SET entityId=%lld \
-                            WHERE entityId=%lld; \
-                           ",
-                           Index_getDatabaseId(toEntityId),
-                           Index_getDatabaseId(entityId)
-                          );
-  if (error != ERROR_NONE)
+  if (entityId != toEntityId)
   {
-    return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE storage \
+                              SET entityId=%lld \
+                              WHERE entityId=%lld; \
+                             ",
+                             Index_getDatabaseId(toEntityId),
+                             Index_getDatabaseId(entityId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+//TODO
+    // delete uuid if empty
+    error = Index_pruneEntity(indexHandle,entityId);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
-  // delete entity if empty
-  error = Index_pruneEntity(indexHandle,entityId);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // set archive type
+  // set entity type
   if (toArchiveType != ARCHIVE_TYPE_NONE)
   {
     error = Database_execute(&indexHandle->databaseHandle,
@@ -8132,6 +8136,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   uuidIdsString    = String_new();
   entityIdString   = String_new();
   storageIdsString = String_new();
+  entryIdsString   = String_new();
   filterString     = String_new();
   orderString      = String_new();
   string           = String_new();
@@ -8199,7 +8204,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
         break;
     }
   }
-  entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
   {
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
