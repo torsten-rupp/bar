@@ -2795,8 +2795,8 @@ Dprintf.dprintf("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
       if (isUpdateTriggered()) return;
 
       // update UUIDs menu items
-      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=*"),
-0,//                               1,  // debugLevel
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=''"),
+                               1,  // debugLevel
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -5286,7 +5286,7 @@ Dprintf.dprintf("");
         {
         }
 
-        subMenu = Widgets.addMenu(menu,BARControl.tr("Set job type\u2026"));
+        subMenu = Widgets.addMenu(menu,BARControl.tr("Set job type")+"\u2026");
         {
           menuItem = Widgets.addMenuItem(subMenu,
                                          null,
