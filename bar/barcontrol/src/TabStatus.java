@@ -2328,12 +2328,10 @@ Dprintf.dprintf("");
     {
       public void mouseEnter(MouseEvent mouseEvent)
       {
-Dprintf.dprintf("");
       }
 
       public void mouseExit(MouseEvent mouseEvent)
       {
-Dprintf.dprintf("");
         if (widgetJobTableToolTip != null)
         {
           // check if inside sub-widget
