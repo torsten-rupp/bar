@@ -67,7 +67,7 @@ typedef struct
   uint       value;
 } ConfigValueSelect;
 
-// configu value set value
+// config value set value
 typedef struct
 {
   const char *name;

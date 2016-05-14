@@ -893,12 +893,15 @@ LOCAL bool processValue(const ConfigValue *configValue,
       break;
     case CONFIG_VALUE_TYPE_SET:
       {
+        ulong                set;
         uint                 i,j;
         char                 setName[128];
-        const ConfigValueSet *set;
+        const ConfigValueSet *configValueSet;
 
         // find and store set values
         assert(configValue->variable.set != NULL);
+
+        set = 0L;
         i = 0;
         while (value[i] != '\0')
         {
@@ -920,8 +923,8 @@ LOCAL bool processValue(const ConfigValue *configValue,
           if (setName[0] != '\0')
           {
             // find value
-            set = findSet(configValue->setValue.sets,setName);
-            if (set == NULL)
+            configValueSet = findSet(configValue->setValue.sets,setName);
+            if (configValueSet == NULL)
             {
               if (outputHandle != NULL) fprintf(outputHandle,
                                                 "%sUnknown value '%s' for config value '%s'!\n",
@@ -938,7 +941,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
               if (variable != NULL)
               {
                 configVariable.set = (ulong*)((byte*)variable+configValue->offset);
-                (*configVariable.set) |= set->value;
+                set |= configValueSet->value;
               }
               else
               {
@@ -946,16 +949,38 @@ LOCAL bool processValue(const ConfigValue *configValue,
                 if ((*configValue->variable.reference) != NULL)
                 {
                   configVariable.set = (ulong*)((byte*)(*configValue->variable.reference)+configValue->offset);
-                  (*configVariable.set) |= set->value;
+                  set |= configValueSet->value;
                 }
               }
             }
             else
             {
               assert(configValue->variable.set != NULL);
-              (*configValue->variable.set) |= set->value;
+              set |= configValueSet->value;
             }
           }
+        }
+        if (configValue->offset >= 0)
+        {
+          if (variable != NULL)
+          {
+            configVariable.set = (ulong*)((byte*)variable+configValue->offset);
+            (*configVariable.set) = set;
+          }
+          else
+          {
+            assert(configValue->variable.reference != NULL);
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.set = (ulong*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              (*configVariable.set) = set;
+            }
+          }
+        }
+        else
+        {
+          assert(configValue->variable.set != NULL);
+          (*configValue->variable.set) = set;
         }
       }
       break;
