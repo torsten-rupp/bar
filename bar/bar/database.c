@@ -482,8 +482,9 @@ LOCAL String vformatSQLString(String     sqlString,
             // string
             s++;
 
-            if (quoteFlag) String_appendChar(sqlString,'\'');
             value.string = va_arg(arguments,String);
+
+            if (quoteFlag) String_appendChar(sqlString,'\'');
             if (value.string != NULL)
             {
               i = 0L;
@@ -3222,7 +3223,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
     }
     else
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      // nothing to do
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
