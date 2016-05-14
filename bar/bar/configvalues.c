@@ -1550,7 +1550,7 @@ bool ConfigValue_parse(const char        *name,
                        void              *variable
                       )
 {
-  uint i,j;
+  int i,j;
 
   assert(name != NULL);
   assert(configValues != NULL);
