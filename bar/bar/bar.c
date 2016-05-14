@@ -3176,7 +3176,7 @@ LOCAL Errors initAll(void)
   continuousDatabaseFileName             = NULL;
   indexDatabaseFileName                  = NULL;
 
-  logTypes                               = 0;
+  logTypes                               = LOG_TYPE_NONE;
   logFileName                            = NULL;
   logFormat                              = DEFAULT_LOG_FORMAT;
   logPostCommand                         = NULL;
