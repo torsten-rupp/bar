@@ -6875,10 +6875,6 @@ Errors Command_create(ConstString                  jobUUID,
   entityId = INDEX_ID_NONE;
   if (indexHandle != NULL)
   {
-#ifndef WERROR
-#warning TODO
-#endif
-#if 1
     error = Index_beginTransaction(indexHandle);
     if (error != ERROR_NONE)
     {
@@ -6889,8 +6885,7 @@ Errors Command_create(ConstString                  jobUUID,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-//    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_rollbackTransaction(indexHandle,"CREATE"); });
-#endif
+    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_rollbackTransaction(indexHandle); });
 
     error = Index_newEntity(indexHandle,
                             jobUUID,
@@ -6907,11 +6902,8 @@ Errors Command_create(ConstString                  jobUUID,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-//TODO
-//                      IndexId                      entityId,
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
   }
-fprintf(stderr,"%s, %d: add to enty %lld\n",__FILE__,__LINE__,Index_getDatabaseId(entityId));
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
@@ -6935,20 +6927,6 @@ fprintf(stderr,"%s, %d: add to enty %lld\n",__FILE__,__LINE__,Index_getDatabaseI
                Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
                Error_getText(error)
               );
-#if 0
-// NYI: must index be deleted on error?
-    // wait for index init
-    waitIndexInit(createInfo);
-
-    if (   (indexHandle != NULL)
-        && !createInfo.archiveInfo->jobOptions->noIndexDatabaseFlag
-        && !createInfo.archiveInfo->jobOptions->dryRunFlag
-        && !createInfo.archiveInfo->jobOptions->noStorageFlag
-       )
-    {
-      Storage_closeIndex(&createInfo.storageIndexHandle);
-    }
-#endif /* 0 */
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -7010,20 +6988,6 @@ fprintf(stderr,"%s, %d: add to enty %lld\n",__FILE__,__LINE__,Index_getDatabaseI
                Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
                Error_getText(error)
               );
-#if 0
-// NYI: must index be deleted on error?
-    // wait for index init
-    waitIndexInit(createInfo);
-
-    if (   (indexHandle != NULL)
-        && !createInfo.archiveInfo->jobOptions->noIndexDatabaseFlag
-        && !createInfo.archiveInfo->jobOptions->dryRunFlag
-        && !createInfo.archiveInfo->jobOptions->noStorageFlag
-       )
-    {
-      Storage_closeIndex(&createInfo.storageIndexHandle);
-    }
-#endif /* 0 */
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -7042,7 +7006,17 @@ fprintf(stderr,"%s, %d: add to enty %lld\n",__FILE__,__LINE__,Index_getDatabaseI
   // update index
   if (indexHandle != NULL)
   {
-#if 1
+    error = Index_pruneEntity(indexHandle,entityId);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create index for '%s' (error: %s)!\n",
+                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
     error = Index_endTransaction(indexHandle);
     if (error != ERROR_NONE)
     {
@@ -7053,7 +7027,6 @@ fprintf(stderr,"%s, %d: add to enty %lld\n",__FILE__,__LINE__,Index_getDatabaseI
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-#endif
   }
 
   // write incremental list
