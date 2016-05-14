@@ -369,12 +369,8 @@ fprintf(stderr,"%s, %d: archiveFileMode=%d exot=%d archiveFileModeOverwriteFlag=
                      );
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %s\n",__FILE__,__LINE__,String_cString(archiveName));
       return error;
     }
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,
-File_getSize(&storageArchiveHandle->fileSystem.fileHandle)
-);
 
     DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->fileSystem,sizeof(storageArchiveHandle->fileSystem));
   }
