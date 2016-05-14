@@ -6374,7 +6374,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
 {
   String            name;
   int               i;
-  String            s;
+  String            value;
   ConfigValueFormat configValueFormat;
 
   assert(clientInfo != NULL);
@@ -6400,16 +6400,16 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // send value
-  s = String_new();
+  value = String_new();
   ConfigValue_formatInit(&configValueFormat,
                          &CONFIG_VALUES[i],
                          CONFIG_VALUE_FORMAT_MODE_VALUE,
                          &globalOptions
                         );
-  ConfigValue_format(&configValueFormat,s);
+  ConfigValue_format(&configValueFormat,value);
   ConfigValue_formatDone(&configValueFormat);
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",s);
-  String_delete(s);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",value);
+  String_delete(value);
 
   // free resources
   String_delete(name);
