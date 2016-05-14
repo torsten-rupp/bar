@@ -77,7 +77,7 @@
   "  name         TEXT NOT NULL," \
   "  UNIQUE (jobUUID,name) " \
   ");" \
-  "CREATE INDEX IF NOT EXISTS namesIndex ON names (jobUUID,scheduleUUID);"
+  "CREATE INDEX IF NOT EXISTS namesIndex ON names (jobUUID,scheduleUUID,name);"
 
 /***************************** Datatypes *******************************/
 
@@ -1531,10 +1531,41 @@ LOCAL void continuousInitThreadCode(void)
 }
 
 /***********************************************************************\
+* Name   : existsContinuousEntry
+* Purpose: check if continuous entry exists in database
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+*          name         - entry name
+* Output : -
+* Return : TRUE iff exists
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool existsContinuousEntry(const char  *jobUUID,
+                                 const char  *scheduleUUID,
+                                 ConstString name
+                                )
+{
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+  assert(name != NULL);
+
+  return Database_exists(&continuousDatabaseHandle,
+                         "names",
+                         "id",
+                         "WHERE jobUUID=%'s AND scheduleUUID=%'s AND name=%'S",
+                         jobUUID,
+                         scheduleUUID,
+                         name
+                        );
+}
+
+/***********************************************************************\
 * Name   : addContinuousEntry
 * Purpose: add continuous entry to database
-* Input  : jobUUID - job UUID
-*          name    - entry name
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+*          name         - entry name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1547,6 +1578,7 @@ LOCAL Errors addContinuousEntry(const char  *jobUUID,
 {
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
+  assert(name != NULL);
 
   return Database_execute(&continuousDatabaseHandle,
                           CALLBACK(NULL,NULL),
@@ -1694,7 +1726,16 @@ fprintf(stderr,"\n");
                 {
                   // store into notify database
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                  if (error != ERROR_NONE)
+                  if (error == ERROR_NONE)
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Marked for storage '%s'\n",
+                                String_cString(name)
+                               );
+                  }
+                  else
                   {
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
@@ -1725,7 +1766,16 @@ fprintf(stderr,"\n");
                 {
                   // store into notify database
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                  if (error != ERROR_NONE)
+                  if (error == ERROR_NONE)
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Marked for storage '%s'\n",
+                                String_cString(name)
+                               );
+                  }
+                  else
                   {
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
@@ -1745,7 +1795,16 @@ fprintf(stderr,"\n");
                 {
                   // store into notify database
                   error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                  if (error != ERROR_NONE)
+                  if (error == ERROR_NONE)
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Marked for storage '%s'\n",
+                                String_cString(name)
+                               );
+                  }
+                  else
                   {
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
@@ -1766,15 +1825,27 @@ fprintf(stderr,"\n");
                 // store into notify database
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
-                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                  if (error != ERROR_NONE)
+                  if (!existsContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name))
                   {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)\n",
-                                Error_getText(error)
-                               );
+                    error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                    if (error == ERROR_NONE)
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_CONTINUOUS,
+                                  "CONTINUOUS",
+                                  "Marked for storage '%s'\n",
+                                  String_cString(name)
+                                 );
+                    }
+                    else
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_CONTINUOUS,
+                                  "CONTINUOUS",
+                                  "Store continuous entry fail (error: %s)\n",
+                                  Error_getText(error)
+                                 );
+                    }
                   }
                 }
               }
