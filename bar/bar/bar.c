@@ -6704,22 +6704,6 @@ bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const
   return TRUE;
 }
 
-//TODO
-#ifndef WERROR
-bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(value);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
-
-  return TRUE;
-}
-#endif
-
 bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);

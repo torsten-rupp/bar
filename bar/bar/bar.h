@@ -1595,22 +1595,6 @@ void configValueFormatDoneKey(void **formatUserData, void *userData);
 bool configValueFormatKey(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseOverwriteArchiveFiles
-* Purpose: config value option call back for parsing overwrite archive
-*          files flag
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
-* Output : -
-* Return : TRUE if config value parsed and stored into variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseOverwriteArchiveFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
 * Name   : configValueParseDeprecated...
 * Purpose: config value option call back for deprecated configuration
 *          values
