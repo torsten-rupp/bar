@@ -8114,7 +8114,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   uint   i;
   String filterString,orderString;
   String string;
-  String filterIdsString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -8145,10 +8144,39 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   getFTSString(ftsName,name);
   getREGEXPString(regexpName,name);
 
-  // get id sets (Note: collecting storage ids is faster than SQL joins of tables)
+  // get id sets
+  for (i = 0; i < indexIdCount; i++)
+  {
+    switch (Index_getType(indexIds[i]))
+    {
+      case INDEX_TYPE_UUID:
+        if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
+        String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      case INDEX_TYPE_ENTITY:
+        if (!String_isEmpty(entityIdString)) String_appendChar(entityIdString,',');
+        String_format(entityIdString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      case INDEX_TYPE_STORAGE:
+        if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
+        String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        break;
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    }
+  }
+  for (i = 0; i < entryIdCount; i++)
+  {
+    if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+    String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+  }
+
+  // get storage id set (Note: collecting storage ids is faster than SQL joins of tables)
   String_setCString(filterString,"0");
   filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
+  filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","storage.id IN (%S)",storageIdsString);
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT storage.id \
@@ -8183,56 +8211,19 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     String_format(storageIdsString,"%lld",storageId);
   }
   Database_finalize(&databaseQueryHandle);
-  for (i = 0; i < indexIdCount; i++)
-  {
-    switch (Index_getType(indexIds[i]))
-    {
-      case INDEX_TYPE_UUID:
-        if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-        String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-        break;
-      case INDEX_TYPE_ENTITY:
-        if (!String_isEmpty(entityIdString)) String_appendChar(entityIdString,',');
-        String_format(entityIdString,"%lld",Index_getDatabaseId(indexIds[i]));
-        break;
-      case INDEX_TYPE_STORAGE:
-        if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
-        String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
-        break;
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    }
-  }
-  for (i = 0; i < entryIdCount; i++)
-  {
-    if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-    String_format(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
-  }
 
   // get filters
   String_setCString(filterString,"1");
-  filterIdsString = String_new();
-//  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-//  filterAppend(filterIdsString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
-  filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","entries.storageId IN (%S)",storageIdsString);  // Note: use entries.storageId instead of storage.id: this is must faster
-  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   if (newestOnly)
   {
-//    filterAppend(filter,!String_isEmpty(ftsName),"AND","entriesNewest.entryId IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
-//TODO: use entriesNewest.entryId?
-//    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+    filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entriesNewest.storageId IN (%S)",storageIdsString);  // Note: use entries.storageId instead of storage.id: this is must faster
     filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(string,indexTypeSet));
   }
   else
   {
-//    filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//    filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,entries.name)",regexpString);
-//    filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+    filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);  // Note: use entries.storageId instead of storage.id: this is must faster
     filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(string,indexTypeSet));
   }
-  String_delete(filterIdsString);
 
   // get ordering
   if (newestOnly)
@@ -8247,6 +8238,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   // lock
   Database_lock(&indexHandle->databaseHandle);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // prepare list
   if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
@@ -10373,7 +10365,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                 ( \
                                  storageId, \
                                  entryId, \
-                                 destinationName, \
+                                 destinationName \
                                 ) \
                               VALUES \
                                 ( \
