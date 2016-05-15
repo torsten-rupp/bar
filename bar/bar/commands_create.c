@@ -5163,7 +5163,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (isAborted(createInfo))
     {
       printInfo(1,"ABORTED\n");
-      Archive_closeEntry(&archiveEntryInfo);
+      (void)Archive_closeEntry(&archiveEntryInfo);
       (void)File_close(&fileHandle);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5175,7 +5175,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       printError("Cannot store archive file (error: %s)!\n",
                  Error_getText(error)
                 );
-      Archive_closeEntry(&archiveEntryInfo);
+      (void)Archive_closeEntry(&archiveEntryInfo);
       (void)File_close(&fileHandle);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5514,7 +5514,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (isAborted(createInfo))
     {
       printInfo(1,"ABORTED\n");
-      Archive_closeEntry(&archiveEntryInfo);
+      (void)Archive_closeEntry(&archiveEntryInfo);
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5526,7 +5526,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       printError("Cannot store archive file (error: %s)!\n",
                  Error_getText(error)
                 );
-      Archive_closeEntry(&archiveEntryInfo);
+      (void)Archive_closeEntry(&archiveEntryInfo);
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -5915,8 +5915,13 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
-
+// /sys/class/hwmon
     // close archive entry
+if (String_equalsCString(linkName,"/sys/devices/LNXSYSTM:00/device:00/PNP0A08:00/PNP0C14:00/path"))
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+}
     error = Archive_closeEntry(&archiveEntryInfo);
     if (error != ERROR_NONE)
     {
@@ -6211,7 +6216,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (isAborted(createInfo))
     {
       printInfo(1,"ABORTED\n");
-      Archive_closeEntry(&archiveEntryInfo);
+      (void)Archive_closeEntry(&archiveEntryInfo);
       (void)File_close(&fileHandle);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -6223,7 +6228,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       printError("Cannot store archive file (error: %s)!\n",
                  Error_getText(error)
                 );
-      Archive_closeEntry(&archiveEntryInfo);
+      (void)Archive_closeEntry(&archiveEntryInfo);
       (void)File_close(&fileHandle);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
