@@ -1010,8 +1010,9 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
 /***********************************************************************\
 * Name   : addNotifySubDirectories
 * Purpose: add notify for directorty and all sub-directories
-* Input  : jobUUID   - job UUID
-*          directory - directory to add
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+*          directory    - directory to add
 * Output : -
 * Return : -
 * Notes  : -
@@ -1032,7 +1033,6 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
   StringList_init(&directoryList);
   name = String_new();
 
-fprintf(stderr,"%s, %d: directory=%s\n",__FILE__,__LINE__,String_cString(directory));
   StringList_append(&directoryList,directory);
   while (   !StringList_isEmpty(&directoryList)
          && !quitFlag
@@ -1049,11 +1049,9 @@ fprintf(stderr,"%s, %d: directory=%s\n",__FILE__,__LINE__,String_cString(directo
       if (error != ERROR_NONE)
       {
 //TODO: log?
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         continue;
       }
 
-#if 1
       // update/add notify
       SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
@@ -1061,6 +1059,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         notifyInfo = addNotify(name);
         if (notifyInfo == NULL)
         {
+//TODO
        //      logMessage(NULL,  // logHandleLOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(name),strerror(errno));
 fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
           Semaphore_unlock(&notifyLock);
@@ -1090,7 +1089,6 @@ fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
         }
         uuidNode->cleanFlag = FALSE;
       }
-#endif
 
       // scan sub-directories
       if (fileInfo.type == FILE_TYPE_DIRECTORY)
@@ -1108,11 +1106,9 @@ fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
             error = File_readDirectoryList(&directoryListHandle,name);
             if (error != ERROR_NONE)
             {
-  //TODO: log?
-  fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//TODO: log?
               continue;
             }
-      //fprintf(stderr,"%s, %d: %s included=%d excluded=%d dictionary=%d\n",__FILE__,__LINE__,String_cString(fileName),isIncluded(includeEntryNode,fileName),isExcluded(createInfo->excludePatternList,fileName),Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)));
 
             if (!isNoBackup(name))
             {
@@ -1120,8 +1116,7 @@ fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
               error = File_getFileInfo(name,&fileInfo);
               if (error != ERROR_NONE)
               {
-    //TODO: log?
-    fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//TODO: log?
                 continue;
               }
 
@@ -1139,12 +1134,10 @@ fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
         else
         {
   //TODO: log?
-fprintf(stderr,"%s, %d: %s %s\n",__FILE__,__LINE__,String_cString(name),strerror(errno));
         }
       }
     }
   }
-fprintf(stderr,"%s, %d: -----------\n",__FILE__,__LINE__);
 
   // free resources
   String_delete(name);
