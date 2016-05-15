@@ -5093,6 +5093,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     }
 
     // write file content to archive
+    bufferLength  = 0L;
     error         = ERROR_NONE;
     entryDoneSize = 0LL;
     do
