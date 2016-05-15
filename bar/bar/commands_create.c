@@ -6664,6 +6664,12 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     }
   }
 
+  // if there is an error terminated the entry queue
+  if (createInfo->failError != ERROR_NONE)
+  {
+    MsgQueue_setEndOfMsg(&createInfo->entryMsgQueue);
+  }
+
   // free resources
   free(buffer);
 }
