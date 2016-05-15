@@ -1490,30 +1490,6 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         row = 0;
 
         button = BARWidgets.newCheckbox(subComposite,
-                                        BARControl.tr("Log nothing."),
-                                        log,
-                                        "none",
-                                        new BARWidgets.Listener()
-                                        {
-                                          public boolean getChecked(WidgetVariable widgetVariable)
-                                          {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
-
-                                            return values.isEmpty() || values.contains("none");
-                                          }
-                                          public void setChecked(WidgetVariable widgetVariable, boolean checked)
-                                          {
-                                            if (checked)
-                                            {
-                                              widgetVariable.set("none");
-                                            }
-                                          }
-                                        }
-                                       );
-        Widgets.layout(button,row,0,TableLayoutData.W);
-        row++;
-
-        button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log errors."),
                                         log,
                                         "errors",
@@ -1863,7 +1839,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                           {
                                             HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
 
-                                            return values.contains("continous");
+                                            return values.contains("continuous");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
@@ -1871,13 +1847,13 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
 
                                             if (checked)
                                             {
-                                              values.add("continous");
+                                              values.add("continuous");
                                               values.remove("none");
                                               values.remove("all");
                                             }
                                             else
                                             {
-                                              values.remove("continous");
+                                              values.remove("continuous");
                                             }
 
                                             widgetVariable.set(StringUtils.join(values,","));
@@ -2257,6 +2233,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       BARServer.setServerOption(serverPassword             );
       BARServer.setServerOption(serverJobsDirectory        );
 
+Dprintf.dprintf("log=%s",log);
       BARServer.setServerOption(log                        );
       BARServer.setServerOption(logFile                    );
       BARServer.setServerOption(logFormat                  );
