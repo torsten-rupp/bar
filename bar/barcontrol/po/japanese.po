@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-05-13 22:27+0200\n"
+"POT-Creation-Date: 2016-05-15 10:04+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -53,12 +53,12 @@ msgstr "サーバ"
 
 #: src/BARControl.java:1498 src/BARControl.java:2741 src/BARControl.java:2765
 #: src/Dialogs.java:2560 src/Dialogs.java:2785 src/ServerSettings.java:537
-#: src/ServerSettings.java:2371 src/TabJobs.java:6355 src/TabRestore.java:7827
+#: src/ServerSettings.java:2376 src/TabJobs.java:6355 src/TabRestore.java:7827
 #: src/TabRestore.java:7854 src/TabRestore.java:8765 src/TabRestore.java:8792
 msgid "Password"
 msgstr "パスワード"
 
-#: src/BARControl.java:1511 src/ServerSettings.java:2328 src/TabJobs.java:6494
+#: src/BARControl.java:1511 src/ServerSettings.java:2333 src/TabJobs.java:6494
 #: src/TabJobs.java:7004
 msgid "Login"
 msgstr "ログイン"
@@ -68,7 +68,7 @@ msgstr "ログイン"
 #: src/Dialogs.java:2500 src/Dialogs.java:2683 src/Dialogs.java:2920
 #: src/Dialogs.java:3490 src/Dialogs.java:4238 src/Dialogs.java:4404
 #: src/Dialogs.java:4590 src/Dialogs.java:4928 src/Dialogs.java:5028
-#: src/ServerSettings.java:1955 src/ServerSettings.java:2558
+#: src/ServerSettings.java:1959 src/ServerSettings.java:2563
 #: src/TabJobs.java:8744 src/TabJobs.java:8863 src/TabJobs.java:8995
 #: src/TabJobs.java:10335 src/TabJobs.java:10670 src/TabJobs.java:11019
 #: src/TabJobs.java:11458 src/TabJobs.java:12687 src/TabJobs.java:13276
@@ -201,7 +201,7 @@ msgstr "次の項目のFTPログインパスワードを入力してください
 
 #: src/BARControl.java:2740 src/Dialogs.java:2548 src/Dialogs.java:2776
 #: src/Dialogs.java:3455 src/ServerSettings.java:555
-#: src/ServerSettings.java:2306 src/TabJobs.java:2085 src/TabJobs.java:3884
+#: src/ServerSettings.java:2311 src/TabJobs.java:2085 src/TabJobs.java:3884
 #: src/TabJobs.java:8729 src/TabJobs.java:8846 src/TabJobs.java:10575
 #: src/TabRestore.java:4151 src/TabRestore.java:4366 src/TabRestore.java:4564
 #: src/TabRestore.java:4778 src/TabRestore.java:5792 src/TabRestore.java:7463
@@ -324,7 +324,7 @@ msgid "Open"
 msgstr ""
 
 #: src/Dialogs.java:3480 src/Dialogs.java:4421 src/ServerSettings.java:639
-#: src/ServerSettings.java:1952 src/TabJobs.java:10489 src/TabJobs.java:10883
+#: src/ServerSettings.java:1956 src/TabJobs.java:10489 src/TabJobs.java:10883
 #: src/TabJobs.java:11169 src/TabJobs.java:11609 src/TabJobs.java:12684
 #: src/TabJobs.java:13413
 msgid "Save"
@@ -450,9 +450,9 @@ msgstr ""
 #: src/ServerSettings.java:1397 src/ServerSettings.java:1409
 #: src/ServerSettings.java:1421 src/ServerSettings.java:1433
 #: src/ServerSettings.java:1445 src/ServerSettings.java:1457
-#: src/ServerSettings.java:1469 src/ServerSettings.java:1921
-#: src/ServerSettings.java:1940 src/ServerSettings.java:2424
-#: src/ServerSettings.java:2490 src/TabJobs.java:4515 src/TabJobs.java:4527
+#: src/ServerSettings.java:1469 src/ServerSettings.java:1925
+#: src/ServerSettings.java:1944 src/ServerSettings.java:2429
+#: src/ServerSettings.java:2495 src/TabJobs.java:4515 src/TabJobs.java:4527
 #: src/TabJobs.java:5019 src/TabJobs.java:5031 src/TabJobs.java:5515
 #: src/TabJobs.java:5527 src/TabJobs.java:5621 src/TabJobs.java:5633
 #: src/TabJobs.java:6792 src/TabJobs.java:6804 src/TabJobs.java:6895
@@ -474,7 +474,7 @@ msgstr "保存ファイルをインデックス・データベースに追加"
 msgid "Servers"
 msgstr "サーバ"
 
-#: src/ServerSettings.java:490 src/ServerSettings.java:2350
+#: src/ServerSettings.java:490 src/ServerSettings.java:2355
 #: src/TabJobs.java:2282 src/TabJobs.java:6600 src/TabJobs.java:7110
 msgid "Port"
 msgstr "ポート"
@@ -908,100 +908,96 @@ msgstr ""
 msgid "Log"
 msgstr "ログイン"
 
-#: src/ServerSettings.java:1493
-msgid "Log nothing."
-msgstr ""
-
-#: src/ServerSettings.java:1517
+#: src/ServerSettings.java:1519
 #, fuzzy
 msgid "Log errors."
 msgstr "最新エラー"
 
-#: src/ServerSettings.java:1551
+#: src/ServerSettings.java:1554
 #, fuzzy
 msgid "Log warnings."
 msgstr "警告"
 
-#: src/ServerSettings.java:1585
+#: src/ServerSettings.java:1589
 #, fuzzy
 msgid "Log stored/restored files."
 msgstr "作成保存ファイルをCDに保存。"
 
-#: src/ServerSettings.java:1619
+#: src/ServerSettings.java:1623
 #, fuzzy
 msgid "Log unknown files."
 msgstr "ファイル"
 
-#: src/ServerSettings.java:1653
+#: src/ServerSettings.java:1657
 #, fuzzy
 msgid "Log skipped files."
 msgstr "ファイル"
 
-#: src/ServerSettings.java:1687
+#: src/ServerSettings.java:1691
 #, fuzzy
 msgid "Log missing files."
 msgstr "ファイル"
 
-#: src/ServerSettings.java:1721
+#: src/ServerSettings.java:1725
 #, fuzzy
 msgid "Log incomplete files."
 msgstr "ファイル"
 
-#: src/ServerSettings.java:1755
+#: src/ServerSettings.java:1759
 #, fuzzy
 msgid "Log excluded files."
 msgstr "ファイル"
 
-#: src/ServerSettings.java:1789
+#: src/ServerSettings.java:1793
 #, fuzzy
 msgid "Log storage operations."
 msgstr "保存作業"
 
-#: src/ServerSettings.java:1823
+#: src/ServerSettings.java:1827
 #, fuzzy
 msgid "Log index operations."
 msgstr "保存作業"
 
-#: src/ServerSettings.java:1857
+#: src/ServerSettings.java:1861
 msgid "Log continous operations."
 msgstr ""
 
-#: src/ServerSettings.java:1891
+#: src/ServerSettings.java:1895
 msgid "all"
 msgstr ""
 
-#: src/ServerSettings.java:1915
+#: src/ServerSettings.java:1919
 #, fuzzy
 msgid "Log file"
 msgstr "ファイル"
 
-#: src/ServerSettings.java:1918
+#: src/ServerSettings.java:1922
 #, fuzzy
 msgid "Log file name."
 msgstr "ファイル名"
 
-#: src/ServerSettings.java:1920
+#: src/ServerSettings.java:1924
 #, fuzzy
 msgid "Log files"
 msgstr "ファイル"
 
-#: src/ServerSettings.java:1927
+#: src/ServerSettings.java:1931
 msgid "Log format"
 msgstr ""
 
-#: src/ServerSettings.java:1930
+#: src/ServerSettings.java:1934
 msgid "Log format string."
 msgstr ""
 
-#: src/ServerSettings.java:1935
+#: src/ServerSettings.java:1939
 msgid "Log post command"
 msgstr ""
 
-#: src/ServerSettings.java:1938
+#: src/ServerSettings.java:1942
 msgid "Log post command."
 msgstr ""
 
-#: src/ServerSettings.java:2147
+#: src/ServerSettings.java:2151
 #, fuzzy, java-format
 msgid ""
 "Get server list fail:\n"
@@ -1009,101 +1005,101 @@ msgid ""
 "{0}"
 msgstr "サーバ"
 
-#: src/ServerSettings.java:2267
+#: src/ServerSettings.java:2272
 #, java-format
 msgid "Flush server options fail (error: {0})"
 msgstr ""
 
-#: src/ServerSettings.java:2335
+#: src/ServerSettings.java:2340
 #, fuzzy
 msgid "Login name."
 msgstr "ファイル名"
 
-#: src/ServerSettings.java:2353
+#: src/ServerSettings.java:2358
 #, fuzzy
 msgid "Port number. Set to 0 to use default port number."
 msgstr ""
 "SSHログインポート番号。設定ファイルからデフォルトポート番号を用いるには0に設"
 "定してください。"
 
-#: src/ServerSettings.java:2374
+#: src/ServerSettings.java:2379
 msgid "Set initial or new password. Note: existing password is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:2388 src/TabJobs.java:4914 src/TabJobs.java:5018
+#: src/ServerSettings.java:2393 src/TabJobs.java:4914 src/TabJobs.java:5018
 #: src/TabJobs.java:5030
 msgid "Public key"
 msgstr "パブリックキー"
 
-#: src/ServerSettings.java:2395
+#: src/ServerSettings.java:2400
 msgid "Set initial or new public key. Note: existing public key is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:2409 src/ServerSettings.java:2476
+#: src/ServerSettings.java:2414 src/ServerSettings.java:2481
 msgid "Load…"
 msgstr ""
 
-#: src/ServerSettings.java:2419 src/TabJobs.java:5016 src/TabJobs.java:5028
+#: src/ServerSettings.java:2424 src/TabJobs.java:5016 src/TabJobs.java:5028
 msgid "Select public key file"
 msgstr "パブリックキーファイル選択"
 
-#: src/ServerSettings.java:2421 src/ServerSettings.java:2422
+#: src/ServerSettings.java:2426 src/ServerSettings.java:2427
 #, fuzzy
 msgid "Public keys"
 msgstr "パブリックキー"
 
-#: src/ServerSettings.java:2423 src/ServerSettings.java:2489
+#: src/ServerSettings.java:2428 src/ServerSettings.java:2494
 #, fuzzy
 msgid "Key files"
 msgstr "ファイル"
 
-#: src/ServerSettings.java:2437
+#: src/ServerSettings.java:2442
 #, fuzzy, java-format
 msgid "Cannot load public key file ''{0}'' (error: {1})"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/ServerSettings.java:2455
+#: src/ServerSettings.java:2460
 #, fuzzy
 msgid "Private key"
 msgstr "SSHプライベートキー"
 
-#: src/ServerSettings.java:2462
+#: src/ServerSettings.java:2467
 msgid ""
 "Set initial or new private key. Note: existing private key is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:2486
+#: src/ServerSettings.java:2491
 #, fuzzy
 msgid "Select private key file"
 msgstr "SSHプライベートキーファイル選択"
 
-#: src/ServerSettings.java:2488
+#: src/ServerSettings.java:2493
 #, fuzzy
 msgid "Private keys"
 msgstr "SSHプライベートキー"
 
-#: src/ServerSettings.java:2503
+#: src/ServerSettings.java:2508
 #, fuzzy, java-format
 msgid "Cannot load private key file ''{0}'' (error: {1})"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/ServerSettings.java:2521
+#: src/ServerSettings.java:2526
 msgid "Max. connections"
 msgstr ""
 
-#: src/ServerSettings.java:2524
+#: src/ServerSettings.java:2529
 #, fuzzy
 msgid ""
 "Max. number of concurrent connections. 0 for unlimited number of concurrent "
 "connections."
 msgstr "リストのエントリ最大数"
 
-#: src/ServerSettings.java:2540 src/TabJobs.java:6067
+#: src/ServerSettings.java:2545 src/TabJobs.java:6067
 #, fuzzy
 msgid "Max. storage size"
 msgstr "パートサイズ"
 
-#: src/ServerSettings.java:2543
+#: src/ServerSettings.java:2548
 #, fuzzy
 msgid "Total size limit for storage."
 msgstr "保存ファイル１パートあたりの制限サイズ。"
