@@ -895,7 +895,7 @@ typedef struct
 
 #define CONFIG_VALUE_ITERATE(configValues,sectionName,index) \
   for ((index) = ConfigValue_firstValueIndex(configValues,sectionName); \
-       (index != -1) && ((index) < ConfigValue_lastValueIndex(configValues,sectionName)); \
+       (index != -1) && ((index) <= ConfigValue_lastValueIndex(configValues,sectionName)); \
        (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
@@ -918,7 +918,7 @@ typedef struct
 
 #define CONFIG_VALUE_ITERATEX(configValues,sectionName,index,condition) \
   for ((index) = ConfigValue_firstValueIndex(configValues,sectionName); \
-       (index != -1) && ((index) < ConfigValue_lastValueIndex(configValues,sectionName)) && (condition)); \
+       (index != -1) && ((index) <= ConfigValue_lastValueIndex(configValues,sectionName)) && (condition)); \
        (index) = ConfigValue_nextValueIndex(configValues,index) \
       )
 
