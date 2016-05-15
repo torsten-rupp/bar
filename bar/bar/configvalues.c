@@ -2083,7 +2083,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         s = String_new();
         ITERATE_SET(set,configValueFormat->configValue->setValue.sets)
         {
-          if ((*configVariable.set) & set->value)
+          if (((*configVariable.set) & set->value) == set->value)
           {
             if (String_length(s) > 0L) String_appendChar(s,',');
             String_appendCString(s,set->name);
