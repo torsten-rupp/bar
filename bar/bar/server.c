@@ -1580,29 +1580,31 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  jobNode->runningInfo.error               = ERROR_NONE;
-  jobNode->runningInfo.estimatedRestTime   = 0L;
-  jobNode->runningInfo.doneCount           = 0L;
-  jobNode->runningInfo.doneSize            = 0LL;
-  jobNode->runningInfo.totalEntryCount     = 0L;
-  jobNode->runningInfo.totalEntrySize      = 0LL;
-  jobNode->runningInfo.collectTotalSumDone = FALSE;
-  jobNode->runningInfo.skippedEntryCount   = 0L;
-  jobNode->runningInfo.skippedEntrySize    = 0LL;
-  jobNode->runningInfo.errorEntryCount     = 0L;
-  jobNode->runningInfo.errorEntrySize      = 0LL;
-  jobNode->runningInfo.archiveSize         = 0LL;
-  jobNode->runningInfo.compressionRatio    = 0.0;
-  jobNode->runningInfo.entryDoneSize       = 0LL;
-  jobNode->runningInfo.entryTotalSize      = 0LL;
-  jobNode->runningInfo.storageDoneSize     = 0LL;
-  jobNode->runningInfo.storageTotalSize    = 0LL;
-  jobNode->runningInfo.volumeNumber        = 0;
-  jobNode->runningInfo.volumeProgress      = 0.0;
-
-  String_clear(jobNode->runningInfo.entryName  );
+  jobNode->runningInfo.error                 = ERROR_NONE;
+  jobNode->runningInfo.estimatedRestTime     = 0L;
+  jobNode->runningInfo.doneCount             = 0L;
+  jobNode->runningInfo.doneSize              = 0LL;
+  jobNode->runningInfo.totalEntryCount       = 0L;
+  jobNode->runningInfo.totalEntrySize        = 0LL;
+  jobNode->runningInfo.collectTotalSumDone   = FALSE;
+  jobNode->runningInfo.skippedEntryCount     = 0L;
+  jobNode->runningInfo.skippedEntrySize      = 0LL;
+  jobNode->runningInfo.errorEntryCount       = 0L;
+  jobNode->runningInfo.errorEntrySize        = 0LL;
+  jobNode->runningInfo.entriesPerSecond      = 0.0;
+  jobNode->runningInfo.bytesPerSecond        = 0.0;
+  jobNode->runningInfo.storageBytesPerSecond = 0.0;
+  jobNode->runningInfo.archiveSize           = 0LL;
+  jobNode->runningInfo.compressionRatio      = 0.0;
+  String_clear(jobNode->runningInfo.entryName);
+  jobNode->runningInfo.entryDoneSize         = 0LL;
+  jobNode->runningInfo.entryTotalSize        = 0LL;
   String_clear(jobNode->runningInfo.storageName);
-  String_clear(jobNode->runningInfo.message    );
+  jobNode->runningInfo.storageDoneSize       = 0LL;
+  jobNode->runningInfo.storageTotalSize      = 0LL;
+  jobNode->runningInfo.volumeNumber          = 0;
+  jobNode->runningInfo.volumeProgress        = 0.0;
+  String_clear(jobNode->runningInfo.message);
 
   Misc_performanceFilterClear(&jobNode->runningInfo.entriesPerSecondFilter     );
   Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecondFilter       );
@@ -15973,7 +15975,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   FileSystemTypes  fileSystemType;
   IndexId          uuidId,entityId,storageId,entryId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes     archiveType;
   uint64           size;
   uint64           timeModified;
@@ -16117,6 +16118,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,timeModified,userId,groupId,permission);
         break;
       default:
+//TODO
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Index_getType(entryId));
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
         #endif /* NDEBUG */
