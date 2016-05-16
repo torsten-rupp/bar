@@ -4603,14 +4603,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           );
     if (error != ERROR_NONE)
     {
-      if (createInfo->failError == ERROR_NONE)
-      {
-        createInfo->failError = ERRORF_(error,
-                                        "Cannot store '%s' (error: %s)",
-                                        String_cString(printableStorageName),
-                                        Error_getText(error)
-                                       );
-      }
+      if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
