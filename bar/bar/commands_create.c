@@ -4603,7 +4603,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           );
     if (error != ERROR_NONE)
     {
-      createInfo->failError = error;
+      if (createInfo->failError == ERROR_NONE)
+      {
+        createInfo->failError = ERRORF_(error,
+                                        "Cannot store '%s' (error: %s)",
+                                        String_cString(printableStorageName),
+                                        Error_getText(error)
+                                       );
+      }
 
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
@@ -4659,7 +4666,7 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
                      String_cString(printableStorageName),
                      Error_getText(error)
                     );
-          createInfo->failError = error;
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
@@ -4680,7 +4687,7 @@ fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
                      String_cString(printableStorageName),
                      Error_getText(error)
                     );
-          createInfo->failError = error;
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
@@ -4703,7 +4710,7 @@ fprintf(stderr,"%s, %d: --- update storage %lld %s: %llu\n",__FILE__,__LINE__,In
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
-        createInfo->failError = error;
+        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         continue;
@@ -4725,7 +4732,7 @@ fprintf(stderr,"%s, %d: --- update storage %lld %s: %llu\n",__FILE__,__LINE__,In
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
-        createInfo->failError = error;
+        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         continue;
@@ -4741,7 +4748,7 @@ fprintf(stderr,"%s, %d: --- update storage %lld %s: %llu\n",__FILE__,__LINE__,In
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      createInfo->failError = error;
+      if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
@@ -4803,7 +4810,7 @@ fprintf(stderr,"%s, %d: --- update storage %lld %s: %llu\n",__FILE__,__LINE__,In
       printError("Cannot post-process storage (error: %s)!\n",
                  Error_getText(error)
                 );
-      createInfo->failError = error;
+      if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
     }
   }
 
@@ -5172,15 +5179,35 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     }
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL\n");
-      printError("Cannot store archive file (error: %s)!\n",
-                 Error_getText(error)
-                );
-      (void)Archive_closeEntry(&archiveEntryInfo);
-      (void)File_close(&fileHandle);
-      File_doneExtendedAttributes(&fileExtendedAttributeList);
-      clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
-      return error;
+      if (createInfo->jobOptions->skipUnreadableFlag)
+      {
+        printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        {
+          createInfo->statusInfo.doneCount++;
+          createInfo->statusInfo.doneSize += (uint64)fileInfo.size;
+          createInfo->statusInfo.errorEntryCount++;
+          createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
+        }
+        (void)Archive_closeEntry(&archiveEntryInfo);
+        (void)File_close(&fileHandle);
+        File_doneExtendedAttributes(&fileExtendedAttributeList);
+        clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
+        return ERROR_NONE;
+      }
+      else
+      {
+        printInfo(1,"FAIL\n");
+        printError("Cannot store file entry (error: %s)!\n",
+                   Error_getText(error)
+                  );
+        (void)Archive_closeEntry(&archiveEntryInfo);
+        (void)File_close(&fileHandle);
+        File_doneExtendedAttributes(&fileExtendedAttributeList);
+        clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
+        return error;
+      }
     }
     printInfo(2,"    \b\b\b\b");
 
@@ -5524,7 +5551,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot store archive file (error: %s)!\n",
+      printError("Cannot store image entry (error: %s)!\n",
                  Error_getText(error)
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
@@ -6226,7 +6253,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot store archive file (error: %s)!\n",
+      printError("Cannot store hardlink entry (error: %s)!\n",
                  Error_getText(error)
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
@@ -6664,8 +6691,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     }
   }
 
-  // if there is an error terminated the entry queue
-  if (createInfo->failError != ERROR_NONE)
+  // on an error or abort terminated the entry queue
+  if (isAborted(createInfo) || (createInfo->failError != ERROR_NONE))
   {
     MsgQueue_setEndOfMsg(&createInfo->entryMsgQueue);
   }
