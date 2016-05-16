@@ -2007,7 +2007,7 @@ Dprintf.dprintf("");
   {
     assert selectedJobData != null;
 
-    if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,BARControl.tr("Abort running job ''{0}''?",selectedJobData.name),false))
+    if ((selectedJobData.state != JobData.States.RUNNING) || Dialogs.confirm(shell,BARControl.tr("Abort running job ''{0}''?",selectedJobData.name),false))
     {
       final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Abort"),300,100,BARControl.tr("Abort job")+" '"+selectedJobData.name+"'\u2026",BusyDialog.TEXT0|BusyDialog.AUTO_ANIMATE);
 
@@ -2185,7 +2185,7 @@ Dprintf.dprintf("");
   {
     assert selectedJobData != null;
 
-    if (!selectedJobData.state.equals("running"))
+    if (selectedJobData.state != JobData.States.RUNNING)
     {
       tabJobs.jobDelete(selectedJobData);
       updateJobList();
