@@ -164,10 +164,60 @@ sub writeHPostfix()
   extern \"C\" {
 #endif
 
-int _Error_textToIndex(const char *text, ...);
+/***********************************************************************\
+* Name   : _Error_textToIndex
+* Purpose: store error text as index
+* Input  : format - format string (like printf)
+*          ...    - optional arguments for format string
+* Output : -
+* Return : index
+* Notes  : internal usage only!
+\***********************************************************************/
+
+int _Error_textToIndex(const char *format, ...);
+
+/***********************************************************************\
+* Name   : Error_getCode
+* Purpose: get error code
+* Input  : error - error
+* Output : -
+* Return : error code
+* Notes  : -
+\***********************************************************************/
+
 unsigned int Error_getCode(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getCodeText
+* Purpose: get error code as text (hex)
+* Input  : error  - error
+* Output : -
+* Return : text
+* Notes  : -
+\***********************************************************************/
+
 const char *Error_getCodeText(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getErrnoText
+* Purpose: get errno text
+* Input  : error  - error
+* Output : -
+* Return : errno text
+* Notes  : -
+\***********************************************************************/
+
 const char *Error_getErrnoText(Errors error);
+
+/***********************************************************************\
+* Name   : Error_getText
+* Purpose: get error text
+* Input  : error  - error
+* Output : -
+* Return : error text
+* Notes  : -
+\***********************************************************************/
+
 const char *Error_getText(Errors error);
 
 #ifdef __cplusplus
@@ -285,13 +335,52 @@ if ($hFileName ne "")
 #ifndef __ERRORS__
 #define __ERRORS__
 
+/***********************************************************************\
+* Name   : ERROR_
+* Purpose: create error
+* Input  : code  - error code; see ERROR_...
+*          errno - errno or 0
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
 #define ERROR_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
                                                  | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
                                                 ) \\
                                        )
+
+/***********************************************************************\
+* Name   : ERRORX_
+* Purpose: create extended error
+* Input  : code   - error code; see ERROR_...
+*          errno  - errno or 0
+*          format - format string (like printf)
+*          ...    - optional arguments for format string
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
 #define ERRORX_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
                                                  | ((_Error_textToIndex(format, ## __VA_ARGS__) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) \\
                                                  | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                ) \\
+                                       )
+
+/***********************************************************************\
+* Name   : ERRORF_
+* Purpose: format error text
+* Input  : error  - error
+*          format - format string (like printf)
+*          ...    - optional arguments for format string
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
+#define ERRORF_(error,format,...)      ((Errors)(  ((error) & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK)) \\
+                                                 | ((_Error_textToIndex(format, ## __VA_ARGS__) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) \\
                                                 ) \\
                                        )
 
