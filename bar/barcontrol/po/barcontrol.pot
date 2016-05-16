@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-05-15 10:34+0200\n"
+"POT-Creation-Date: 2016-05-16 12:26+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -57,12 +57,12 @@ msgstr ""
 
 #: src/BARControl.java:1498 src/BARControl.java:2741 src/BARControl.java:2765
 #: src/Dialogs.java:2560 src/Dialogs.java:2785 src/ServerSettings.java:537
-#: src/ServerSettings.java:2376 src/TabJobs.java:6355 src/TabRestore.java:7827
+#: src/ServerSettings.java:2348 src/TabJobs.java:6355 src/TabRestore.java:7827
 #: src/TabRestore.java:7854 src/TabRestore.java:8765 src/TabRestore.java:8792
 msgid "Password"
 msgstr ""
 
-#: src/BARControl.java:1511 src/ServerSettings.java:2333 src/TabJobs.java:6494
+#: src/BARControl.java:1511 src/ServerSettings.java:2305 src/TabJobs.java:6494
 #: src/TabJobs.java:7004
 msgid "Login"
 msgstr ""
@@ -72,7 +72,7 @@ msgstr ""
 #: src/Dialogs.java:2500 src/Dialogs.java:2683 src/Dialogs.java:2920
 #: src/Dialogs.java:3490 src/Dialogs.java:4238 src/Dialogs.java:4404
 #: src/Dialogs.java:4590 src/Dialogs.java:4928 src/Dialogs.java:5028
-#: src/ServerSettings.java:1959 src/ServerSettings.java:2563
+#: src/ServerSettings.java:1931 src/ServerSettings.java:2535
 #: src/TabJobs.java:8744 src/TabJobs.java:8863 src/TabJobs.java:8995
 #: src/TabJobs.java:10335 src/TabJobs.java:10670 src/TabJobs.java:11019
 #: src/TabJobs.java:11458 src/TabJobs.java:12687 src/TabJobs.java:13276
@@ -199,7 +199,7 @@ msgstr ""
 
 #: src/BARControl.java:2740 src/Dialogs.java:2548 src/Dialogs.java:2776
 #: src/Dialogs.java:3455 src/ServerSettings.java:555
-#: src/ServerSettings.java:2311 src/TabJobs.java:2085 src/TabJobs.java:3884
+#: src/ServerSettings.java:2283 src/TabJobs.java:2085 src/TabJobs.java:3884
 #: src/TabJobs.java:8729 src/TabJobs.java:8846 src/TabJobs.java:10575
 #: src/TabRestore.java:4151 src/TabRestore.java:4366 src/TabRestore.java:4564
 #: src/TabRestore.java:4778 src/TabRestore.java:5792 src/TabRestore.java:7463
@@ -311,7 +311,7 @@ msgid "Open"
 msgstr ""
 
 #: src/Dialogs.java:3480 src/Dialogs.java:4421 src/ServerSettings.java:639
-#: src/ServerSettings.java:1956 src/TabJobs.java:10489 src/TabJobs.java:10883
+#: src/ServerSettings.java:1928 src/TabJobs.java:10489 src/TabJobs.java:10883
 #: src/TabJobs.java:11169 src/TabJobs.java:11609 src/TabJobs.java:12684
 #: src/TabJobs.java:13413
 msgid "Save"
@@ -428,9 +428,9 @@ msgstr ""
 #: src/ServerSettings.java:1397 src/ServerSettings.java:1409
 #: src/ServerSettings.java:1421 src/ServerSettings.java:1433
 #: src/ServerSettings.java:1445 src/ServerSettings.java:1457
-#: src/ServerSettings.java:1469 src/ServerSettings.java:1925
-#: src/ServerSettings.java:1944 src/ServerSettings.java:2429
-#: src/ServerSettings.java:2495 src/TabJobs.java:4515 src/TabJobs.java:4527
+#: src/ServerSettings.java:1469 src/ServerSettings.java:1897
+#: src/ServerSettings.java:1916 src/ServerSettings.java:2401
+#: src/ServerSettings.java:2467 src/TabJobs.java:4515 src/TabJobs.java:4527
 #: src/TabJobs.java:5019 src/TabJobs.java:5031 src/TabJobs.java:5515
 #: src/TabJobs.java:5527 src/TabJobs.java:5621 src/TabJobs.java:5633
 #: src/TabJobs.java:6792 src/TabJobs.java:6804 src/TabJobs.java:6895
@@ -450,7 +450,7 @@ msgstr ""
 msgid "Servers"
 msgstr ""
 
-#: src/ServerSettings.java:490 src/ServerSettings.java:2355
+#: src/ServerSettings.java:490 src/ServerSettings.java:2327
 #: src/TabJobs.java:2282 src/TabJobs.java:6600 src/TabJobs.java:7110
 msgid "Port"
 msgstr ""
@@ -846,83 +846,83 @@ msgstr ""
 msgid "Log"
 msgstr ""
 
-#: src/ServerSettings.java:1519
+#: src/ServerSettings.java:1493
 msgid "Log errors."
 msgstr ""
 
-#: src/ServerSettings.java:1554
+#: src/ServerSettings.java:1527
 msgid "Log warnings."
 msgstr ""
 
-#: src/ServerSettings.java:1589
+#: src/ServerSettings.java:1561
 msgid "Log stored/restored files."
 msgstr ""
 
-#: src/ServerSettings.java:1623
+#: src/ServerSettings.java:1595
 msgid "Log unknown files."
 msgstr ""
 
-#: src/ServerSettings.java:1657
+#: src/ServerSettings.java:1629
 msgid "Log skipped files."
 msgstr ""
 
-#: src/ServerSettings.java:1691
+#: src/ServerSettings.java:1663
 msgid "Log missing files."
 msgstr ""
 
-#: src/ServerSettings.java:1725
+#: src/ServerSettings.java:1697
 msgid "Log incomplete files."
 msgstr ""
 
-#: src/ServerSettings.java:1759
+#: src/ServerSettings.java:1731
 msgid "Log excluded files."
 msgstr ""
 
-#: src/ServerSettings.java:1793
+#: src/ServerSettings.java:1765
 msgid "Log storage operations."
 msgstr ""
 
-#: src/ServerSettings.java:1827
+#: src/ServerSettings.java:1799
 msgid "Log index operations."
 msgstr ""
 
-#: src/ServerSettings.java:1861
+#: src/ServerSettings.java:1833
 msgid "Log continous operations."
 msgstr ""
 
-#: src/ServerSettings.java:1895
+#: src/ServerSettings.java:1867
 msgid "all"
 msgstr ""
 
-#: src/ServerSettings.java:1919
+#: src/ServerSettings.java:1891
 msgid "Log file"
 msgstr ""
 
-#: src/ServerSettings.java:1922
+#: src/ServerSettings.java:1894
 msgid "Log file name."
 msgstr ""
 
-#: src/ServerSettings.java:1924
+#: src/ServerSettings.java:1896
 msgid "Log files"
 msgstr ""
 
-#: src/ServerSettings.java:1931
+#: src/ServerSettings.java:1903
 msgid "Log format"
 msgstr ""
 
-#: src/ServerSettings.java:1934
+#: src/ServerSettings.java:1906
 msgid "Log format string."
 msgstr ""
 
-#: src/ServerSettings.java:1939
+#: src/ServerSettings.java:1911
 msgid "Log post command"
 msgstr ""
 
-#: src/ServerSettings.java:1942
+#: src/ServerSettings.java:1914
 msgid "Log post command."
 msgstr ""
 
-#: src/ServerSettings.java:2151
+#: src/ServerSettings.java:2123
 #, java-format
 msgid ""
 "Get server list fail:\n"
@@ -930,90 +930,90 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/ServerSettings.java:2272
+#: src/ServerSettings.java:2244
 #, java-format
 msgid "Flush server options fail (error: {0})"
 msgstr ""
 
-#: src/ServerSettings.java:2340
+#: src/ServerSettings.java:2312
 msgid "Login name."
 msgstr ""
 
-#: src/ServerSettings.java:2358
+#: src/ServerSettings.java:2330
 msgid "Port number. Set to 0 to use default port number."
 msgstr ""
 
-#: src/ServerSettings.java:2379
+#: src/ServerSettings.java:2351
 msgid "Set initial or new password. Note: existing password is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:2393 src/TabJobs.java:4914 src/TabJobs.java:5018
+#: src/ServerSettings.java:2365 src/TabJobs.java:4914 src/TabJobs.java:5018
 #: src/TabJobs.java:5030
 msgid "Public key"
 msgstr ""
 
-#: src/ServerSettings.java:2400
+#: src/ServerSettings.java:2372
 msgid "Set initial or new public key. Note: existing public key is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:2414 src/ServerSettings.java:2481
+#: src/ServerSettings.java:2386 src/ServerSettings.java:2453
 msgid "Load…"
 msgstr ""
 
-#: src/ServerSettings.java:2424 src/TabJobs.java:5016 src/TabJobs.java:5028
+#: src/ServerSettings.java:2396 src/TabJobs.java:5016 src/TabJobs.java:5028
 msgid "Select public key file"
 msgstr ""
 
-#: src/ServerSettings.java:2426 src/ServerSettings.java:2427
+#: src/ServerSettings.java:2398 src/ServerSettings.java:2399
 msgid "Public keys"
 msgstr ""
 
-#: src/ServerSettings.java:2428 src/ServerSettings.java:2494
+#: src/ServerSettings.java:2400 src/ServerSettings.java:2466
 msgid "Key files"
 msgstr ""
 
-#: src/ServerSettings.java:2442
+#: src/ServerSettings.java:2414
 #, java-format
 msgid "Cannot load public key file ''{0}'' (error: {1})"
 msgstr ""
 
-#: src/ServerSettings.java:2460
+#: src/ServerSettings.java:2432
 msgid "Private key"
 msgstr ""
 
-#: src/ServerSettings.java:2467
+#: src/ServerSettings.java:2439
 msgid ""
 "Set initial or new private key. Note: existing private key is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:2491
+#: src/ServerSettings.java:2463
 msgid "Select private key file"
 msgstr ""
 
-#: src/ServerSettings.java:2493
+#: src/ServerSettings.java:2465
 msgid "Private keys"
 msgstr ""
 
-#: src/ServerSettings.java:2508
+#: src/ServerSettings.java:2480
 #, java-format
 msgid "Cannot load private key file ''{0}'' (error: {1})"
 msgstr ""
 
-#: src/ServerSettings.java:2526
+#: src/ServerSettings.java:2498
 msgid "Max. connections"
 msgstr ""
 
-#: src/ServerSettings.java:2529
+#: src/ServerSettings.java:2501
 msgid ""
 "Max. number of concurrent connections. 0 for unlimited number of concurrent "
 "connections."
 msgstr ""
 
-#: src/ServerSettings.java:2545 src/TabJobs.java:6067
+#: src/ServerSettings.java:2517 src/TabJobs.java:6067
 msgid "Max. storage size"
 msgstr ""
 
-#: src/ServerSettings.java:2548
+#: src/ServerSettings.java:2520
 msgid "Total size limit for storage."
 msgstr ""
 
