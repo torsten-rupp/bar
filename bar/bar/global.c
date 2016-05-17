@@ -754,7 +754,6 @@ void debugResourceCheck(void)
 }
 #endif /* not NDEBUG */
 
-#ifndef NDEBUG
 typedef struct
 {
   FILE *handle;
@@ -874,11 +873,12 @@ void debugDumpCurrentStackTrace(FILE *handle,
 
     free(currentStackTrace);
   #else /* not defined(HAVE_BACKTRACE) */
+    UNUSED_VARIABLE(skipFrameCount);
+
     for (i = 0; i < indent; i++) fputc(' ',handle);
     fprintf(handle,"  not available\n");
   #endif /* defined(HAVE_BACKTRACE) */
 }
-#endif /* not NDEBUG */
 
 #ifndef NDEBUG
 void debugDumpMemory(const void *address, uint length, bool printAddress)
