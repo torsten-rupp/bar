@@ -691,11 +691,7 @@ if test $cleanFlag -eq 0; then
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      if test -n "$destination"; then
-        (cd $destination; $LN -sfT libcdio-0.92 libcdio)
-      else
-        $LN -sfT $tmpDirectory/libcdio-0.92 packages/libcdio
-      fi
+      (cd $destination; $LN -sfT packages/libcdio-0.92 libcdio)
     fi
   fi
 
