@@ -3320,54 +3320,54 @@ AC_TRY_LINK([#include <stdio.h>
             ],
             [printf("%s\n",GCRYPT_VERSION);],
             VERSION_GCRYPT=`./conftest$ac_exeext`,
-            VERSION_GCRYPT=
+            VERSION_GCRYPT=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "curl/curl.h"],
             [printf("%s\n",LIBCURL_VERSION);],
             VERSION_CURL=`./conftest$ac_exeext`,
-            VERSION_CURL=
+            VERSION_CURL=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "openssl/opensslv.h"
             ],
             [printf("%s\n",OPENSSL_VERSION_TEXT);],
             VERSION_OPENSSL=`./conftest$ac_exeext`,
-            VERSION_OPENSSL=
+            VERSION_OPENSSL=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "libssh2.h"],
             [printf("%d.%d.%d\n",LIBSSH2_VERSION_MAJOR,LIBSSH2_VERSION_MINOR,LIBSSH2_VERSION_PATCH);],
             VERSION_LIBSSH2=`./conftest$ac_exeext`,
-            VERSION_LIBSSH2=
+            VERSION_LIBSSH2=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "gmp.h"
             ],
             [printf("%s\n",gmp_version);],
             VERSION_GMP=`./conftest$ac_exeext`,
-            VERSION_GMP=
+            VERSION_GMP=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "gnutls/gnutls.h"
             ],
             [printf("%s\n",GNUTLS_VERSION);],
             VERSION_GNUTLS=`./conftest$ac_exeext`,
-            VERSION_GNUTLS=
+            VERSION_GNUTLS=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "cdio/cdio.h"
             ],
             [printf("%s\n",CDIO_VERSION);],
             VERSION_CDIO=`./conftest$ac_exeext`,
-            VERSION_CDIO=
+            VERSION_CDIO=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "pcre.h"
             ],
             [printf("%s\n",pcre_version());],
             VERSION_PCRE=`./conftest$ac_exeext`,
-            VERSION_PCRE=
+            VERSION_PCRE=unknown
            )
 
 dnl ------------ autoheader: top/bottom include for config.h -----------
