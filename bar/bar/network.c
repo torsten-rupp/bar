@@ -1984,7 +1984,7 @@ void Network_executeFlush(NetworkExecuteHandle  *networkExecuteHandle,
 
 Errors Network_executeKeepAlive(NetworkExecuteHandle *networkExecuteHandle)
 {
-  #if defined(HAVE_SSH2_KEEPALIVE_SEND)
+  #if defined(HAVE_SSH2) && defined(HAVE_SSH2_KEEPALIVE_SEND)
     int dummy;
   #endif
 

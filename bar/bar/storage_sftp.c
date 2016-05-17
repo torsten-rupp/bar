@@ -474,6 +474,7 @@ LOCAL Errors StorageSFTP_done(StorageHandle *storageHandle)
   #ifdef HAVE_SSH2
     freeServer(storageHandle->sftp.serverId);
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_SSH2 */
 
   return ERROR_NONE;
@@ -490,6 +491,8 @@ LOCAL bool StorageSFTP_isServerAllocationPending(StorageHandle *storageHandle)
   #if defined(HAVE_SSH2)
     serverAllocationPending = isServerAllocationPending(storageHandle->sftp.serverId);
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageHandle);
+
     serverAllocationPending = FALSE;
   #endif /* HAVE_SSH2 */
 
@@ -558,6 +561,11 @@ LOCAL Errors StorageSFTP_preProcess(StorageHandle *storageHandle,
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(timestamp);
+    UNUSED_VARIABLE(initialFlag);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 
@@ -627,6 +635,11 @@ LOCAL Errors StorageSFTP_postProcess(StorageHandle *storageHandle,
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(timestamp);
+    UNUSED_VARIABLE(finalFlag);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 
@@ -649,7 +662,9 @@ LOCAL Errors StorageSFTP_create(StorageArchiveHandle *storageArchiveHandle,
                                 uint64        archiveSize
                                )
 {
-  Errors error;
+  #ifdef HAVE_SSH2
+    Errors error;
+  #endif /* HAVE_SSH2 */
 
   assert(storageArchiveHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
@@ -743,7 +758,10 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
       }
     }
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(fileSize);
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(archiveSize);
+
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 
@@ -754,7 +772,9 @@ LOCAL Errors StorageSFTP_open(StorageArchiveHandle *storageArchiveHandle,
                               ConstString          archiveName
                              )
 {
-  Errors error;
+  #ifdef HAVE_SSH2
+    Errors error;
+  #endif /* HAVE_SSH2 */
 
   assert(storageArchiveHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
@@ -872,6 +892,9 @@ LOCAL Errors StorageSFTP_open(StorageArchiveHandle *storageArchiveHandle,
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(archiveName);
+
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 }
@@ -879,7 +902,9 @@ LOCAL Errors StorageSFTP_open(StorageArchiveHandle *storageArchiveHandle,
 LOCAL void StorageSFTP_close(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #ifdef HAVE_SSH2
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #endif /* HAVE_SSH2 */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
@@ -908,13 +933,16 @@ LOCAL void StorageSFTP_close(StorageArchiveHandle *storageArchiveHandle)
     Network_disconnect(&storageArchiveHandle->sftp.socketHandle);
     DEBUG_REMOVE_RESOURCE_TRACE(&storageArchiveHandle->sftp,sizeof(storageArchiveHandle->sftp));
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageArchiveHandle);
   #endif /* HAVE_SSH2 */
 }
 
 LOCAL bool StorageSFTP_eof(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #ifdef HAVE_SSH2
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #endif /* HAVE_SSH2 */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
@@ -930,6 +958,7 @@ LOCAL bool StorageSFTP_eof(StorageArchiveHandle *storageArchiveHandle)
     }
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageArchiveHandle);
+
     return TRUE;
   #endif /* HAVE_SSH2 */
 }
@@ -943,7 +972,9 @@ LOCAL Errors StorageSFTP_read(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #ifdef HAVE_SSH2
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #endif /* HAVE_SSH2 */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
@@ -1081,6 +1112,11 @@ LOCAL Errors StorageSFTP_read(StorageArchiveHandle *storageArchiveHandle,
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bytesRead);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
   assert(error != ERROR_UNKNOWN);
@@ -1096,7 +1132,9 @@ LOCAL Errors StorageSFTP_write(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #ifdef HAVE_SSH2
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #endif /* HAVE_SSH2 */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
@@ -1190,6 +1228,10 @@ LOCAL Errors StorageSFTP_write(StorageArchiveHandle *storageArchiveHandle,
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(size);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
   assert(error != ERROR_UNKNOWN);
@@ -1202,7 +1244,9 @@ LOCAL uint64 StorageSFTP_getSize(StorageArchiveHandle *storageArchiveHandle)
   uint64 size;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #ifdef HAVE_SSH2
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #endif /* HAVE_SSH2 */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
@@ -1213,6 +1257,7 @@ LOCAL uint64 StorageSFTP_getSize(StorageArchiveHandle *storageArchiveHandle)
       size = storageArchiveHandle->sftp.size;
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageArchiveHandle);
   #endif /* HAVE_SSH2 */
 
   return size;
@@ -1225,7 +1270,9 @@ LOCAL Errors StorageSFTP_tell(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #ifdef HAVE_SSH2
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #endif /* HAVE_SSH2 */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(offset != NULL);
@@ -1240,6 +1287,9 @@ LOCAL Errors StorageSFTP_tell(StorageArchiveHandle *storageArchiveHandle,
       error     = ERROR_NONE;
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(offset);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
   assert(error != ERROR_UNKNOWN);
@@ -1254,7 +1304,9 @@ LOCAL Errors StorageSFTP_seek(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #ifdef HAVE_SSH2
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->sftp);
+  #endif /* HAVE_SSH2 */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
@@ -1305,6 +1357,9 @@ LOCAL Errors StorageSFTP_seek(StorageArchiveHandle *storageArchiveHandle,
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(offset);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
   assert(error != ERROR_UNKNOWN);
@@ -1517,8 +1572,11 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                                            ConstString                archiveName
                                           )
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  #ifdef HAVE_SSH2
+    AutoFreeList autoFreeList;
+    Errors       error;
+    SSHServer    sshServer;
+  #endif /* HAVE_SSH2 */
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -1528,65 +1586,84 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(serverConnectionPriority);
 
-  // initialize variables
-  AutoFree_init(&autoFreeList);
-
-  // open directory listing
-  error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
+    // init variables
+    AutoFree_init(&autoFreeList);
+    storageDirectoryListHandle->type               = STORAGE_TYPE_SFTP;
+    storageDirectoryListHandle->sftp.pathName      = String_new();
+    storageDirectoryListHandle->sftp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
+    if (storageDirectoryListHandle->sftp.buffer == NULL)
     {
-      SSHServer sshServer;
+      String_delete(storageDirectoryListHandle->sftp.pathName);
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+    storageDirectoryListHandle->sftp.bufferLength  = 0;
+    storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.buffer,{ free(storageDirectoryListHandle->sftp.buffer); });
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.pathName,{ String_delete(storageDirectoryListHandle->sftp.pathName); });
 
-      // init variables
-      storageDirectoryListHandle->type               = STORAGE_TYPE_SFTP;
-      storageDirectoryListHandle->sftp.pathName      = String_new();
-      storageDirectoryListHandle->sftp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
-      if (storageDirectoryListHandle->sftp.buffer == NULL)
-      {
-        String_delete(storageDirectoryListHandle->sftp.pathName);
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_INSUFFICIENT_MEMORY;
-      }
-      storageDirectoryListHandle->sftp.bufferLength  = 0;
-      storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
-      AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.buffer,{ free(storageDirectoryListHandle->sftp.buffer); });
-      AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.pathName,{ String_delete(storageDirectoryListHandle->sftp.pathName); });
+    // set pathname
+    String_set(storageDirectoryListHandle->sftp.pathName,archiveName);
 
-      // set pathname
-      String_set(storageDirectoryListHandle->sftp.pathName,archiveName);
+    // get SSH server settings
+    getSSHServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&sshServer);
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,sshServer.loginName);
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
+    if (storageDirectoryListHandle->storageSpecifier.hostPort == 0) storageDirectoryListHandle->storageSpecifier.hostPort = sshServer.port;
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NO_HOST_NAME;
+    }
+    if (sshServer.publicKey.data == NULL)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NO_SSH_PUBLIC_KEY;
+    }
+    if (sshServer.privateKey.data == NULL)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NO_SSH_PRIVATE_KEY;
+    }
 
-      // get SSH server settings
-      getSSHServerSettings(storageDirectoryListHandle->storageSpecifier.hostName,jobOptions,&sshServer);
-      if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,sshServer.loginName);
-      if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
-      if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
-      if (storageDirectoryListHandle->storageSpecifier.hostPort == 0) storageDirectoryListHandle->storageSpecifier.hostPort = sshServer.port;
-      if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_NO_HOST_NAME;
-      }
-      if (sshServer.publicKey.data == NULL)
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_NO_SSH_PUBLIC_KEY;
-      }
-      if (sshServer.privateKey.data == NULL)
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_NO_SSH_PRIVATE_KEY;
-      }
-
-      // open network connection
-      error = ERROR_UNKNOWN;
-      if ((error == ERROR_UNKNOWN) && !Password_isEmpty(sshServer.password))
+    // open network connection
+    error = ERROR_UNKNOWN;
+    if ((error == ERROR_UNKNOWN) && !Password_isEmpty(sshServer.password))
+    {
+      error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
+                              SOCKET_TYPE_SSH,
+                              storageDirectoryListHandle->storageSpecifier.hostName,
+                              storageDirectoryListHandle->storageSpecifier.hostPort,
+                              storageDirectoryListHandle->storageSpecifier.loginName,
+                              sshServer.password,
+                              sshServer.publicKey.data,
+                              sshServer.publicKey.length,
+                              sshServer.privateKey.data,
+                              sshServer.privateKey.length,
+                              0
+                             );
+    }
+    if (error == ERROR_UNKNOWN)
+    {
+      // initialize default password
+      while (   (error != ERROR_NONE)
+             && initSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                             storageDirectoryListHandle->storageSpecifier.loginName,
+                             storageDirectoryListHandle->storageSpecifier.loginPassword,
+                             jobOptions,
+//TODO
+                             CALLBACK(NULL,NULL) // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                            )
+         )
       {
         error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
                                 SOCKET_TYPE_SSH,
                                 storageDirectoryListHandle->storageSpecifier.hostName,
                                 storageDirectoryListHandle->storageSpecifier.hostPort,
                                 storageDirectoryListHandle->storageSpecifier.loginName,
-                                sshServer.password,
+                                storageDirectoryListHandle->storageSpecifier.loginPassword,
                                 sshServer.publicKey.data,
                                 sshServer.publicKey.length,
                                 sshServer.privateKey.data,
@@ -1594,86 +1671,64 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                                 0
                                );
       }
-      if (error == ERROR_UNKNOWN)
-      {
-        // initialize default password
-        while (   (error != ERROR_NONE)
-               && initSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
-                               storageDirectoryListHandle->storageSpecifier.loginName,
-                               storageDirectoryListHandle->storageSpecifier.loginPassword,
-                               jobOptions,
-//TODO
-                               CALLBACK(NULL,NULL) // CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
-                              )
-           )
-        {
-          error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
-                                  SOCKET_TYPE_SSH,
-                                  storageDirectoryListHandle->storageSpecifier.hostName,
-                                  storageDirectoryListHandle->storageSpecifier.hostPort,
-                                  storageDirectoryListHandle->storageSpecifier.loginName,
-                                  storageDirectoryListHandle->storageSpecifier.loginPassword,
-                                  sshServer.publicKey.data,
-                                  sshServer.publicKey.length,
-                                  sshServer.privateKey.data,
-                                  sshServer.privateKey.length,
-                                  0
-                                 );
-        }
-        if (error != ERROR_NONE)
-        {
-          error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
-                    ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
-                    : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
-        }
-
-        // store passwrd as default SSH password
-        if (error == ERROR_NONE)
-        {
-          if (defaultSSHPassword == NULL) defaultSSHPassword = Password_new();
-          Password_set(defaultSSHPassword,storageDirectoryListHandle->storageSpecifier.loginPassword);
-        }
-      }
-      assert(error != ERROR_UNKNOWN);
       if (error != ERROR_NONE)
       {
-        AutoFree_cleanup(&autoFreeList);
-        return error;
+        error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
+                  ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
+                  : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
       }
-      libssh2_session_set_timeout(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle),READ_TIMEOUT);
-      AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.socketHandle,{ Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle); });
 
-      // init SFTP session
-      storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
-      if (storageDirectoryListHandle->sftp.sftp == NULL)
+      // store passwrd as default SSH password
+      if (error == ERROR_NONE)
       {
-        error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
-        AutoFree_cleanup(&autoFreeList);
-        return error;
+        if (defaultSSHPassword == NULL) defaultSSHPassword = Password_new();
+        Password_set(defaultSSHPassword,storageDirectoryListHandle->storageSpecifier.loginPassword);
       }
-      AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.sftp,{ libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp); });
-
-      // open directory for reading
-      storageDirectoryListHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryListHandle->sftp.sftp,
-                                                                         String_cString(storageDirectoryListHandle->sftp.pathName)
-                                                                        );
-      if (storageDirectoryListHandle->sftp.sftpHandle == NULL)
-      {
-        error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
-        AutoFree_cleanup(&autoFreeList);
-        return error;
-      }
-
-      // free resources
     }
+    assert(error != ERROR_UNKNOWN);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    libssh2_session_set_timeout(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle),READ_TIMEOUT);
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.socketHandle,{ Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle); });
+
+    // init SFTP session
+    storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
+    if (storageDirectoryListHandle->sftp.sftp == NULL)
+    {
+      error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->sftp.sftp,{ libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp); });
+
+    // open directory for reading
+    storageDirectoryListHandle->sftp.sftpHandle = libssh2_sftp_opendir(storageDirectoryListHandle->sftp.sftp,
+                                                                       String_cString(storageDirectoryListHandle->sftp.pathName)
+                                                                      );
+    if (storageDirectoryListHandle->sftp.sftpHandle == NULL)
+    {
+      error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    // free resources
+
+    AutoFree_done(&autoFreeList);
+
+    return ERROR_NONE;
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
+    UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
+    UNUSED_VARIABLE(serverConnectionPriority);
+    UNUSED_VARIABLE(archiveName);
 
-    error = ERROR_FUNCTION_NOT_SUPPORTED;
+    return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
-  AutoFree_done(&autoFreeList);
-
-  return ERROR_NONE;
 }
 
 LOCAL void StorageSFTP_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -1688,6 +1743,7 @@ LOCAL void StorageSFTP_closeDirectoryList(StorageDirectoryListHandle *storageDir
     free(storageDirectoryListHandle->sftp.buffer);
     String_delete(storageDirectoryListHandle->sftp.pathName);
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
   #endif /* HAVE_SSH2 */
 }
 
@@ -1731,6 +1787,7 @@ LOCAL bool StorageSFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDir
       endOfDirectoryFlag = !storageDirectoryListHandle->sftp.entryReadFlag;
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
   #endif /* HAVE_SSH2 */
 
   return endOfDirectoryFlag;
@@ -1846,6 +1903,10 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(fileInfo);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
   assert(error != ERROR_UNKNOWN);
