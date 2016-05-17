@@ -4490,6 +4490,8 @@ LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
 {
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
+
+  UNUSED_VARIABLE(indexQueryHandle);
 }
 
 /***********************************************************************\
@@ -6222,12 +6224,11 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // lock
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id, \
@@ -6248,8 +6249,8 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
-    Database_unlock(&indexHandle->databaseHandle);
     doneIndexQueryHandle(indexQueryHandle);
+    Database_unlock(&indexHandle->databaseHandle);
     return error;
   }
 
@@ -6421,9 +6422,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-//TODO required?
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
@@ -6440,6 +6438,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
@@ -6462,10 +6461,10 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -6643,9 +6642,6 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-//TODO required?
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
@@ -6669,6 +6665,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id,\
@@ -6694,12 +6691,12 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(orderString);
     String_delete(filterString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -7080,7 +7077,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
-  assert((uuidId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_UUID));
+  assert((uuidId == INDEX_ID_ANY) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
   assert((entityId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
   assert((indexIdCount == 0) || (indexIds != NULL));
 
@@ -7089,9 +7086,6 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   {
     return indexHandle->upgradeError;
   }
-
-//TODO required?
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
 
   // init variables
   ftsName      = String_new();
@@ -7135,6 +7129,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
+  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","entity.uuidId=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
@@ -7151,6 +7146,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 //TODO newest
@@ -7184,6 +7180,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(string);
     String_delete(orderString);
@@ -7193,10 +7190,10 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
     String_delete(uuidIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
+  // free resources
   String_delete(string);
   String_delete(orderString);
   String_delete(filterString);
@@ -7205,7 +7202,6 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   String_delete(uuidIdsString);
   String_delete(regexpName);
   String_delete(ftsName);
-  doneIndexQueryHandle(indexQueryHandle);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
@@ -8127,8 +8123,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName          = String_new();
   regexpName       = String_new();
@@ -8173,6 +8167,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   }
 
   // get storage id set (Note: collecting storage ids is faster than SQL joins of tables)
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   String_setCString(filterString,"0");
   filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
@@ -8240,6 +8235,7 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
     // no pattern/no entries selected
@@ -8464,6 +8460,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(string);
     String_delete(orderString);
@@ -8474,7 +8471,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(uuidIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
@@ -8731,8 +8727,6 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
@@ -8772,6 +8766,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -8794,13 +8789,13 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(filter);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -8937,8 +8932,6 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
@@ -8977,6 +8970,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -8996,13 +8990,13 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(filter);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -9132,8 +9126,6 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
@@ -9173,6 +9165,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   // prepare list
 //Database_debugEnable(1);
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -9193,13 +9186,13 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(filter);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -9329,8 +9322,6 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
@@ -9370,6 +9361,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -9390,13 +9382,13 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(filter);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -9528,8 +9520,6 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
@@ -9568,6 +9558,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -9590,13 +9581,13 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(filter);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -9732,8 +9723,6 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  initIndexQueryHandle(indexQueryHandle,indexHandle);
-
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
@@ -9772,6 +9761,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   Database_lock(&indexHandle->databaseHandle);
 
   // prepare list
+  initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT entries.id, \
@@ -9791,13 +9781,13 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
+    doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
     String_delete(filter);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
     String_delete(ftsName);
-    doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
 
@@ -9906,8 +9896,8 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle)
   DEBUG_REMOVE_RESOURCE_TRACE(indexQueryHandle,sizeof(IndexQueryHandle));
 
   Database_finalize(&indexQueryHandle->databaseQueryHandle);
-  Database_unlock(&indexQueryHandle->indexHandle->databaseHandle);
   doneIndexQueryHandle(indexQueryHandle);
+  Database_unlock(&indexQueryHandle->indexHandle->databaseHandle);
 }
 
 Errors Index_addFile(IndexHandle *indexHandle,

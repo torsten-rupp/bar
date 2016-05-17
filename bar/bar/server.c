@@ -13331,6 +13331,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
         )
   {
 fprintf(stderr,"%s, %d: %lld\n",__FILE__,__LINE__,entryId);
+    type = "";
     switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:      type = "FILE";      break;

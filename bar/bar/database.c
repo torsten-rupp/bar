@@ -855,6 +855,8 @@ LOCAL void unlockNotifyCallback(void *argv[], int argc)
   assert(argv != NULL);
   assert(argc >= 1);
 
+  UNUSED_VARIABLE(argc);
+
   semaphore = (sem_t*)argv[0];
 
   assert(semaphore != NULL);
@@ -993,6 +995,9 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
       assert(statementHandle != NULL);
 
       // allocate call-back data
+      names  = NULL;
+      values = NULL;
+      count  = 0;
       if (databaseRowFunction != NULL)
       {
         count = sqlite3_column_count(statementHandle);
@@ -1524,23 +1529,22 @@ void Database_doneAll(void)
   assert(databaseHandle != NULL);
 
   sqlite3_mutex_enter(databaseHandle->lock);
-  #ifdef NDEBUG
-    databaseHandle->locked.fileName = __FILE__;
-    databaseHandle->locked.lineNb   = __LINE__;
-  #else /* not NDEBUG */
+  #ifndef NDEBUG
     databaseHandle->locked.fileName = __fileName__;
     databaseHandle->locked.lineNb   = __lineNb__;
-  #endif /* NDEBUG */
-  databaseHandle->locked.text[0] = '\0';
-  databaseHandle->locked.t0      = Misc_getTimestamp();
+    databaseHandle->locked.text[0]  = '\0';
+    databaseHandle->locked.t0       = Misc_getTimestamp();
+  #endif /* not NDEBUG */
 }
 void Database_unlock(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
 
-  databaseHandle->locked.t1       = Misc_getTimestamp();
-  databaseHandle->locked.lineNb   = 0; \
-  databaseHandle->locked.fileName = NULL;
+  #ifndef NDEBUG
+    databaseHandle->locked.t1       = Misc_getTimestamp();
+    databaseHandle->locked.lineNb   = 0; \
+    databaseHandle->locked.fileName = NULL;
+  #endif /* not NDEBUG */
   sqlite3_mutex_leave(databaseHandle->lock); \
 }
 

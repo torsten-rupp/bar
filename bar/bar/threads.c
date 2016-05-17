@@ -549,18 +549,15 @@ LOCAL void debugThreadSignalAbortHandler(int signalNumber, siginfo_t *siginfo, v
 
 LOCAL void debugThreadSignalQuitHandler(int signalNumber, siginfo_t *siginfo, void *context)
 {
+  UNUSED_VARIABLE(siginfo);
+  UNUSED_VARIABLE(context);
+
   if (signalNumber == SIGQUIT)
   {
     debugThreadDumpAllStackTraces(NULL);
   }
 
   // Note: do not call previouos handler
-#if 0
-  if (debugThreadSignalQuitPrevHandler.sa_sigaction != NULL)
-  {
-    debugThreadSignalQuitPrevHandler.sa_sigaction(signalNumber,siginfo,context);
-  }
-#endif
 }
 
 /***********************************************************************\
