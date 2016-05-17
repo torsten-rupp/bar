@@ -293,6 +293,8 @@ typedef union
 #endif
 
 #ifndef NDEBUG
+//TODO
+#ifndef WERROR
 /***********************************************************************\
 * Name   : debugPrintQueryPlanCallback
 * Purpose: print query plan output
@@ -320,6 +322,7 @@ LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], ch
 
   return 0;
 }
+#endif
 #endif
 
 /***********************************************************************\
