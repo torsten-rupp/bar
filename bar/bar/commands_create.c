@@ -3638,6 +3638,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
   {
     // get total storage size, find oldest storage entry
     totalStorageSize      = 0LL;
+    oldestUUIDId          = INDEX_ID_NONE;
     oldestStorageId       = INDEX_ID_NONE;
     oldestEntityId        = INDEX_ID_NONE;
     String_clear(oldestStorageName);
@@ -4001,6 +4002,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
   {
     // get total storage size, find oldest storage entry
     totalStorageSize      = 0LL;
+    oldestUUIDId          = INDEX_ID_NONE;
     oldestStorageId       = INDEX_ID_NONE;
     oldestEntityId        = INDEX_ID_NONE;
     String_clear(oldestStorageName);
