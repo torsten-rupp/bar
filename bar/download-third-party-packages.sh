@@ -694,7 +694,7 @@ if test $cleanFlag -eq 0; then
       if test -n "$destination"; then
         (cd $destination; $LN -sfT libcdio-0.92 libcdio)
       else
-        $LN -sfT $tmpDirectory/libcdio-0.92 libcdio
+        $LN -sfT $tmpDirectory/libcdio-0.92 packages/libcdio
       fi
     fi
   fi
