@@ -525,7 +525,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   $(TARGETS) \
   \
   configure \
-  configure.in \
+  configure.ac \
   Makefile.in \
   epm.list.in \
   version \
@@ -561,7 +561,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    $(OTHER_SOURCES) \
                    tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 664 \
-                   configure.in \
+                   configure.ac \
                    Makefile.in \
                    epm.list.in \
                    ToDo \
