@@ -1394,12 +1394,14 @@ Errors Network_startSSL(SocketHandle *socketHandle,
                         const char   *keyFileName
                        )
 {
-  #if  defined(PLATFORM_LINUX)
-    long               socketFlags;
-  #elif defined(PLATFORM_WINDOWS)
-    u_long             n;
-  #endif /* PLATFORM_... */
-  Errors error;
+  #ifdef HAVE_GNU_TLS
+    #if  defined(PLATFORM_LINUX)
+      long               socketFlags;
+    #elif defined(PLATFORM_WINDOWS)
+      u_long             n;
+    #endif /* PLATFORM_... */
+    Errors error;
+  #endif /* HAVE_GNU_TLS */
 
   assert(socketHandle->type == SOCKET_TYPE_PLAIN);
 
