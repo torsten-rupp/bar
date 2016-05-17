@@ -417,6 +417,7 @@ DESTROYER_SOURCES    = destroyer.c \
                        cmdoptions.c \
                        lists.c \
                        strings.c \
+                       stacktraces.c \
 
 DESTROYER_HEADERS    = $(patsubst %.c,%.h,$(filter-out destroyer.c,$(DESTROYER_SOURCES))) \
 
