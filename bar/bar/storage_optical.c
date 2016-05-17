@@ -1300,6 +1300,9 @@ LOCAL Errors StorageOptical_open(StorageArchiveHandle *storageArchiveHandle,
 
     return ERROR_NONE;
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(archiveName);
+
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_ISO9660 */
 }
@@ -1364,6 +1367,7 @@ LOCAL bool StorageOptical_eof(StorageArchiveHandle *storageArchiveHandle)
     }
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageArchiveHandle);
+
     return TRUE;
   #endif /* HAVE_ISO9660 */
 }
@@ -1442,6 +1446,11 @@ LOCAL Errors StorageOptical_read(StorageArchiveHandle *storageArchiveHandle,
       }
     }
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bytesRead);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_ISO9660 */
   assert(error != ERROR_UNKNOWN);
@@ -1489,6 +1498,7 @@ LOCAL uint64 StorageOptical_getSize(StorageArchiveHandle *storageArchiveHandle)
       size = (uint64)storageArchiveHandle->opticalDisk.read.iso9660Stat->size;
     }
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageArchiveHandle);
   #endif /* HAVE_ISO9660 */
 
   return size;
@@ -1516,6 +1526,8 @@ LOCAL Errors StorageOptical_tell(StorageArchiveHandle *storageArchiveHandle,
       error     = ERROR_NONE;
     }
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(offset);
   #endif /* HAVE_ISO9660 */
   assert(error != ERROR_UNKNOWN);
 
@@ -1541,6 +1553,8 @@ LOCAL Errors StorageOptical_seek(StorageArchiveHandle *storageArchiveHandle,
       error = ERROR_NONE;
     }
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(offset);
   #endif /* HAVE_ISO9660 */
   assert(error != ERROR_UNKNOWN);
 
@@ -1604,6 +1618,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
+  UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 
   // initialize variables
@@ -1625,8 +1640,6 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
 
   // open directory listing
   #ifdef HAVE_ISO9660
-    UNUSED_VARIABLE(jobOptions);
-
     // init variables
     storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(archiveName);
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.pathName,{ String_delete(storageDirectoryListHandle->opticalDisk.pathName); });
@@ -1703,7 +1716,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
     error = File_openDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,
                                    archiveName
                                   );
-    if (error != NULL)
+    if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);
       return error;
@@ -1816,6 +1829,10 @@ LOCAL Errors StorageOptical_readDirectoryList(StorageDirectoryListHandle *storag
       }
     }
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(fileInfo);
+
     error = File_readDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,fileName);
   #endif /* HAVE_ISO9660 */
 

@@ -53,6 +53,9 @@
 #define MAX_BUFFER_SIZE       (64*1024)
 #define MAX_FILENAME_LENGTH   ( 8*1024)
 
+#define UNLOAD_VOLUME_DELAY_TIME (10LL*MISC_US_PER_SECOND) /* [us] */
+#define LOAD_VOLUME_DELAY_TIME   (10LL*MISC_US_PER_SECOND) /* [us] */
+
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
@@ -379,6 +382,15 @@ LOCAL Errors StorageDevice_init(StorageHandle          *storageHandle,
   assert(storageSpecifier != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
+
+  // get device name
+  if (String_isEmpty(storageHandle->storageSpecifier.deviceName))
+  {
+    String_set(storageHandle->storageSpecifier.deviceName,globalOptions.device->name);
+  }
+
+  // get device settings
+  getDeviceSettings(storageHandle->storageSpecifier.deviceName,jobOptions,&device);
 
   // init variables
   storageHandle->device.requestVolumeCommand   = device.requestVolumeCommand;

@@ -604,34 +604,26 @@ Errors Storage_initAll(void)
   {
     error = StorageFile_initAll();
   }
-  #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    if (error == ERROR_NONE)
-    {
-      error = StorageFTP_initAll();
-    }
-  #endif /* HAVE_CURL || HAVE_FTP */
-  #if defined(HAVE_SSH2)
-    if (error == ERROR_NONE)
-    {
-      error = StorageSCP_initAll();
-    }
-    if (error == ERROR_NONE)
-    {
-      error = StorageSFTP_initAll();
-    }
-  #endif /* HAVE_SSH2 */
-  #if defined(HAVE_CURL)
-    if (error == ERROR_NONE)
-    {
-      error = StorageWebDAV_initAll();
-    }
-  #endif /* HAVE_CURL */
-  #ifdef HAVE_ISO9660
-    if (error == ERROR_NONE)
-    {
-      error = StorageOptical_initAll();
-    }
-  #endif /* HAVE_ISO9660 */
+  if (error == ERROR_NONE)
+  {
+    error = StorageFTP_initAll();
+  }
+  if (error == ERROR_NONE)
+  {
+    error = StorageSCP_initAll();
+  }
+  if (error == ERROR_NONE)
+  {
+    error = StorageSFTP_initAll();
+  }
+  if (error == ERROR_NONE)
+  {
+    error = StorageWebDAV_initAll();
+  }
+  if (error == ERROR_NONE)
+  {
+    error = StorageOptical_initAll();
+  }
   if (error == ERROR_NONE)
   {
     error = StorageDevice_initAll();
@@ -643,19 +635,11 @@ Errors Storage_initAll(void)
 void Storage_doneAll(void)
 {
   StorageDevice_doneAll();
-  #ifdef HAVE_ISO9660
-    StorageOptical_doneAll();
-  #endif /* HAVE_ISO9660 */
-  #if defined(HAVE_CURL)
-    StorageWebDAV_doneAll();
-  #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
-  #if defined(HAVE_SSH2)
-    StorageSFTP_doneAll();
-    StorageSCP_doneAll();
-  #endif /* HAVE_SSH2 */
-  #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    StorageFTP_doneAll();
-  #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
+  StorageOptical_doneAll();
+  StorageWebDAV_doneAll();
+  StorageSFTP_doneAll();
+  StorageSCP_doneAll();
+  StorageFTP_doneAll();
   #if   defined(HAVE_CURL)
     curl_global_cleanup();
   #endif /* HAVE_CURL */
@@ -1599,6 +1583,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   AUTOFREE_ADD(&autoFreeList,&storageHandle->storageSpecifier,{ Storage_doneSpecifier(&storageHandle->storageSpecifier); });
 
   // init protocol specific values
+  error = ERROR_UNKNOWN;
   switch (storageHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
