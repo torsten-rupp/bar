@@ -361,8 +361,8 @@ typedef struct
 } ErrorText;
 
 static ErrorText errorTexts[$ERROR_TEXTINDEX_MAX_COUNT];   // last error texts
-static int       errorTextCount = 0;                       // last error text count (=max. when all text entries are used; recycle oldest entry if required)
-static int       errorTextId    = 0;                       // total number of error texts
+static uint      errorTextCount = 0;                       // last error text count (=max. when all text entries are used; recycle oldest entry if required)
+static uint      errorTextId    = 0;                       // total number of error texts
 
 int _Error_textToIndex(const char *format, ...)
 {
