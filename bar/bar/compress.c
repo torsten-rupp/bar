@@ -124,6 +124,7 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
   extern "C" {
 #endif
 
+#if defined(HAVE_LZO) || defined(HAVE_LZ4)
 /***********************************************************************\
 * Name   : putUINT32
 * Purpose: put uint32 into buffer (big endian)
@@ -160,6 +161,7 @@ LOCAL_INLINE uint32 getUINT32(byte *buffer)
          | ((uint32)buffer[2] <<  8)
          | ((uint32)buffer[3] <<  0);
 }
+#endif /* defined(HAVE_LZO) || defined(HAVE_LZ4) */
 
 #ifdef HAVE_Z
   #include "compress_zip.c"
@@ -849,7 +851,6 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_LZO
         CompressLZO_done(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
