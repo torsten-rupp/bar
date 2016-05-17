@@ -352,6 +352,7 @@ LOCAL Errors StorageSFTP_init(StorageHandle                *storageHandle,
     storageHandle->sftp.sshPublicKeyFileName   = NULL;
     storageHandle->sftp.sshPrivateKeyFileName  = NULL;
     initBandWidthLimiter(&storageHandle->sftp.bandWidthLimiter,maxBandWidthList);
+    AUTOFREE_ADD(&autoFreeList,&storageHandle->sftp.bandWidthLimiter,{ doneBandWidthLimiter(&storageHandle->sftp.bandWidthLimiter); });
 
     // get SSH server settings
     storageHandle->sftp.serverId = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);

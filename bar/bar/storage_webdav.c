@@ -655,6 +655,7 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
     // init variables
     AutoFree_init(&autoFreeList);
     initBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter,maxBandWidthList);
+    AUTOFREE_ADD(&autoFreeList,&storageHandle->webdav.bandWidthLimiter,{ doneBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter); });
 
     // get WebDAV server settings
     storageHandle->webdav.serverId = getWebDAVServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
@@ -663,14 +664,14 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
     if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
     if (String_isEmpty(storageHandle->storageSpecifier.hostName))
     {
-      doneBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter);
+      AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_HOST_NAME;
     }
 
     // allocate WebDAV server
     if (!allocateServer(storageHandle->webdav.serverId,serverConnectionPriority,60*1000L))
     {
-      doneBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter);
+      AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
     AUTOFREE_ADD(&autoFreeList,&storageHandle->webdav.serverId,{ freeServer(storageHandle->webdav.serverId); });
@@ -853,6 +854,8 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
     }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(timestamp);
     UNUSED_VARIABLE(initialFlag);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -922,6 +925,8 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
     }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(timestamp);
     UNUSED_VARIABLE(finalFlag);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1228,7 +1233,6 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
     return ERROR_NONE;
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageArchiveHandle);
-    UNUSED_VARIABLE(storageHandle)
     UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(archiveSize);
 
@@ -1451,7 +1455,9 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
 LOCAL void StorageWebDAV_close(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #ifdef HAVE_CURL
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #endif /* HAVE_CURL */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
@@ -1473,7 +1479,9 @@ LOCAL void StorageWebDAV_close(StorageArchiveHandle *storageArchiveHandle)
 LOCAL bool StorageWebDAV_eof(StorageArchiveHandle *storageArchiveHandle)
 {
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #ifdef HAVE_CURL
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #endif /* HAVE_CURL */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
@@ -1510,7 +1518,9 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
   #endif /* HAVE_CURL */
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #ifdef HAVE_CURL
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #endif /* HAVE_CURL */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
@@ -1675,7 +1685,9 @@ LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
   #endif /* HAVE_CURL */
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #ifdef HAVE_CURL
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #endif /* HAVE_CURL */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
@@ -1779,7 +1791,9 @@ LOCAL uint64 StorageWebDAV_getSize(StorageArchiveHandle *storageArchiveHandle)
   uint64 size;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #ifdef HAVE_CURL
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #endif /* HAVE_CURL */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
@@ -1803,7 +1817,9 @@ LOCAL Errors StorageWebDAV_tell(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #ifdef HAVE_CURL
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #endif /* HAVE_CURL */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(offset != NULL);
@@ -1844,7 +1860,9 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
   #endif /* HAVE_CURL */
 
   assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #ifdef HAVE_CURL
+    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  #endif /* HAVE_CURL */
   assert(storageArchiveHandle->storageHandle != NULL);
   assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
@@ -2237,9 +2255,9 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
                                              ConstString                archiveName
                                             )
 {
-  Errors       error;
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
-    AutoFreeList autoFreeList;
+    Errors            error;
+    AutoFreeList      autoFreeList;
     WebDAVServer      webDAVServer;
     CURL              *curlHandle;
     String            url;
@@ -2262,7 +2280,6 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
   UNUSED_VARIABLE(storageSpecifier);
 
   // open directory listing
-  error = ERROR_UNKNOWN;
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
     // init variables
     AutoFree_init(&autoFreeList);
@@ -2450,15 +2467,17 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
     AutoFree_done(&autoFreeList);
+
+    return ERROR_NONE;
   #else /* not defined(HAVE_CURL) && defined(HAVE_MXML) */
     UNUSED_VARIABLE(storageDirectoryListHandle);
     UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
+    UNUSED_VARIABLE(serverConnectionPriority);
+    UNUSED_VARIABLE(archiveName);
 
-    error = ERROR_FUNCTION_NOT_SUPPORTED;
+    return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
-
-  return ERROR_NONE;
 }
 
 LOCAL void StorageWebDAV_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)

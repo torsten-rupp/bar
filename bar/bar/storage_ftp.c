@@ -1067,15 +1067,17 @@ LOCAL Errors StorageFTP_init(StorageHandle              *storageHandle,
                              ServerConnectionPriorities serverConnectionPriority
                             )
 {
-  Errors error;
+  #if defined(HAVE_CURL) || defined(HAVE_FTP)
+    Errors error;
+  #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
 
   assert(storageHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
 
-  #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2)
+  #if !defined(HAVE_CURL) && !defined(HAVE_FTP)
     UNUSED_VARIABLE(serverConnectionPriority);
-  #endif /* !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2) */
+  #endif /* !defined(HAVE_CURL) && !defined(HAVE_FTP) */
 
   UNUSED_VARIABLE(storageSpecifier);
 
@@ -1390,6 +1392,8 @@ LOCAL Errors StorageFTP_preProcess(StorageHandle *storageHandle,
     }
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(time);
     UNUSED_VARIABLE(initialFlag);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1460,6 +1464,8 @@ LOCAL Errors StorageFTP_postProcess(StorageHandle *storageHandle,
     }
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(time);
     UNUSED_VARIABLE(finalFlag);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -3370,8 +3376,8 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
                                           ConstString                archiveName
                                          )
 {
-  Errors error;
   #if   defined(HAVE_CURL)
+    Errors          error;
     AutoFreeList    autoFreeList;
     FTPServer       ftpServer;
     CURL            *curlHandle;
@@ -3380,6 +3386,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     StringTokenizer nameTokenizer;
     ConstString     token;
   #elif defined(HAVE_FTP)
+    Errors       error;
     AutoFreeList autoFreeList;
     FTPServer    ftpServer;
     const char   *plainLoginPassword;
@@ -3399,7 +3406,6 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
   #endif
 
   // open directory listing
-  error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
     // init variables
     AutoFree_init(&autoFreeList);
@@ -3556,6 +3562,8 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
     AutoFree_done(&autoFreeList);
+
+    return ERROR_NONE;
   #elif defined(HAVE_FTP)
     // init variables
     AutoFree_init(&autoFreeList);
@@ -3717,15 +3725,16 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
     // free resources
     AutoFree_done(&autoFreeList);
+
+    return ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageDirectoryListHandle);
     UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
+    UNUSED_VARIABLE(archiveName);
 
-    error = ERROR_FUNCTION_NOT_SUPPORTED;
+    return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */
-
-  return ERROR_NONE;
 }
 
 LOCAL void StorageFTP_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)

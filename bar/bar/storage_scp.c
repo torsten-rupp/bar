@@ -360,6 +360,7 @@ LOCAL Errors StorageSCP_init(StorageHandle              *storageHandle,
     storageHandle->scp.sshPublicKeyFileName   = NULL;
     storageHandle->scp.sshPrivateKeyFileName  = NULL;
     initBandWidthLimiter(&storageHandle->scp.bandWidthLimiter,maxBandWidthList);
+    AUTOFREE_ADD(&autoFreeList,&storageHandle->scp.bandWidthLimiter,{ doneBandWidthLimiter(&storageHandle->scp.bandWidthLimiter); });
 
     // get SSH server settings
     storageHandle->scp.serverId = getSSHServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&sshServer);
