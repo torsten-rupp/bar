@@ -1685,7 +1685,6 @@ LOCAL void continuousThreadCode(void)
       {
         n = read(inotifyHandle,buffer,BUFFER_SIZE);
       }
-//fprintf(stderr,"%s, %d: xxxxxx inotifyHandle=%d n=%d: %d %s\n",__FILE__,__LINE__,inotifyHandle,n,errno,strerror(errno));
     }
     while ((n == -1) && ((errno == EAGAIN) || (errno == EINTR)) && !quitFlag);
     if (quitFlag) break;
@@ -1768,7 +1767,6 @@ fprintf(stderr,"\n");
               }
               else if ((inotifyEvent->mask & IN_MOVED_TO) == IN_MOVED_TO)
               {
-//fprintf(stderr,"%s, %d: del\n",__FILE__,__LINE__);
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
                   // store into notify database
@@ -1858,7 +1856,12 @@ fprintf(stderr,"\n");
               }
             }
           }
-else fprintf(stderr,"%s, %d: not found %d!\n",__FILE__,__LINE__,inotifyEvent->wd);
+          else
+          {
+            #ifndef NDEBUG
+              fprintf(stderr,"%s, %d: Warning: unknown inotify event received %d!\n",__FILE__,__LINE__,inotifyEvent->wd);
+            #endif /* not NDEBUG */
+          }
         }
       }
 
