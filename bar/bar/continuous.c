@@ -617,48 +617,16 @@ UNUSED_VARIABLE(databaseHandle);
 
   // clean-up
   n = 0L;
-  do
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    deletedIndex = FALSE;
+    do
+    {
+      deletedIndex = FALSE;
 
-    // get storage entry
-    error = Index_initListStorage(&indexQueryHandle1,
-                                  databaseHandle,
-                                  NULL, // uuid
-                                  DATABASE_ID_ANY, // entity id
-                                  STORAGE_TYPE_ANY,
-                                  NULL, // storageName
-                                  NULL, // hostName
-                                  NULL, // loginName
-                                  NULL, // deviceName
-                                  NULL, // fileName
-                                  INDEX_STATE_SET_ALL
-                                 );
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-    while (   !quitFlag
-           && !deletedIndex
-           && Index_getNextStorage(&indexQueryHandle1,
-                                   &storageId,
-                                   NULL, // entity id
-                                   NULL, // job UUID
-                                   NULL, // schedule UUID
-                                   NULL, // archive type
-                                   storageName,
-                                   NULL, // createdDateTime
-                                   NULL, // entries
-                                   NULL, // size
-                                   NULL, // indexState
-                                   NULL, // indexMode
-                                   NULL, // lastCheckedDateTime
-                                   NULL  // errorMessage
-                                  )
-          )
-    {
-      // check for duplicate entry
-      error = Index_initListStorage(&indexQueryHandle2,
+      // get storage entry
+      error = Index_initListStorage(&indexQueryHandle1,
                                     databaseHandle,
                                     NULL, // uuid
                                     DATABASE_ID_ANY, // entity id
@@ -672,16 +640,17 @@ UNUSED_VARIABLE(databaseHandle);
                                    );
       if (error != ERROR_NONE)
       {
-        continue;
+        break;
       }
       while (   !quitFlag
-             && Index_getNextStorage(&indexQueryHandle2,
-                                     &duplicateStorageId,
+             && !deletedIndex
+             && Index_getNextStorage(&indexQueryHandle1,
+                                     &storageId,
                                      NULL, // entity id
                                      NULL, // job UUID
                                      NULL, // schedule UUID
                                      NULL, // archive type
-                                     duplicateStorageName,
+                                     storageName,
                                      NULL, // createdDateTime
                                      NULL, // entries
                                      NULL, // size
@@ -692,43 +661,79 @@ UNUSED_VARIABLE(databaseHandle);
                                     )
             )
       {
-        if (   (storageId != duplicateStorageId)
-            && Storage_equalNames(storageName,duplicateStorageName)
-           )
+        // check for duplicate entry
+        error = Index_initListStorage(&indexQueryHandle2,
+                                      databaseHandle,
+                                      NULL, // uuid
+                                      DATABASE_ID_ANY, // entity id
+                                      STORAGE_TYPE_ANY,
+                                      NULL, // storageName
+                                      NULL, // hostName
+                                      NULL, // loginName
+                                      NULL, // deviceName
+                                      NULL, // fileName
+                                      INDEX_STATE_SET_ALL
+                                     );
+        if (error != ERROR_NONE)
         {
-          // get printable name (if possible)
-          error = Storage_parseName(&storageSpecifier,storageName);
-          if (error == ERROR_NONE)
+          continue;
+        }
+        while (   !quitFlag
+               && Index_getNextStorage(&indexQueryHandle2,
+                                       &duplicateStorageId,
+                                       NULL, // entity id
+                                       NULL, // job UUID
+                                       NULL, // schedule UUID
+                                       NULL, // archive type
+                                       duplicateStorageName,
+                                       NULL, // createdDateTime
+                                       NULL, // entries
+                                       NULL, // size
+                                       NULL, // indexState
+                                       NULL, // indexMode
+                                       NULL, // lastCheckedDateTime
+                                       NULL  // errorMessage
+                                      )
+              )
+        {
+          if (   (storageId != duplicateStorageId)
+              && Storage_equalNames(storageName,duplicateStorageName)
+             )
           {
-            String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-          }
-          else
-          {
-            String_set(printableStorageName,storageName);
-          }
+            // get printable name (if possible)
+            error = Storage_parseName(&storageSpecifier,storageName);
+            if (error == ERROR_NONE)
+            {
+              String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+            }
+            else
+            {
+              String_set(printableStorageName,storageName);
+            }
 
-          error = Index_deleteStorage(databaseHandle,duplicateStorageId);
-          if (error == ERROR_NONE)
-          {
-            plogMessage(NULL,  // logHandle,
-                        LOG_TYPE_CONTINUOUS,
-                        "CONTINUOUS",
-                        "Deleted duplicate index #%lld: '%s'\n",
-                        duplicateStorageId,
-                        String_cString(printableStorageName)
-                       );
-            n++;
+            error = Index_deleteStorage(databaseHandle,duplicateStorageId);
+            if (error == ERROR_NONE)
+            {
+              plogMessage(NULL,  // logHandle,
+                          LOG_TYPE_CONTINUOUS,
+                          "CONTINUOUS",
+                          "Deleted duplicate index #%lld: '%s'\n",
+                          duplicateStorageId,
+                          String_cString(printableStorageName)
+                         );
+              n++;
+              break;
+            }
+            deletedIndex = TRUE;
             break;
           }
-          deletedIndex = TRUE;
-          break;
         }
+        Index_doneList(&indexQueryHandle2);
       }
-      Index_doneList(&indexQueryHandle2);
+      Index_doneList(&indexQueryHandle1);
     }
-    Index_doneList(&indexQueryHandle1);
-  }
-  while (!quitFlag &&  deletedIndex);
+    while (!quitFlag &&  deletedIndex);
+  });
   if (n > 0L)
   {
     plogMessage(NULL,  // logHandle
@@ -1569,29 +1574,38 @@ LOCAL Errors addContinuousEntry(const char  *jobUUID,
                                 ConstString name
                                )
 {
+  Errors error;
+
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
   assert(name != NULL);
 
-  return Database_execute(&continuousDatabaseHandle,
-                          CALLBACK(NULL,NULL),
-                          "INSERT OR IGNORE INTO names \
-                             (\
-                              jobUUID,\
-                              scheduleUUID,\
-                              name\
-                             ) \
-                           VALUES \
-                             (\
-                              %'s,\
-                              %'s,\
-                              %'S\
-                             ); \
-                          ",
-                          jobUUID,
-                          scheduleUUID,
-                          name
-                         );
+  BLOCK_DOX(error,
+            Database_lock(&continuousDatabaseHandle),
+            Database_unlock(&continuousDatabaseHandle),
+  {
+    return Database_execute(&continuousDatabaseHandle,
+                            CALLBACK(NULL,NULL),
+                            "INSERT OR IGNORE INTO names \
+                               (\
+                                jobUUID,\
+                                scheduleUUID,\
+                                name\
+                               ) \
+                             VALUES \
+                               (\
+                                %'s,\
+                                %'s,\
+                                %'S\
+                               ); \
+                            ",
+                            jobUUID,
+                            scheduleUUID,
+                            name
+                           );
+  });
+
+  return error;
 }
 
 /***********************************************************************\
@@ -2049,31 +2063,16 @@ Errors Continuous_remove(DatabaseId databaseId)
 
 bool Continuous_isAvailable(ConstString jobUUID, ConstString scheduleUUID)
 {
-  bool                isAvailable;
-  DatabaseQueryHandle databaseQueryHandle;
-
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
-  if (Database_prepare(&databaseQueryHandle,
-                       &continuousDatabaseHandle,
-                       "SELECT id FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S LIMIT 0,1",
-                       jobUUID,
-                       scheduleUUID
-                      ) != ERROR_NONE
-     )
-  {
-    return FALSE;
-  }
-
-  isAvailable = Database_getNextRow(&databaseQueryHandle,
-                                    "%lld",
-                                    NULL
-                                   );
-
-  Database_finalize(&databaseQueryHandle);
-
-  return isAvailable;
+  return Database_exists(&continuousDatabaseHandle,
+                         "names",
+                         "id",
+                         "WHERE jobUUID=%'S AND scheduleUUID=%'S",
+                         jobUUID,
+                         scheduleUUID
+                        );
 }
 
 Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
@@ -2087,6 +2086,10 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
+  // lock
+  Database_lock(&continuousDatabaseHandle);
+
+  // prepare list
   error = Database_prepare(databaseQueryHandle,
                            &continuousDatabaseHandle,
                            "SELECT id,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S",
@@ -2095,17 +2098,22 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
+    Database_unlock(&continuousDatabaseHandle);
     return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 void Continuous_doneList(DatabaseQueryHandle *databaseQueryHandle)
 {
   assert(databaseQueryHandle != NULL);
 
+  // done list
   Database_finalize(databaseQueryHandle);
+
+  // unlock
+  Database_unlock(&continuousDatabaseHandle);
 }
 
 bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
