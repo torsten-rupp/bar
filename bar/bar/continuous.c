@@ -126,7 +126,8 @@ LOCAL int            inotifyHandle;
 LOCAL MsgQueue       initNotifyMsgQueue;
 LOCAL Thread         continuousInitThread;
 LOCAL Thread         continuousThread;
-LOCAL Thread         continuousCleanupThread;
+//TODO
+//LOCAL Thread         continuousCleanupThread;
 LOCAL bool           quitFlag;
 
 /****************************** Macros *********************************/
@@ -146,6 +147,8 @@ LOCAL bool           quitFlag;
 #endif
 
 #ifndef NDEBUG
+//TODO
+#ifndef WERROR
 LOCAL void printNotifies(void)
 {
   SemaphoreLock      semaphoreLock;
@@ -186,6 +189,7 @@ LOCAL void printNotifies(void)
     Dictionary_doneIterator(&dictionaryIterator);
   }
 }
+#endif
 #endif // NDEBUG
 
 /***********************************************************************\
@@ -368,6 +372,8 @@ LOCAL Errors getContinuousVersion(const char *databaseFileName, int64 *continuou
 * Notes  : -
 \***********************************************************************/
 
+// TODO
+#ifndef WERROR
 LOCAL Errors cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
 {
 UNUSED_VARIABLE(databaseHandle);
@@ -582,6 +588,7 @@ UNUSED_VARIABLE(databaseHandle);
 
   return ERROR_NONE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : cleanUpDuplicateIndizes
@@ -592,6 +599,7 @@ UNUSED_VARIABLE(databaseHandle);
 * Notes  : -
 \***********************************************************************/
 
+#ifndef WERROR
 LOCAL Errors cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
 {
 UNUSED_VARIABLE(databaseHandle);
@@ -753,6 +761,7 @@ UNUSED_VARIABLE(databaseHandle);
 
   return ERROR_NONE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : getMaxNotifies
@@ -868,6 +877,7 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 * Notes  : -
 \***********************************************************************/
 
+#ifndef WERROR
 LOCAL void cleanupContinuousThreadCode(DatabaseHandle *databaseHandle)
 {
 UNUSED_VARIABLE(databaseHandle);
@@ -914,6 +924,7 @@ UNUSED_VARIABLE(databaseHandle);
   }
 #endif
 }
+#endif
 
 /***********************************************************************\
 * Name   : addNotify
