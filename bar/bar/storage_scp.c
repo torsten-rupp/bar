@@ -1443,14 +1443,12 @@ whould this be a possible implementation?
       String_delete(command);
     }
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(storageArchiveHandle);
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(archiveName);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 #endif /* 0 */
-  UNUSED_VARIABLE(storageHandle);
-  UNUSED_VARIABLE(archiveName);
 
   error = ERROR_FUNCTION_NOT_SUPPORTED;
   assert(error != ERROR_UNKNOWN);
