@@ -255,7 +255,7 @@ CREATE VIRTUAL TABLE FTS_storage USING FTS4(
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON storage
   BEGIN
- insert into log values('trigger storage: INSERT size='||NEW.size);
+// insert into log values('trigger storage: INSERT size='||NEW.size);
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  +1,
           totalStorageSize   =totalStorageSize   +NEW.size,
@@ -302,7 +302,7 @@ CREATE TRIGGER BEFORE DELETE ON storage
   END;
 CREATE TRIGGER AFTER UPDATE OF entityId,size,totalEntryCount,totalEntrySize,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount ON storage
   BEGIN
- insert into log values('trigger storage: UPDATE OF storageId='||OLD.id||' size='||OLD.size||'->'||NEW.size||' totalEntryCount='||OLD.totalEntryCount||'->'||NEW.totalEntryCount);
+// insert into log values('trigger storage: UPDATE OF storageId='||OLD.id||' size='||OLD.size||'->'||NEW.size||' totalEntryCount='||OLD.totalEntryCount||'->'||NEW.totalEntryCount);
     UPDATE entities
       SET totalStorageCount  =totalStorageCount  -1,
           totalStorageSize   =totalStorageSize   -OLD.size,
@@ -412,6 +412,14 @@ CREATE TRIGGER AFTER INSERT ON entries
 
 CREATE TRIGGER AFTER UPDATE OF storageId ON entries
   BEGIN
+    // update storageId in *Entries
+    UPDATE fileEntries      SET storageId=NEW.storageId WHERE entryId=NEW.id;
+    UPDATE imageEntries     SET storageId=NEW.storageId WHERE entryId=NEW.id;
+    UPDATE directoryEntries SET storageId=NEW.storageId WHERE entryId=NEW.id;
+    UPDATE linkEntries      SET storageId=NEW.storageId WHERE entryId=NEW.id;
+    UPDATE hardlinkeEntries SET storageId=NEW.storageId WHERE entryId=NEW.id;
+    UPDATE specialEntries   SET storageId=NEW.storageId WHERE entryId=NEW.id;
+
     // update count/size in storage
     UPDATE storage
       SET totalEntryCount    =totalEntryCount    -1,
