@@ -14204,15 +14204,12 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   assert(argumentMap != NULL);
 
   // get uuid, pattern, pattern, pattern type
-  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_ANY))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuidId=<id>");
-    return;
-  }
   patternString = String_new();
-  if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
+  if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_ANY)
+      && !StringMap_getString(argumentMap,"pattern",patternString,NULL)
+     )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuidId=<id> or pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -14222,6 +14219,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(patternString);
     return;
   }
 
@@ -14243,6 +14241,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init entity list fail: %s",Error_getText(error));
     String_delete(lastErrorMessage);
+    String_delete(patternString);
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
@@ -14277,6 +14276,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
   // free resources
   String_delete(lastErrorMessage);
+  String_delete(patternString);
 }
 
 /***********************************************************************\
@@ -14307,13 +14307,11 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
   assert(argumentMap != NULL);
 
   // get jobUUID, archive type
-  String_clear(jobUUID);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  archiveType = ARCHIVE_TYPE_UNKNOWN;
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
@@ -14378,13 +14376,11 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
   UNUSED_VARIABLE(argumentMap);
 
   // get jobUUID, archive type, created
-  String_clear(jobUUID);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  archiveType = ARCHIVE_TYPE_UNKNOWN;
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
@@ -14967,7 +14963,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 * Return : -
 * Notes  : Arguments:
 *            toJobUUID=<uuid>|""
-*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
+*            [archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL]
 *            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
 *
 *          or
@@ -15002,11 +14998,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
-    return;
-  }
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE);
   String_clear(jobUUID);
   entityId  = INDEX_ID_NONE;
   storageId = INDEX_ID_NONE;
