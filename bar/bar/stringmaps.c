@@ -1258,9 +1258,12 @@ bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, 
   assert(stringMapParseEnumFunction != NULL);
 
   stringMapEntry = findStringMapEntry(stringMap,name);
-  if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
+  if (   (stringMapEntry != NULL)
+      && (stringMapEntry->value.text != NULL)
+      && stringMapParseEnumFunction(String_cString(stringMapEntry->value.text),(uint*)data)
+     )
   {
-    return stringMapParseEnumFunction(String_cString(stringMapEntry->value.text),(uint*)data);
+    return TRUE;
   }
   else
   {
