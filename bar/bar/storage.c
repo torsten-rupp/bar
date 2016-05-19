@@ -1457,6 +1457,7 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
   // get file to use
   if (archiveName == NULL)
   {
+//TODO: impleemtn Storage_getPattern()
     if (storageSpecifier->archivePatternString != NULL)
     {
       archiveName = storageSpecifier->archivePatternString;
@@ -3113,78 +3114,12 @@ Errors Storage_forAll(ConstString     storagePattern,
 
   Storage_initSpecifier(&storageSpecifier);
   initJobOptions(&jobOptions);
-//  copyJobOptions(serverDefaultJobOptions,&jobOptions);
   StringList_init(&directoryList);
   fileName = String_new();
 
   error = Storage_parseName(&storageSpecifier,storagePattern);
   if (error == ERROR_NONE)
   {
-#if 0
-    // get base directory
-    String_set(fileName,storageSpecifier.archiveName);
-    do
-    {
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        &jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH,
-                                        fileName
-                                       );
-      if (error == ERROR_NONE)
-      {
-        StringList_append(&directoryList,fileName);
-        Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-      else
-      {
-        File_getFilePathName(fileName,fileName);
-      }
-    }
-    while ((error != ERROR_NONE) && !String_isEmpty(fileName));
-
-    // read directory and scan all sub-directories
-    while (!StringList_isEmpty(&directoryList))
-    {
-      StringList_getLast(&directoryList,fileName);
-
-      // open directory
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        &jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_LOW,
-                                        fileName
-                                       );
-
-      if (error == ERROR_NONE)
-      {
-        // read directory
-        while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
-               && (error == ERROR_NONE)
-              )
-        {
-          // read next directory entry
-          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
-          if (error != ERROR_NONE)
-          {
-            continue;
-          }
-
-          // check entry type and file name
-          if (fileInfo.type == FILE_TYPE_DIRECTORY)
-          {
-            StringList_append(&directoryList,fileName);
-          }
-
-          // callback
-          error = storageFunction(Storage_getName(&storageSpecifier,fileName),&fileInfo,storageUserData);
-        }
-
-        // close directory
-        Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-    }
-#else
     // read directory and scan all sub-directories
     StringList_append(&directoryList,storageSpecifier.archiveName);
     while (!StringList_isEmpty(&directoryList))
@@ -3220,7 +3155,6 @@ Errors Storage_forAll(ConstString     storagePattern,
           }
 
           // match pattern and call callback
-//fprintf(stderr,"%s, %d: %s -- %s: %d\n",__FILE__,__LINE__,String_cString(storageSpecifier.archivePatternString),String_cString(fileName),Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT));
           if (Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
           {
             // callback
@@ -3232,7 +3166,6 @@ Errors Storage_forAll(ConstString     storagePattern,
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
-#endif
   }
 
   // free resources
