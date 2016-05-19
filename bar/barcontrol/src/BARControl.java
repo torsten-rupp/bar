@@ -1302,9 +1302,9 @@ public class BARControl
     System.out.println("         -c|--continue                              - continue job execution");
     System.out.println("         -l|--list                                  - list jobs");
     System.out.println("");
-    System.out.println("         --index-database-add=<name>                - add storage archive <name> to index");
-    System.out.println("         --index-database-remove=<pattern>          - remove storage archive <name> from index");
-    System.out.println("         --index-database-refresh=<pattern>         - refresh storage archive <name> in index");
+    System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
+    System.out.println("         --index-database-remove=<pattern>          - remove storage archive <pattern> from index");
+    System.out.println("         --index-database-refresh=<pattern>         - refresh storage archive <pattern> in index");
     System.out.println("         -a|--index-database-storage-list=<pattern> - list storage archives matching pattern <pattern>");
     System.out.println("         -e|--index-database-entries-list=<pattern> - list entries matching pattern <pattern>");
     System.out.println("");
