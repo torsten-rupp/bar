@@ -14782,6 +14782,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   String           patternString;
   PatternTypes     patternType;
   StorageSpecifier storageSpecifier;
+  StorageHandle    storageHandle;
   IndexId          storageId;
   Errors           error;
 
@@ -14814,63 +14815,131 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 #ifndef WERROR
 #warning remove
 #endif
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Storage_forAll(patternString,
-                         CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
-                         {
-                           UNUSED_VARIABLE(fileInfo);
-                           UNUSED_VARIABLE(userData);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
-                           error = Storage_parseName(&storageSpecifier,storageName);
-                           if (error == ERROR_NONE)
+  error = ERROR_UNKNOWN;
+
+  // try to open as storage file
+  if (error != ERROR_NONE)
+  {
+    if (Storage_parseName(&storageSpecifier,patternString) == ERROR_NONE)
+    {
+      if (String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
+      {
+        if (Storage_init(&storageHandle,
+                         &storageSpecifier,
+                         NULL, // jobOptions
+                         &globalOptions.indexDatabaseMaxBandWidthList,
+                         SERVER_CONNECTION_PRIORITY_LOW,
+                         CALLBACK(NULL,NULL),  // updateStatusInfo
+                         CALLBACK(NULL,NULL),  // getPassword
+                         CALLBACK(NULL,NULL)  // requestVolume
+                        ) == ERROR_NONE
+           )
+        {
+          if (Index_findStorageByName(indexHandle,
+                                      &storageSpecifier,
+                                      NULL,  // archiveName
+                                      NULL,  // uuidId
+                                      NULL,  // entityId
+                                      NULL,  // jobUUID
+                                      NULL,  // scheduleUUID
+                                      &storageId,
+                                      NULL,  // indexState,
+                                      NULL  // lastCheckedDateTime
+                                     )
+             )
+          {
+            error = Index_setState(indexHandle,
+                                   storageId,
+                                   INDEX_STATE_UPDATE_REQUESTED,
+                                   Misc_getCurrentDateTime(),
+                                   NULL
+                                  );
+          }
+          else
+          {
+            error = Index_newStorage(indexHandle,
+                                     INDEX_ID_NONE, // entityId
+                                     Storage_getPrintableName(&storageSpecifier,NULL),
+                                     INDEX_STATE_UPDATE_REQUESTED,
+                                     INDEX_MODE_MANUAL,
+                                     &storageId
+                                    );
+            if (error == ERROR_NONE)
+            {
+              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                               storageId,
+                               Storage_getPrintableName(&storageSpecifier,NULL)
+                              );
+            }
+          }
+          Storage_done(&storageHandle);
+        }
+      }
+    }
+  }
+
+  // try to open as directory
+  if (error != ERROR_NONE)
+  {
+    error = Storage_forAll(patternString,
+                           CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                            {
-                             if (String_endsWithCString(storageSpecifier.archiveName,".bar"))
-                             {
-fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(Storage_getPrintableName(&storageSpecifier,NULL)));
-                               if (Index_findStorageByName(indexHandle,
-                                                           &storageSpecifier,
-                                                           NULL,  // archiveName
-                                                           NULL,  // uuidId
-                                                           NULL,  // entityId
-                                                           NULL,  // jobUUID
-                                                           NULL,  // scheduleUUID
-//TODO NULL
-                                                           &storageId,
-                                                           NULL,  // indexState,
-                                                           NULL  // lastCheckedDateTime
-                                                          )
-                                  )
-                               {
-                                 error = Index_setState(indexHandle,
-                                                        storageId,
-                                                        INDEX_STATE_UPDATE_REQUESTED,
-                                                        Misc_getCurrentDateTime(),
-                                                        NULL
-                                                       );
-                               }
-                               else
-                               {
-                                 error = Index_newStorage(indexHandle,
-                                                          INDEX_ID_NONE, // entityId
-                                                          storageName,
-                                                          INDEX_STATE_UPDATE_REQUESTED,
-                                                          INDEX_MODE_MANUAL,
-                                                          &storageId
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   return error;
-                                 }
+                             UNUSED_VARIABLE(fileInfo);
+                             UNUSED_VARIABLE(userData);
 
-                                 sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu",storageId);
+                             error = Storage_parseName(&storageSpecifier,storageName);
+                             if (error == ERROR_NONE)
+                             {
+                               if (String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
+                               {
+//fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
+                                 if (Index_findStorageByName(indexHandle,
+                                                             &storageSpecifier,
+                                                             NULL,  // archiveName
+                                                             NULL,  // uuidId
+                                                             NULL,  // entityId
+                                                             NULL,  // jobUUID
+                                                             NULL,  // scheduleUUID
+                                                             &storageId,
+                                                             NULL,  // indexState,
+                                                             NULL  // lastCheckedDateTime
+                                                            )
+                                    )
+                                 {
+                                   error = Index_setState(indexHandle,
+                                                          storageId,
+                                                          INDEX_STATE_UPDATE_REQUESTED,
+                                                          Misc_getCurrentDateTime(),
+                                                          NULL
+                                                         );
+                                 }
+                                 else
+                                 {
+                                   error = Index_newStorage(indexHandle,
+                                                            INDEX_ID_NONE, // entityId
+                                                            storageName,
+                                                            INDEX_STATE_UPDATE_REQUESTED,
+                                                            INDEX_MODE_MANUAL,
+                                                            &storageId
+                                                           );
+                                   if (error != ERROR_NONE)
+                                   {
+                                     return error;
+                                   }
+
+                                   sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                                    storageId,
+                                                    Storage_getPrintableName(&storageSpecifier,NULL)
+                                                   );
+                                 }
                                }
                              }
-                           }
 
-                           return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
-                         },NULL)
-                        );
+                             return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
+                           },NULL)
+                          );
+  }
 
   if (error == ERROR_NONE)
   {
