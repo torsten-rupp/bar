@@ -1773,255 +1773,13 @@ public class TabJobs
   private HashSet<String>              compressExcludeHashSet = new HashSet<String>();
   private HashMap<String,ScheduleData> scheduleDataMap        = new HashMap<String,ScheduleData>();
 
-  ListDirectory remoteListDirectory = new ListDirectory()
-  {
-    /** remote file
-     */
-    class RemoteFile extends File
-    {
-      private FileTypes fileType;
-      private long      size;
-      private long      dateTime;
-
-      /** create remote file
-       * @param name name
-       * @param fileType file type
-       * @param size size [bytes]
-       * @param dateTime last modified date/time
-       */
-      public RemoteFile(String name, FileTypes fileType, long size, long dateTime)
-      {
-        super(name);
-
-        this.fileType = fileType;
-        this.size     = size;
-        this.dateTime = dateTime;
-      }
-
-      /** create remote file
-       * @param name name
-       * @param fileType file type
-       * @param dateTime last modified date/time
-       */
-      public RemoteFile(String name, FileTypes fileType, long dateTime)
-      {
-        this(name,fileType,0,dateTime);
-      }
-
-      /** create remote file
-       * @param name name
-       * @param size size [bytes]
-       */
-      public RemoteFile(String name, long size)
-      {
-        this(name,FileTypes.DIRECTORY,size,0);
-      }
-
-      /** get file size
-       * @return size [bytes]
-       */
-      public long length()
-      {
-        return size;
-      }
-
-      /** get last modified
-       * @return last modified date/time
-       */
-      public long lastModified()
-      {
-        return dateTime*1000;
-      }
-
-      /** check if file is file
-       * @return true iff file
-       */
-      public boolean isFile()
-      {
-        return fileType == FileTypes.FILE;
-      }
-
-      /** check if file is directory
-       * @return true iff directory
-       */
-      public boolean isDirectory()
-      {
-        return fileType == FileTypes.DIRECTORY;
-      }
-
-      /** check if file is hidden
-       * @return always false
-       */
-      public boolean isHidden()
-      {
-        return getName().startsWith(".");
-      }
-
-      /** check if file exists
-       * @return always true
-       */
-      public boolean exists()
-      {
-        return true;
-      }
-    };
-
-    private ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-    private Iterator<ValueMap>  iterator;
-
-    /** get shortcut files
-     * @return shortcut files
-     */
-    public File[] getShortcuts()
-    {
-      ArrayList<File> shortcutList = new ArrayList<File>();
-
-      String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("ROOT_LIST"),
-                                           0,
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-      if (error == Errors.NONE)
-      {
-        for (ValueMap resultMap : resultMapList)
-        {
-          shortcutList.add(new RemoteFile(resultMap.getString("name"),
-                                          Long.parseLong(resultMap.getString("size"))
-                                         )
-                          );
-        }
-      }
-
-      return shortcutList.toArray(new File[shortcutList.size()]);
-    }
-
-    /** set shortcut files
-     * @param shortchuts shortcut files
-     */
-    public void setShortcuts(File shortcuts[])
-    {
-Dprintf.dprintf("");
-    }
-
-    /** open list files in directory
-     * @param pathName path name
-     * @return true iff open
-     */
-    public boolean open(String pathName)
-    {
-      String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
-                                                               pathName
-                                                              ),
-                                           0,
-                                           resultErrorMessage,
-                                           resultMapList
-                                          );
-      if (error == Errors.NONE)
-      {
-        iterator = resultMapList.listIterator();
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
-
-    /** close list files in directory
-     */
-    public void close()
-    {
-      iterator = null;
-    }
-
-    /** get next entry in directory
-     * @return entry
-     */
-    public File getNext()
-    {
-      File file = null;
-
-      if (iterator.hasNext())
-      {
-        ValueMap valueMap = iterator.next();
-        try
-        {
-          FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
-          switch (fileType)
-          {
-            case FILE:
-              {
-                String  name         = valueMap.getString ("name"         );
-                long    size         = valueMap.getLong   ("size"         );
-                long    dateTime     = valueMap.getLong   ("dateTime"     );
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.FILE,size,dateTime);
-              }
-              break;
-            case DIRECTORY:
-              {
-                String  name         = valueMap.getString ("name"          );
-                long    dateTime     = valueMap.getLong   ("dateTime"      );
-                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime);
-              }
-              break;
-            case LINK:
-              {
-                String  name         = valueMap.getString ("name"    );
-                long    dateTime     = valueMap.getLong   ("dateTime");
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.LINK,dateTime);
-              }
-              break;
-            case HARDLINK:
-              {
-                String  name         = valueMap.getString ("name"    );
-                long    size         = valueMap.getLong   ("size"    );
-                long    dateTime     = valueMap.getLong   ("dateTime");
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime);
-              }
-              break;
-            case SPECIAL:
-              {
-                String  name         = valueMap.getString ("name"          );
-                long    size         = valueMap.getLong   ("size",    0L   );
-                long    dateTime     = valueMap.getLong   ("dateTime"      );
-                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                file = new RemoteFile(name,FileTypes.SPECIAL,dateTime);
-              }
-              break;
-          }
-        }
-        catch (IllegalArgumentException exception)
-        {
-          if (Settings.debugLevel > 0)
-          {
-            System.err.println("ERROR: "+exception.getMessage());
-          }
-        }
-      }
-
-      return file;
-    }
-  };
-
   /** create jobs tab
    * @param parentTabFolder parent tab folder
    * @param accelerator keyboard shortcut to select tab
    */
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
+
     TabFolder   tabFolder;
     Composite   tab,subTab;
     Menu        menu;
@@ -4515,7 +4273,7 @@ widgetArchivePartSize.setListVisible(true);
                                                      BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                     },
                                         "*",
-                                        remoteListDirectory
+                                        BARServer.remoteListDirectory
                                        );
               }
               else
@@ -5019,7 +4777,7 @@ widgetArchivePartSize.setListVisible(true);
                                                      BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                     },
                                         "*",
-                                        remoteListDirectory
+                                        BARServer.remoteListDirectory
                                        );
               }
               else
@@ -5515,7 +5273,7 @@ widgetArchivePartSize.setListVisible(true);
                                                        BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
-                                          remoteListDirectory
+                                          BARServer.remoteListDirectory
                                          );
                 }
                 else
@@ -5621,7 +5379,7 @@ widgetArchivePartSize.setListVisible(true);
                                                      BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                     },
                                         "*",
-                                        remoteListDirectory
+                                        BARServer.remoteListDirectory
                                        );
               }
               else
@@ -6041,7 +5799,7 @@ widgetArchivePartSize.setListVisible(true);
                                             Dialogs.FileDialogTypes.DIRECTORY,
                                             BARControl.tr("Mount device name"),
                                             mountDeviceName.getString(),
-                                            remoteListDirectory
+                                            BARServer.remoteListDirectory
                                            );
                   }
                   else
@@ -6792,7 +6550,7 @@ widgetArchivePartSize.setListVisible(true);
                                                        BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
-                                          remoteListDirectory
+                                          BARServer.remoteListDirectory
                                          );
                 }
                 else
@@ -6895,7 +6653,7 @@ widgetArchivePartSize.setListVisible(true);
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
-                                          remoteListDirectory
+                                          BARServer.remoteListDirectory
                                          );
                 }
                 else
@@ -7304,7 +7062,7 @@ widgetArchivePartSize.setListVisible(true);
                                                        BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
-                                          remoteListDirectory
+                                          BARServer.remoteListDirectory
                                          );
                 }
                 else
@@ -7407,7 +7165,7 @@ widgetArchivePartSize.setListVisible(true);
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
-                                          remoteListDirectory
+                                          BARServer.remoteListDirectory
                                          );
                 }
                 else
@@ -7586,7 +7344,7 @@ widgetArchivePartSize.setListVisible(true);
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
-                                          remoteListDirectory
+                                          BARServer.remoteListDirectory
                                          );
                 }
                 else
@@ -7909,7 +7667,7 @@ widgetArchivePartSize.setListVisible(true);
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
-                                          remoteListDirectory
+                                          BARServer.remoteListDirectory
                                          );
                 }
                 else
@@ -10249,7 +10007,7 @@ throw new Error("NYI");
                                       new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      remoteListDirectory
+                                      BARServer.remoteListDirectory
                                      );
             }
             else
@@ -10607,7 +10365,7 @@ throw new Error("NYI");
                                       new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      remoteListDirectory
+                                      BARServer.remoteListDirectory
                                      );
             }
             else
@@ -10977,7 +10735,7 @@ throw new Error("NYI");
                                     Dialogs.FileDialogTypes.DIRECTORY,
                                     BARControl.tr("Select path"),
                                     widgetPattern.getText(),
-                                    remoteListDirectory
+                                    BARServer.remoteListDirectory
                                    );
           }
           else
@@ -11429,7 +11187,7 @@ throw new Error("NYI");
                                     Dialogs.FileDialogTypes.DIRECTORY,
                                     BARControl.tr("Select path"),
                                     widgetPattern.getText(),
-                                    remoteListDirectory
+                                    BARServer.remoteListDirectory
                                    );
           }
           else
