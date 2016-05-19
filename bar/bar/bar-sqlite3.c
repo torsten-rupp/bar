@@ -33,6 +33,7 @@
 
 /***************************** Variables *******************************/
 LOCAL bool create        = FALSE;
+LOCAL bool showNames     = FALSE;
 LOCAL bool showHeader    = FALSE;
 LOCAL bool headerPrinted = FALSE;
 LOCAL bool foreignKeys   = TRUE;
@@ -62,6 +63,7 @@ LOCAL void printUsage(const char *programName)
   printf("Usage %s: [<options>] <database file>\n",programName);
   printf("\n");
   printf("Options:  -c|--create  - create database file\n");
+  printf("          -n|--names   - named values\n");
   printf("          -H|--header  - print headers\n");
   printf("          -v|--verbose - verbose output\n");
   printf("          -h|--help    - print this help\n");
@@ -331,6 +333,7 @@ LOCAL int printRow(void *userData, int argc, char *argv[], char *columns[])
   {
     if (argv[i] != NULL)
     {
+      if (showNames) printf("%s=",columns[i]);
       printf("%s ",argv[i]); if (showHeader) { printSpaces(widths[i]-strlen(argv[i])); }
     }
     else
@@ -366,6 +369,10 @@ int main(int argc, const char *argv[])
     if      (stringEquals(argv[i],"-c") || stringEquals(argv[i],"--create"))
     {
       create = TRUE;
+    }
+    else if (stringEquals(argv[i],"-n") || stringEquals(argv[i],"--names"))
+    {
+      showNames = TRUE;
     }
     else if (stringEquals(argv[i],"-H") || stringEquals(argv[i],"--header"))
     {
