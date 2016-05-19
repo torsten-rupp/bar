@@ -3697,7 +3697,7 @@ class Dialogs
           TableItem tableItem = widgetFileList.getItem(point);
           if (tableItem != null)
           {
-            dragSourceEvent.data = dragFile[0].getAbsolutePath();
+            dragSourceEvent.data = dragFile[0];//.getAbsolutePath();
           }
         }
         public void dragFinished(DragSourceEvent dragSourceEvent)
@@ -3717,10 +3717,13 @@ class Dialogs
         }
         public void drop(DropTargetEvent dropTargetEvent)
         {
+Dprintf.dprintf("");
           if (dropTargetEvent.data != null)
           {
+Dprintf.dprintf("%s: %s",dropTargetEvent.data instanceof File,dropTargetEvent.data);
             if (dropTargetEvent.data instanceof File)
             {
+Dprintf.dprintf("");
               shortcutSet.add((File)dropTargetEvent.data);
               listDirectory.setShortcuts(shortcutSet.toArray(new File[shortcutSet.size()]));
 
