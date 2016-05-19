@@ -2533,6 +2533,8 @@ throw new Error("NYI");
     return encodeHex(encryptedPasswordBytes);
   }
 
+  /** list remote directory
+   */
   public static ListDirectory remoteListDirectory = new ListDirectory()
   {
     /** remote file
