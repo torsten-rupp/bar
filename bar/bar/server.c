@@ -14056,7 +14056,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 *            uuidId=<n>
 *            jobUUID=<uuid> \
 *            name=<name> \
-*            lastCreatedDateTime=<created date/time [s]> \
+*            lastCreatedDateTime=<time stamp [s]> \
 *            lastErrorMessage=<text> \
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> \
@@ -14177,7 +14177,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 *            scheduleUUID=<uuid> \
 *            entityId=<id> \
 *            archiveType=<type> \
-*            lastCreatedDateTime=<created time stamp> \
+*            lastCreatedDateTime=<time stamp [s]> \
 *            lastErrorMessage=<error message>
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> \
@@ -14292,6 +14292,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            [createdDateTime=<time stamp [s]>]
 *          Result:
 *            entityId=<id>
 \***********************************************************************/
@@ -14300,6 +14301,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes archiveType;
+  uint64       createdDateTime;
   IndexId      entityId;
   Errors       error;
 
@@ -14317,6 +14319,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
+  StringMap_getInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -14330,6 +14333,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
                            jobUUID,
                            NULL,  // scheduleUUID,
                            archiveType,
+                           createdDateTime,
                            &entityId
                           );
   if (error != ERROR_NONE)
@@ -14356,7 +14360,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 * Notes  : Arguments:
 *            entityId=<id>
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
-*            createDateTime=<time stamp>
+*            [createdDateTime=<time stamp [s]>]
 *          Result:
 \***********************************************************************/
 
@@ -14364,6 +14368,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes archiveType;
+  uint64       createdDateTime;
   IndexId      entityId;
   Errors       error;
 
@@ -14386,7 +14391,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
-//TODO: created
+  StringMap_getInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -14400,6 +14405,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
                            jobUUID,
                            NULL,  // scheduleUUID,
                            archiveType,
+                           createdDateTime,
                            &entityId
                           );
   if (error != ERROR_NONE)
@@ -15010,6 +15016,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
+fprintf(stderr,"%s, %d: assign toEntityId=%lld archiveType=%d storageId=%lld\n",__FILE__,__LINE__,toEntityId,archiveType,storageId);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -15044,6 +15051,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                               toJobUUID,
                               NULL,  // scheduleUUID
                               archiveType,
+                              0LL,  // createdDateTime
                               &toEntityId
                              );
       if (error != ERROR_NONE)
@@ -15096,6 +15104,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                               toJobUUID,
                               NULL,  // scheduleUUID
                               archiveType,
+                              0LL,  // createdDateTime
                               &toEntityId
                              );
       if (error != ERROR_NONE)
@@ -15147,6 +15156,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                               toJobUUID,
                               NULL,
                               archiveType,
+                              0LL,  // createdDateTime
                               &toEntityId
                              );
       if (error != ERROR_NONE)
