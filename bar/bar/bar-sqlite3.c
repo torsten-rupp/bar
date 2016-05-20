@@ -98,7 +98,7 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
 
   // get text to convert, optional date/time format
   text   = (const char*)sqlite3_value_text(argv[0]);
-  format = (argc >= 2) ? argv[1] : NULL;
+  format = (argc >= 2) ? (const char*)argv[1] : NULL;
 
   // convert to Unix timestamp
   if (text != NULL)
