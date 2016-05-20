@@ -417,37 +417,10 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
     UPDATE imageEntries     SET storageId=NEW.storageId WHERE entryId=NEW.id;
     UPDATE directoryEntries SET storageId=NEW.storageId WHERE entryId=NEW.id;
     UPDATE linkEntries      SET storageId=NEW.storageId WHERE entryId=NEW.id;
-    UPDATE hardlinkeEntries SET storageId=NEW.storageId WHERE entryId=NEW.id;
+    UPDATE hardlinkEntries  SET storageId=NEW.storageId WHERE entryId=NEW.id;
     UPDATE specialEntries   SET storageId=NEW.storageId WHERE entryId=NEW.id;
 
-    // update count/size in storage
-    UPDATE storage
-      SET totalEntryCount    =totalEntryCount    -1,
-          totalEntrySize     =totalEntrySize     -OLD.size,
-          totalFileCount     =totalFileCount     -CASE OLD.type WHEN $TYPE_FILE      THEN 1        ELSE 0 END,
-          totalFileSize      =totalFileSize      -CASE OLD.type WHEN $TYPE_FILE      THEN OLD.size ELSE 0 END,
-          totalImageCount    =totalImageCount    -CASE OLD.type WHEN $TYPE_IMAGE     THEN 1        ELSE 0 END,
-          totalImageSize     =totalImageSize     -CASE OLD.type WHEN $TYPE_IMAGE     THEN OLD.size ELSE 0 END,
-          totalDirectoryCount=totalDirectoryCount-CASE OLD.type WHEN $TYPE_DIRECTORY THEN 1        ELSE 0 END,
-          totalLinkCount     =totalLinkCount     -CASE OLD.type WHEN $TYPE_LINK      THEN 1        ELSE 0 END,
-          totalHardlinkCount =totalHardlinkCount -CASE OLD.type WHEN $TYPE_HARDLINK  THEN 1        ELSE 0 END,
-          totalHardlinkSize  =totalHardlinkSize  -CASE OLD.type WHEN $TYPE_HARDLINK  THEN OLD.size ELSE 0 END,
-          totalSpecialCount  =totalSpecialCount  -CASE OLD.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
-      WHERE storage.id=OLD.storageId;
-    UPDATE storage
-      SET totalEntryCount    =totalEntryCount    +1,
-          totalEntrySize     =totalEntrySize     +NEW.size,
-          totalFileCount     =totalFileCount     +CASE NEW.type WHEN $TYPE_FILE      THEN 1        ELSE 0 END,
-          totalFileSize      =totalFileSize      +CASE NEW.type WHEN $TYPE_FILE      THEN NEW.size ELSE 0 END,
-          totalImageCount    =totalImageCount    +CASE NEW.type WHEN $TYPE_IMAGE     THEN 1        ELSE 0 END,
-          totalImageSize     =totalImageSize     +CASE NEW.type WHEN $TYPE_IMAGE     THEN NEW.size ELSE 0 END,
-          totalDirectoryCount=totalDirectoryCount+CASE NEW.type WHEN $TYPE_DIRECTORY THEN 1        ELSE 0 END,
-          totalLinkCount     =totalLinkCount     +CASE NEW.type WHEN $TYPE_LINK      THEN 1        ELSE 0 END,
-          totalHardlinkCount =totalHardlinkCount +CASE NEW.type WHEN $TYPE_HARDLINK  THEN 1        ELSE 0 END,
-          totalHardlinkSize  =totalHardlinkSize  +CASE NEW.type WHEN $TYPE_HARDLINK  THEN NEW.size ELSE 0 END,
-          totalSpecialCount  =totalSpecialCount  +CASE NEW.type WHEN $TYPE_SPECIAL   THEN 1        ELSE 0 END
-      WHERE storage.id=NEW.storageId;
-
+    // update newest count/size in storage
     UPDATE storage
       SET totalEntryCountNewest    =totalEntryCountNewest    -1,
           totalEntrySizeNewest     =totalEntrySizeNewest     -OLD.size,
@@ -477,6 +450,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON entries
       WHERE     EXISTS(SELECT id FROM entriesNewest WHERE entryId=NEW.id)
             AND storage.id=NEW.storageId;
 
+    // update newest entries
     UPDATE entriesNewest
       SET storageId=NEW.storageId
       WHERE entryId=OLD.id;
@@ -748,14 +722,16 @@ CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON fileEntries
   BEGIN
     // update count/size in storage
     UPDATE storage
-      SET totalEntrySize=totalEntrySize-OLD.fragmentSize,
-          totalFileCount=totalFileCount-1,
-          totalFileSize =totalFileSize -OLD.fragmentSize
+      SET totalEntryCount=totalEntryCount-1,
+          totalEntrySize =totalEntrySize -OLD.fragmentSize,
+          totalFileCount =totalFileCount -1,
+          totalFileSize  =totalFileSize  -OLD.fragmentSize
       WHERE id=OLD.storageId;
     UPDATE storage
-      SET totalEntrySize=totalEntrySize+NEW.fragmentSize,
-          totalFileCount=totalFileCount+1,
-          totalFileSize =totalFileSize +NEW.fragmentSize
+      SET totalEntryCount=totalEntryCount+1,
+          totalEntrySize =totalEntrySize +NEW.fragmentSize,
+          totalFileCount =totalFileCount +1,
+          totalFileSize  =totalFileSize  +NEW.fragmentSize
       WHERE id=NEW.storageId;
   END;
 
@@ -805,11 +781,15 @@ CREATE TRIGGER AFTER UPDATE OF storageId,blockSize,blockCount ON imageEntries
   BEGIN
     // update count in storage
     UPDATE storage
-      SET totalImageCount=totalImageCount-1,
+      SET totalEntryCount=totalEntryCount-1,
+          totalEntrySize =totalEntrySize -OLD.blockSize*OLD.blockCount,
+          totalImageCount=totalImageCount-1,
           totalImageSize =totalImageSize -OLD.blockSize*OLD.blockCount
       WHERE id=OLD.storageId;
     UPDATE storage
-      SET totalImageCount=totalImageCount+1,
+      SET totalEntryCount=totalEntryCount+1,
+          totalEntrySize =totalEntrySize +NEW.blockSize*OLD.blockCount,
+          totalImageCount=totalImageCount+1,
           totalImageSize =totalImageSize +NEW.blockSize*NEW.blockCount
       WHERE id=NEW.storageId;
   END;
@@ -867,10 +847,12 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON directoryEntries
   BEGIN
     // update count in storage
     UPDATE storage
-      SET totalDirectoryCount=totalDirectoryCount-1
+      SET totalEntryCount    =totalEntryCount    -1,
+          totalDirectoryCount=totalDirectoryCount-1
       WHERE storage.id=OLD.storageId;
     UPDATE storage
-      SET totalDirectoryCount=totalDirectoryCount+1
+      SET totalEntryCount    =totalEntryCount    +1,
+          totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
   END;
 
@@ -940,10 +922,12 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON linkEntries
   BEGIN
     // update count in storage
     UPDATE storage
-      SET totalLinkCount=totalLinkCount-1
+      SET totalEntryCount=totalEntryCount-1,
+          totalLinkCount =totalLinkCount -1
       WHERE id=OLD.storageId;
     UPDATE storage
-      SET totalLinkCount=totalLinkCount+1
+      SET totalEntryCount=totalEntryCount+1,
+          totalLinkCount =totalLinkCount +1
       WHERE id=NEW.storageId;
   END;
 
@@ -998,12 +982,14 @@ CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON hardlinkEntries
   BEGIN
     // update count in storage
     UPDATE storage
-      SET totalEntrySize    =totalEntrySize    -OLD.fragmentSize,
+      SET totalEntryCount   =totalEntryCount   -1,
+          totalEntrySize    =totalEntrySize    -OLD.fragmentSize,
           totalHardlinkCount=totalHardlinkCount-1,
           totalHardlinkSize =totalHardlinkSize -OLD.fragmentSize
       WHERE id=OLD.storageId;
     UPDATE storage
-      SET totalEntrySize    =totalEntrySize    +NEW.fragmentSize,
+      SET totalEntryCount   =totalEntryCount   +1,
+          totalEntrySize    =totalEntrySize    +NEW.fragmentSize,
           totalHardlinkCount=totalHardlinkCount+1,
           totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
       WHERE id=NEW.storageId;
@@ -1055,10 +1041,12 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON specialEntries
   BEGIN
     // update count in storage
     UPDATE storage
-      SET totalSpecialCount=totalSpecialCount-1
+      SET totalEntryCount  =totalEntryCount  -1,
+          totalSpecialCount=totalSpecialCount-1
       WHERE storage.id=OLD.storageId;
     UPDATE storage
-      SET totalSpecialCount=totalSpecialCount+1
+      SET totalEntryCount  =totalEntryCount  +1,
+          totalSpecialCount=totalSpecialCount+1
       WHERE id=NEW.storageId;
   END;
 
