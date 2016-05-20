@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-05-20 11:55+0200\n"
+"POT-Creation-Date: 2016-05-20 12:38+0200\n"
 "PO-Revision-Date: 2015-12-25 11:45+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1147,7 +1147,7 @@ msgstr "Umbenennen"
 msgid "Rename a job entry."
 msgstr "Auftrag umbenennen."
 
-#: src/TabJobs.java:1943 src/TabRestore.java:5518 src/TabStatus.java:848
+#: src/TabJobs.java:1943 src/TabRestore.java:5517 src/TabStatus.java:848
 #, fuzzy
 msgid "Delete"
 msgstr "Löschen…"
@@ -1652,7 +1652,7 @@ msgstr "Verschlüsselungspassworte sind nicht gleich!"
 msgid "Mode"
 msgstr "Modus"
 
-#: src/TabJobs.java:5072 src/TabJobs.java:12872 src/TabRestore.java:5349
+#: src/TabJobs.java:5072 src/TabJobs.java:12872 src/TabRestore.java:5348
 msgid "normal"
 msgstr "normal"
 
@@ -1660,7 +1660,7 @@ msgstr "normal"
 msgid "Normal mode: do not create incremental data files."
 msgstr "Alle Dateien speichern: keine Inkrementdaten erzeugen."
 
-#: src/TabJobs.java:5097 src/TabJobs.java:12877 src/TabRestore.java:5365
+#: src/TabJobs.java:5097 src/TabJobs.java:12877 src/TabRestore.java:5364
 msgid "full"
 msgstr "voll"
 
@@ -1668,7 +1668,7 @@ msgstr "voll"
 msgid "Full mode: store all entries and create incremental data files."
 msgstr "Alle Dateien speichern: Inkrementdaten erzeugen."
 
-#: src/TabJobs.java:5122 src/TabJobs.java:12882 src/TabRestore.java:5381
+#: src/TabJobs.java:5122 src/TabJobs.java:12882 src/TabRestore.java:5380
 msgid "incremental"
 msgstr "inkrementell"
 
@@ -1680,7 +1680,7 @@ msgstr ""
 "Inkrementell: speichern von veränderten Dateien seit dem letzten "
 "vollständigen oder inkrementellen Speichern."
 
-#: src/TabJobs.java:5147 src/TabJobs.java:12887 src/TabRestore.java:5397
+#: src/TabJobs.java:5147 src/TabJobs.java:12887 src/TabRestore.java:5396
 msgid "differential"
 msgstr "differentiell"
 
@@ -2786,7 +2786,7 @@ msgstr "Status"
 msgid "Last checked"
 msgstr "Letzte Ausführung"
 
-#: src/TabRestore.java:4724 src/TabRestore.java:5494 src/TabRestore.java:5763
+#: src/TabRestore.java:4724 src/TabRestore.java:5493 src/TabRestore.java:5763
 #: src/TabRestore.java:6017 src/TabRestore.java:6254
 msgid "Restore"
 msgstr "Wiederherstellen"
@@ -2796,12 +2796,12 @@ msgstr "Wiederherstellen"
 msgid "Count: {0}"
 msgstr ""
 
-#: src/TabRestore.java:4829 src/TabRestore.java:5165 src/TabRestore.java:5873
+#: src/TabRestore.java:4829 src/TabRestore.java:5164 src/TabRestore.java:5873
 #: src/TabStatus.java:564
 msgid "Click to sort for name."
 msgstr "Klicken um nach Namen zu sortieren."
 
-#: src/TabRestore.java:4832 src/TabRestore.java:5168 src/TabRestore.java:5879
+#: src/TabRestore.java:4832 src/TabRestore.java:5167 src/TabRestore.java:5879
 msgid "Click to sort for size."
 msgstr "Klicken um nach Teilgrößen zu sortieren."
 
@@ -2809,61 +2809,61 @@ msgstr "Klicken um nach Teilgrößen zu sortieren."
 msgid "Modified"
 msgstr "Letzte Änderung"
 
-#: src/TabRestore.java:4835 src/TabRestore.java:5171
+#: src/TabRestore.java:4835 src/TabRestore.java:5170
 msgid "Click to sort for modification date/time."
 msgstr "Klicken um nach Datum/Zeit zu sortieren."
 
-#: src/TabRestore.java:4838 src/TabRestore.java:5174 src/TabStatus.java:567
+#: src/TabRestore.java:4838 src/TabRestore.java:5173 src/TabStatus.java:567
 msgid "Click to sort for state."
 msgstr "Klicken um nach Status zu sortieren."
 
-#: src/TabRestore.java:5128
+#: src/TabRestore.java:5127
 msgid "List"
 msgstr "Liste"
 
-#: src/TabRestore.java:5311
+#: src/TabRestore.java:5310
 #, fuzzy
 msgid "Refresh index"
 msgstr "Indizes neu erstellen…"
 
-#: src/TabRestore.java:5326
+#: src/TabRestore.java:5325
 #, fuzzy
 msgid "Refresh all indizes with error"
 msgstr "Alle Indexeinträge mit Fehlerstatus neu erstellen…"
 
-#: src/TabRestore.java:5341
+#: src/TabRestore.java:5340
 #, fuzzy
 msgid "Assign to job"
 msgstr "An Auftrag zuweisen…"
 
-#: src/TabRestore.java:5345
+#: src/TabRestore.java:5344
 msgid "Set job type"
 msgstr ""
 
-#: src/TabRestore.java:5415
+#: src/TabRestore.java:5414
 #, fuzzy
 msgid "Add to index"
 msgstr "Index hinzufügen…"
 
-#: src/TabRestore.java:5430
+#: src/TabRestore.java:5429
 #, fuzzy
 msgid "Remove from index"
 msgstr "Index löschen…"
 
-#: src/TabRestore.java:5445
+#: src/TabRestore.java:5444
 #, fuzzy
 msgid "Remove all indizes with error"
 msgstr "Indexeinträge mit Fehlerstatus löschen…"
 
-#: src/TabRestore.java:5462 src/TabRestore.java:5985
+#: src/TabRestore.java:5461 src/TabRestore.java:5985
 msgid "Mark all"
 msgstr "Alle markieren"
 
-#: src/TabRestore.java:5477 src/TabRestore.java:6000
+#: src/TabRestore.java:5476 src/TabRestore.java:6000
 msgid "Unmark all"
 msgstr "Alle Markierungen entfernen"
 
-#: src/TabRestore.java:5534 src/TabRestore.java:6043 src/TabStatus.java:862
+#: src/TabRestore.java:5533 src/TabRestore.java:6043 src/TabStatus.java:862
 msgid "Info"
 msgstr ""
 

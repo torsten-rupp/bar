@@ -999,7 +999,7 @@ public class TabRestore
      */
     public String getInfo()
     {
-      return name;
+      return String.format("%d: %s",id,!name.isEmpty() ? name : "unknown");
     }
 
     /** convert data to string
@@ -1368,7 +1368,7 @@ Dprintf.dprintf("");
      */
     public String getInfo()
     {
-      return String.format("%d: %s, %s",id,jobName,name);
+      return String.format("%d: %s, %s",id,!jobName.isEmpty() ? jobName : "unknown",name);
     }
 
     /** set index state
@@ -6559,8 +6559,8 @@ Dprintf.dprintf("remove");
 
             if      (indexData instanceof UUIDIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s jobUUID=%'S",
-                                                                   toUUIDIndexData.jobUUID,
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s jobUUID=%'S",
+                                                                   entityId,
                                                                    archiveType.toString(),
                                                                    ((UUIDIndexData)indexData).jobUUID
                                                                   ),
@@ -6570,8 +6570,8 @@ Dprintf.dprintf("remove");
             }
             else if (indexData instanceof EntityIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s entityId=%lld",
-                                                                   toUUIDIndexData.jobUUID,
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
+                                                                   entityId,
                                                                    archiveType.toString(),
                                                                    indexData.id
                                                                   ),
@@ -6581,8 +6581,8 @@ Dprintf.dprintf("remove");
             }
             else if (indexData instanceof StorageIndexData)
             {
-              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S toEntityId=0 archiveType=%s storageId=%lld",
-                                                                   toUUIDIndexData.jobUUID,
+              error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s storageId=%lld",
+                                                                   entityId,
                                                                    archiveType.toString(),
                                                                    indexData.id
                                                                   ),

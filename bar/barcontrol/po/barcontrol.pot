@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-05-20 11:55+0200\n"
+"POT-Creation-Date: 2016-05-20 15:18+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1052,7 +1052,7 @@ msgstr ""
 msgid "Rename a job entry."
 msgstr ""
 
-#: src/TabJobs.java:1943 src/TabRestore.java:5518 src/TabStatus.java:848
+#: src/TabJobs.java:1943 src/TabRestore.java:5517 src/TabStatus.java:848
 msgid "Delete"
 msgstr ""
 
@@ -1520,7 +1520,7 @@ msgstr ""
 msgid "Mode"
 msgstr ""
 
-#: src/TabJobs.java:5072 src/TabJobs.java:12872 src/TabRestore.java:5349
+#: src/TabJobs.java:5072 src/TabJobs.java:12872 src/TabRestore.java:5348
 msgid "normal"
 msgstr ""
 
@@ -1528,7 +1528,7 @@ msgstr ""
 msgid "Normal mode: do not create incremental data files."
 msgstr ""
 
-#: src/TabJobs.java:5097 src/TabJobs.java:12877 src/TabRestore.java:5365
+#: src/TabJobs.java:5097 src/TabJobs.java:12877 src/TabRestore.java:5364
 msgid "full"
 msgstr ""
 
@@ -1536,7 +1536,7 @@ msgstr ""
 msgid "Full mode: store all entries and create incremental data files."
 msgstr ""
 
-#: src/TabJobs.java:5122 src/TabJobs.java:12882 src/TabRestore.java:5381
+#: src/TabJobs.java:5122 src/TabJobs.java:12882 src/TabRestore.java:5380
 msgid "incremental"
 msgstr ""
 
@@ -1546,7 +1546,7 @@ msgid ""
 "storage."
 msgstr ""
 
-#: src/TabJobs.java:5147 src/TabJobs.java:12887 src/TabRestore.java:5397
+#: src/TabJobs.java:5147 src/TabJobs.java:12887 src/TabRestore.java:5396
 msgid "differential"
 msgstr ""
 
@@ -2498,7 +2498,7 @@ msgstr ""
 msgid "Last checked"
 msgstr ""
 
-#: src/TabRestore.java:4724 src/TabRestore.java:5494 src/TabRestore.java:5763
+#: src/TabRestore.java:4724 src/TabRestore.java:5493 src/TabRestore.java:5763
 #: src/TabRestore.java:6017 src/TabRestore.java:6254
 msgid "Restore"
 msgstr ""
@@ -2508,12 +2508,12 @@ msgstr ""
 msgid "Count: {0}"
 msgstr ""
 
-#: src/TabRestore.java:4829 src/TabRestore.java:5165 src/TabRestore.java:5873
+#: src/TabRestore.java:4829 src/TabRestore.java:5164 src/TabRestore.java:5873
 #: src/TabStatus.java:564
 msgid "Click to sort for name."
 msgstr ""
 
-#: src/TabRestore.java:4832 src/TabRestore.java:5168 src/TabRestore.java:5879
+#: src/TabRestore.java:4832 src/TabRestore.java:5167 src/TabRestore.java:5879
 msgid "Click to sort for size."
 msgstr ""
 
@@ -2521,55 +2521,55 @@ msgstr ""
 msgid "Modified"
 msgstr ""
 
-#: src/TabRestore.java:4835 src/TabRestore.java:5171
+#: src/TabRestore.java:4835 src/TabRestore.java:5170
 msgid "Click to sort for modification date/time."
 msgstr ""
 
-#: src/TabRestore.java:4838 src/TabRestore.java:5174 src/TabStatus.java:567
+#: src/TabRestore.java:4838 src/TabRestore.java:5173 src/TabStatus.java:567
 msgid "Click to sort for state."
 msgstr ""
 
-#: src/TabRestore.java:5128
+#: src/TabRestore.java:5127
 msgid "List"
 msgstr ""
 
-#: src/TabRestore.java:5311
+#: src/TabRestore.java:5310
 msgid "Refresh index"
 msgstr ""
 
-#: src/TabRestore.java:5326
+#: src/TabRestore.java:5325
 msgid "Refresh all indizes with error"
 msgstr ""
 
-#: src/TabRestore.java:5341
+#: src/TabRestore.java:5340
 msgid "Assign to job"
 msgstr ""
 
-#: src/TabRestore.java:5345
+#: src/TabRestore.java:5344
 msgid "Set job type"
 msgstr ""
 
-#: src/TabRestore.java:5415
+#: src/TabRestore.java:5414
 msgid "Add to index"
 msgstr ""
 
-#: src/TabRestore.java:5430
+#: src/TabRestore.java:5429
 msgid "Remove from index"
 msgstr ""
 
-#: src/TabRestore.java:5445
+#: src/TabRestore.java:5444
 msgid "Remove all indizes with error"
 msgstr ""
 
-#: src/TabRestore.java:5462 src/TabRestore.java:5985
+#: src/TabRestore.java:5461 src/TabRestore.java:5985
 msgid "Mark all"
 msgstr ""
 
-#: src/TabRestore.java:5477 src/TabRestore.java:6000
+#: src/TabRestore.java:5476 src/TabRestore.java:6000
 msgid "Unmark all"
 msgstr ""
 
-#: src/TabRestore.java:5534 src/TabRestore.java:6043 src/TabStatus.java:862
+#: src/TabRestore.java:5533 src/TabRestore.java:6043 src/TabStatus.java:862
 msgid "Info"
 msgstr ""
 
