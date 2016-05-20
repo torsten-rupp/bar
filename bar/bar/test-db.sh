@@ -6,9 +6,9 @@ make $SQLITE3 > /dev/null
 databaseFile=bar-index.db
 testBase=0
 testDelete=0
-testAssign=0
+testAssign=1
 testDirectory=0
-testFTS=1
+testFTS=0
 
 DATETIME1=`date -d "2016-01-01 01:01:01" +%s`
 DATETIME2=`date -d "2016-02-02 02:02:02" +%s`
@@ -291,10 +291,12 @@ if test $testDelete -eq 1; then
   hardlinkEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM hardlinkEntries"`
   specialEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM specialEntries"`
 
+  # insert 2 file fragments
   id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME1); SELECT last_insert_rowid();"`
   $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id,1000,0,500);"
   id=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME1); SELECT last_insert_rowid();"`
   $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id,1000,500,500);"
+  # insert 2 file fragments with newer date
   id1=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME2); SELECT last_insert_rowid();"`
   id2=`$SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id1,1000,0,500); SELECT last_insert_rowid();"`
   id3=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'xf1',$DATETIME2); SELECT last_insert_rowid();"`
@@ -402,7 +404,9 @@ if test $testAssign -eq 1; then
   # assign
   entriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM entries"`
   storageTotalEntryCount=`$SQLITE3 $databaseFile "SELECT totalEntryCount FROM storage WHERE id=$storageId2"`
+  storageTotalEntrySize=`$SQLITE3 $databaseFile "SELECT totalEntrySize FROM storage WHERE id=$storageId2"`
   storageTotalEntryCountNewest=`$SQLITE3 $databaseFile "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId2"`
+  storageTotalEntrySizeNewest=`$SQLITE3 $databaseFile "SELECT totalEntrySizeNewest FROM storage WHERE id=$storageId2"`
   entitiesTotalEntryCount=`$SQLITE3 $databaseFile "SELECT totalEntryCount FROM entities WHERE id=$entityId2"`
 
   storageTotalFileCount=`$SQLITE3 $databaseFile "SELECT totalFileCount FROM storage WHERE id=$storageId2"`
@@ -436,15 +440,26 @@ if test $testAssign -eq 1; then
   hardlinkEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM hardlinkEntries"`
   specialEntriesCount=`$SQLITE3 $databaseFile "SELECT COUNT(id) FROM specialEntries"`
 
+  # insert 1 file fragment
   id1=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'af1',$DATETIME1); SELECT last_insert_rowid();"`
   $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id1,1000,0,500)"
-  id2=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'af1',$DATETIME1); SELECT last_insert_rowid();"`
+  # insert 1 file fragment with newer date
+  id2=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_FILE,'af1',$DATETIME2); SELECT last_insert_rowid();"`
   $SQLITE3 $databaseFile "INSERT INTO fileEntries (storageId,entryId,size,fragmentOffset,fragmentSize) VALUES ($storageId2,$id2,1000,0,500)"
 
+  # insert 1 image fragment
   id3=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_IMAGE,'ai1',$DATETIME1); SELECT last_insert_rowid();"`
   $SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId2,$id3,1000,1,0,500)"
-  id4=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_IMAGE,'ai1',$DATETIME1); SELECT last_insert_rowid();"`
+  # insert 1 image fragment with newer date
+  id4=`$SQLITE3 $databaseFile "INSERT INTO entries (storageId,type,name,timeLastChanged) VALUES ($storageId2,$TYPE_IMAGE,'ai1',$DATETIME2); SELECT last_insert_rowid();"`
   $SQLITE3 $databaseFile "INSERT INTO imageEntries (storageId,entryId,size,blockSize,blockOffset,blockCount) VALUES ($storageId2,$id4,1000,1,0,500)"
+
+  verify "SELECT COUNT(id) FROM entries" $(($entriesCount+4))
+  verify "SELECT totalEntryCount FROM storage WHERE id=$storageId2" $(($storageTotalEntryCount+4))
+  verify "SELECT totalEntrySize FROM storage WHERE id=$storageId2" $(($storageTotalEntrySize+2000))
+  verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId2" $(($storageTotalEntryCountNewest+2))
+  verify "SELECT totalEntrySizeNewest FROM storage WHERE id=$storageId2" $(($storageTotalEntrySizeNewest+1000))
+  verify "SELECT totalEntryCount FROM entities WHERE id=$entityId2" $(($entitiesTotalEntryCount+4))
 
   echo "--- before assign ----------------------------------------------------"
   printValues
@@ -504,9 +519,13 @@ if test $testAssign -eq 1; then
 
   verify "SELECT COUNT(id) FROM entries" $(($entriesCount+4))
   verify "SELECT totalEntryCount FROM storage WHERE id=$storageId2" $storageTotalEntryCount
+  verify "SELECT totalEntrySize FROM storage WHERE id=$storageId2" $storageTotalEntrySize
   verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId2" $storageTotalEntryCountNewest
+  verify "SELECT totalEntrySizeNewest FROM storage WHERE id=$storageId2" $storageTotalEntrySizeNewest
   verify "SELECT totalEntryCount FROM storage WHERE id=$storageId3" 4
+  verify "SELECT totalEntrySize FROM storage WHERE id=$storageId3" 2000
   verify "SELECT totalEntryCountNewest FROM storage WHERE id=$storageId3" 2
+  verify "SELECT totalEntrySizeNewest FROM storage WHERE id=$storageId3" 1000
   verify "SELECT totalEntryCount FROM entities WHERE id=$entityId2" $entitiesTotalEntryCount
   verify "SELECT totalEntryCount FROM entities WHERE id=$entityId3" 4
 
@@ -517,13 +536,15 @@ if test $testAssign -eq 1; then
   verify "SELECT COUNT(id) FROM hardlinkEntries" $(($hardlinkEntriesCount+0))
   verify "SELECT COUNT(id) FROM specialEntries" $(($specialEntriesCount+0))
 
-  verify "SELECT totalEntryCount FROM storage WHERE id=$storageId3" 4
-
+  verify "SELECT totalFileCount FROM storage WHERE id=$storageId2" $storageTotalFileCount
+  verify "SELECT totalFileSize FROM storage WHERE id=$storageId2" $storageTotalFileSize
   verify "SELECT totalFileCount FROM storage WHERE id=$storageId3" 2
   verify "SELECT totalFileSize FROM storage WHERE id=$storageId3" 1000
   verify "SELECT totalFileCountNewest FROM storage WHERE id=$storageId3" 1
   verify "SELECT totalFileSizeNewest FROM storage WHERE id=$storageId3" 500
 
+  verify "SELECT totalImageCount FROM storage WHERE id=$storageId2" $storageTotalImageCount
+  verify "SELECT totalImageSize FROM storage WHERE id=$storageId2" $storageTotalImageSize
   verify "SELECT totalImageCount FROM storage WHERE id=$storageId3" 2
   verify "SELECT totalImageSize FROM storage WHERE id=$storageId3" 1000
   verify "SELECT totalImageCountNewest FROM storage WHERE id=$storageId3" 1
