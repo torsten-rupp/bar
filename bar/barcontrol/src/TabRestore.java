@@ -4963,21 +4963,20 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
           // show tooltip if tree item available and mouse is in the right side
           if ((treeItem != null) && (mouseEvent.x > tree.getBounds().width/2))
           {
-            Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
+            Point point = display.getCursorLocation();
+            if (point.x > 16) point.x -= 16;
+            if (point.y > 16) point.y -= 16;
 
             if      (treeItem.getData() instanceof UUIDIndexData)
             {
-Dprintf.dprintf("");
               showUUIDIndexToolTip((UUIDIndexData)treeItem.getData(),point.x,point.y);
             }
             else if (treeItem.getData() instanceof EntityIndexData)
             {
-Dprintf.dprintf("");
               showEntityIndexToolTip((EntityIndexData)treeItem.getData(),point.x,point.y);
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
-Dprintf.dprintf("");
               showStorageIndexToolTip((StorageIndexData)treeItem.getData(),point.x,point.y);
             }
           }
@@ -5261,8 +5260,10 @@ Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
             StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
             if (storageIndexData != null)
             {
-              Point point = table.toDisplay(mouseEvent.x+16,mouseEvent.y);
-Dprintf.dprintf("");
+              Point point = display.getCursorLocation();
+              if (point.x > 16) point.x -= 16;
+              if (point.y > 16) point.y -= 16;
+
               showStorageIndexToolTip(storageIndexData,point.x,point.y);
             }
           }
@@ -5539,34 +5540,59 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            TreeItem treeItems[] = widgetStorageTree.getSelection();
-            if (treeItems.length > 0)
+            switch (widgetStorageTabFolder.getSelectionIndex())
             {
-              if (widgetStorageTreeToolTip != null)
-              {
-                widgetStorageTreeToolTip.dispose();
-                widgetStorageTreeToolTip = null;
-              }
+              case 0:
+                TreeItem treeItems[] = widgetStorageTree.getSelection();
+                if (treeItems.length > 0)
+                {
+                  if (widgetStorageTreeToolTip != null)
+                  {
+                    widgetStorageTreeToolTip.dispose();
+                    widgetStorageTreeToolTip = null;
+                  }
 
-              if (treeItems[0] != null)
-              {
-                Point point = display.getCursorLocation();
-                if (point.x > 16) point.x -= 16;
-                if (point.y > 16) point.y -= 16;
+                  if (treeItems[0] != null)
+                  {
+                    Point point = display.getCursorLocation();
+                    if (point.x > 16) point.x -= 16;
+                    if (point.y > 16) point.y -= 16;
 
-                if      (treeItems[0].getData() instanceof UUIDIndexData)
-                {
-                  showUUIDIndexToolTip((UUIDIndexData)treeItems[0].getData(),point.x,point.y);
+                    if      (treeItems[0].getData() instanceof UUIDIndexData)
+                    {
+                      showUUIDIndexToolTip((UUIDIndexData)treeItems[0].getData(),point.x,point.y);
+                    }
+                    else if (treeItems[0].getData() instanceof EntityIndexData)
+                    {
+                      showEntityIndexToolTip((EntityIndexData)treeItems[0].getData(),point.x,point.y);
+                    }
+                    else if (treeItems[0].getData() instanceof StorageIndexData)
+                    {
+                      showStorageIndexToolTip((StorageIndexData)treeItems[0].getData(),point.x,point.y);
+                    }
+                  }
                 }
-                else if (treeItems[0].getData() instanceof EntityIndexData)
+                break;
+              case 1:
+                TableItem tableItems[] = widgetStorageTable.getSelection();
+                if (tableItems.length > 0)
                 {
-                  showEntityIndexToolTip((EntityIndexData)treeItems[0].getData(),point.x,point.y);
+                  if (widgetStorageTreeToolTip != null)
+                  {
+                    widgetStorageTreeToolTip.dispose();
+                    widgetStorageTreeToolTip = null;
+                  }
+
+                  if (tableItems[0] != null)
+                  {
+                    Point point = display.getCursorLocation();
+                    if (point.x > 16) point.x -= 16;
+                    if (point.y > 16) point.y -= 16;
+
+                    showStorageIndexToolTip((StorageIndexData)tableItems[0].getData(),point.x,point.y);
+                  }
                 }
-                else if (treeItems[0].getData() instanceof StorageIndexData)
-                {
-                  showStorageIndexToolTip((StorageIndexData)treeItems[0].getData(),point.x,point.y);
-                }
-              }
+                break;
             }
           }
         });
