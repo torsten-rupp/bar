@@ -652,6 +652,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        Misc_getUUID(jobUUID),
                                                        NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_FULL,
+                                                       0LL,  // createdDateTime
                                                        &entityId
                                                       );
                                (void)Database_setTableColumnListInt64(toColumnList,"entityId",entityId);
@@ -966,6 +967,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        Misc_getUUID(jobUUID),
                                                        NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_FULL,
+                                                       0LL,  // createdDateTime
                                                        &entityId
                                                       );
                                (void)Database_setTableColumnListInt64(toColumnList,"entityId",entityId);
@@ -1314,6 +1316,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        Misc_getUUID(jobUUID),
                                                        NULL,  // scheduleUUID
                                                        ARCHIVE_TYPE_FULL,
+                                                       0LL,  // createdDateTime
                                                        &entityId
                                                       );
                                (void)Database_setTableColumnListInt64(toColumnList,"entityId",entityId);
@@ -2213,6 +2216,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                          Misc_getUUID(jobUUID),
                                                          NULL,  // scheduleUUID
                                                          ARCHIVE_TYPE_FULL,
+                                                         0LL,  // createdDateTime
                                                          &entityId
                                                         );
                                }
@@ -3007,6 +3011,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                          Misc_getUUID(jobUUID),
                                                          NULL,  // scheduleUUID
                                                          ARCHIVE_TYPE_FULL,
+                                                         0LL,  // createdDateTime
                                                          &entityId
                                                         );
                                }
@@ -6760,6 +6765,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        ConstString  jobUUID,
                        ConstString  scheduleUUID,
                        ArchiveTypes archiveType,
+                       uint64       createdDateTime,
                        IndexId      *entityId
                       )
 {
@@ -6811,7 +6817,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                 ( \
                                  %'S, \
                                  %'S, \
-                                 DATETIME('now'), \
+                                 %llu, \
                                  %u, \
                                  '', \
                                  0\
@@ -6819,6 +6825,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                              ",
                              jobUUID,
                              scheduleUUID,
+                             (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime(),
                              archiveType
                             );
     if (error != ERROR_NONE)
@@ -8233,7 +8240,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   // lock
   Database_lock(&indexHandle->databaseHandle);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))

@@ -883,10 +883,11 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 /***********************************************************************\
 * Name   : Index_newEntity
 * Purpose: create new entity index
-* Input  : indexHandle  - index handle
-*          jobUUID      - unique job id (can be NULL)
-*          scheduleUUID - unique schedule id (can be NULL)
-*          archiveType  - archive type
+* Input  : indexHandle     - index handle
+*          jobUUID         - unique job id (can be NULL)
+*          scheduleUUID    - unique schedule id (can be NULL)
+*          archiveType     - archive type
+*          createdDateTime - created date/time stamp or 0
 * Output : entityId - index id of new entity index
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -896,6 +897,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        ConstString  jobUUID,
                        ConstString  scheduleUUID,
                        ArchiveTypes archiveType,
+                       uint64       createdDateTime,
                        IndexId      *entityId
                       );
 
