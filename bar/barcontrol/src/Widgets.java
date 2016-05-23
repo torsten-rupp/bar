@@ -8257,29 +8257,39 @@ private static void printTree(Tree tree)
    * @param comparator data comparator
    * @return menu item
    */
-  public static Menu getMenu(Menu menu, final Object data, Comparator comparator)
+  public static Menu getMenu(final Menu menu, final Object data, final Comparator comparator)
   {
-    for (MenuItem menuItem : menu.getItems())
+    final Menu result[] = new Menu[]{null};
+
+    menu.getDisplay().syncExec(new Runnable()
     {
-      Menu subMenu = menuItem.getMenu();
-      if (subMenu != null)
+      public void run()
       {
-        if (comparator.compare(subMenu.getData(),data) == 0)
+        for (MenuItem menuItem : menu.getItems())
         {
-          return subMenu;
-        }
-        else
-        {
-          subMenu = getMenu(subMenu,data,comparator);
+          Menu subMenu = menuItem.getMenu();
           if (subMenu != null)
           {
-            return subMenu;
+            if (comparator.compare(subMenu.getData(),data) == 0)
+            {
+              result[0] = subMenu;
+              return;
+            }
+            else
+            {
+              subMenu = getMenu(subMenu,data,comparator);
+              if (subMenu != null)
+              {
+                result[0] = subMenu;
+                return;
+              }
+            }
           }
         }
       }
-    }
+    });
 
-    return null;
+    return result[0];
   }
 
   /** get menu item
@@ -8287,29 +8297,39 @@ private static void printTree(Tree tree)
    * @param data data structure
    * @return menu item
    */
-  public static Menu getMenu(Menu menu, final Object data)
+  public static Menu getMenu(final Menu menu, final Object data)
   {
-    for (MenuItem menuItem : menu.getItems())
+    final Menu result[] = new Menu[]{null};
+
+    menu.getDisplay().syncExec(new Runnable()
     {
-      Menu subMenu = menuItem.getMenu();
-      if (subMenu != null)
+      public void run()
       {
-        if (subMenu.getData().equals(data))
+        for (MenuItem menuItem : menu.getItems())
         {
-          return subMenu;
-        }
-        else
-        {
-          subMenu = getMenu(subMenu,data);
+          Menu subMenu = menuItem.getMenu();
           if (subMenu != null)
           {
-            return subMenu;
+            if (subMenu.getData().equals(data))
+            {
+              result[0] = subMenu;
+              return;
+            }
+            else
+            {
+              subMenu = getMenu(subMenu,data);
+              if (subMenu != null)
+              {
+                result[0] = subMenu;
+                return;
+              }
+            }
           }
         }
       }
-    }
+    });
 
-    return null;
+    return result[0];
   }
 
   /** remove menu item
@@ -8700,32 +8720,42 @@ private static void printTree(Tree tree)
    * @param comparator data comparator
    * @return menu item
    */
-  public static MenuItem getMenuItem(Menu menu, final Object data, Comparator comparator)
+  public static MenuItem getMenuItem(final Menu menu, final Object data, final Comparator comparator)
   {
-    Menu     subMenu;
-    MenuItem subMenuItem;
+    final MenuItem result[] = new MenuItem[]{null};
 
-    for (MenuItem menuItem : menu.getItems())
+    menu.getDisplay().syncExec(new Runnable()
     {
-      if (comparator.compare(menuItem.getData(),data) == 0)
+      public void run()
       {
-        return menuItem;
-      }
-      else
-      {
-        subMenu = menuItem.getMenu();
-        if (subMenu != null)
+        Menu     subMenu;
+        MenuItem subMenuItem;
+
+        for (MenuItem menuItem : menu.getItems())
         {
-          subMenuItem = getMenuItem(subMenu,data,comparator);
-          if (subMenuItem != null)
+          if (comparator.compare(menuItem.getData(),data) == 0)
           {
-            return subMenuItem;
+            result[0] = menuItem;
+            return;
+          }
+          else
+          {
+            subMenu = menuItem.getMenu();
+            if (subMenu != null)
+            {
+              subMenuItem = getMenuItem(subMenu,data,comparator);
+              if (subMenuItem != null)
+              {
+                result[0] = subMenuItem;
+                return;
+              }
+            }
           }
         }
       }
-    }
+    });
 
-    return null;
+    return result[0];
   }
 
   /** get menu item
@@ -8733,32 +8763,42 @@ private static void printTree(Tree tree)
    * @param data data structure
    * @return menu item
    */
-  public static MenuItem getMenuItem(Menu menu, final Object data)
+  public static MenuItem getMenuItem(final Menu menu, final Object data)
   {
-    Menu     subMenu;
-    MenuItem subMenuItem;
+    final MenuItem result[] = new MenuItem[]{null};
 
-    for (MenuItem menuItem : menu.getItems())
+    menu.getDisplay().syncExec(new Runnable()
     {
-      if (menuItem.getData().equals(data))
+      public void run()
       {
-        return menuItem;
-      }
-      else
-      {
-        subMenu = menuItem.getMenu();
-        if (subMenu != null)
+        Menu     subMenu;
+        MenuItem subMenuItem;
+
+        for (MenuItem menuItem : menu.getItems())
         {
-          subMenuItem = getMenuItem(subMenu,data);
-          if (subMenuItem != null)
+          if (menuItem.getData().equals(data))
           {
-            return subMenuItem;
+            result[0] = menuItem;
+            return;
+          }
+          else
+          {
+            subMenu = menuItem.getMenu();
+            if (subMenu != null)
+            {
+              subMenuItem = getMenuItem(subMenu,data);
+              if (subMenuItem != null)
+              {
+                result[0] = subMenuItem;
+                return;
+              }
+            }
           }
         }
       }
-    }
+    });
 
-    return null;
+    return result[0];
   }
 
   /** update menu item
