@@ -2214,7 +2214,8 @@ Dprintf.dprintf("cirrect?");
                                                    uuidIndexData[0].id,
                                                    storagePattern
                                                   ),
-                               1,  // debug level
+//TODO
+0,//                               1,  // debug level
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -2786,7 +2787,6 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
     private void updateUUIDMenus()
     {
       final HashSet<Menu>          removeUUIDMenuSet       = new HashSet<Menu>();
-      final HashSet<UUIDIndexData> uuidIndexDataSet        = new HashSet<UUIDIndexData>();
       final HashSet<MenuItem>      removeEntityMenuItemSet = new HashSet<MenuItem>();
 
       // get all existing UUID menus
@@ -2799,10 +2799,10 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           {
             assert menuItem.getData() instanceof UUIDIndexData;
 
-            Menu menu = menuItem.getMenu();
-            assert(menu != null);
+            Menu subMenu = menuItem.getMenu();
+            assert(subMenu != null);
 
-            removeUUIDMenuSet.add(menu);
+            removeUUIDMenuSet.add(subMenu);
           }
         }
       });
@@ -2812,6 +2812,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       final IndexDataComparator indexDataComparator = IndexDataComparator.getInstance(IndexDataComparator.SortModes.ID);
 
       // get and update UUIDs menu items
+      final HashSet<UUIDIndexData> uuidIndexDataSet = new HashSet<UUIDIndexData>();
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=''"),
                                1,  // debugLevel
                                new CommandResultHandler()
@@ -2924,18 +2925,19 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                assignStorage(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
                                              }
                                            });
-
                                            Widgets.addMenuSeparator(subMenu);
 
+                                           // store sub-menu for UUID index data
                                            uuidIndexData.setSubMenu(subMenu);
                                          }
                                          else
                                          {
-                                           // update sub-menu item
                                            assert subMenu.getData() instanceof UUIDIndexData;
 
+                                           // update sub-menu text
                                            subMenu.getParentItem().setText(uuidIndexData.name.replaceAll("&","&&"));
 
+                                           // keep sub-menu
                                            removeUUIDMenuSet.remove(subMenu);
                                          }
 
@@ -2966,21 +2968,20 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                               );
       if (isUpdateTriggered()) return;
 
-      // remove not existing UUID menus
+      // remove not existing UUID sub-menus
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          for (Menu menu : removeUUIDMenuSet)
+          for (Menu subMenu : removeUUIDMenuSet)
           {
-            UUIDIndexData uuidIndexData = (UUIDIndexData)menu.getData();
-            Widgets.removeMenu(widgetStorageTreeAssignToMenu,menu);
+            subMenu.dispose();
 //TODO
 //            Widgets.removeMenu(widgetStorageTableAssignToMenu,menu);
-            uuidIndexData.clearSubMenu();
           }
         }
       });
+      if (isUpdateTriggered()) return;
 
       // get all entity menu items
       removeEntityMenuItemSet.clear();
@@ -2988,33 +2989,38 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       {
         public void run()
         {
-          for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
+          for (MenuItem menuItem : widgetStorageTreeAssignToMenu.getItems())
           {
-            Menu subMenu = uuidIndexData.getSubMenu();
-            if (subMenu != null)
+            assert menuItem.getData() instanceof UUIDIndexData;
+
+            Menu subMenu = menuItem.getMenu();
+            assert(subMenu != null);
+
+            MenuItem menuItems[] = subMenu.getItems();
+            for (int i = STORAGE_LIST_MENU_START_INDEX; i < menuItems.length; i++)
             {
-              MenuItem menuItems[] = subMenu.getItems();
-              for (int i = STORAGE_LIST_MENU_START_INDEX; i < menuItems.length; i++)
-              {
-                assert menuItems[i].getData() instanceof EntityIndexData;
-                removeEntityMenuItemSet.add(menuItems[i]);
-              }
+              assert menuItems[i].getData() instanceof EntityIndexData;
+              removeEntityMenuItemSet.add(menuItems[i]);
             }
           }
         }
       });
       if (isUpdateTriggered()) return;
 
+Dprintf.dprintf("--------------------------- %d",uuidIndexDataSet.size());
       // update entity menu items
       for (UUIDIndexData uuidIndexData : uuidIndexDataSet)
       {
-        final Menu subMenu = uuidIndexData.getSubMenu();
+//        final Menu subMenu = uuidIndexData.getSubMenu();
+        final Menu subMenu = Widgets.getMenu(widgetStorageTreeAssignToMenu,uuidIndexData);
+assert subMenu != null;
         if (subMenu != null)
         {
           BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%lld",
                                                        uuidIndexData.id
                                                       ),
-                                   1,  // debugLevel
+//TODO
+0,//                                   1,  // debugLevel
                                    new CommandResultHandler()
                                    {
                                      public int handleResult(int i, ValueMap valueMap)
@@ -3106,6 +3112,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
         }
         if (isUpdateTriggered()) return;
       }
+      if (isUpdateTriggered()) return;
 
       // remove not existing entity menu items
       display.syncExec(new Runnable()
@@ -3121,6 +3128,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           }
         }
       });
+      if (isUpdateTriggered()) return;
     }
   }
 
