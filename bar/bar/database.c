@@ -833,7 +833,7 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   assert(databaseHandle != NULL);
 
   #ifndef NDEBUG
-//    fprintf(stderr,"Warning: database busy handler called %p: %d\n",pthread_self(),n);
+//    fprintf(stderr,"Warning: database busy handler called %p: %d\n",Thread_getCurrentId(),n);
   #endif /* not NDEBUG */
 
   delay(SLEEP_TIME);
@@ -2582,23 +2582,28 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   #ifndef NDEBUG
     if (databaseHandle->transaction.fileName != NULL)
     {
-      fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread 0x%lx at %s, %u and previously thread 0x%lx at %s, %u!\n",
-              (ulong)pthread_self(),
+      const char *name1,*name2;
+
+      name1 = Thread_getCurrentName();
+      name2 = Thread_getName(databaseHandle->transaction.threadId);
+      fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread '%s' (%p) at %s, %u and previously thread '%s' (%p) at %s, %u!\n",
+              (name1 != NULL) ? name1 : "none",
+              (void*)Thread_getCurrentId(),
               __fileName__,
               __lineNb__,
-              (ulong)databaseHandle->transaction.threadId,
+              (name2 != NULL) ? name2 : "none",
+              (void*)databaseHandle->transaction.threadId,
               databaseHandle->transaction.fileName,
               databaseHandle->transaction.lineNb
              );
       #ifdef HAVE_BACKTRACE
-        debugDumpStackTrace(stderr,4,databaseHandle->transaction.stackTrace,databaseHandle->transaction.stackTraceSize,0);
+        debugDumpStackTrace(stderr,0,databaseHandle->transaction.stackTrace,databaseHandle->transaction.stackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR("begin transactions fail");
     }
   #endif /* NDEBUG */
 
   // format SQL command string
-//  sqlString = String_format(String_new(),"BEGIN TRANSACTION EXCLUSIVE;");
   sqlString = String_format(String_new(),"BEGIN TRANSACTION;");
 
   BLOCK_DOX(error,
@@ -2622,7 +2627,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   String_delete(sqlString);
 
   #ifndef NDEBUG
-    databaseHandle->transaction.threadId = pthread_self();
+    databaseHandle->transaction.threadId = Thread_getCurrentId();
     databaseHandle->transaction.fileName = __fileName__;
     databaseHandle->transaction.lineNb   = __lineNb__;
     #ifdef HAVE_BACKTRACE

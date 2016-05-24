@@ -21,6 +21,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "threads.h"
 #include "errors.h"
 
 #include "sqlite3.h"
@@ -79,7 +80,7 @@ typedef struct
     char fileName[256];
     struct
     {
-      pthread_t  threadId;                  // thread who aquired lock
+      ThreadId   threadId;                  // thread who aquired lock
       const char *fileName;
       uint       lineNb;
       char       text[8*1024];
@@ -87,7 +88,7 @@ typedef struct
     } locked;
     struct
     {
-      pthread_t  threadId;                  // thread who started transaction
+      ThreadId   threadId;                  // thread who started transaction
       const char *fileName;
       uint       lineNb;
       void const *stackTrace[16];
