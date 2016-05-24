@@ -1386,10 +1386,10 @@ LOCAL Errors StorageSCP_seek(StorageArchiveHandle *storageArchiveHandle,
       {
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       }
-      assert(error != ERROR_UNKNOWN);
-
-      return error;
     }
+    assert(error != ERROR_UNKNOWN);
+
+    return error;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageArchiveHandle);
     UNUSED_VARIABLE(offset);
