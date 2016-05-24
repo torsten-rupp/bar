@@ -6585,11 +6585,13 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // delete entities of UUID
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(jobUUID));
+//asm("int3");
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    // delete entities of UUID
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT id \
@@ -6600,9 +6602,9 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
       return error;
     }
-
     while (   Database_getNextRow(&databaseQueryHandle,
                                   "%lld",
                                   &entityId
@@ -6610,10 +6612,30 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
            && (error == ERROR_NONE)
           )
     {
+fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
       error = Index_deleteEntity(indexHandle,INDEX_ID_ENTITY(entityId));
     }
-
     Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: 3\n",__FILE__,__LINE__);
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
+      return error;
+    }
+fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
+
+    // delete UUID
+    error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DELETE FROM uuids WHERE jobUUID=%'S;",
+                               jobUUID
+                              );
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
+      return error;
+    }
+fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
 
     return ERROR_NONE;
   });
@@ -6862,18 +6884,19 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Index_getDatabaseId(entityId));
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    // delete storage of entity
+    // delete storages of entity
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT id \
                               FROM storage \
                               WHERE entityId=%lld; \
                              ",
-                             entityId
+                             Index_getDatabaseId(entityId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7356,94 +7379,133 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             "DELETE FROM fileEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             "DELETE FROM imageEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             "DELETE FROM directoryEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             "DELETE FROM linkEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_LINK
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_LINK
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             "DELETE FROM hardlinkEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             "DELETE FROM specialEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_SPECIAL
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_SPECIAL
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM storage WHERE id=%lld;",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE) return error;
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
     return ERROR_NONE;
   });
