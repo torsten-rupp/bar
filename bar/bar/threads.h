@@ -169,7 +169,7 @@ INLINE ThreadId Thread_getCurrentId(void);
 #if defined(NDEBUG) || defined(__THREADS_IMPLEMENATION__)
 INLINE ThreadId Thread_getCurrentId(void)
 {
-  return pthread_self();
+  return (ThreadId)pthread_self();
 }
 #endif /* NDEBUG || __THREADS_IMPLEMENATION__ */
 
@@ -206,6 +206,28 @@ INLINE bool Thread_isCurrentThread(ThreadId threadId)
   return pthread_equal(threadId,pthread_self()) != 0;
 }
 #endif /* NDEBUG || __THREADS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Thread_getName
+* Purpose: get name of thread
+* Input  : threadId - thread id
+* Output : -
+* Return : thread name or NULL
+* Notes  : -
+\***********************************************************************/
+
+const char *Thread_getName(ThreadId threadId);
+
+/***********************************************************************\
+* Name   : Thread_getCurrentName
+* Purpose: get name of current thread
+* Input  : -
+* Output : -
+* Return : thread name or NULL
+* Notes  : -
+\***********************************************************************/
+
+const char *Thread_getCurrentName(void);
 
 /***********************************************************************\
 * Name   : Thread_initLocalVariable
