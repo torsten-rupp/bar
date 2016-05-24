@@ -662,15 +662,15 @@ public class TabRestore
 
       if ((indexData1 == null) && (indexData2 == null))
       {
-        result = 0;
+        return 0;
       }
       else if (indexData1 == null)
       {
-        result = 1;
+        return 1;
       }
       else if (indexData2 == null)
       {
-        result = -1;
+        return -1;
       }
       else
       {
@@ -999,7 +999,7 @@ public class TabRestore
      */
     public String getInfo()
     {
-      return String.format("%d: %s",id,!name.isEmpty() ? name : "unknown");
+      return String.format("#%d: %s",id,!name.isEmpty() ? name : "unknown");
     }
 
     /** convert data to string
@@ -1130,7 +1130,7 @@ Dprintf.dprintf("");
      */
     public String getInfo()
     {
-      return String.format("%d: %s",id,archiveType.toString());
+      return String.format("#%d: %s",id,archiveType.toString());
     }
 
     /** write storage index data object to object stream
@@ -1368,7 +1368,7 @@ Dprintf.dprintf("");
      */
     public String getInfo()
     {
-      return String.format("%d: %s, %s",id,!jobName.isEmpty() ? jobName : "unknown",name);
+      return String.format("#%d: %s, %s",id,!jobName.isEmpty() ? jobName : "unknown",name);
     }
 
     /** set index state
@@ -2799,10 +2799,11 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           {
             assert menuItem.getData() instanceof UUIDIndexData;
 
-            Menu subMenu = menuItem.getMenu();
-            assert(subMenu != null);
-
-            removeUUIDMenuSet.add(subMenu);
+            Menu menu = menuItem.getMenu();
+            if (menu != null)
+            {
+              removeUUIDMenuSet.add(menu);
+            }
           }
         }
       });
@@ -2978,6 +2979,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
             subMenu.dispose();
 //TODO
 //            Widgets.removeMenu(widgetStorageTableAssignToMenu,menu);
+            menu.dispose();
           }
         }
       });
@@ -3014,6 +3016,7 @@ Dprintf.dprintf("--------------------------- %d",uuidIndexDataSet.size());
 //        final Menu subMenu = uuidIndexData.getSubMenu();
         final Menu subMenu = Widgets.getMenu(widgetStorageTreeAssignToMenu,uuidIndexData);
 assert subMenu != null;
+
         if (subMenu != null)
         {
           BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%lld",
@@ -3122,9 +3125,8 @@ assert subMenu != null;
           for (MenuItem menuItem : removeEntityMenuItemSet)
           {
             EntityIndexData entityIndexData = (EntityIndexData)menuItem.getData();
-            Widgets.removeMenuItem(widgetStorageTreeAssignToMenu,menuItem);
-//            Widgets.removeMenuItem(widgetStorageTableAssignToMenu,menuItem);
             entityIndexData.clearMenuItem();
+            menuItem.dispose();
           }
         }
       });
@@ -7042,7 +7044,7 @@ Dprintf.dprintf("remove");
     {
       if (Dialogs.confirm(shell,BARControl.tr("Remove index of {0} {0,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size())))
       {
-        final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+        final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE);
         busyDialog.setMaximum(indexDataHashSet.size());
 
         new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
