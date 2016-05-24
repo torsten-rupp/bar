@@ -2979,7 +2979,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
             subMenu.dispose();
 //TODO
 //            Widgets.removeMenu(widgetStorageTableAssignToMenu,menu);
-            menu.dispose();
+            subMenu.dispose();
           }
         }
       });
