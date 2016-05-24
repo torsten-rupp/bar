@@ -6925,6 +6925,7 @@ Errors Command_create(ConstString                  jobUUID,
                             jobUUID,
                             scheduleUUID,
                             archiveType,
+                            0LL, // createdDateTime
                             &entityId
                            );
     if (error != ERROR_NONE)
