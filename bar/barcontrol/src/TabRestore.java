@@ -2008,7 +2008,7 @@ Dprintf.dprintf("cirrect?");
 
       // get UUID list
       final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=%'S",
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST name=%'S",
                                                    storagePattern
                                                   ),
                                1,  // debugLevel
@@ -2398,11 +2398,11 @@ Dprintf.dprintf("cirrect?");
 
       // get storage list for entity
       final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld pattern=%'S indexStateSet=%s indexModeSet=%s",
+      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld indexStateSet=%s indexModeSet=%s name=%'S",
                                                    entityIndexData[0].id,
-                                                   storagePattern,
                                                    storageIndexStateSet.nameList("|"),
-                                                   "*"
+                                                   "*",
+                                                   storagePattern
                                                   ),
                                1,  // debugLevel
                                new CommandResultHandler()
@@ -2582,7 +2582,7 @@ Dprintf.dprintf("cirrect?");
       // get storages info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO pattern=%'S indexStateSet=%s indexModeSet=%s ",
+      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO name=%'S indexStateSet=%s indexModeSet=%s ",
                                                        storagePattern,
                                                        storageIndexStateSet.nameList("|"),
                                                        "*"
@@ -2649,7 +2649,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       final int[]    n            = new int[1];
       try
       {
-        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* pattern=%'S offset=%d limit=%d",
+        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d",
                                                      (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                      storageIndexStateSet.nameList("|"),
                                                      storagePattern,
@@ -2814,7 +2814,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
 
       // get and update UUIDs menu items
       final HashSet<UUIDIndexData> uuidIndexDataSet = new HashSet<UUIDIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST pattern=''"),
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST"),
                                1,  // debugLevel
                                new CommandResultHandler()
                                {
@@ -3015,7 +3015,7 @@ Dprintf.dprintf("--------------------------- %d",uuidIndexDataSet.size());
       {
 //        final Menu subMenu = uuidIndexData.getSubMenu();
         final Menu subMenu = Widgets.getMenu(widgetStorageTreeAssignToMenu,uuidIndexData);
-assert subMenu != null;
+//assert subMenu != null;
 
         if (subMenu != null)
         {
@@ -3711,7 +3711,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       // get entries info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO pattern=%'S indexType=%s newestOnly=%y",
+      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
                                                        entryPattern,
                                                        entryType.toString(),
                                                        newestOnly
@@ -3784,7 +3784,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       // update entry table segment
       final String[] errorMessage = new String[1];
       final int[]    n            = new int[1];
-      BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST pattern=%'S indexType=%s newestOnly=%y offset=%d limit=%d",
+      BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=%s newestOnly=%y offset=%d limit=%d",
                                                    entryPattern,
                                                    entryType.toString(),
                                                    newestOnly,
@@ -6404,7 +6404,7 @@ Dprintf.dprintf("remove");
 
         if (checked)
         {
-          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO storagePattern=%'S indexStateSet=%s",
+          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO name=%'S indexStateSet=%s",
                                                            updateStorageTreeTableThread.getStoragePattern(),
                                                            updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|")
                                                           ),
@@ -6441,11 +6441,11 @@ Dprintf.dprintf("remove");
             final int n[] = new int[]{0};
             final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
             busyDialog.setMaximum(totalEntryCount[0]);
-            int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s storagePattern=%'S indexStateSet=%s indexModeSet=%s",
+            int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S",
                                                                      "*",
-                                                                     updateStorageTreeTableThread.getStoragePattern(),
                                                                      updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                                     "*"
+                                                                     "*",
+                                                                     updateStorageTreeTableThread.getStoragePattern()
                                                                     ),
                                                  1,  // debugLevel
                                                  errorMessage,
@@ -7184,7 +7184,7 @@ Dprintf.dprintf("remove");
       // get number of indizes with error state
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand("INDEX_STORAGES_INFO pattern='*' indexStateSet=ERROR",
+      if (BARServer.executeCommand("INDEX_STORAGES_INFO indexStateSet=ERROR",
                                    1,  // debugLevel
                                    errorMessage,
                                    valueMap
@@ -8215,7 +8215,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
     final boolean doit[]            = new boolean[]{true};
     if (checked)
     {
-      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO pattern=%'S indexType=%s newestOnly=%y",
+      if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
                                                        updateEntryTableThread.getEntryPattern(),
                                                        updateEntryTableThread.getEntryType().toString(),
                                                        updateEntryTableThread.getNewestOnly()
@@ -8253,7 +8253,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
         final int n[] = new int[]{0};
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(totalEntryCount[0]);
-        int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST pattern=%'S indexType=%s newestOnly=%y",
+        int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=%s newestOnly=%y",
                                                                  updateEntryTableThread.getEntryPattern(),
                                                                  updateEntryTableThread.getEntryType().toString(),
                                                                  updateEntryTableThread.getNewestOnly()
