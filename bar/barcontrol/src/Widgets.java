@@ -8338,7 +8338,7 @@ private static void printTree(Tree tree)
    */
   public static void removeMenu(Menu menu, final Object data)
   {
-    if (menu.getData().equals(data))
+    if ((menu.getData() != null) && (menu.getData().equals(data)))
     {
       menu.dispose();
     }
@@ -8776,7 +8776,8 @@ private static void printTree(Tree tree)
 
         for (MenuItem menuItem : menu.getItems())
         {
-          if (menuItem.getData().equals(data))
+
+          if ((menuItem.getData() != null) && (menuItem.getData().equals(data)))
           {
             result[0] = menuItem;
             return;
