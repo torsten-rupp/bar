@@ -37,6 +37,8 @@ import org.eclipse.swt.dnd.DropTargetAdapter;
 import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.TraverseEvent;
@@ -3320,7 +3322,7 @@ class Dialogs
       final FileComparator  fileComparator   = new FileComparator(FileComparator.SORTMODE_NAME);;
       final Updater         updater          = new Updater(fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
       final ArrayList<File> shortcutFileList = new ArrayList<File>();
-      final HashSet<File> shortcutSet        = new HashSet<File>();
+      final HashSet<File>   shortcutSet      = new HashSet<File>();
 
       // load images
       final Image IMAGE_FOLDER_UP;
@@ -3560,6 +3562,28 @@ class Dialogs
         {
         }
       });
+      widgetShortcutList.addKeyListener(new KeyListener()
+      {
+        @Override
+        public void keyPressed(KeyEvent keyEvent)
+        {
+        }
+        @Override
+        public void keyReleased(KeyEvent keyEvent)
+        {
+          if      (Widgets.isAccelerator(keyEvent,SWT.DEL))
+          {
+            int index = widgetShortcutList.getSelectionIndex();
+            if (index >= 0)
+            {
+              File file = shortcutFileList.get(index);
+              shortcutSet.remove(file);
+              listDirectory.setShortcuts(shortcutSet.toArray(new File[shortcutSet.size()]));
+              updater.updateShortcutList(shortcutFileList,widgetShortcutList,shortcutSet);
+            }
+          }
+        }
+      });
       widgetFileList.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3697,7 +3721,7 @@ class Dialogs
           TableItem tableItem = widgetFileList.getItem(point);
           if (tableItem != null)
           {
-            dragSourceEvent.data = dragFile[0];//.getAbsolutePath();
+            dragSourceEvent.data = dragFile[0].getAbsolutePath();
           }
         }
         public void dragFinished(DragSourceEvent dragSourceEvent)
@@ -3717,18 +3741,12 @@ class Dialogs
         }
         public void drop(DropTargetEvent dropTargetEvent)
         {
-Dprintf.dprintf("");
           if (dropTargetEvent.data != null)
           {
-Dprintf.dprintf("%s: %s",dropTargetEvent.data instanceof File,dropTargetEvent.data);
-            if (dropTargetEvent.data instanceof File)
-            {
-Dprintf.dprintf("");
-              shortcutSet.add((File)dropTargetEvent.data);
-              listDirectory.setShortcuts(shortcutSet.toArray(new File[shortcutSet.size()]));
-
-              updater.updateShortcutList(shortcutFileList,widgetShortcutList,shortcutSet);
-            }
+            File file = new File((String)dropTargetEvent.data);
+            shortcutSet.add(file);
+            listDirectory.setShortcuts(shortcutSet.toArray(new File[shortcutSet.size()]));
+            updater.updateShortcutList(shortcutFileList,widgetShortcutList,shortcutSet);
           }
           else
           {
