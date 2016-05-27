@@ -899,7 +899,6 @@ public class TabStatus
       @Override
       public void menuShown(MenuEvent menuEvent)
       {
-Dprintf.dprintf("");
         if (widgetJobTableToolTip != null)
         {
           widgetJobTableToolTip.dispose();
