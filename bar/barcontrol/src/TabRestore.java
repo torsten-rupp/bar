@@ -91,57 +91,6 @@ import org.eclipse.swt.widgets.Widget;
 
 /****************************** Classes ********************************/
 
-/** background task
- */
-abstract class BackgroundTask
-{
-  // --------------------------- constants --------------------------------
-
-  // --------------------------- variables --------------------------------
-  private final BusyDialog busyDialog;
-  private Thread           thread;
-
-  // ------------------------ native functions ----------------------------
-
-  // ---------------------------- methods ---------------------------------
-
-  /** create background task
-   * @param busyDialog busy dialog
-   * @param userData user data
-   */
-  BackgroundTask(final BusyDialog busyDialog, final Object userData)
-  {
-    final BackgroundTask backgroundTask = this;
-
-    this.busyDialog = busyDialog;
-
-    thread = new Thread(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        backgroundTask.run(busyDialog,userData);
-      }
-    });
-    thread.setDaemon(true);
-    thread.start();
-  }
-
-  /** create background task
-   * @param busyDialog busy dialog
-   */
-  BackgroundTask(final BusyDialog busyDialog)
-  {
-    this(busyDialog,null);
-  }
-
-  /** run method
-   * @param busyDialog busy dialog
-   * @param userData user data
-   */
-  abstract public void run(BusyDialog busyDialog, Object userData);
-}
-
 /** tab restore
  */
 public class TabRestore
@@ -6762,6 +6711,7 @@ Dprintf.dprintf("remove");
           else if (indexData instanceof StorageIndexData)
           {
             // nothing to do
+            error = Errors.NONE;
           }
           if (error == Errors.NONE)
           {
@@ -7733,7 +7683,7 @@ Dprintf.dprintf("remove");
         }
         try
         {
-          // set storage entries to restore
+          // set storage achives to restore
           setStorageList(indexIdSet);
 
           // get archives
@@ -7857,7 +7807,7 @@ Dprintf.dprintf("remove");
 
           int errorCode;
 
-          // restore entries
+          // restore archives
           {
             display.syncExec(new Runnable()
             {
@@ -7870,16 +7820,15 @@ Dprintf.dprintf("remove");
           }
           try
           {
-            // set storage entries to restore
+            // set storage archives to restore
             setStorageList(indexIdSet);
 
             // start restore
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S directoryContent=%y overwriteEntries=%y",
+            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteEntries=%y",
                                                                      restoreToDirectory,
-                                                                     directoryContent,
                                                                      overwriteEntries
                                                                     ),
                                                  0,  // debugLevel
@@ -8675,7 +8624,7 @@ Dprintf.dprintf("");
           // set entries to restore
           setEntryList(entryIdSet);
 
-          // get archives
+          // get entries
           BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
 1,//                                   0,  // debugLevel
                                    new CommandResultHandler()
@@ -8779,7 +8728,8 @@ Dprintf.dprintf("");
                                                    500,
                                                    300,
                                                    null,
-                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE
+                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE,
+                                                   250  // max. lines
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
