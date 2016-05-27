@@ -13623,6 +13623,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 * Notes  : Arguments:
 *            type=ARCHIVES|ENTRIES
 *            destination=<name>
+*            directoryContent=yes|no
 *            overwriteEntries=yes|no
 *          Result:
 \***********************************************************************/
@@ -13836,7 +13837,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
 
   Types              type;
+  bool               directoryContentFlag;
   String             storageName;
+  IndexId            entryId;
   String             entryName;
   StringList         storageNameList;
   IndexQueryHandle   indexQueryHandle;
@@ -13847,7 +13850,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get type, destination, overwrite flag
+  // get type, destination, directory content flag, overwrite flag
   if (!StringMap_getEnum(argumentMap,"type",&type,(StringMapParseEnumFunction)parseRestoreType,UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=ARCHIVES|ENTRIES");
@@ -13859,6 +13862,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination=<name>");
     return;
   }
+  StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
   if (!StringMap_getBool(argumentMap,"overwriteEntries",&clientInfo->jobOptions.overwriteEntriesFlag,FALSE))
   {
     String_delete(clientInfo->jobOptions.destination);
@@ -13921,6 +13925,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       }
       break;
     case ENTRIES:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
       error = Index_initListEntries(&indexQueryHandle,
                                     indexHandle,
                                     NULL, // indexIds
@@ -13946,7 +13952,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                      NULL, // storageId,
                                      storageName, // storageName
                                      NULL, // storageDateTime
-                                     NULL, // entryId,
+                                     &entryId,
                                      entryName,
                                      NULL,  // destinationName
                                      NULL,  // fileSystemType
@@ -13965,6 +13971,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
             StringList_append(&storageNameList,storageName);
           }
           EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+          if (directoryContentFlag && (Index_getType(entryId) == INDEX_TYPE_DIRECTORY))
+          {
+            String_appendCString(entryName,"/*");
+            EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+          }
         }
         Index_doneList(&indexQueryHandle);
       }
@@ -16385,8 +16396,6 @@ SERVER_COMMANDS[] =
 
   { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_OK      },
 
-//  { "RESTORE_LIST_CLEAR",          serverCommand_restoreListClear,         AUTHORIZATION_STATE_OK      },
-//  { "RESTORE_LIST_ADD",            serverCommand_restoreListAdd,           AUTHORIZATION_STATE_OK      },
   { "RESTORE",                     serverCommand_restore,                  AUTHORIZATION_STATE_OK      },
   { "RESTORE_CONTINUE",            serverCommand_restoreContinue,          AUTHORIZATION_STATE_OK      },
 
