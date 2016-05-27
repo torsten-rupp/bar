@@ -16140,22 +16140,22 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:
-        SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_IMAGE:
-        SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_DIRECTORY:
-        SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,timeModified,userId,groupId,permission);
+        SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_LINK:
-        SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,destinationName,timeModified,userId,groupId,permission);
+        SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,destinationName,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_HARDLINK:
-        SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_SPECIAL:
-        SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,timeModified,userId,groupId,permission);
+        SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
         break;
       default:
 //TODO
