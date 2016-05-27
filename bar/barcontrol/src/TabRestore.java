@@ -1654,7 +1654,7 @@ Dprintf.dprintf("cirrect?");
     private boolean          updateStorageCount   = false;
     private HashSet<Integer> updateOffsets        = new HashSet<Integer>();
     private int              storageCount         = 0;
-    private String           storagePattern       = "";
+    private String           storageName          = "";
     private IndexStateSet    storageIndexStateSet = INDEX_STATE_SET_ALL;
     private EntityStates     storageEntityState   = EntityStates.ANY;
     private boolean          setUpdateIndicator   = false;          // true to set color/cursor at update
@@ -1822,12 +1822,12 @@ Dprintf.dprintf("cirrect?");
       return storageCount;
     }
 
-    /** get storage pattern
-     * @return storage pattern
+    /** get storage name
+     * @return storage name
      */
-    public String getStoragePattern()
+    public String getStorageName()
     {
-      return storagePattern;
+      return storageName;
     }
 
     /** get storage index state set
@@ -1839,21 +1839,21 @@ Dprintf.dprintf("cirrect?");
     }
 
     /** trigger update of storage list
-     * @param storagePattern new storage pattern
+     * @param storageName new storage name
      * @param storageIndexStateSet new storage index state set
      * @param storageEntityState new storage entity state
      */
-    public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
+    public void triggerUpdate(String storageName, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
     {
-      assert storagePattern != null;
+      assert storageName != null;
 
       synchronized(trigger)
       {
-        if (   !this.storagePattern.equals(storagePattern)
+        if (   !this.storageName.equals(storageName)
             || (this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState)
            )
         {
-          this.storagePattern       = storagePattern;
+          this.storageName          = storageName;
           this.storageIndexStateSet = storageIndexStateSet;
           this.storageEntityState   = storageEntityState;
           this.setUpdateIndicator   = true;
@@ -1864,22 +1864,22 @@ Dprintf.dprintf("cirrect?");
     }
 
     /** trigger update of storage list
-     * @param storagePattern new storage pattern
+     * @param storageName new storage name
      */
-    public void triggerUpdateStoragePattern(String storagePattern)
+    public void triggerUpdateStorageName(String storageName)
     {
-      assert storagePattern != null;
+      assert storageName != null;
 
       synchronized(trigger)
       {
-//        if (!this.storagePattern.equals(storagePattern))
-        if (   (this.storagePattern == null)
-            || (storagePattern == null)
+//        if (!this.storageName.equals(storageName))
+        if (   (this.storageName == null)
+            || (storageName == null)
 //Note: at least 3 characters?
-            || (((storagePattern.length() == 0) || (storagePattern.length() >= 3)) && !this.storagePattern.equals(storagePattern))
+            || (((storageName.length() == 0) || (storageName.length() >= 3)) && !this.storageName.equals(storageName))
            )
         {
-          this.storagePattern     = storagePattern;
+          this.storageName        = storageName;
           this.setUpdateIndicator = true;
           this.updateStorageCount = true;
           trigger.notify();
@@ -1966,7 +1966,7 @@ Dprintf.dprintf("cirrect?");
       // get UUID list
       final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
       BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST name=%'S",
-                                                   storagePattern
+                                                   storageName
                                                   ),
                                1,  // debugLevel
                                new CommandResultHandler()
@@ -2169,7 +2169,7 @@ Dprintf.dprintf("cirrect?");
       final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
       BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%lld pattern=%'S",
                                                    uuidIndexData[0].id,
-                                                   storagePattern
+                                                   storageName
                                                   ),
 //TODO
 0,//                               1,  // debug level
@@ -2359,7 +2359,7 @@ Dprintf.dprintf("cirrect?");
                                                    entityIndexData[0].id,
                                                    storageIndexStateSet.nameList("|"),
                                                    "*",
-                                                   storagePattern
+                                                   storageName
                                                   ),
                                1,  // debugLevel
                                new CommandResultHandler()
@@ -2524,7 +2524,7 @@ Dprintf.dprintf("cirrect?");
      */
     private void updateStorageTableCount()
     {
-      assert storagePattern != null;
+      assert storageName != null;
 
       // set update inidicator
       display.syncExec(new Runnable()
@@ -2540,7 +2540,7 @@ Dprintf.dprintf("cirrect?");
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
       if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO name=%'S indexStateSet=%s indexModeSet=%s ",
-                                                       storagePattern,
+                                                       storageName,
                                                        storageIndexStateSet.nameList("|"),
                                                        "*"
                                                       ),
@@ -2580,7 +2580,7 @@ Dprintf.dprintf("cirrect?");
      */
     private boolean updateStorageTable(final int offset)
     {
-      assert storagePattern != null;
+      assert storageName != null;
       assert offset >= 0;
       assert storageCount >= 0;
 
@@ -2609,7 +2609,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d",
                                                      (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                      storageIndexStateSet.nameList("|"),
-                                                     storagePattern,
+                                                     storageName,
                                                      offset,
                                                      limit
                                                     ),
@@ -3364,7 +3364,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
     private HashSet<Integer> updateOffsets         = new HashSet<Integer>();
     private long             totalEntryCount       = 0;
     private EntryTypes       entryType             = EntryTypes.ANY;
-    private String           entryPattern          = "";
+    private String           entryName             = "";
     private boolean          newestOnly            = false;
     private boolean          setUpdateIndicator    = false;          // true to set color/cursor at update
 
@@ -3503,12 +3503,12 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       return entryType;
     }
 
-    /** get entry pattern
-     * @return entry pattern
+    /** get entry name
+     * @return entry name
      */
-    public String getEntryPattern()
+    public String getEntryName()
     {
-      return entryPattern;
+      return entryName;
     }
 
     /** get newest-only
@@ -3520,20 +3520,20 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
     }
 
     /** trigger update of entry list
-     * @param entryPattern new entry pattern or null
+     * @param entryName new entry name or null
      * @param type type or *
      * @param newestOnly flag for newest entries only or null
      */
-    public void triggerUpdate(String entryPattern, String type, boolean newestOnly)
+    public void triggerUpdate(String entryName, String type, boolean newestOnly)
     {
       synchronized(trigger)
       {
-        if (   (this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern)
+        if (   (this.entryName == null) || (entryName == null) || !this.entryName.equals(entryName)
             || (entryType != this.entryType)
             || (this.newestOnly != newestOnly)
            )
         {
-          this.entryPattern          = entryPattern;
+          this.entryName             = entryName;
           this.entryType             = entryType;
           this.newestOnly            = newestOnly;
           this.setUpdateIndicator    = true;
@@ -3544,22 +3544,22 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
     }
 
     /** trigger update of entry list
-     * @param entryPattern new entry pattern or null
+     * @param entryName new entry pattern or null
      */
-    public void triggerUpdateEntryPattern(String entryPattern)
+    public void triggerUpdateEntryName(String entryName)
     {
-      assert entryPattern != null;
+      assert entryName != null;
 
       synchronized(trigger)
       {
-        // if ((this.entryPattern == null) || (entryPattern == null) || !this.entryPattern.equals(entryPattern))
-        if (   (this.entryPattern == null)
-            || (entryPattern == null)
+        // if ((this.entryName == null) || (entryName == null) || !this.entryName.equals(entryName))
+        if (   (this.entryName == null)
+            || (entryName == null)
 //Note: at least 3 characters?
-            || (((entryPattern.length() == 0) || (entryPattern.length() >= 3)) && !this.entryPattern.equals(entryPattern))
+            || (((entryName.length() == 0) || (entryName.length() >= 3)) && !this.entryName.equals(entryName))
            )
         {
-          this.entryPattern          = entryPattern;
+          this.entryName             = entryName;
           this.setUpdateIndicator    = true;
           this.updateTotalEntryCount = true;
           trigger.notify();
@@ -3641,7 +3641,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
      */
     private void updateEntryTableTotalEntryCount()
     {
-      assert entryPattern != null;
+      assert entryName != null;
 
       final long oldTotalEntryCount = totalEntryCount;
 
@@ -3659,7 +3659,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
       if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
-                                                       entryPattern,
+                                                       entryName,
                                                        entryType.toString(),
                                                        newestOnly
                                                       ),
@@ -3718,7 +3718,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
      */
     private boolean updateEntryTable(final int offset)
     {
-      assert entryPattern != null;
+      assert entryName != null;
       assert offset >= 0;
       assert totalEntryCount >= 0;
 
@@ -3732,7 +3732,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       final String[] errorMessage = new String[1];
       final int[]    n            = new int[1];
       BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=%s newestOnly=%y offset=%d limit=%d",
-                                                   entryPattern,
+                                                   entryName,
                                                    entryType.toString(),
                                                    newestOnly,
                                                    offset,
@@ -4097,8 +4097,6 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
   private Shell                        widgetStorageTableToolTip = null;
 //TODO: NYI
   private Menu                         widgetStorageTableAssignToMenu;
-  private Text                         widgetStoragePattern;
-  private Combo                        widgetStorageState;
   private WidgetEvent                  checkedStorageEvent = new WidgetEvent();     // triggered when checked-state of some storage changed
 
   private Label                        widgetEntryTableTitle;
@@ -5631,26 +5629,26 @@ Dprintf.dprintf("");
         label = Widgets.newLabel(composite,BARControl.tr("Filter")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        widgetStoragePattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
-        widgetStoragePattern.setToolTipText(BARControl.tr("Enter filter key words for storage list."));
-        widgetStoragePattern.setMessage(BARControl.tr("Enter text to filter storage list"));
-        Widgets.layout(widgetStoragePattern,0,2,TableLayoutData.WE);
-        widgetStoragePattern.addSelectionListener(new SelectionListener()
+        text = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        text.setToolTipText(BARControl.tr("Enter filter key words for storage list."));
+        text.setMessage(BARControl.tr("Enter text to filter storage list"));
+        Widgets.layout(text,0,2,TableLayoutData.WE);
+        text.addSelectionListener(new SelectionListener()
         {
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            updateStorageTreeTableThread.triggerUpdateStoragePattern(widget.getText());
+            updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            updateStorageTreeTableThread.triggerUpdateStoragePattern(widget.getText());
+            updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
           }
         });
-        widgetStoragePattern.addKeyListener(new KeyListener()
+        text.addKeyListener(new KeyListener()
         {
           @Override
           public void keyPressed(KeyEvent keyEvent)
@@ -5660,11 +5658,11 @@ Dprintf.dprintf("");
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
-            updateStorageTreeTableThread.triggerUpdateStoragePattern(widget.getText());
+            updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
           }
         });
 //???
-        widgetStoragePattern.addFocusListener(new FocusListener()
+        text.addFocusListener(new FocusListener()
         {
           @Override
           public void focusGained(FocusEvent focusEvent)
@@ -5674,19 +5672,19 @@ Dprintf.dprintf("");
           public void focusLost(FocusEvent focusEvent)
           {
 //            Text widget = (Text)focusEvent.widget;
-//            updateStorageTreeTableThread.triggerUpdateStoragePattern(widget.getText());
+//            updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
           }
         });
 
         label = Widgets.newLabel(composite,BARControl.tr("State")+":");
         Widgets.layout(label,0,3,TableLayoutData.W);
 
-        widgetStorageState = Widgets.newOptionMenu(composite);
-        widgetStorageState.setToolTipText(BARControl.tr("Storage states filter."));
-        widgetStorageState.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested","not assigned"});
-        widgetStorageState.setText("*");
-        Widgets.layout(widgetStorageState,0,4,TableLayoutData.W);
-        widgetStorageState.addSelectionListener(new SelectionListener()
+        combo = Widgets.newOptionMenu(composite);
+        combo.setToolTipText(BARControl.tr("Storage states filter."));
+        combo.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested","not assigned"});
+        combo.setText("*");
+        Widgets.layout(combo,0,4,TableLayoutData.W);
+        combo.addSelectionListener(new SelectionListener()
         {
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6116,13 +6114,13 @@ Dprintf.dprintf("remove");
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Text  widget = (Text)selectionEvent.widget;
-            updateEntryTableThread.triggerUpdateEntryPattern(widget.getText());
+            updateEntryTableThread.triggerUpdateEntryName(widget.getText());
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
-            updateEntryTableThread.triggerUpdateEntryPattern(widget.getText());
+            updateEntryTableThread.triggerUpdateEntryName(widget.getText());
           }
         });
         text.addKeyListener(new KeyListener()
@@ -6135,7 +6133,7 @@ Dprintf.dprintf("remove");
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
-            updateEntryTableThread.triggerUpdateEntryPattern(widget.getText());
+            updateEntryTableThread.triggerUpdateEntryName(widget.getText());
           }
         });
 //???
@@ -6149,7 +6147,7 @@ Dprintf.dprintf("remove");
           public void focusLost(FocusEvent focusEvent)
           {
 //            Text widget = (Text)focusEvent.widget;
-//            updateEntryTableThread.triggerUpdateEntryPattern(widget.getText());
+//            updateEntryTableThread.triggerUpdateEntryName(widget.getText());
           }
         });
 
@@ -6352,7 +6350,7 @@ Dprintf.dprintf("remove");
         if (checked)
         {
           if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO name=%'S indexStateSet=%s",
-                                                           updateStorageTreeTableThread.getStoragePattern(),
+                                                           updateStorageTreeTableThread.getStorageName(),
                                                            updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|")
                                                           ),
                                        1,  // debugLevel
@@ -6392,7 +6390,7 @@ Dprintf.dprintf("remove");
                                                                      "*",
                                                                      updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
                                                                      "*",
-                                                                     updateStorageTreeTableThread.getStoragePattern()
+                                                                     updateStorageTreeTableThread.getStorageName()
                                                                     ),
                                                  1,  // debugLevel
                                                  errorMessage,
@@ -7536,7 +7534,7 @@ Dprintf.dprintf("remove");
     if (checked)
     {
       if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
-                                                       updateEntryTableThread.getEntryPattern(),
+                                                       updateEntryTableThread.getEntryName(),
                                                        updateEntryTableThread.getEntryType().toString(),
                                                        updateEntryTableThread.getNewestOnly()
                                                       ),
@@ -7574,7 +7572,7 @@ Dprintf.dprintf("remove");
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(totalEntryCount[0]);
         int error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=%s newestOnly=%y",
-                                                                 updateEntryTableThread.getEntryPattern(),
+                                                                 updateEntryTableThread.getEntryName(),
                                                                  updateEntryTableThread.getEntryType().toString(),
                                                                  updateEntryTableThread.getNewestOnly()
                                                                 ),
