@@ -16158,8 +16158,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
         break;
       default:
-//TODO
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Index_getType(entryId));
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
         #endif /* NDEBUG */
