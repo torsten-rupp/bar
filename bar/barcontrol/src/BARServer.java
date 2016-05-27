@@ -36,6 +36,8 @@ import java.security.spec.RSAPublicKeySpec;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -2533,137 +2535,179 @@ throw new Error("NYI");
     return encodeHex(encryptedPasswordBytes);
   }
 
+  /** remote file
+   */
+  static class RemoteFile extends File
+  {
+    private FileTypes fileType;
+    private long      size;
+    private long      dateTime;
+
+    /** create remote file
+     * @param name name
+     * @param fileType file type
+     * @param size size [bytes]
+     * @param dateTime last modified date/time
+     */
+    public RemoteFile(String name, FileTypes fileType, long size, long dateTime)
+    {
+      super(name);
+
+      this.fileType = fileType;
+      this.size     = size;
+      this.dateTime = dateTime;
+    }
+
+    /** create remote file
+     * @param name name
+     * @param fileType file type
+     * @param dateTime last modified date/time
+     */
+    public RemoteFile(String name, FileTypes fileType, long dateTime)
+    {
+      this(name,fileType,0,dateTime);
+    }
+
+    /** create remote file
+     * @param name name
+     * @param size size [bytes]
+     */
+    public RemoteFile(String name, long size)
+    {
+      this(name,FileTypes.DIRECTORY,size,0);
+    }
+
+    /** create remote file
+     * @param name name
+     */
+    public RemoteFile(String name)
+    {
+      this(name,0);
+    }
+
+    /** get file size
+     * @return size [bytes]
+     */
+    public long length()
+    {
+      return size;
+    }
+
+    /** get last modified
+     * @return last modified date/time
+     */
+    public long lastModified()
+    {
+      return dateTime*1000;
+    }
+
+    /** check if file is file
+     * @return true iff file
+     */
+    public boolean isFile()
+    {
+      return fileType == FileTypes.FILE;
+    }
+
+    /** check if file is directory
+     * @return true iff directory
+     */
+    public boolean isDirectory()
+    {
+      return fileType == FileTypes.DIRECTORY;
+    }
+
+    /** check if file is hidden
+     * @return always false
+     */
+    public boolean isHidden()
+    {
+      return getName().startsWith(".");
+    }
+
+    /** check if file exists
+     * @return always true
+     */
+    public boolean exists()
+    {
+      return true;
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "RemoteFile {"+getPath()+", "+fileType+", "+size+","+dateTime+"}";
+    }
+  };
+
   /** list remote directory
    */
-  public static ListDirectory remoteListDirectory = new ListDirectory()
+  public static ListDirectory<RemoteFile> remoteListDirectory = new ListDirectory<RemoteFile>()
   {
-    /** remote file
-     */
-    class RemoteFile extends File
-    {
-      private FileTypes fileType;
-      private long      size;
-      private long      dateTime;
-
-      /** create remote file
-       * @param name name
-       * @param fileType file type
-       * @param size size [bytes]
-       * @param dateTime last modified date/time
-       */
-      public RemoteFile(String name, FileTypes fileType, long size, long dateTime)
-      {
-        super(name);
-
-        this.fileType = fileType;
-        this.size     = size;
-        this.dateTime = dateTime;
-      }
-
-      /** create remote file
-       * @param name name
-       * @param fileType file type
-       * @param dateTime last modified date/time
-       */
-      public RemoteFile(String name, FileTypes fileType, long dateTime)
-      {
-        this(name,fileType,0,dateTime);
-      }
-
-      /** create remote file
-       * @param name name
-       * @param size size [bytes]
-       */
-      public RemoteFile(String name, long size)
-      {
-        this(name,FileTypes.DIRECTORY,size,0);
-      }
-
-      /** get file size
-       * @return size [bytes]
-       */
-      public long length()
-      {
-        return size;
-      }
-
-      /** get last modified
-       * @return last modified date/time
-       */
-      public long lastModified()
-      {
-        return dateTime*1000;
-      }
-
-      /** check if file is file
-       * @return true iff file
-       */
-      public boolean isFile()
-      {
-        return fileType == FileTypes.FILE;
-      }
-
-      /** check if file is directory
-       * @return true iff directory
-       */
-      public boolean isDirectory()
-      {
-        return fileType == FileTypes.DIRECTORY;
-      }
-
-      /** check if file is hidden
-       * @return always false
-       */
-      public boolean isHidden()
-      {
-        return getName().startsWith(".");
-      }
-
-      /** check if file exists
-       * @return always true
-       */
-      public boolean exists()
-      {
-        return true;
-      }
-    };
-
-    private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+    private HashSet<RemoteFile> manualShortcutSet = new HashSet<RemoteFile>();
+    private ArrayList<ValueMap> valueMapList      = new ArrayList<ValueMap>();
     private Iterator<ValueMap>  iterator;
+
+    public RemoteFile newInstance(String name)
+    {
+      return new RemoteFile(name);
+    }
 
     /** get shortcut files
      * @return shortcut files
      */
-    public File[] getShortcuts()
+    public void getShortcuts(ArrayList<RemoteFile> shortcutList)
     {
-      ArrayList<File> shortcutFileList = new ArrayList<File>();
+      final HashMap<String,RemoteFile> shortcutMap = new HashMap<String,RemoteFile>();
 
-      String[] errorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("ROOT_LIST"),
-                                           0,
-                                           errorMessage,
-                                           valueMapList
-                                          );
-      if (error == Errors.NONE)
+      // add manual shortcuts
+      for (RemoteFile shortcut : manualShortcutSet)
       {
-        for (ValueMap valueMap : valueMapList)
-        {
-          shortcutFileList.add(new RemoteFile(valueMap.getString("name"),
-                                              Long.parseLong(valueMap.getString("size"))
-                                             )
-                              );
-        }
+        shortcutMap.put(shortcut.getAbsolutePath(),shortcut);
       }
 
-      return shortcutFileList.toArray(new File[shortcutFileList.size()]);
+      // add root shortcuts
+      BARServer.executeCommand(StringParser.format("ROOT_LIST"),
+                               1,  // debugLevel
+                               null,  // errorMessage
+                               new CommandResultHandler()
+                               {
+                                 public int handleResult(int i, ValueMap valueMap)
+                                 {
+                                   String name = valueMap.getString("name");
+                                   long   size = Long.parseLong(valueMap.getString("size"));
+
+                                   shortcutMap.put(name,new RemoteFile(name,size));
+
+                                   return Errors.NONE;
+                                 }
+                               }
+                              );
+
+      shortcutList.clear();
+      for (RemoteFile shortcut : shortcutMap.values())
+      {
+        shortcutList.add(shortcut);
+      }
+      Collections.sort(shortcutList,this);
     }
 
-    /** set shortcut files
-     * @param shortchuts shortcut files
+    /** remove shortcut file
+     * @param name shortcut name
      */
-    public void setShortcuts(File shortcuts[])
+    public void addShortcut(RemoteFile shortcut)
     {
-Dprintf.dprintf("");
+      manualShortcutSet.add(shortcut);
+    }
+
+    /** remove shortcut file
+     * @param shortcut shortcut file
+     */
+    public void removeShortcut(RemoteFile shortcut)
+    {
+      manualShortcutSet.remove(shortcut);
     }
 
     /** open list files in directory
