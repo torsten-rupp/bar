@@ -1379,6 +1379,14 @@ Dprintf.dprintf("");
     }
   };
 
+  /** restore types
+   */
+  enum RestoreTypes
+  {
+    ARCHIVES,
+    ENTRIES;
+  };
+
   /** find index for insert of item in sorted storage item list
    * @param indexData index data
    * @param indexDataComparator index data comparator
@@ -5457,7 +5465,7 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            restoreArchives(selectedIndexIdSet);
+            restore(RestoreTypes.ARCHIVES,selectedIndexIdSet);
           }
         });
 
@@ -5735,7 +5743,7 @@ Dprintf.dprintf("remove");
 //            getCheckedIndexData(indexDataHashSet);
 //            getSelectedIndexData(indexDataHashSet);
 
-            restoreArchives(selectedIndexIdSet);
+            restore(RestoreTypes.ARCHIVES,selectedIndexIdSet);
           }
         });
       }
@@ -5983,7 +5991,7 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            restoreEntries(selectedEntryIdSet);
+            restore(RestoreTypes.ENTRIES,selectedEntryIdSet);
           }
         });
 
@@ -6222,7 +6230,7 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            restoreEntries(selectedEntryIdSet);
+            restore(RestoreTypes.ENTRIES,selectedEntryIdSet);
           }
         });
       }
@@ -7456,633 +7464,6 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** restore archives
-   * @param indexIdSet index id set
-   */
-  private void restoreArchives(IndexIdSet indexIdSet)
-  {
-    /** dialog data
-     */
-    class Data
-    {
-      String  restoreToDirectory;
-      boolean directoryContent;
-      boolean overwriteEntries;
-
-      Data()
-      {
-        this.restoreToDirectory = null;
-        this.directoryContent   = false;
-        this.overwriteEntries   = false;
-      }
-    };
-
-    final Data data = new Data();
-
-    Label     label;
-    Composite composite,subComposite;
-    Button    button;
-
-    // create dialog
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore archives"),600,400,new double[]{1.0,0.0},1.0);
-
-    final WidgetEvent selectRestoreToEvent = new WidgetEvent();
-
-    // create widgets
-    final Table  widgetArchiveTable;
-    final Label  widgetTotal;
-    final Button widgetRestoreTo;
-    final Text   widgetRestoreToDirectory;
-    final Button widgetDirectoryContent;
-    final Button widgetOverwriteEntries;
-    final Button widgetRestore;
-    composite = Widgets.newComposite(dialog);
-    composite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
-    {
-      label = Widgets.newLabel(composite,BARControl.tr("Archives")+":");
-      Widgets.layout(label,0,0,TableLayoutData.NW,0,2);
-      widgetArchiveTable = Widgets.newTable(composite);
-      Widgets.layout(widgetArchiveTable,1,0,TableLayoutData.NSWE,0,2,0,4);
-      Widgets.addTableColumn(widgetArchiveTable,0,BARControl.tr("Name"),   SWT.LEFT, 430,true);
-      Widgets.addTableColumn(widgetArchiveTable,1,BARControl.tr("Entries"),SWT.RIGHT, 80,true);
-      Widgets.addTableColumn(widgetArchiveTable,2,BARControl.tr("Size"),   SWT.RIGHT, 60,true);
-
-      label = Widgets.newLabel(composite,BARControl.tr("Total")+":");
-      Widgets.layout(label,2,0,TableLayoutData.W);
-      widgetTotal = Widgets.newLabel(composite,"-");
-      Widgets.layout(widgetTotal,2,1,TableLayoutData.W);
-
-      subComposite = Widgets.newComposite(composite);
-      subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
-      Widgets.layout(subComposite,3,0,TableLayoutData.WE,0,2);
-      {
-        widgetRestoreTo = Widgets.newCheckbox(subComposite,BARControl.tr("to"));
-        widgetRestoreTo.setToolTipText(BARControl.tr("Enable this checkbox and select a directory to restore entries to different location."));
-        Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
-        widgetRestoreTo.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button  widget      = (Button)selectionEvent.widget;
-            boolean checkedFlag = widget.getSelection();
-            widgetRestoreTo.setSelection(checkedFlag);
-            selectRestoreToEvent.trigger();
-          }
-        });
-
-        widgetRestoreToDirectory = Widgets.newText(subComposite);
-        widgetRestoreToDirectory.setEnabled(false);
-        Widgets.layout(widgetRestoreToDirectory,0,1,TableLayoutData.WE);
-        Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
-        {
-          @Override
-          public void trigger(Control control)
-          {
-            control.setEnabled(widgetRestoreTo.getSelection());
-          }
-        });
-        subComposite.addMouseListener(new MouseListener()
-        {
-          @Override
-          public void mouseDoubleClick(final MouseEvent mouseEvent)
-          {
-          }
-          @Override
-          public void mouseDown(final MouseEvent mouseEvent)
-          {
-            Rectangle bounds = widgetRestoreToDirectory.getBounds();
-
-            if (bounds.contains(mouseEvent.x,mouseEvent.y))
-            {
-              widgetRestoreTo.setSelection(true);
-              selectRestoreToEvent.trigger();
-              Widgets.setFocus(widgetRestoreToDirectory);
-            }
-          }
-          @Override
-          public void mouseUp(final MouseEvent mouseEvent)
-          {
-          }
-        });
-
-        button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
-        Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
-        button.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            String pathName;
-            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-            {
-              pathName = Dialogs.file(shell,
-                                      Dialogs.FileDialogTypes.DIRECTORY,
-                                      BARControl.tr("Select path"),
-                                      widgetRestoreTo.getText(),
-                                      BARServer.remoteListDirectory
-                                     );
-            }
-            else
-            {
-             pathName = Dialogs.directory(shell,
-                                          BARControl.tr("Select path"),
-                                          widgetRestoreTo.getText()
-                                         );
-            }
-            if (pathName != null)
-            {
-              widgetRestoreTo.setSelection(true);
-              selectRestoreToEvent.trigger();
-              widgetRestoreToDirectory.setText(pathName);
-            }
-          }
-        });
-      }
-
-      widgetDirectoryContent = Widgets.newCheckbox(composite,BARControl.tr("Directory content"));
-      widgetDirectoryContent.setToolTipText(BARControl.tr("Restore content of selected directories, too."));
-      Widgets.layout(widgetDirectoryContent,4,0,TableLayoutData.W,0,2);
-
-      widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
-      widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,5,0,TableLayoutData.W,0,2);
-    }
-
-    // buttons
-    composite = Widgets.newComposite(dialog);
-    composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE);
-    {
-      widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
-      widgetRestore.setEnabled(false);
-      Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
-      widgetRestore.addSelectionListener(new SelectionListener()
-      {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-
-          data.restoreToDirectory = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
-          data.directoryContent   = widgetDirectoryContent.getSelection();
-          data.overwriteEntries   = widgetOverwriteEntries.getSelection();
-
-          Dialogs.close(dialog,true);
-        }
-      });
-
-      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
-      button.addSelectionListener(new SelectionListener()
-      {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          Dialogs.close(dialog,null);
-        }
-      });
-    }
-
-    Dialogs.show(dialog);
-
-    // get number/size of entries to restore
-    new BackgroundTask((BusyDialog)null,new Object[]{indexIdSet})
-    {
-      @Override
-      public void run(BusyDialog busyDialog, Object userData)
-      {
-        final IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
-
-        {
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              BARControl.waitCursor(dialog);
-            }
-          });
-        }
-        try
-        {
-          // set storage achives to restore
-          setStorageList(indexIdSet);
-
-          // get archives
-          final String[] errorMessage = new String[1];
-          BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
-                                   0,  // debugLevel
-                                   errorMessage,
-                                   new CommandResultHandler()
-                                   {
-                                     public int handleResult(int i, ValueMap valueMap)
-                                     {
-                                       try
-                                       {
-                                         final long   storageId       = valueMap.getLong  ("storageId"      );
-                                         final String name            = valueMap.getString("name"           );
-                                         final long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
-                                         final long   totalEntrySize  = valueMap.getLong  ("totalEntrySize" );
-
-                                         display.syncExec(new Runnable()
-                                         {
-                                           public void run()
-                                           {
-                                              if (!widgetArchiveTable.isDisposed())
-                                              {
-                                                Widgets.addTableItem(widgetArchiveTable,
-                                                                     storageId,
-                                                                     name,
-                                                                     Long.toString(totalEntryCount),
-                                                                     Units.formatByteSize(totalEntrySize)
-                                                                    );
-                                              }
-                                           }
-                                         });
-                                       }
-                                       catch (IllegalArgumentException exception)
-                                       {
-                                         if (Settings.debugLevel > 0)
-                                         {
-                                           System.err.println("ERROR: "+exception.getMessage());
-                                           System.exit(1);
-                                         }
-                                       }
-
-                                       return Errors.NONE;
-                                     }
-                                   }
-                                  );
-
-          // get total number entries, size
-          ValueMap       valueMap     = new ValueMap();
-          if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                       0,  // debugLevel
-                                       errorMessage,
-                                       valueMap
-                                      ) == Errors.NONE
-             )
-          {
-            final long totalEntryCount = valueMap.getLong("totalEntryCount");
-            final long totalEntrySize  = valueMap.getLong("totalEntrySize");
-
-            display.syncExec(new Runnable()
-            {
-              public void run()
-              {
-                if (!widgetTotal.isDisposed())
-                {
-                  widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
-                  widgetTotal.pack();
-                }
-              }
-            });
-          }
-
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              if (!widgetRestore.isDisposed())
-              {
-                widgetRestore.setEnabled(!indexIdSet.isEmpty());
-              }
-            }
-          });
-        }
-        finally
-        {
-          // reset cursor and foreground color
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              BARControl.resetCursor(dialog);
-            }
-          });
-        }
-      }
-    };
-
-    // run dialog
-    if ((Boolean)Dialogs.run(dialog,false))
-    {
-      final BusyDialog busyDialog = new BusyDialog(shell,
-                                                   (data.restoreToDirectory != null) ? BARControl.tr("Restore archives to: {0}",data.restoreToDirectory) : BARControl.tr("Restore archives"),
-                                                   500,
-                                                   300,
-                                                   null,
-                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE,
-                                                   250  // max. lines
-                                                  );
-      busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
-
-      new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.directoryContent,data.overwriteEntries})
-      {
-        @Override
-        public void run(final BusyDialog busyDialog, Object userData)
-        {
-          final IndexIdSet indexIdSet         = (IndexIdSet)((Object[])userData)[0];
-          final String     restoreToDirectory = (String    )((Object[])userData)[1];
-          final boolean    directoryContent   = (Boolean   )((Object[])userData)[2];
-          final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[3];
-
-          int errorCode;
-
-          // restore archives
-          {
-            display.syncExec(new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                BARControl.waitCursor();
-              }
-            });
-          }
-          try
-          {
-            // set storage archives to restore
-            setStorageList(indexIdSet);
-
-            // start restore
-            final long     errorCount[]  = new long[]{0};
-            final boolean  skipAllFlag[] = new boolean[]{false};
-            final String[] errorMessage  = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteEntries=%y",
-                                                                     restoreToDirectory,
-                                                                     overwriteEntries
-                                                                    ),
-                                                 0,  // debugLevel
-                                                 errorMessage,
-                                                 new CommandResultHandler()
-                                                 {
-                                                   public int handleResult(int i, ValueMap valueMap)
-                                                   {
-                                                     // parse and update progresss
-                                                     try
-                                                     {
-                                                       if (valueMap.containsKey("action"))
-                                                       {
-                                                         Actions             action       = valueMap.getEnum  ("action",Actions.class);
-                                                         final String        name         = valueMap.getString("name","");
-                                                         final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
-                                                         final String        passwordText = valueMap.getString("passwordText","");
-                                                         final String        volume       = valueMap.getString("volume","");
-                                                         final int           error        = valueMap.getInt   ("error",Errors.NONE);
-                                                         final String        errorMessage = valueMap.getString("errorMessage","");
-                                                         final String        storage      = valueMap.getString("storage","");
-                                                         final String        entry        = valueMap.getString("entry","");
-
-                                                         switch (action)
-                                                         {
-                                                           case REQUEST_PASSWORD:
-                                                             // get password
-                                                             display.syncExec(new Runnable()
-                                                             {
-                                                               @Override
-                                                               public void run()
-                                                               {
-                                                                 if (passwordType.isLogin())
-                                                                 {
-                                                                   String[] data = Dialogs.login(shell,
-                                                                                                 BARControl.tr("{0} login password",passwordType),
-                                                                                                 BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
-                                                                                                 name,
-                                                                                                 BARControl.tr("Password")+":"
-                                                                                                );
-                                                                   if (data != null)
-                                                                   {
-                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
-                                                                                                                  Errors.NONE,
-                                                                                                                  data[0],
-                                                                                                                  BARServer.getPasswordEncryptType(),
-                                                                                                                  BARServer.encryptPassword(data[1])
-                                                                                                                 ),
-                                                                                              0  // debugLevel
-                                                                                             );
-                                                                   }
-                                                                   else
-                                                                   {
-                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                                  Errors.NO_PASSWORD
-                                                                                                                 ),
-                                                                                              0  // debugLevel
-                                                                                             );
-                                                                   }
-                                                                 }
-                                                                 else
-                                                                 {
-                                                                   String password = Dialogs.password(shell,
-                                                                                                      BARControl.tr("{0} login password",passwordType),
-                                                                                                      BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
-                                                                                                      BARControl.tr("Password")+":"
-                                                                                                     );
-                                                                   if (password != null)
-                                                                   {
-                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
-                                                                                                                  Errors.NONE,
-                                                                                                                  BARServer.getPasswordEncryptType(),
-                                                                                                                  BARServer.encryptPassword(password)
-                                                                                                                 ),
-                                                                                              0  // debugLevel
-                                                                                             );
-                                                                   }
-                                                                   else
-                                                                   {
-                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                                  Errors.NO_PASSWORD
-                                                                                                                 ),
-                                                                                              0  // debugLevel
-                                                                                             );
-                                                                   }
-                                                                 }
-                                                               }
-                                                             });
-                                                             break;
-                                                           case REQUEST_VOLUME:
-Dprintf.dprintf("REQUEST_VOLUME");
-System.exit(1);
-                                                             break;
-                                                           case CONFIRM:
-                                                             busyDialog.updateList(!entry.isEmpty() ? entry : storage);
-                                                             errorCount[0]++;
-
-                                                             final int resultError[] = new int[]{error};
-                                                             if (!skipAllFlag[0])
-                                                             {
-                                                               display.syncExec(new Runnable()
-                                                               {
-                                                                 @Override
-                                                                 public void run()
-                                                                 {
-                                                                   switch (Dialogs.select(shell,
-                                                                                          BARControl.tr("Confirmation"),
-                                                                                          BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
-                                                                                                        !entry.isEmpty() ? entry : storage,
-                                                                                                        errorMessage
-                                                                                                       ),
-                                                                                          new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                                                                          0
-                                                                                         )
-                                                                          )
-                                                                   {
-                                                                     case 0:
-                                                                       resultError[0] = Errors.NONE;
-                                                                       break;
-                                                                     case 1:
-                                                                       resultError[0] = Errors.NONE;
-                                                                       skipAllFlag[0] = true;
-                                                                       break;
-                                                                     case 2:
-                                                                       abort();
-                                                                       break;
-                                                                   }
-                                                                 }
-                                                               });
-                                                             }
-                                                             else
-                                                             {
-                                                               resultError[0] = Errors.NONE;
-                                                             }
-                                                             BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                          resultError[0]
-                                                                                                         ),
-                                                                                      0  // debugLevel
-                                                                                     );
-                                                             break;
-                                                         }
-                                                       }
-                                                       else
-                                                       {
-Dprintf.dprintf("valueMap=%s",valueMap);
-                                                         RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
-                                                         String        storageName      = valueMap.getString("storageName");
-                                                         long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
-                                                         long          storageTotalSize = valueMap.getLong  ("storageTotalSize");
-                                                         String        entryName        = valueMap.getString("entryName");
-                                                         long          entryDoneSize    = valueMap.getLong  ("entryDoneSize");
-                                                         long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
-
-                                                         busyDialog.updateText(0,"%s",storageName);
-                                                         busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
-                                                         busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
-                                                         busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
-                                                       }
-                                                     }
-                                                     catch (IllegalArgumentException exception)
-                                                     {
-                                                       if (Settings.debugLevel > 0)
-                                                       {
-                                                         System.err.println("ERROR: "+exception.getMessage());
-                                                         System.exit(1);
-                                                       }
-                                                     }
-
-                                                     if (busyDialog.isAborted())
-                                                     {
-                                                       busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
-                                                       busyDialog.updateText(1,"");
-                                                       abort();
-                                                     }
-
-                                                     return Errors.NONE;
-                                                   }
-                                                 }
-                                                );
-
-            if ((error != Errors.NONE) && (error != Errors.ABORTED))
-            {
-              display.syncExec(new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  Dialogs.error(shell,BARControl.tr("Cannot restore archives!\n\n(error: {0})",errorMessage[0]));
-                }
-              });
-              busyDialog.close();
-              return;
-            }
-
-            // close/done busy dialog, restore cursor
-            if (errorCount[0] > 0)
-            {
-              busyDialog.done();
-            }
-            else
-            {
-              busyDialog.close();
-            }
-          }
-//TODO: pass to caller?
-          catch (CommunicationError error)
-          {
-            final String errorMessage = error.getMessage();
-            display.syncExec(new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Error while restoring archives:\n\n{0}",errorMessage));
-               }
-            });
-          }
-          catch (ConnectionError error)
-          {
-            final String errorMessage = error.getMessage();
-            display.syncExec(new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
-               }
-            });
-          }
-          catch (Throwable throwable)
-          {
-            BARServer.disconnect();
-            System.err.println("ERROR: "+throwable.getMessage());
-            BARControl.printStackTrace(throwable);
-            System.exit(1);
-          }
-          finally
-          {
-            display.syncExec(new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                BARControl.resetCursor();
-              }
-            });
-          }
-        }
-      };
-    }
-  }
-
   //-----------------------------------------------------------------------
 
   /** clear selected entries
@@ -8393,10 +7774,11 @@ Dprintf.dprintf("");
     checkedEntryEvent.trigger();
   }
 
-  /** restore entries
-   * @param entryIdSet index id set
+  /** restore archives/entries
+   * @param restoreType restore type
+   * @param indexIdSet index id set
    */
-  private void restoreEntries(IndexIdSet entryIdSet)
+  private void restore(final RestoreTypes restoreType, IndexIdSet indexIdSet)
   {
     /** dialog data
      */
@@ -8416,17 +7798,23 @@ Dprintf.dprintf("");
 
     final Data data = new Data();
 
-    Label      label;
-    Composite  composite,subComposite;
-    Button     button;
+    String    title = null;
+    Label     label;
+    Composite composite,subComposite;
+    Button    button;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Restore entries"),600,400,new double[]{1.0,0.0},1.0);
+    switch (restoreType)
+    {
+      case ARCHIVES: title = BARControl.tr("Restore archives"); break;
+      case ENTRIES:  title = BARControl.tr("Restore entries");  break;
+    }
+    final Shell dialog = Dialogs.openModal(shell,title,600,400,new double[]{1.0,0.0},1.0);
 
     final WidgetEvent selectRestoreToEvent = new WidgetEvent();
 
     // create widgets
-    final Table  widgetEntryTable;
+    final Table  widgetRestoreTable;
     final Label  widgetTotal;
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
@@ -8437,13 +7825,22 @@ Dprintf.dprintf("");
     composite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Entries")+":");
+      switch (restoreType)
+      {
+        case ARCHIVES: title = BARControl.tr("Archives"); break;
+        case ENTRIES:  title = BARControl.tr("Entries");  break;
+      }
+      label = Widgets.newLabel(composite,title+":");
       Widgets.layout(label,0,0,TableLayoutData.NW,0,2);
-      widgetEntryTable = Widgets.newTable(composite);
-      Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE,0,2,0,4);
-      Widgets.addTableColumn(widgetEntryTable,0,BARControl.tr("Name"),SWT.LEFT, 430,true);
-      Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Type"),SWT.LEFT, 100,true);
-      Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Size"),SWT.RIGHT, 60,true);
+      widgetRestoreTable = Widgets.newTable(composite);
+      Widgets.layout(widgetRestoreTable,1,0,TableLayoutData.NSWE,0,2,0,4);
+      Widgets.addTableColumn(widgetRestoreTable,0,BARControl.tr("Name"),SWT.LEFT, 430,true);
+      switch (restoreType)
+      {
+        case ARCHIVES: Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Entries"),SWT.RIGHT, 80,true); break;
+        case ENTRIES:  Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Type"),   SWT.LEFT, 100,true); break;
+      }
+      Widgets.addTableColumn(widgetRestoreTable,2,BARControl.tr("Size"),SWT.RIGHT, 60,true);
 
       label = Widgets.newLabel(composite,BARControl.tr("Total")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);
@@ -8498,9 +7895,8 @@ Dprintf.dprintf("");
             if (bounds.contains(mouseEvent.x,mouseEvent.y))
             {
               widgetRestoreTo.setSelection(true);
-              widgetRestoreToDirectory.setEnabled(true);
-              Widgets.setFocus(widgetRestoreToDirectory);
               selectRestoreToEvent.trigger();
+              Widgets.setFocus(widgetRestoreToDirectory);
             }
           }
           @Override
@@ -8549,6 +7945,7 @@ Dprintf.dprintf("");
 
       widgetDirectoryContent = Widgets.newCheckbox(composite,BARControl.tr("Directory content"));
       widgetDirectoryContent.setToolTipText(BARControl.tr("Restore content of selected directories, too."));
+      widgetDirectoryContent.setEnabled(restoreType == RestoreTypes.ENTRIES);
       Widgets.layout(widgetDirectoryContent,4,0,TableLayoutData.W,0,2);
 
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
@@ -8602,13 +7999,13 @@ Dprintf.dprintf("");
 
     Dialogs.show(dialog);
 
-    // get number/size of entries to restore
-    new BackgroundTask((BusyDialog)null,new Object[]{entryIdSet})
+    // get number/size of archievs/entries to restore
+    new BackgroundTask((BusyDialog)null,new Object[]{indexIdSet})
     {
       @Override
       public void run(BusyDialog busyDialog, Object userData)
       {
-        final IndexIdSet entryIdSet = (IndexIdSet)((Object[])userData)[0];
+        final IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
 
         {
           display.syncExec(new Runnable()
@@ -8621,77 +8018,155 @@ Dprintf.dprintf("");
         }
         try
         {
-          // set entries to restore
-          setEntryList(entryIdSet);
-
-          // get entries
-          BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
-1,//                                   0,  // debugLevel
-                                   new CommandResultHandler()
-                                   {
-                                     public int handleResult(int i, ValueMap valueMap)
-                                     {
-                                       try
-                                       {
-                                         final long   entryId = valueMap.getLong  ("entryId");
-                                         final String name    = valueMap.getString("name"   );
-                                         final String type    = valueMap.getString("type"   );
-                                         final long   size    = valueMap.getLong  ("size"   );
-
-                                         display.syncExec(new Runnable()
-                                         {
-                                           public void run()
-                                           {
-                                              if (!widgetEntryTable.isDisposed())
-                                              {
-                                                Widgets.addTableItem(widgetEntryTable,
-                                                                     entryId,
-                                                                     name,
-                                                                     type,
-                                                                     (size > 0L) ? Units.formatByteSize(size) : ""
-                                                                    );
-                                              }
-                                           }
-                                         });
-                                       }
-                                       catch (IllegalArgumentException exception)
-                                       {
-                                         if (Settings.debugLevel > 0)
-                                         {
-                                           System.err.println("ERROR: "+exception.getMessage());
-                                           System.exit(1);
-                                         }
-                                       }
-
-                                       return Errors.NONE;
-                                     }
-                                   }
-                                  );
-
-          // get total number entries, size
           final String[] errorMessage = new String[1];
           ValueMap       valueMap     = new ValueMap();
-          if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+          switch (restoreType)
+          {
+            case ARCHIVES:
+              // set storage achives to restore
+              setStorageList(indexIdSet);
+
+              // get archives
+              BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
                                        0,  // debugLevel
                                        errorMessage,
-                                       valueMap
-                                      ) == Errors.NONE
-             )
-          {
-            final long totalEntryCount = valueMap.getLong("totalEntryCount");
-            final long totalEntrySize  = valueMap.getLong("totalEntrySize");
+                                       new CommandResultHandler()
+                                       {
+                                         public int handleResult(int i, ValueMap valueMap)
+                                         {
+                                           try
+                                           {
+                                             final long   storageId       = valueMap.getLong  ("storageId"      );
+                                             final String name            = valueMap.getString("name"           );
+                                             final long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
+                                             final long   totalEntrySize  = valueMap.getLong  ("totalEntrySize" );
 
-            display.syncExec(new Runnable()
-            {
-              public void run()
+                                             display.syncExec(new Runnable()
+                                             {
+                                               public void run()
+                                               {
+                                                  if (!widgetRestoreTable.isDisposed())
+                                                  {
+                                                    Widgets.addTableItem(widgetRestoreTable,
+                                                                         storageId,
+                                                                         name,
+                                                                         Long.toString(totalEntryCount),
+                                                                         Units.formatByteSize(totalEntrySize)
+                                                                        );
+                                                  }
+                                               }
+                                             });
+                                           }
+                                           catch (IllegalArgumentException exception)
+                                           {
+                                             if (Settings.debugLevel > 0)
+                                             {
+                                               System.err.println("ERROR: "+exception.getMessage());
+                                               System.exit(1);
+                                             }
+                                           }
+
+                                           return Errors.NONE;
+                                         }
+                                       }
+                                      );
+
+              // get total number entries, size
+              if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
+                                           0,  // debugLevel
+                                           errorMessage,
+                                           valueMap
+                                          ) == Errors.NONE
+                 )
               {
-                if (!widgetTotal.isDisposed())
+                final long totalEntryCount = valueMap.getLong("totalEntryCount");
+                final long totalEntrySize  = valueMap.getLong("totalEntrySize");
+
+                display.syncExec(new Runnable()
                 {
-                  widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
-                  widgetTotal.pack();
-                }
+                  public void run()
+                  {
+                    if (!widgetTotal.isDisposed())
+                    {
+                      widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                      widgetTotal.pack();
+                    }
+                  }
+                });
               }
-            });
+              break;
+            case ENTRIES:
+              // set entries to restore
+              setEntryList(indexIdSet);
+
+              // get entries
+              BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
+                                       0,  // debugLevel
+                                       new CommandResultHandler()
+                                       {
+                                         public int handleResult(int i, ValueMap valueMap)
+                                         {
+                                           try
+                                           {
+                                             final long   entryId = valueMap.getLong  ("entryId");
+                                             final String name    = valueMap.getString("name"   );
+                                             final String type    = valueMap.getString("type"   );
+                                             final long   size    = valueMap.getLong  ("size"   );
+
+                                             display.syncExec(new Runnable()
+                                             {
+                                               public void run()
+                                               {
+                                                  if (!widgetRestoreTable.isDisposed())
+                                                  {
+                                                    Widgets.addTableItem(widgetRestoreTable,
+                                                                         entryId,
+                                                                         name,
+                                                                         type,
+                                                                         (size > 0L) ? Units.formatByteSize(size) : ""
+                                                                        );
+                                                  }
+                                               }
+                                             });
+                                           }
+                                           catch (IllegalArgumentException exception)
+                                           {
+                                             if (Settings.debugLevel > 0)
+                                             {
+                                               System.err.println("ERROR: "+exception.getMessage());
+                                               System.exit(1);
+                                             }
+                                           }
+
+                                           return Errors.NONE;
+                                         }
+                                       }
+                                      );
+
+              // get total number entries, size
+              if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+                                           0,  // debugLevel
+                                           errorMessage,
+                                           valueMap
+                                          ) == Errors.NONE
+                 )
+              {
+                final long totalEntryCount = valueMap.getLong("totalEntryCount");
+                final long totalEntrySize  = valueMap.getLong("totalEntrySize");
+
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    if (!widgetTotal.isDisposed())
+                    {
+                      widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                      widgetTotal.pack();
+                    }
+                  }
+                });
+              }
+              break;
           }
 
           display.syncExec(new Runnable()
@@ -8700,9 +8175,8 @@ Dprintf.dprintf("");
             {
               if (!widgetRestore.isDisposed())
               {
-                widgetRestore.setEnabled(!entryIdSet.isEmpty());
+                widgetRestore.setEnabled(!indexIdSet.isEmpty());
               }
-
             }
           });
         }
@@ -8723,8 +8197,13 @@ Dprintf.dprintf("");
     // run dialog
     if ((Boolean)Dialogs.run(dialog,false))
     {
+      switch (restoreType)
+      {
+        case ARCHIVES: title = (data.restoreToDirectory != null) ? BARControl.tr("Restore archives to: {0}",data.restoreToDirectory) : BARControl.tr("Restore archives"); break;
+        case ENTRIES:  title = (data.restoreToDirectory != null) ? BARControl.tr("Restore entries to: {0}",data.restoreToDirectory) : BARControl.tr("Restore entries");  break;
+      }
       final BusyDialog busyDialog = new BusyDialog(shell,
-                                                   (data.restoreToDirectory != null) ? BARControl.tr("Restore entries to: {0}",data.restoreToDirectory) : BARControl.tr("Restore entries"),
+                                                   title,
                                                    500,
                                                    300,
                                                    null,
@@ -8733,19 +8212,19 @@ Dprintf.dprintf("");
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
-      new BackgroundTask(busyDialog,new Object[]{entryIdSet,data.restoreToDirectory,data.directoryContent,data.overwriteEntries})
+      new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.directoryContent,data.overwriteEntries})
       {
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
-          final IndexIdSet entryIdSet         = (IndexIdSet)((Object[])userData)[0];
+          final IndexIdSet indexIdSet         = (IndexIdSet)((Object[])userData)[0];
           final String     restoreToDirectory = (String    )((Object[])userData)[1];
           final boolean    directoryContent   = (Boolean   )((Object[])userData)[2];
           final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[3];
 
           int errorCode;
 
-          // restore entries
+          // restore archives
           {
             display.syncExec(new Runnable()
             {
@@ -8758,33 +8237,55 @@ Dprintf.dprintf("");
           }
           try
           {
-            // set entries to restore
-            setEntryList(entryIdSet);
-
-            // start restore
             final long     errorCount[]  = new long[]{0};
             final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y overwriteEntries=%y",
-                                                                     restoreToDirectory,
-                                                                     directoryContent,
-                                                                     overwriteEntries
-                                                                    ),
+
+            // set archives/entries to restore
+            switch (restoreType)
+            {
+              case ARCHIVES:
+                setStorageList(indexIdSet);
+                break;
+              case ENTRIES:
+                setEntryList(indexIdSet);
+                break;
+            }
+
+            // start restore
+            String command = null;
+            switch (restoreType)
+            {
+              case ARCHIVES:
+                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteEntries=%y",
+                                              restoreToDirectory,
+                                              overwriteEntries
+                                             );
+                break;
+              case ENTRIES:
+                command = StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y overwriteEntries=%y",
+                                              restoreToDirectory,
+                                              directoryContent,
+                                              overwriteEntries
+                                             );
+                break;
+            }
+            int error = BARServer.executeCommand(command,
                                                  0,  // debugLevel
                                                  errorMessage,
                                                  new CommandResultHandler()
                                                  {
                                                    public int handleResult(int i, ValueMap valueMap)
                                                    {
-                                                     // parse and update progress
+                                                     // parse and update progresss
                                                      try
                                                      {
                                                        if (valueMap.containsKey("action"))
                                                        {
                                                          Actions             action       = valueMap.getEnum  ("action",Actions.class);
                                                          final String        name         = valueMap.getString("name","");
-                                                         final String        passwordText = valueMap.getString("passwordText","");
                                                          final PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+                                                         final String        passwordText = valueMap.getString("passwordText","");
                                                          final String        volume       = valueMap.getString("volume","");
                                                          final int           error        = valueMap.getInt   ("error",Errors.NONE);
                                                          final String        errorMessage = valueMap.getString("errorMessage","");
@@ -8858,7 +8359,8 @@ Dprintf.dprintf("");
                                                              });
                                                              break;
                                                            case REQUEST_VOLUME:
-Dprintf.dprintf("");
+Dprintf.dprintf("REQUEST_VOLUME");
+System.exit(1);
                                                              break;
                                                            case CONFIRM:
                                                              busyDialog.updateList(!entry.isEmpty() ? entry : storage);
@@ -8911,6 +8413,8 @@ Dprintf.dprintf("");
                                                        }
                                                        else
                                                        {
+//TODO
+Dprintf.dprintf("valueMap=%s",valueMap);
                                                          RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
                                                          String        storageName      = valueMap.getString("storageName");
                                                          long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
@@ -8945,6 +8449,7 @@ Dprintf.dprintf("");
                                                    }
                                                  }
                                                 );
+
             if ((error != Errors.NONE) && (error != Errors.ABORTED))
             {
               display.syncExec(new Runnable()
@@ -8952,7 +8457,7 @@ Dprintf.dprintf("");
                 @Override
                 public void run()
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot restore entries!\n\n(error: {0})",errorMessage[0]));
+                  Dialogs.error(shell,BARControl.tr("Cannot restore!\n\n(error: {0})",errorMessage[0]));
                 }
               });
               busyDialog.close();
@@ -8969,7 +8474,7 @@ Dprintf.dprintf("");
               busyDialog.close();
             }
           }
-// TODO: pass to caller?
+//TODO: pass to caller?
           catch (CommunicationError error)
           {
             final String errorMessage = error.getMessage();
@@ -8979,7 +8484,7 @@ Dprintf.dprintf("");
               public void run()
               {
                 busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Error while restoring entries:\n\n{0}",errorMessage));
+                Dialogs.error(shell,BARControl.tr("Error while restoring:\n\n{0}",errorMessage));
                }
             });
           }
@@ -8992,7 +8497,7 @@ Dprintf.dprintf("");
               public void run()
               {
                 busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
+                Dialogs.error(shell,BARControl.tr("Connection error while restoring\n\n(error: {0})",errorMessage));
                }
             });
           }
