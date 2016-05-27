@@ -1443,7 +1443,7 @@ public class BARControl
     return null;
   }
 
-  /** server/password dialog
+  /** login server/password dialog
    * @param loginData server login data
    * @return true iff login data ok, false otherwise
    */
@@ -1565,8 +1565,19 @@ public class BARControl
       }
     });
 
-    if ((loginData.serverName != null) && (loginData.serverName.length() != 0)) widgetPassword.forceFocus();
-
+    Widgets.setNextFocus(widgetServerName,
+                         widgetServerPort,
+                         widgetPassword,
+                         widgetLoginButton
+                        );
+    if ((loginData.serverName != null) && (loginData.serverName.length() != 0))
+    {
+      widgetPassword.forceFocus();
+    }
+    else
+    {
+      widgetServerName.forceFocus();
+    }
     Boolean result = (Boolean)Dialogs.run(dialog);
 
     // store new name, shorten list
