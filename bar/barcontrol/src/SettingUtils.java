@@ -754,7 +754,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                   }
                   else
                   {
-Dprintf.dprintf("Set without value adapter %s",settingValue.type());
+                    throw new Error(String.format("%s: Set without value adapter %s",field,settingValue.type()));
                   }
                 }
                 else if (List.class.isAssignableFrom(type))
@@ -847,7 +847,7 @@ Dprintf.dprintf("Set without value adapter %s",settingValue.type());
                   }
                   else
                   {
-Dprintf.dprintf("List without value adapter %s",settingValue.type());
+                    throw new Error(String.format("%s: List without value adapter %s",field,settingValue.type()));
                   }
                 }
                 else
