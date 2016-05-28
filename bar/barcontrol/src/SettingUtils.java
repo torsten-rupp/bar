@@ -15,6 +15,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.ParameterizedType;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.TYPE;
 
@@ -241,6 +242,8 @@ Dprintf.dprintf("field.getType()=%s",type);
                         else if (Set.class.isAssignableFrom(type))
                         {
                           // Set type
+                          Class<?> setType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+
                           if (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                           {
                             // instantiate config adapter class
@@ -261,56 +264,58 @@ Dprintf.dprintf("field.getType()=%s",type);
 Dprintf.dprintf("value=%s",value);
                             ((Set)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == int.class)
+                          else if (setType == int.class)
                           {
                             int value = Integer.parseInt(string);
                             ((Set)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == Integer.class)
+                          else if (setType == Integer.class)
                           {
                             int value = Integer.parseInt(string);
                             ((Set)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == long.class)
+                          else if (setType == long.class)
                           {
                             long value = Long.parseLong(string);
                             ((Set)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == Long.class)
+                          else if (setType == Long.class)
                           {
                             long value = Long.parseLong(string);
                             ((Set)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == boolean.class)
+                          else if (setType == boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
                             ((Set)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == Boolean.class)
+                          else if (setType == Boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
                             ((Set)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == String.class)
+                          else if (setType == String.class)
                           {
                             ((Set)field.get(null)).add(StringUtils.unescape(string));
                           }
-                          else if (settingValue.type().isEnum())
+                          else if (setType.isEnum())
                           {
                             ((Set)field.get(null)).add(StringUtils.parseEnum(type,string));
                           }
-                          else if (settingValue.type() == EnumSet.class)
+                          else if (setType == EnumSet.class)
                           {
                             ((Set)field.get(null)).add(StringUtils.parseEnumSet(type,string));
                           }
                           else
                           {
-Dprintf.dprintf("Set without value adapter %s",settingValue.type());
+                            throw new Error(String.format("%s: Set without value adapter %s",field,setType));
                           }
                         }
                         else if (List.class.isAssignableFrom(type))
                         {
                           // List type
+                          Class<?> listType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+
                           if (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                           {
                             // instantiate config adapter class
@@ -330,51 +335,51 @@ Dprintf.dprintf("Set without value adapter %s",settingValue.type());
                             Object value = settingValueAdapter.toValue(string);
                             ((List)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == int.class)
+                          else if (listType == int.class)
                           {
                             int value = Integer.parseInt(string);
                             ((List)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == Integer.class)
+                          else if (listType == Integer.class)
                           {
                             int value = Integer.parseInt(string);
                             ((List)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == long.class)
+                          else if (listType == long.class)
                           {
                             long value = Long.parseLong(string);
                             ((List)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == Long.class)
+                          else if (listType == Long.class)
                           {
                             long value = Long.parseLong(string);
                             ((List)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == boolean.class)
+                          else if (listType == boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
                             ((List)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == Boolean.class)
+                          else if (listType == Boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
                             ((List)field.get(null)).add(value);
                           }
-                          else if (settingValue.type() == String.class)
+                          else if (listType == String.class)
                           {
                             ((List)field.get(null)).add(StringUtils.unescape(string));
                           }
-                          else if (settingValue.type().isEnum())
+                          else if (listType.isEnum())
                           {
                             ((List)field.get(null)).add(StringUtils.parseEnum(type,string));
                           }
-                          else if (settingValue.type() == EnumSet.class)
+                          else if (listType == EnumSet.class)
                           {
                             ((List)field.get(null)).add(StringUtils.parseEnumSet(type,string));
                           }
                           else
                           {
-Dprintf.dprintf("List without value adapter %s",settingValue.type());
+                            throw new Error(String.format("%s: List without value adapter %s",field,listType));
                           }
                         }
                         else
@@ -667,6 +672,8 @@ Dprintf.dprintf("field.getType()=%s",type);
                 else if (Set.class.isAssignableFrom(type))
                 {
                   // Set type
+                  Class<?> setType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+
                   if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
@@ -689,49 +696,49 @@ Dprintf.dprintf("field.getType()=%s",type);
                       output.printf("%s = %s\n",name,value);
                     }
                   }
-                  else if (settingValue.type() == int.class)
+                  else if (setType == int.class)
                   {
                     for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %d\n",name,(Integer)object);
                     }
                   }
-                  else if (settingValue.type() == Integer.class)
+                  else if (setType == Integer.class)
                   {
                     for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %d\n",name,(Integer)object);
                     }
                   }
-                  else if (settingValue.type() == long.class)
+                  else if (setType == long.class)
                   {
                     for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %ld\n",name,(Long)object);
                     }
                   }
-                  else if (settingValue.type() == Long.class)
+                  else if (setType == Long.class)
                   {
                     for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %ld\n",name,(Long)object);
                     }
                   }
-                  else if (settingValue.type() == boolean.class)
+                  else if (setType == boolean.class)
                   {
                     for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
                     }
                   }
-                  else if (settingValue.type() == Boolean.class)
+                  else if (setType == Boolean.class)
                   {
                     for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
                     }
                   }
-                  else if (settingValue.type() == String.class)
+                  else if (setType == String.class)
                   {
                     for (Object object : (Set)field.get(null))
                     {
@@ -745,7 +752,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                       output.printf("%s = %s\n",name,((Enum)object).toString());
                     }
                   }
-                  else if (settingValue.type() == EnumSet.class)
+                  else if (setType == EnumSet.class)
                   {
                     for (Object object : (Set)field.get(null))
                     {
@@ -754,12 +761,14 @@ Dprintf.dprintf("field.getType()=%s",type);
                   }
                   else
                   {
-                    throw new Error(String.format("%s: Set without value adapter %s",field,settingValue.type()));
+                    throw new Error(String.format("%s: Set without value adapter %s",field,setType));
                   }
                 }
                 else if (List.class.isAssignableFrom(type))
                 {
                   // List type
+                  Class<?> listType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+
                   if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
@@ -782,63 +791,63 @@ Dprintf.dprintf("field.getType()=%s",type);
                       output.printf("%s = %s\n",name,value);
                     }
                   }
-                  else if (settingValue.type() == int.class)
+                  else if (listType == int.class)
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %d\n",name,(Integer)object);
                     }
                   }
-                  else if (settingValue.type() == Integer.class)
+                  else if (listType == Integer.class)
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %d\n",name,(Integer)object);
                     }
                   }
-                  else if (settingValue.type() == long.class)
+                  else if (listType == long.class)
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %ld\n",name,(Long)object);
                     }
                   }
-                  else if (settingValue.type() == Long.class)
+                  else if (listType == Long.class)
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %ld\n",name,(Long)object);
                     }
                   }
-                  else if (settingValue.type() == boolean.class)
+                  else if (listType == boolean.class)
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
                     }
                   }
-                  else if (settingValue.type() == Boolean.class)
+                  else if (listType == Boolean.class)
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %s\n",name,(Boolean)object ? "yes" : "no");
                     }
                   }
-                  else if (settingValue.type() == String.class)
+                  else if (listType == String.class)
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %s\n",name,StringUtils.escape((String)object));
                     }
                   }
-                  else if (settingValue.type().isEnum())
+                  else if (listType.isEnum())
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %s\n",name,((Enum)object).toString());
                     }
                   }
-                  else if (settingValue.type() == EnumSet.class)
+                  else if (listType == EnumSet.class)
                   {
                     for (Object object : (List)field.get(null))
                     {
@@ -847,7 +856,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                   }
                   else
                   {
-                    throw new Error(String.format("%s: List without value adapter %s",field,settingValue.type()));
+                    throw new Error(String.format("%s: List without value adapter %s",field,listType));
                   }
                 }
                 else
