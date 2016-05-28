@@ -3407,7 +3407,7 @@ class Dialogs
 
       // path
       composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
       composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
       {
         label = new Label(composite,SWT.NONE);
@@ -3424,7 +3424,7 @@ class Dialogs
 
       // lists
       composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(1.0,new double[]{0.25,0.75},4));
+      composite.setLayout(new TableLayout(1.0,new double[]{0.25,0.75},2));
       composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
       {
         widgetShortcutList = new List(composite,SWT.BORDER);
@@ -3506,7 +3506,7 @@ class Dialogs
 
       // filter, name
       composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0},4));
+      composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0},2));
       composite.setLayoutData(new TableLayoutData(2,0,TableLayoutData.WE));
       {
         if (fileExtensions != null)
@@ -3545,7 +3545,7 @@ class Dialogs
       // buttons
       composite = new Composite(dialog,SWT.NONE);
       composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(4,0,TableLayoutData.WE,0,0,4));
+      composite.setLayoutData(new TableLayoutData(4,0,TableLayoutData.WE,0,0,2));
       {
         widgetDone = new Button(composite,SWT.CENTER);
         switch (type)
@@ -3838,17 +3838,23 @@ class Dialogs
 
       // update path, name
       File file = listDirectory.newInstance(oldFileName);
-      File parentFile = file.getParentFile();
-      widgetPath.setData(parentFile);
-      if (parentFile != null)
-      {
-        widgetPath.setText(file.getParentFile().getAbsolutePath());
-      }
       if (widgetName != null)
       {
+        File parentFile = file.getParentFile();
+        widgetPath.setData(parentFile);
+        if (parentFile != null)
+        {
+          widgetPath.setText(file.getParentFile().getAbsolutePath());
+        }
+        widgetDone.setEnabled((parentFile != null));
         widgetName.setText(file.getName());
       }
-      widgetDone.setEnabled((parentFile != null));
+      else
+      {
+        widgetPath.setData(file);
+        widgetPath.setText(file.getAbsolutePath());
+        widgetDone.setEnabled(true);
+      }
 
       if ((fileExtensions != null) && (widgetFilter != null))
       {
