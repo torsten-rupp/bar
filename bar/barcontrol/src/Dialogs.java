@@ -583,7 +583,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public int compare(T file0, T file1)
   {
-    return file0.getName().compareTo(file1.getName());
+    return file0.getAbsolutePath().compareTo(file1.getAbsolutePath());
   }
 
   /** get shortcut files
