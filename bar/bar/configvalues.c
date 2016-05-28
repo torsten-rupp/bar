@@ -1582,12 +1582,15 @@ bool ConfigValue_parse(const char        *name,
 
   // find config value
   i = ConfigValue_firstValueIndex(configValues,sectionName);
+  if (i < 0) return FALSE;
   j = ConfigValue_lastValueIndex(configValues,sectionName);
+  if (j < 0) return FALSE;
   while (   (i <= j)
          && !stringEquals(configValues[i].name,name)
         )
   {
     i = ConfigValue_nextValueIndex(configValues,i);
+    if (i < 0) return FALSE;
   }
   if (i > j)
   {
