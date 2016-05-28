@@ -483,7 +483,7 @@ public class Settings
 
   // file requester shortcuts
   @SettingComment(text={"","Shortcuts"})
-  @SettingValue
+  @SettingValue(name="shortcut")
   public static HashSet<String>       shortcuts                       = new HashSet<String>();
 
   public static String                selectedJobName                 = null;
