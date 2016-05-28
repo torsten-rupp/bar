@@ -1745,7 +1745,6 @@ public class TabJobs
   private WidgetVariable  storageLoginPassword    = new WidgetVariable<String> ("","");
   private WidgetVariable  storageDeviceName       = new WidgetVariable<String> ("","");
   private WidgetVariable  storageFileName         = new WidgetVariable<String> ("","");
-  private WidgetVariable  mountDeviceName         = new WidgetVariable<String> ("","");
   private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   ("max-storage-size",0);
   private WidgetVariable  archiveFileMode         = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","overwrite","append"},"stop");
   private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String> ("ssh-public-key","");
@@ -5721,106 +5720,8 @@ widgetArchivePartSize.setListVisible(true);
           Widgets.layout(composite,0,0,TableLayoutData.WE);
           {
             subComposite = Widgets.newComposite(composite,SWT.NONE);
-            subComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
-            Widgets.layout(subComposite,0,0,TableLayoutData.WE);
-            {
-              label = Widgets.newLabel(subComposite,BARControl.tr("Mount device")+":");
-              Widgets.layout(label,0,0,TableLayoutData.W);
-
-              text = Widgets.newText(subComposite);
-              text.setToolTipText(BARControl.tr("Device to mount/unmount before/after job is executed."));
-              Widgets.layout(text,0,1,TableLayoutData.WE);
-              text.addModifyListener(new ModifyListener()
-              {
-                @Override
-                public void modifyText(ModifyEvent modifyEvent)
-                {
-                  Text   widget = (Text)modifyEvent.widget;
-                  String string = widget.getText();
-                  Color  color  = COLOR_MODIFIED;
-
-                  if (mountDeviceName.getString().equals(string)) color = null;
-                  widget.setBackground(color);
-                }
-              });
-              text.addSelectionListener(new SelectionListener()
-              {
-                @Override
-                public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                {
-                  Text widget   = (Text)selectionEvent.widget;
-                  String string = widget.getText();
-
-                  mountDeviceName.set(string);
-                  BARServer.setJobOption(selectedJobData.uuid,mountDeviceName);
-                  widget.setBackground(null);
-                }
-                @Override
-                public void widgetSelected(SelectionEvent selectionEvent)
-                {
-                }
-              });
-              text.addFocusListener(new FocusListener()
-              {
-                @Override
-                public void focusGained(FocusEvent focusEvent)
-                {
-                }
-                @Override
-                public void focusLost(FocusEvent focusEvent)
-                {
-                  Text widget   = (Text)focusEvent.widget;
-                  String string = widget.getText();
-
-                  mountDeviceName.set(string);
-                  BARServer.setJobOption(selectedJobData.uuid,mountDeviceName);
-                  widget.setBackground(null);
-                }
-              });
-              Widgets.addModifyListener(new WidgetModifyListener(text,mountDeviceName));
-
-              button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
-              button.setToolTipText(BARControl.tr("Select remote path. CTRL+click to select local path."));
-              Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
-              button.addSelectionListener(new SelectionListener()
-              {
-                @Override
-                public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                {
-                }
-                @Override
-                public void widgetSelected(SelectionEvent selectionEvent)
-                {
-                  String pathName;
-
-                  if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                  {
-                    pathName = Dialogs.file(shell,
-                                            Dialogs.FileDialogTypes.DIRECTORY,
-                                            BARControl.tr("Mount device name"),
-                                            mountDeviceName.getString(),
-                                            BARServer.remoteListDirectory
-                                           );
-                  }
-                  else
-                  {
-                    pathName = Dialogs.directory(shell,
-                                                 BARControl.tr("Mount device name"),
-                                                 mountDeviceName.getString()
-                                                );
-                  }
-                  if (pathName != null)
-                  {
-                    mountDeviceName.set(pathName);
-                    BARServer.setJobOption(selectedJobData.uuid,mountDeviceName);
-                  }
-                }
-              });
-            }
-
-            subComposite = Widgets.newComposite(composite,SWT.NONE);
             subComposite.setLayout(new TableLayout(1.0,0.0));
-            Widgets.layout(subComposite,1,0,TableLayoutData.WE);
+            Widgets.layout(subComposite,0,0,TableLayoutData.WE);
             {
               label = Widgets.newLabel(subComposite,BARControl.tr("Max. storage size")+":");
               Widgets.layout(label,0,0,TableLayoutData.W);
@@ -5945,7 +5846,7 @@ widgetArchivePartSize.setListVisible(true);
 
             subComposite = Widgets.newComposite(composite,SWT.NONE);
             subComposite.setLayout(new TableLayout(1.0,0.0));
-            Widgets.layout(subComposite,2,0,TableLayoutData.WE);
+            Widgets.layout(subComposite,1,0,TableLayoutData.WE);
             {
               label = Widgets.newLabel(subComposite,BARControl.tr("Archive file mode:"));
               Widgets.layout(label,0,0,TableLayoutData.W);
@@ -8983,7 +8884,6 @@ throw new Error("NYI");
       BARServer.getJobOption(selectedJobData.uuid,overwriteFiles);
       BARServer.getJobOption(selectedJobData.uuid,preCommand);
       BARServer.getJobOption(selectedJobData.uuid,postCommand);
-      mountDeviceName.set(BARServer.getStringJobOption(selectedJobData.uuid,"mount-device"));
       maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0));
       BARServer.getJobOption(selectedJobData.uuid,comment);
 
