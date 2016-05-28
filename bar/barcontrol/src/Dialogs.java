@@ -67,6 +67,8 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Slider;
@@ -3363,6 +3365,8 @@ class Dialogs
     Composite   composite;
     Label       label;
     Button      button;
+    Menu        menu;
+    MenuItem    menuItem;
     TableColumn tableColumn;
 
     if (!parentShell.isDisposed())
@@ -3425,6 +3429,29 @@ class Dialogs
       {
         widgetShortcutList = new List(composite,SWT.BORDER);
         widgetShortcutList.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+        menu = Widgets.newPopupMenu(dialog);
+        {
+          menuItem = Widgets.addMenuItem(menu,Dialogs.tr("Remove"));
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              int index = widgetShortcutList.getSelectionIndex();
+              if (index >= 0)
+              {
+                listDirectory.removeShortcut(shortcutList.get(index));
+                listDirectory.getShortcuts(shortcutList);
+                updater.updateShortcutList(widgetShortcutList,shortcutList);
+              }
+            }
+          });
+        }
+        widgetShortcutList.setMenu(menu);
 
         widgetFileList = new Table(composite,SWT.BORDER);
         widgetFileList.setHeaderVisible(true);
@@ -3589,7 +3616,6 @@ class Dialogs
           int index = widgetShortcutList.getSelectionIndex();
           if (index >= 0)
           {
-//            File file = shortcutFileList.get(index);
             File file = shortcutList.get(index);
             if      (listDirectory.isDirectory(file))
             {
