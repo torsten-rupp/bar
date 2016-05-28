@@ -559,13 +559,16 @@ public class TabRestore
     static IndexDataComparator getInstance(final Tree tree)
     {
       final IndexDataComparator indexDataComparator[] = new IndexDataComparator[1];
-      tree.getDisplay().syncExec(new Runnable()
+      if (!tree.isDisposed())
       {
-        public void run()
+        tree.getDisplay().syncExec(new Runnable()
         {
-          indexDataComparator[0] = new IndexDataComparator(tree);
-        }
-      });
+          public void run()
+          {
+            indexDataComparator[0] = new IndexDataComparator(tree);
+          }
+        });
+      }
 
       return indexDataComparator[0];
     }
