@@ -7684,6 +7684,7 @@ exit(1);
   // read all configuration files
   STRINGLIST_ITERATE(&configFileNameList,stringNode,fileName)
   {
+    printInfo(1,"Reading configuration file '%s'...",String_cString(fileName));
     if (!readConfigFile(fileName,printInfoFlag))
     {
       doneAll();
@@ -7696,6 +7697,7 @@ exit(1);
       #endif /* not NDEBUG */
       return ERROR_CONFIG;
     }
+    printInfo(1,"ok\n");
   }
 
   // read options from job file
