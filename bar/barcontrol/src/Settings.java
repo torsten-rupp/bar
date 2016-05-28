@@ -481,6 +481,11 @@ public class Settings
   @SettingValue
   public static String                serverKeyFileName               = null;
 
+  // file requester shortcuts
+  @SettingComment(text={"","Shortcuts"})
+  @SettingValue
+  public static HashSet<String>       shortcuts                       = new HashSet<String>();
+
   public static String                selectedJobName                 = null;
   public static boolean               loginDialogFlag                 = false;
 
