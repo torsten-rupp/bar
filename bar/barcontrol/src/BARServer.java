@@ -2646,8 +2646,7 @@ throw new Error("NYI");
    */
   public static ListDirectory<RemoteFile> remoteListDirectory = new ListDirectory<RemoteFile>()
   {
-    private HashSet<RemoteFile> manualShortcutSet = new HashSet<RemoteFile>();
-    private ArrayList<ValueMap> valueMapList      = new ArrayList<ValueMap>();
+    private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
     private Iterator<ValueMap>  iterator;
 
     public RemoteFile newInstance(String name)
@@ -2663,9 +2662,9 @@ throw new Error("NYI");
       final HashMap<String,RemoteFile> shortcutMap = new HashMap<String,RemoteFile>();
 
       // add manual shortcuts
-      for (RemoteFile shortcut : manualShortcutSet)
+      for (String name : Settings.shortcuts)
       {
-        shortcutMap.put(shortcut.getAbsolutePath(),shortcut);
+        shortcutMap.put(name,new RemoteFile(name));
       }
 
       // add root shortcuts
@@ -2699,7 +2698,7 @@ throw new Error("NYI");
      */
     public void addShortcut(RemoteFile shortcut)
     {
-      manualShortcutSet.add(shortcut);
+      Settings.shortcuts.add(shortcut.getAbsolutePath());
     }
 
     /** remove shortcut file
@@ -2707,7 +2706,7 @@ throw new Error("NYI");
      */
     public void removeShortcut(RemoteFile shortcut)
     {
-      manualShortcutSet.remove(shortcut);
+      Settings.shortcuts.remove(shortcut.getAbsolutePath());
     }
 
     /** open list files in directory
