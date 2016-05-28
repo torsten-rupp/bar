@@ -10254,32 +10254,27 @@ throw new Error("NYI");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            String fileName;
+            String pathName;
 
             if ((selectionEvent.stateMask & SWT.CTRL) == 0)
             {
-              fileName = Dialogs.file(shell,
-                                      Dialogs.FileDialogTypes.OPEN,
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.DIRECTORY,
                                       BARControl.tr("Select name"),
                                       widgetName.getText(),
-                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
                                       BARServer.remoteListDirectory
                                      );
             }
             else
             {
-              fileName = Dialogs.fileOpen(shell,
-                                          BARControl.tr("Select name"),
-                                          widgetName.getText(),
-                                          new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      }
-                                         );
+              pathName = Dialogs.directory(shell,
+                                           BARControl.tr("Select name"),
+                                           widgetName.getText()
+                                          );
             }
-            if (fileName != null)
+            if (pathName != null)
             {
-              widgetName.setText(fileName.trim());
+              widgetName.setText(pathName.trim());
             }
           }
         });
@@ -10632,18 +10627,23 @@ throw new Error("NYI");
           if ((selectionEvent.stateMask & SWT.CTRL) == 0)
           {
             pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.DIRECTORY,
+                                    Dialogs.FileDialogTypes.OPEN,
                                     BARControl.tr("Select path"),
                                     widgetPattern.getText(),
+                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                },
+                                    "*",
                                     BARServer.remoteListDirectory
                                    );
           }
           else
           {
-            pathName = Dialogs.directory(shell,
-                                         BARControl.tr("Select path"),
-                                         widgetPattern.getText()
-                                        );
+            pathName = Dialogs.fileOpen(shell,
+                                        BARControl.tr("Select path"),
+                                        widgetPattern.getText(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    }
+                                       );
           }
           if (pathName != null)
           {
@@ -11084,18 +11084,23 @@ throw new Error("NYI");
           if ((selectionEvent.stateMask & SWT.CTRL) == 0)
           {
             pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.DIRECTORY,
+                                    Dialogs.FileDialogTypes.OPEN,
                                     BARControl.tr("Select path"),
                                     widgetPattern.getText(),
+                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                },
+                                    "*",
                                     BARServer.remoteListDirectory
                                    );
           }
           else
           {
-            pathName = Dialogs.directory(shell,
-                                         BARControl.tr("Select path"),
-                                         widgetPattern.getText()
-                                        );
+            pathName = Dialogs.fileOpen(shell,
+                                        BARControl.tr("Select path"),
+                                        widgetPattern.getText(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    }
+                                       );
           }
           if (pathName != null)
           {
