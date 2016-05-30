@@ -7614,6 +7614,158 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 }
 
 /***********************************************************************\
+* Name   : serverCommand_fileInfo
+* Purpose: get file info
+* Input  : clientInfo    - client info
+*          indexHandle   - index handle
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            name=<name>
+*          Result:
+*            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            fileType=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
+*            fileType=LINK name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            fileType=DEVICE CHARACTER name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=DEVICE BLOCK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
+*            fileType=FIFO name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=SOCKET name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=SPECIAL name=<name> dateTime=<time stamp> noDump=yes|no
+\***********************************************************************/
+
+LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  String   name;
+  Errors   error;
+  String              noBackupFileName;
+  FileInfo fileInfo;
+  bool                noBackupExists;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get name
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    return;
+  }
+
+  // read file info
+  noBackupFileName = String_new();
+  error = File_getFileInfo(name,&fileInfo);
+  if (error == ERROR_NONE)
+  {
+    switch (fileInfo.type)
+    {
+      case FILE_TYPE_FILE:
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                         "fileType=FILE name=%'S size=%llu dateTime=%llu noDump=%y",
+                         name,
+                         fileInfo.size,
+                         fileInfo.timeModified,
+                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                        );
+        break;
+      case FILE_TYPE_DIRECTORY:
+        // check if .nobackup exists
+        noBackupExists = FALSE;
+        if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
+        if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
+
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                         "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
+                         name,
+                         fileInfo.timeModified,
+                         noBackupExists,
+                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                        );
+        break;
+      case FILE_TYPE_LINK:
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                         "fileType=LINK name=%'S dateTime=%llu noDump=%y",
+                         name,
+                         fileInfo.timeModified,
+                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                        );
+        break;
+      case FILE_TYPE_HARDLINK:
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                         "fileType=HARDLINK name=%'S dateTime=%llu noDump=%y",
+                         name,
+                         fileInfo.timeModified,
+                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                        );
+        break;
+      case FILE_TYPE_SPECIAL:
+        switch (fileInfo.specialType)
+        {
+          case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
+            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                             "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu noDump=%y",
+                             name,
+                             fileInfo.timeModified,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+          case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
+            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                             "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu noDump=%y",
+                             name,
+                             fileInfo.size,
+                             fileInfo.timeModified,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+          case FILE_SPECIAL_TYPE_FIFO:
+            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                             "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu noDump=%y",
+                             name,
+                             fileInfo.timeModified,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+          case FILE_SPECIAL_TYPE_SOCKET:
+            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                             "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu noDump=%y",
+                             name,
+                             fileInfo.timeModified,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+          default:
+            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                             "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu noDump=%y",
+                             name,
+                             fileInfo.timeModified,
+                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                            );
+            break;
+        }
+        break;
+      default:
+        // skipped
+        break;
+    }
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"read file info fail: %s",Error_getText(error));
+  }
+  String_delete(noBackupFileName);
+
+  // free resources
+  String_delete(name);
+}
+
+/***********************************************************************\
 * Name   : serverCommand_fileList
 * Purpose: file list
 * Input  : clientInfo    - client info
@@ -7624,7 +7776,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            storageDirectory=<name>
+*            directory=<name>
 *          Result:
 *            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
 *            fileType=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
@@ -7770,13 +7922,14 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
             }
             break;
           default:
+            // skipped
             break;
         }
       }
       else
       {
         sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                         "fileType=UNKNOWN error=%'s",
+                         "get file info fail: %s",
                          Error_getText(error)
                         );
       }
@@ -7784,7 +7937,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
     else
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "fileType=UNKNOWN error=%'s",
+                       "read directory entry file: %s",
                        Error_getText(error)
                       );
     }
@@ -7798,6 +7951,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
+  String_delete(directory);
 }
 
 /***********************************************************************\
@@ -16335,6 +16489,7 @@ SERVER_COMMANDS[] =
   { "CONTINUE",                    serverCommand_continue,                 AUTHORIZATION_STATE_OK      },
   { "DEVICE_LIST",                 serverCommand_deviceList,               AUTHORIZATION_STATE_OK      },
   { "ROOT_LIST",                   serverCommand_rootList,                 AUTHORIZATION_STATE_OK      },
+  { "FILE_INFO",                   serverCommand_fileInfo,                 AUTHORIZATION_STATE_OK      },
   { "FILE_LIST",                   serverCommand_fileList,                 AUTHORIZATION_STATE_OK      },
   { "FILE_ATTRIBUTE_GET",          serverCommand_fileAttributeGet,         AUTHORIZATION_STATE_OK      },
   { "FILE_ATTRIBUTE_SET",          serverCommand_fileAttributeSet,         AUTHORIZATION_STATE_OK      },
