@@ -6406,7 +6406,6 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
   {
     return error;
   }
-
   if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
