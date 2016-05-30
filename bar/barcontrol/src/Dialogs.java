@@ -684,7 +684,8 @@ class Dialogs
   {
     OPEN,
     SAVE,
-    DIRECTORY
+    DIRECTORY,
+    ENTRY
   };
 
   // --------------------------- variables --------------------------------
@@ -3017,13 +3018,13 @@ class Dialogs
    * @param defaultFileExtension default file extension pattern or null
    * @return file name or null
    */
-  public static String file(Shell               parentShell,
-                            FileDialogTypes     type,
-                            String              title,
-                            String              oldFileName,
-                            final String[]      fileExtensions,
-                            String              defaultFileExtension,
-                            final ListDirectory listDirectory
+  public static String file(Shell                 parentShell,
+                            final FileDialogTypes type,
+                            String                title,
+                            String                oldFileName,
+                            final String[]        fileExtensions,
+                            String                defaultFileExtension,
+                            final ListDirectory   listDirectory
                            )
   {
     /** dialog data
@@ -3527,13 +3528,14 @@ class Dialogs
         widgetShowHidden.setText(Dialogs.tr("show hidden"));
         widgetShowHidden.setLayoutData(new TableLayoutData(0,2,TableLayoutData.E));
 
-        if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.SAVE))
+        if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.SAVE) || (type == FileDialogTypes.ENTRY))
         {
           label = new Label(composite,SWT.NONE);
           label.setText(Dialogs.tr("Name")+":");
           Widgets.layout(label,1,0,TableLayoutData.W);
 
           widgetName = new Text(composite,SWT.NONE);
+          widgetName.setEnabled((type != FileDialogTypes.OPEN));
           Widgets.layout(widgetName,1,1,TableLayoutData.WE,0,2);
         }
         else
@@ -3558,6 +3560,7 @@ class Dialogs
             widgetDone.setText(Dialogs.tr("Save"));
             break;
           case DIRECTORY:
+          case ENTRY:
             widgetDone.setText(Dialogs.tr("Select"));
             break;
         }
@@ -3602,10 +3605,20 @@ class Dialogs
           File parentFile = file.getParentFile();
           if (parentFile != null)
           {
+            // set new path, clear name
             widgetPath.setData(parentFile);
             widgetPath.setText(parentFile.getAbsolutePath());
+            if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
+
+            // update list
             updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
-            widgetDone.setEnabled((parentFile != null));
+
+            // enable/disable done button
+            widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
+                                  || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
+                                 );
           }
         }
       });
@@ -3619,10 +3632,13 @@ class Dialogs
             File file = shortcutList.get(index);
             if      (listDirectory.isDirectory(file))
             {
+              // set new path, clear name
               widgetPath.setData(file);
               widgetPath.setText(file.getAbsolutePath());
+              if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
+
+              // update list
               updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
-              widgetDone.setEnabled((file != null));
             }
             else if (listDirectory.exists(file))
             {
@@ -3632,6 +3648,13 @@ class Dialogs
             {
               error(dialog,Dialogs.tr("''{0}'' does not exists",file.getAbsolutePath()));
             }
+
+            // enable/disable done button
+            widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
+                                  || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
+                                 );
           }
         }
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -3671,12 +3694,22 @@ class Dialogs
 
             if (file.isDirectory())
             {
+              // set new path, clear name
               File newPath = listDirectory.newInstance((File)widgetPath.getData(),file.getName());
               widgetPath.setData(newPath);
               widgetPath.setText(newPath.getAbsolutePath());
+              if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
+
+              // update list
               updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
-              widgetDone.setEnabled((newPath != null));
             }
+
+            // enable/disable done button
+            widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
+                                  || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
+                                 );
           }
         }
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -3687,10 +3720,18 @@ class Dialogs
             TableItem tableItem = widgetFileList.getItem(index);
             File      file      = (File)tableItem.getData();
 
+            // set new name
             if (listDirectory.isFile(file))
             {
               if (widgetName != null) widgetName.setText(file.getName());
             }
+
+            // enable/disable done button
+            widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
+                                  || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
+                                 );
           }
         }
       });
@@ -3755,6 +3796,26 @@ class Dialogs
           updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
         }
       });
+      if (widgetName != null)
+      {
+        widgetName.addKeyListener(new KeyListener()
+        {
+          @Override
+          public void keyPressed(KeyEvent keyEvent)
+          {
+          }
+          @Override
+          public void keyReleased(KeyEvent keyEvent)
+          {
+            // enable/disable done button
+            widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
+                                  || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
+                                  || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
+                                 );
+          }
+        });
+      }
       widgetDone.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3837,23 +3898,36 @@ class Dialogs
       updater.updateShortcutList(widgetShortcutList,shortcutList);
 
       // update path, name
-      File file = listDirectory.newInstance(oldFileName);
-      if (widgetName != null)
+      if (!oldFileName.isEmpty())
       {
-        File parentFile = file.getParentFile();
-        widgetPath.setData(parentFile);
-        if (parentFile != null)
+        File file = listDirectory.newInstance(oldFileName);
+        if (widgetName != null)
         {
-          widgetPath.setText(file.getParentFile().getAbsolutePath());
+          if (file.isDirectory())
+          {
+            widgetPath.setData(file);
+            widgetPath.setText(file.getAbsolutePath());
+            widgetName.setText("");
+            widgetDone.setEnabled(false);
+          }
+          else
+          {
+            File parentFile = file.getParentFile();
+            widgetPath.setData(parentFile);
+            if (parentFile != null)
+            {
+              widgetPath.setText(parentFile.getAbsolutePath());
+            }
+            widgetName.setText(file.getName());
+            widgetDone.setEnabled(true);
+          }
         }
-        widgetDone.setEnabled((parentFile != null));
-        widgetName.setText(file.getName());
-      }
-      else
-      {
-        widgetPath.setData(file);
-        widgetPath.setText(file.getAbsolutePath());
-        widgetDone.setEnabled(true);
+        else
+        {
+          widgetPath.setData(file);
+          widgetPath.setText(file.getAbsolutePath());
+          widgetDone.setEnabled(true);
+        }
       }
 
       if ((fileExtensions != null) && (widgetFilter != null))
@@ -3869,6 +3943,13 @@ class Dialogs
 
       // update file list
       updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+
+      // enable/disable done button
+      widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
+                            || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
+                            || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
+                            || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
+                           );
 
       if (widgetName != null)
       {
