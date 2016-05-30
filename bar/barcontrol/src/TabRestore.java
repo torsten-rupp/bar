@@ -2886,6 +2886,23 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                assignStorage(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
                                              }
                                            });
+                                           menuItem = Widgets.addMenuItem(subMenu,
+                                                                          null,
+                                                                          BARControl.tr("new continuous")
+                                                                         );
+                                           menuItem.addSelectionListener(new SelectionListener()
+                                           {
+                                             public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                                             {
+                                             }
+                                             public void widgetSelected(SelectionEvent selectionEvent)
+                                             {
+                                               MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                                               UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
+                                               assignStorage(uuidIndexData,Settings.ArchiveTypes.CONTINUOUS);
+                                             }
+                                           });
                                            Widgets.addMenuSeparator(subMenu);
 
                                            // store sub-menu for UUID index data
@@ -4079,7 +4096,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
   };
 
   private final int STORAGE_TREE_MENU_START_INDEX = 0;
-  private final int STORAGE_LIST_MENU_START_INDEX = 5;  // entry 0..3: new "..."; entry 4: separator
+  private final int STORAGE_LIST_MENU_START_INDEX = 6;  // entry 0..4: new "..."; entry 5: separator
 
   // --------------------------- variables --------------------------------
 
@@ -5363,6 +5380,22 @@ Dprintf.dprintf("");
               MenuItem widget = (MenuItem)selectionEvent.widget;
 
               setEntityType(Settings.ArchiveTypes.DIFFERENTIAL);
+            }
+          });
+          menuItem = Widgets.addMenuItem(subMenu,
+                                         null,
+                                         BARControl.tr("continuous")
+                                        );
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+
+              setEntityType(Settings.ArchiveTypes.CONTINUOUS);
             }
           });
         }
