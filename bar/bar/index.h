@@ -685,14 +685,21 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextHistory
 * Purpose: get next history entry
 * Input  : IndexQueryHandle - index query handle
-* Output : uuidId          - index id of UUID entry
-*          jobUUID         - unique job id (can be NULL)
-*          scheduleUUID    - unique schedule id (can be NULL)
-*          createdDateTime - create date/time stamp [s] (can be NULL)
-*          errorMessage    - last storage error message (can be NULL)
-*          duration        - duration [s]
-*          totalEntryCount - total number of entries (can be NULL)
-*          totalEntrySize  - total storage size [bytes] (can be NULL)
+* Output : uuidId            - index id of UUID entry
+*          jobUUID           - unique job id (can be NULL)
+*          scheduleUUID      - unique schedule id (can be NULL)
+*          scheduleUUID      - unique schedule id (can be NULL)
+*          createdDateTime   - create date/time stamp [s] (can be NULL)
+*          errorMessage      - last storage error message (can be NULL)
+*          duration          - duration [s]
+*          totalEntryCount   - total number of entries (can be NULL)
+*          totalEntrySize    - total storage size [bytes] (can be NULL)
+*          skippedEntryCount - number of skipped entries (can be NULL)
+*          skippedEntrySize  - size of skipped entries [bytes] (can be
+*                              NULL)
+*          errorEntryCount   - number of error entries (can be NULL)
+*          errorEntrySize    - size of error entries [bytes] (can be
+*                              NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -701,25 +708,35 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           IndexId          *historyId,
                           String           jobUUID,
                           String           scheduleUUID,
+                          String           hostName,
                           uint64           *createdDateTime,
                           String           errorMessage,
                           uint64           *duration,
                           ulong            *totalEntryCount,
-                          uint64           *totalEntrySize
+                          uint64           *totalEntrySize,
+                          ulong            *skippedEntryCount,
+                          uint64           *skippedEntrySize,
+                          ulong            *errorEntryCount,
+                          uint64           *errorEntrySize
                          );
 
 /***********************************************************************\
 * Name   : Index_newHistory
 * Purpose: create new history entry
 * Input  : indexHandle  - index handle
-*          jobUUID         - unique job id (can be NULL)
-*          scheduleUUID    - unique schedule id (can be NULL)
-*          archiveType     - archive type (can be NULL)
-*          createdDateTime - create date/time stamp [s] (can be NULL)
-*          errorMessage    - last storage error message (can be NULL)
-*          totalEntryCount - total number of entries (can be NULL)
-*          totalEntrySize  - total storage size [bytes] (can be NULL)
-*          duration        - duration [s]
+*          jobUUID           - unique job id
+*          scheduleUUID      - unique schedule id (can be NULL)
+*          hostName          - hostname (can be NULL)
+*          archiveType       - archive type
+*          createdDateTime   - create date/time stamp [s]
+*          errorMessage      - last storage error message
+*          duration          - duration [s]
+*          totalEntryCount   - total number of entries
+*          totalEntrySize    - total storage size [bytes]
+*          skippedEntryCount - number of skipped entries
+*          skippedEntrySize  - size of skipped entries [bytes]
+*          errorEntryCount   - number of error entries
+*          errorEntrySize    - size of error entries [bytes]
 * Output : uuidId - index id of new UUID entry (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -728,12 +745,17 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 Errors Index_newHistory(IndexHandle  *indexHandle,
                         ConstString  jobUUID,
                         ConstString  scheduleUUID,
+                        ConstString  hostName,
                         ArchiveTypes archiveType,
                         uint64       createdDateTime,
                         const char   *errorMessage,
                         uint64       duration,
                         ulong        totalEntryCount,
                         uint64       totalEntrySize,
+                        ulong        skippedEntryCount,
+                        uint64       skippedEntrySize,
+                        ulong        errorEntryCount,
+                        uint64       errorEntrySize,
                         IndexId      *historyId
                        );
 

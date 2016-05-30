@@ -3065,6 +3065,7 @@ LOCAL void jobThreadCode(void)
   JobNode          *jobNode;
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  String           hostName;
   RemoteHost       remoteHost;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
@@ -3087,6 +3088,7 @@ LOCAL void jobThreadCode(void)
   Storage_initSpecifier(&storageSpecifier);
   storageName        = String_new();
   directory          = String_new();
+  hostName           = String_new();
   Remote_initHost(&remoteHost);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
@@ -3128,6 +3130,7 @@ LOCAL void jobThreadCode(void)
     // get copy of mandatory job data
     String_set(storageName,jobNode->archiveName);
     String_set(jobUUID,jobNode->uuid);
+    Network_getHostName(hostName);
     Remote_copyHost(&remoteHost,&jobNode->remoteHost);
     EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
@@ -3347,12 +3350,17 @@ NULL,//                                                        scheduleTitle,
                 Index_newHistory(indexHandle,
                                  jobUUID,
                                  scheduleUUID,
+                                 hostName,
                                  archiveType,
                                  Misc_getTimestamp(),
                                  "aborted",
                                  endDateTime-startDateTime,
                                  jobNode->runningInfo.totalEntryCount,
                                  jobNode->runningInfo.totalEntrySize,
+                                 jobNode->runningInfo.skippedEntryCount,
+                                 jobNode->runningInfo.skippedEntrySize,
+                                 jobNode->runningInfo.errorEntryCount,
+                                 jobNode->runningInfo.errorEntrySize,
                                  NULL  // historyId
                                 );
               }
@@ -3373,12 +3381,17 @@ NULL,//                                                        scheduleTitle,
                 Index_newHistory(indexHandle,
                                  jobUUID,
                                  scheduleUUID,
+                                 hostName,
                                  archiveType,
                                  Misc_getTimestamp(),
                                  Error_getText(jobNode->runningInfo.error),
                                  endDateTime-startDateTime,
                                  jobNode->runningInfo.totalEntryCount,
                                  jobNode->runningInfo.totalEntrySize,
+                                 jobNode->runningInfo.skippedEntryCount,
+                                 jobNode->runningInfo.skippedEntrySize,
+                                 jobNode->runningInfo.errorEntryCount,
+                                 jobNode->runningInfo.errorEntrySize,
                                  NULL  // historyId
                                 );
               }
@@ -3399,12 +3412,17 @@ NULL,//                                                        scheduleTitle,
                 Index_newHistory(indexHandle,
                                  jobUUID,
                                  scheduleUUID,
+                                 hostName,
                                  archiveType,
                                  Misc_getTimestamp(),
                                  NULL,
                                  endDateTime-startDateTime,
                                  jobNode->runningInfo.totalEntryCount,
                                  jobNode->runningInfo.totalEntrySize,
+                                 jobNode->runningInfo.skippedEntryCount,
+                                 jobNode->runningInfo.skippedEntrySize,
+                                 jobNode->runningInfo.errorEntryCount,
+                                 jobNode->runningInfo.errorEntrySize,
                                  NULL  // historyId
                                 );
               }

@@ -1052,15 +1052,20 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON specialEntries
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
-  id              INTEGER PRIMARY KEY,
-  jobUUID         TEXT NOT NULL,
-  scheduleUUID    TEXT,
-  type            INTEGER,
-  created         INTEGER,
-  errorMessage    TEXT,
-  duration        INTEGER,
-  totalEntryCount INTEGER,
-  totalEntrySize  INTEGER
+  id                INTEGER PRIMARY KEY,
+  jobUUID           TEXT NOT NULL,
+  scheduleUUID      TEXT,
+  hostName          TEXT,
+  type              INTEGER,
+  created           INTEGER,
+  errorMessage      TEXT,
+  duration          INTEGER,
+  totalEntryCount   INTEGER,
+  totalEntrySize    INTEGER,
+  skippedEntryCount INTEGER,
+  skippedEntrySize  INTEGER,
+  errorEntryCount   INTEGER,
+  errorEntrySize    INTEGER
 );
 CREATE INDEX ON history (jobUUID,created,type);
 CREATE INDEX ON history (created);

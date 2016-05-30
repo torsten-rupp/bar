@@ -6239,11 +6239,16 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                            "SELECT id, \
                                    jobUUID, \
                                    scheduleUUID, \
+                                   hostName, \
                                    UNIXTIMESTAMP(lastCreated), \
                                    errorMessage, \
                                    duration, \
                                    totalEntryCount, \
-                                   totalEntrySize \
+                                   totalEntrySize, \
+                                   skippedEntryCount, \
+                                   skippedEntrySize, \
+                                   errorEntryCount, \
+                                   errorEntrySize \
                             FROM uuids \
                             WHERE jobUUID=%'S \
                             LIMIT %llu,%llu \
@@ -6268,11 +6273,16 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           IndexId          *historyId,
                           String           jobUUID,
                           String           scheduleUUID,
+                          String           hostName,
                           uint64           *createdDateTime,
                           String           errorMessage,
                           uint64           *duration,
                           ulong            *totalEntryCount,
-                          uint64           *totalEntrySize
+                          uint64           *totalEntrySize,
+                          ulong            *skippedEntryCount,
+                          uint64           *skippedEntrySize,
+                          ulong            *errorEntryCount,
+                          uint64           *errorEntrySize
                          )
 {
   DatabaseId databaseId;
@@ -6287,15 +6297,20 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %S %llu %S %llu %lu %llu",
+                           "%lld %S %S %S %llu %S %llu %lu %llu %lu %llu %lu %llu",
                            &databaseId,
                            jobUUID,
                            scheduleUUID,
+                           hostName,
                            createdDateTime,
                            errorMessage,
                            duration,
                            totalEntryCount,
-                           totalEntrySize
+                           totalEntrySize,
+                           skippedEntryCount,
+                           skippedEntrySize,
+                           errorEntryCount,
+                           errorEntrySize
                           )
      )
   {
@@ -6309,12 +6324,17 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 Errors Index_newHistory(IndexHandle  *indexHandle,
                         ConstString  jobUUID,
                         ConstString  scheduleUUID,
+                        ConstString  hostName,
                         ArchiveTypes archiveType,
                         uint64       createdDateTime,
                         const char   *errorMessage,
                         uint64       duration,
                         ulong        totalEntryCount,
                         uint64       totalEntrySize,
+                        ulong        skippedEntryCount,
+                        uint64       skippedEntrySize,
+                        ulong        errorEntryCount,
+                        uint64       errorEntrySize,
                         IndexId      *historyId
                        )
 {
@@ -6338,15 +6358,21 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                ( \
                                 jobUUID, \
                                 scheduleUUID, \
+                                hostName, \
                                 type, \
                                 created, \
                                 errorMessage, \
                                 duration, \
                                 totalEntryCount, \
-                                totalEntrySize \
+                                totalEntrySize, \
+                                skippedEntryCount, \
+                                skippedEntrySize, \
+                                errorEntryCount, \
+                                errorEntrySize \
                                ) \
                              VALUES \
                                ( \
+                                %'S, \
                                 %'S, \
                                 %'S, \
                                 %d, \
@@ -6354,17 +6380,26 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                 %'s, \
                                 %llu, \
                                 %lu, \
+                                %llu, \
+                                %lu, \
+                                %llu, \
+                                %lu, \
                                 %llu \
                                ); \
                             ",
                             jobUUID,
                             scheduleUUID,
+                            hostName,
                             archiveType,
                             createdDateTime,
                             errorMessage,
                             duration,
                             totalEntryCount,
-                            totalEntrySize
+                            totalEntrySize,
+                            skippedEntryCount,
+                            skippedEntrySize,
+                            errorEntryCount,
+                            errorEntrySize
                            );
   });
   if (error != ERROR_NONE)
@@ -6884,7 +6919,6 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Index_getDatabaseId(entityId));
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
