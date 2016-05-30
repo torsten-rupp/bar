@@ -714,7 +714,7 @@ public class TabJobs
                                                                      directoryInfoRequest.name,
                                                                      directoryInfoRequest.timeout
                                                                     ),
-                                                 0,
+                                                 0,  // debugLevel
                                                  resultErrorMessage,
                                                  resultMap
                                                 );
@@ -8449,7 +8449,7 @@ throw new Error("NYI");
             String[] resultErrorMessage = new String[1];
             ValueMap resultMap          = new ValueMap();
             int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",jobName),
-                                                 0,
+                                                 0,  // debugLevel
                                                  resultErrorMessage,
                                                  resultMap
                                                 );
@@ -8580,7 +8580,7 @@ throw new Error("NYI");
                                                                      jobData.uuid,
                                                                      newJobName
                                                                     ),
-                                                 0,
+                                                 0,  // debugLevel
                                                  resultErrorMessage,
                                                  resultMap
                                                 );
@@ -8711,7 +8711,7 @@ throw new Error("NYI");
                                                                      jobData.uuid,
                                                                      newJobName
                                                                     ),
-                                                 0,
+                                                 0,  // debugLevel
                                                  resultErrorMessage
                                                 );
             if (error == Errors.NONE)
@@ -9088,7 +9088,7 @@ throw new Error("NYI");
       int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
                                                                fileTreeData.name
                                                               ),
-                                           0,
+                                           0,  // debugLevel
                                            resultErrorMessage,
                                            resultMapList
                                           );
@@ -9422,7 +9422,7 @@ throw new Error("NYI");
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -9601,7 +9601,7 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
                                                              selectedJobData.uuid
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -9655,7 +9655,7 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobUUID=%s",
                                                              selectedJobData.uuid
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -9706,7 +9706,7 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
                                                              selectedJobData.uuid
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -9759,7 +9759,7 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("SOURCE_LIST jobUUID=%s",
                                                              selectedJobData.uuid
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -9807,7 +9807,7 @@ throw new Error("NYI");
     int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
                                                              selectedJobData.uuid
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage,
                                          resultMapList
                                         );
@@ -9901,8 +9901,8 @@ throw new Error("NYI");
             if ((selectionEvent.stateMask & SWT.CTRL) == 0)
             {
               pathName = Dialogs.file(shell,
-                                      Dialogs.FileDialogTypes.OPEN,
-                                      BARControl.tr("Select path"),
+                                      Dialogs.FileDialogTypes.ENTRY,
+                                      BARControl.tr("Select entry"),
                                       widgetPattern.getText(),
                                       new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
@@ -9913,7 +9913,7 @@ throw new Error("NYI");
             else
             {
               pathName = Dialogs.fileOpen(shell,
-                                          BARControl.tr("Select path"),
+                                          BARControl.tr("Select entry"),
                                           widgetPattern.getText(),
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       }
@@ -10039,7 +10039,7 @@ throw new Error("NYI");
                                                              "GLOB",
                                                              entryData.pattern
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage
                                         );
     if (error != Errors.NONE)
@@ -10089,7 +10089,7 @@ throw new Error("NYI");
                                                    "GLOB",
                                                    entryData.pattern
                                                   ),
-                               0,
+                               0,  // debugLevel
                                resultErrorMessage
                               );
     }
@@ -10369,7 +10369,7 @@ throw new Error("NYI");
                                                              mountData.name,
                                                              mountData.alwaysUnmount
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage,
                                          resultMap
                                         );
@@ -10417,7 +10417,7 @@ throw new Error("NYI");
                                                              mountData.name,
                                                              mountData.alwaysUnmount
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage
                                         );
     if (error != Errors.NONE)
@@ -10458,7 +10458,7 @@ throw new Error("NYI");
                                                              selectedJobData.uuid,
                                                              mountData.id
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage
                                         );
     if (error != Errors.NONE)
@@ -10628,7 +10628,7 @@ throw new Error("NYI");
           {
             pathName = Dialogs.file(shell,
                                     Dialogs.FileDialogTypes.OPEN,
-                                    BARControl.tr("Select path"),
+                                    BARControl.tr("Select entry"),
                                     widgetPattern.getText(),
                                     new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                 },
@@ -10639,7 +10639,7 @@ throw new Error("NYI");
           else
           {
             pathName = Dialogs.fileOpen(shell,
-                                        BARControl.tr("Select path"),
+                                        BARControl.tr("Select entry"),
                                         widgetPattern.getText(),
                                         new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                     }
@@ -10723,7 +10723,7 @@ throw new Error("NYI");
                                                              "GLOB",
                                                              pattern
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage
                                         );
     if (error != Errors.NONE)
@@ -10771,7 +10771,7 @@ throw new Error("NYI");
                                                    "GLOB",
                                                    pattern
                                                   ),
-                                0,
+                                0,  // debugLevel
                                 resultErrorMessage
                                );
     }
@@ -10895,7 +10895,7 @@ throw new Error("NYI");
                                                              "NOBACKUP",
                                                              name
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage
                                         );
     if (error != Errors.NONE)
@@ -10928,7 +10928,7 @@ throw new Error("NYI");
                                                              "NODUMP",
                                                              name
                                                             ),
-                                         0,
+                                         0,  // debugLevel
                                          resultErrorMessage
                                         );
     if (error != Errors.NONE)
@@ -10963,7 +10963,7 @@ throw new Error("NYI");
                                                                  "GLOB",
                                                                  pattern
                                                                 ),
-                                             0,
+                                             0,  // debugLevel
                                              resultErrorMessage
                                             );
         if (error != Errors.NONE)
@@ -11009,7 +11009,7 @@ throw new Error("NYI");
                                                    "GLOB",
                                                    pattern
                                                   ),
-                               0,
+                               0,  // debugLevel
                                resultErrorMessage
                               );
     }
@@ -11085,7 +11085,7 @@ throw new Error("NYI");
           {
             pathName = Dialogs.file(shell,
                                     Dialogs.FileDialogTypes.OPEN,
-                                    BARControl.tr("Select path"),
+                                    BARControl.tr("Select entry"),
                                     widgetPattern.getText(),
                                     new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                 },
@@ -11096,7 +11096,7 @@ throw new Error("NYI");
           else
           {
             pathName = Dialogs.fileOpen(shell,
-                                        BARControl.tr("Select path"),
+                                        BARControl.tr("Select entry"),
                                         widgetPattern.getText(),
                                         new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                     }
@@ -11182,7 +11182,7 @@ throw new Error("NYI");
                                                                "GLOB",
                                                                pattern
                                                               ),
-                                           0,
+                                           0,  // debugLevel
                                            resultErrorMesage
                                           );
       if (error != Errors.NONE)
@@ -11221,7 +11221,7 @@ throw new Error("NYI");
                                                                  "GLOB",
                                                                  pattern
                                                                 ),
-                                             0,
+                                             0,  // debugLevel
                                              resultErrorMessage
                                             );
         if (error != Errors.NONE)
@@ -11305,7 +11305,7 @@ throw new Error("NYI");
                                                    "GLOB",
                                                    pattern
                                                   ),
-                               0,
+                               0,  // debugLevel
                                resultErrorMessage
                               );
       Widgets.insertListItem(widgetCompressExcludeList,
@@ -12487,7 +12487,7 @@ Dprintf.dprintf("line=%s",line);
         String[]            resultErrorMessage  = new String[1];
         ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
         int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",selectedJobData.uuid),
-                                             0,
+                                             0,  // debugLevel
                                              resultErrorMessage,
                                              resultMapList
                                             );
@@ -13035,7 +13035,7 @@ throw new Error("NYI");
                                                                scheduleData.noStorage,
                                                                scheduleData.enabled
                                                               ),
-                                           0,
+                                           0,  // debugLevel
                                            resultErrorMessage,
                                            resultMap
                                           );
@@ -13171,7 +13171,7 @@ throw new Error("NYI");
                                                                  newScheduleData.noStorage,
                                                                  newScheduleData.enabled
                                                                 ),
-                                             0,
+                                             0,  // debugLevel
                                              resultErrorMessage,
                                              resultMap
                                             );
