@@ -2570,6 +2570,15 @@ throw new Error("NYI");
 
     /** create remote file
      * @param name name
+     * @param fileType file type
+     */
+    public RemoteFile(String name, FileTypes fileType)
+    {
+      this(name,fileType,0);
+    }
+
+    /** create remote file
+     * @param name name
      * @param size size [bytes]
      */
     public RemoteFile(String name, long size)
@@ -2580,10 +2589,10 @@ throw new Error("NYI");
     /** create remote file
      * @param name name
      */
-    public RemoteFile(String name)
+/*    public RemoteFile(String name)
     {
       this(name,0);
-    }
+    }*/
 
     /** get file size
      * @return size [bytes]
@@ -2651,7 +2660,38 @@ throw new Error("NYI");
 
     public RemoteFile newInstance(String name)
     {
-      return new RemoteFile(name);
+      FileTypes fileType = FileTypes.FILE;
+      long      size     = 0;
+      long      dateTime = 0;
+
+      ValueMap valueMap = new ValueMap();
+      int error = BARServer.executeCommand(StringParser.format("FILE_INFO name=%'S",
+                                                               name
+                                                              ),
+                                           1,  // debugLevel
+                                           null,  // errorMessage,
+                                           valueMap
+                                          );
+      if (error == Errors.NONE)
+      {
+        fileType = valueMap.getEnum("fileType",FileTypes.class);
+        switch (fileType)
+        {
+          case FILE:
+            size = valueMap.getLong("size");
+          case HARDLINK:
+            break;
+          case DIRECTORY:
+          case LINK:
+          case SPECIAL:
+            break;
+          default:
+            break;
+        }
+        dateTime = valueMap.getLong("dateTime");
+      }
+
+      return new RemoteFile(name,fileType,size,dateTime);
     }
 
     /** get shortcut files
@@ -2664,7 +2704,7 @@ throw new Error("NYI");
       // add manual shortcuts
       for (String name : Settings.shortcuts)
       {
-        shortcutMap.put(name,new RemoteFile(name));
+        shortcutMap.put(name,new RemoteFile(name,FileTypes.DIRECTORY));
       }
 
       // add root shortcuts
@@ -2719,7 +2759,7 @@ throw new Error("NYI");
       int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
                                                                pathName
                                                               ),
-                                           0,
+                                           1,  // debugLevel
                                            errorMessage,
                                            valueMapList
                                           );
