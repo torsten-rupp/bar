@@ -480,8 +480,6 @@ INTERMEDIATE         = errors.c \
                        archive_format.h \
                        archive_format_const.h \
                        index_definition.h \
-                       \
-                       bar-gcov.info
 
 TARGETS              = bar@EXEEXT@ \
                        bar-debug@EXEEXT@ \
@@ -510,6 +508,7 @@ clean: \
 	$(RMF) $(DESTROYER_OBJECTS)
 	$(RMF) $(BAR_MINIDUMP_OBJECTS)
 	$(RMF) $(INTERMEDIATE)
+	$(RMF) bar-gcov.info
 	$(RMF) $(TARGETS)
 	$(RMRF) test
 
