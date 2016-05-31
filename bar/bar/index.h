@@ -38,6 +38,11 @@
 #define INDEX_UNLIMITED 9223372036854775807LL
 
 // special index ids
+#define INDEX_ID_MASK_TYPE         0x0000000F
+#define INDEX_ID_SHIFT_TYPE        0
+#define INDEX_ID_MASK_DATABASE_ID  0xFFFFFFF0
+#define INDEX_ID_SHIFT_DATABASE_ID 4
+
 #define INDEX_ID_NONE  0LL
 #define INDEX_ID_ANY  -1LL
 
@@ -168,17 +173,6 @@ typedef ulong IndexTypeSet;
 // index id
 typedef int64 IndexId;
 
-// internal usage only!
-typedef union
-{
-  struct
-  {
-    IndexTypes type : 4;
-    DatabaseId databaseId : 60;
-  };
-  IndexId data;
-} __IndexId;
-
 /***************************** Variables *******************************/
 extern const char *__databaseFileName;
 
@@ -191,11 +185,13 @@ extern const char *__databaseFileName;
 #define INDEX_MODE_SET(indexMode) (1U << indexMode)
 
 // get type, database id from index id
-#define INDEX_TYPE_(indexId)        (((__IndexId)(indexId)).type      )
-#define INDEX_DATABASE_ID_(indexId) (((__IndexId)(indexId)).databaseId)
+#define INDEX_TYPE_(indexId)        ((IndexTypes)(((indexId) & INDEX_ID_MASK_TYPE       ) >> INDEX_ID_SHIFT_TYPE       ))
+#define INDEX_DATABASE_ID_(indexId) ((DatabaseId)(((indexId) & INDEX_ID_MASK_DATABASE_ID) >> INDEX_ID_SHIFT_DATABASE_ID))
 
 // create index id
-#define INDEX_ID_(indexType,databaseId) ((IndexId)((__IndexId){{indexType,databaseId}}).data)
+#define INDEX_ID_(indexType,databaseId) (IndexId)(  ((uint64)(indexType ) << INDEX_ID_SHIFT_TYPE       ) \
+                                                  | ((uint64)(databaseId) << INDEX_ID_SHIFT_DATABASE_ID) \
+                                                 )
 #define INDEX_ID_UUID(databaseId)      INDEX_ID_(INDEX_TYPE_UUID     ,databaseId)
 #define INDEX_ID_ENTITY(databaseId)    INDEX_ID_(INDEX_TYPE_ENTITY   ,databaseId)
 #define INDEX_ID_STORAGE(databaseId)   INDEX_ID_(INDEX_TYPE_STORAGE  ,databaseId)
