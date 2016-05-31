@@ -347,9 +347,11 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
   // set crash flag
   crashFlag = TRUE;
 
-  if (IS_DEBUG_TESTCODE()) exit(EXITCODE_TESTCODE);
+//TODO?
+//  if (IS_DEBUG_TESTCODE()) exit(EXITCODE_TESTCODE);
+  exit(EXITCODE_TESTCODE);
 
-  return succeeded;
+//  return succeeded;
 
   #undef __TO_STRING
   #undef __TO_STRING_TMP
