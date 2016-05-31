@@ -2426,7 +2426,6 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     }
 
     // update storage status
-fprintf(stderr,"%s, %d: update sto don\n",__FILE__,__LINE__);
     restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveInfo);
     updateStatusInfo(restoreInfo,TRUE);
 
