@@ -2141,7 +2141,7 @@ Dprintf.dprintf("cirrect?");
 
     /** update entity tree items
      * @param uuidTreeItem UUID tree item to update
-     * @param entityTreeItems updated job tree items
+     * @param entityTreeItems updated job tree items or null
      */
     private void updateEntityTreeItems(final TreeItem uuidTreeItem, final HashSet<TreeItem> entityTreeItems)
     {
@@ -2273,7 +2273,7 @@ Dprintf.dprintf("cirrect?");
                                       );
                 removeEntityTreeItemSet.remove(entityTreeItem);
               }
-              if (entityTreeItem.getExpanded())
+              if ((entityTreeItems != null) && entityTreeItem.getExpanded())
               {
                 entityTreeItems.add(entityTreeItem);
               }
@@ -2315,6 +2315,14 @@ Dprintf.dprintf("cirrect?");
     }
 
     /** update entity tree items
+     * @param uuidTreeItem UUID tree item to update
+     */
+    private void updateEntityTreeItems(TreeItem uuidTreeItem)
+    {
+      updateEntityTreeItems(uuidTreeItem,(HashSet<TreeItem>)null);
+    }
+
+    /** update entity tree items
      * @param uuidTreeItems UUID tree items to update
      * @param entityTreeItems updated job tree items
      */
@@ -2328,10 +2336,10 @@ Dprintf.dprintf("cirrect?");
       }
     }
 
-    /** update storage tree item
+    /** update storage tree items
      * @param entityTreeItem job tree item to update
      */
-    private void updateStorageTreeItem(final TreeItem entityTreeItem)
+    private void updateStorageTreeItems(final TreeItem entityTreeItem)
     {
       // get entity index data, storage items
       final HashSet<TreeItem> removeStorageTreeItemSet = new HashSet<TreeItem>();
@@ -2504,7 +2512,7 @@ Dprintf.dprintf("cirrect?");
     {
       for (final TreeItem entityTreeItem : entityTreeItems)
       {
-        updateStorageTreeItem(entityTreeItem);
+        updateStorageTreeItems(entityTreeItem);
       }
     }
 
@@ -2515,11 +2523,11 @@ Dprintf.dprintf("cirrect?");
     {
       if      (treeItem.getData() instanceof UUIDIndexData)
       {
-        updateStorageTreeTableThread.updateEntityTreeItems(treeItem,new HashSet<TreeItem>());
+        updateStorageTreeTableThread.updateEntityTreeItems(treeItem);
       }
       else if (treeItem.getData() instanceof EntityIndexData)
       {
-        updateStorageTreeTableThread.updateStorageTreeItem(treeItem);
+        updateStorageTreeTableThread.updateStorageTreeItems(treeItem);
       }
     }
 
@@ -5060,14 +5068,9 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
             {
               IndexData fromIndexData = (IndexData)dropTargetEvent.data;
               IndexData toIndexData   = (IndexData)treeItem.getData();
-//TODO
-Dprintf.dprintf("fromIndexData=%s",fromIndexData);
-Dprintf.dprintf("toIndexData=%s",toIndexData);
 
               if      (toIndexData instanceof UUIDIndexData)
               {
-//TODO
-Dprintf.dprintf("");
               }
               else if (toIndexData instanceof EntityIndexData)
               {
@@ -5077,12 +5080,9 @@ Dprintf.dprintf("");
               else if (toIndexData instanceof StorageIndexData)
               {
                 StorageIndexData toStorageIndexData = (StorageIndexData)toIndexData;
-                if (toStorageIndexData.getTreeItem() != null)
+                if (treeItem != null)
                 {
-Dprintf.dprintf("ubsP? toStorageIndexData.getTreeItem()=%s",toStorageIndexData.getTreeItem());
-Dprintf.dprintf("ubsP? toStorageIndexData.getTreeItem()=%s",toStorageIndexData.getTreeItem().getParent());
-                  EntityIndexData toEntityIndexData = (EntityIndexData)toStorageIndexData.getTreeItem().getParent().getData();
-Dprintf.dprintf("ubsP? toEntityIndexData=%s",toEntityIndexData);
+                  EntityIndexData toEntityIndexData = (EntityIndexData)treeItem.getParentItem().getData();
                   if (toEntityIndexData != null)
                   {
                     assignStorage(fromIndexData,toEntityIndexData);
