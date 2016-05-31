@@ -1889,14 +1889,14 @@ ifeq (@HAVE_XDELTA@,1)
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(TEST_DATA_DIR)/data/delta1; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	#
-	$(RMF) test/$(BAR_PATTERN)-B.bar
+	$(RMF) test/$(BAR_PATTERN)-B.bar test/restore/test.dat
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar test.dat --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),</dev/null 1>/dev/null))
 	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
 	#
-	$(RMF) test/$(BAR_PATTERN)-B.bar
+	$(RMF) test/$(BAR_PATTERN)-B.bar test/restore/test.dat
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
@@ -1904,7 +1904,7 @@ ifeq (@HAVE_XDELTA@,1)
 	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
 	#
 ifeq (@HAVE_BZ2@,1)
-	$(RMF) test/$(BAR_PATTERN)-B.bar
+	$(RMF) test/$(BAR_PATTERN)-B.bar test/restore/test.dat
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
@@ -1913,7 +1913,7 @@ ifeq (@HAVE_BZ2@,1)
 endif
 	#
 ifeq (@HAVE_LZMA@,1)
-	$(RMF) test/$(BAR_PATTERN)-B.bar
+	$(RMF) test/$(BAR_PATTERN)-B.bar test/restore/test.dat
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
