@@ -977,9 +977,9 @@ public class BARControl
   class LoginData
   {
     String serverName;       // server name
+    int    serverPort;       // server port
+    int    serverTLSPort;    // server TLS port
     String password;         // login password
-    int    port;             // server port
-    int    tlsPort;          // server TLS port
 
     /** create login data
      * @param serverName server name
@@ -990,12 +990,13 @@ public class BARControl
     {
       final Settings.Server defaultServer = Settings.getLastServer();
 
-      this.serverName = !name.equals("") ? name : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME);
-      this.password   = (defaultServer != null) ? defaultServer.password : "";
-      this.port       = (port != 0) ? port    : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
-      this.tlsPort    = (port != 0) ? tlsPort : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
+      this.serverName    = !name.equals("") ? name : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME);
+      this.serverPort    = (port != 0) ? port    : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
+      this.serverTLSPort = (port != 0) ? tlsPort : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
+      this.password      = (defaultServer != null) ? defaultServer.password : "";
 
       // get last used server if no name given
+//TODO
 //      if (this.serverName.isEmpty() && (Settings.servers.size() > 0))
 //      {
 //        this.serverName = Settings.serverNames.toArray(new String[Settings.serverNames.size()])[Settings.serverNames.size()-1];
@@ -1457,13 +1458,15 @@ public class BARControl
 
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Login BAR server"),250,SWT.DEFAULT);
 
-    HashSet<String> serverHash = new HashSet<String>();
+    // get sorted server list
+    ArrayList<String> serverDataList = new ArrayList<String>();
     for (Settings.Server server : Settings.servers)
     {
-      serverHash.add(server.toString());
+      serverDataList.add(server.getData());
+Dprintf.dprintf("serverData=%s",server.getData());
     }
-    String serverNames[] = serverHash.toArray(new String[serverHash.size()]);
-    Arrays.sort(serverNames);
+    String serverData[] = serverDataList.toArray(new String[serverDataList.size()]);
+    Arrays.sort(serverData);
 
     // password
     final Combo   widgetServerName;
@@ -1483,14 +1486,14 @@ public class BARControl
       subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
       {
         widgetServerName = new Combo(subComposite,SWT.LEFT|SWT.BORDER);
-        widgetServerName.setItems(serverNames);
+        widgetServerName.setItems(serverData);
         if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
         widgetServerName.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
 
         widgetServerPort = new Spinner(subComposite,SWT.RIGHT|SWT.BORDER);
         widgetServerPort.setMinimum(0);
         widgetServerPort.setMaximum(65535);
-        widgetServerPort.setSelection(loginData.port);
+        widgetServerPort.setSelection(loginData.serverPort);
         widgetServerPort.setLayoutData(new TableLayoutData(0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT));
       }
 
@@ -1518,7 +1521,7 @@ public class BARControl
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           loginData.serverName = widgetServerName.getText();
-          loginData.port       = widgetServerPort.getSelection();
+          loginData.serverPort = widgetServerPort.getSelection();
           loginData.password   = widgetPassword.getText();
           Dialogs.close(dialog,true);
         }
@@ -1579,20 +1582,17 @@ public class BARControl
       widgetServerName.forceFocus();
     }
     Boolean result = (Boolean)Dialogs.run(dialog);
-
-    // store new name, shorten list
-//TODO
-/*
-    Settings.serverNames.remove(loginData.serverName);
-    Settings.serverNames.add(loginData.serverName);
-    while (Settings.serverNames.size() > 10)
+    if ((result != null) && result)
     {
-      String serverName = Settings.serverNames.iterator().next();
-      Settings.serverNames.remove(serverName);
-    }
-*/
+      // store new name+port, shorten list
+      Settings.addServer(loginData.serverName,loginData.serverPort,loginData.password);
 
-    return (result != null) ? result : false;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 
   /** create main window
@@ -1663,7 +1663,7 @@ public class BARControl
     });
   }
 
-  /** upser server menu entries
+  /** update server menu entries
    */
   private void updateServerMenu()
   {
@@ -1676,7 +1676,7 @@ public class BARControl
 
     for (final Settings.Server server : Settings.servers)
     {
-      menuItem = Widgets.addMenuItem(serverMenu,server.name+((server.port != Settings.DEFAULT_SERVER_PORT) ? ":"+server.port : ""));
+      menuItem = Widgets.addMenuItem(serverMenu,server.name+":"+server.port);
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1692,8 +1692,8 @@ public class BARControl
           try
           {
             BARServer.connect(loginData.serverName,
-                              loginData.port,
-                              loginData.tlsPort,
+                              loginData.serverPort,
+                              loginData.serverTLSPort,
                               loginData.password,
                               Settings.serverKeyFileName
                              );
@@ -1741,8 +1741,8 @@ public class BARControl
               try
               {
                 BARServer.connect(loginData.serverName,
-                                  loginData.port,
-                                  loginData.tlsPort,
+                                  loginData.serverPort,
+                                  loginData.serverTLSPort,
                                   loginData.password,
                                   Settings.serverKeyFileName
                                  );
@@ -2051,15 +2051,15 @@ public class BARControl
         {
           while (   !connectOkFlag
                  && getLoginData(loginData)
-                 && ((loginData.port != 0) || (loginData.tlsPort != 0))
+                 && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0))
                 )
           {
             // try to connect to server
             try
             {
               BARServer.connect(loginData.serverName,
-                                loginData.port,
-                                loginData.tlsPort,
+                                loginData.serverPort,
+                                loginData.serverTLSPort,
                                 loginData.password,
                                 Settings.serverKeyFileName
                                );
@@ -2123,9 +2123,9 @@ public class BARControl
                                 (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                 (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
                                );
-      if (Settings.serverName    != null) loginData.serverName = Settings.serverName;
-      if (Settings.serverPort    != -1  ) loginData.port       = Settings.serverPort;
-      if (Settings.serverTLSPort != -1  ) loginData.tlsPort    = Settings.serverTLSPort;
+      if (Settings.serverName    != null) loginData.serverName    = Settings.serverName;
+      if (Settings.serverPort    != -1  ) loginData.serverPort    = Settings.serverPort;
+      if (Settings.serverTLSPort != -1  ) loginData.serverTLSPort = Settings.serverTLSPort;
 
       // commands
       if (   (Settings.runJobName != null)
@@ -2150,8 +2150,8 @@ public class BARControl
         try
         {
           BARServer.connect(loginData.serverName,
-                            loginData.port,
-                            loginData.tlsPort,
+                            loginData.serverPort,
+                            loginData.serverTLSPort,
                             loginData.password,
                             Settings.serverKeyFileName
                            );
@@ -2880,8 +2880,8 @@ Dprintf.dprintf("still not supported");
             try
             {
               BARServer.connect(loginData.serverName,
-                                loginData.port,
-                                loginData.tlsPort,
+                                loginData.serverPort,
+                                loginData.serverTLSPort,
                                 loginData.password,
                                 Settings.serverKeyFileName
                                );
@@ -2898,8 +2898,8 @@ Dprintf.dprintf("still not supported");
             try
             {
               BARServer.connect(loginData.serverName,
-                                loginData.port,
-                                loginData.tlsPort,
+                                loginData.serverPort,
+                                loginData.serverTLSPort,
                                 "",
                                 Settings.serverKeyFileName
                                );
@@ -2918,7 +2918,7 @@ Dprintf.dprintf("still not supported");
           {
             System.exit(0);
           }
-          if ((loginData.port == 0) && (loginData.tlsPort == 0))
+          if ((loginData.serverPort == 0) && (loginData.serverTLSPort == 0))
           {
             throw new Error("Cannot connect to server. No server ports specified!");
           }
@@ -2928,8 +2928,8 @@ Dprintf.dprintf("still not supported");
           try
           {
             BARServer.connect(loginData.serverName,
-                              loginData.port,
-                              loginData.tlsPort,
+                              loginData.serverPort,
+                              loginData.serverTLSPort,
                               loginData.password,
                               Settings.serverKeyFileName
                              );

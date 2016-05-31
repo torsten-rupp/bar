@@ -327,6 +327,23 @@ public class Settings
       return new Server(name,port,password);
     }
 
+    /** check if equals
+     * @param server server
+     * @return true iff equals
+     */
+    public boolean equals(Server server)
+    {
+      return this.name.equals(server.name) && (this.port == server.port);
+    }
+
+    /** get data string
+     * @return string
+     */
+    public String getData()
+    {
+      return name+":"+port;
+    }
+
     /** convert data to string
      * @return string
      */
@@ -475,7 +492,7 @@ public class Settings
   // server settings
   @SettingComment(text={"","Server settings"})
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
-  public static LinkedList<Server>    servers                         = new LinkedList<Server>();
+  public static LinkedHashSet<Server> servers                         = new LinkedHashSet<Server>();
   @SettingValue(name="serverName",type=String.class,obsolete=true)
   public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
   @SettingValue
@@ -582,7 +599,8 @@ public class Settings
   {
     if (servers.size() > 0)
     {
-      return servers.getLast();
+      Server serverArray[] = servers.toArray(new Server[servers.size()]);
+      return serverArray[serverArray.length-1];
     }
     else
     {
@@ -597,21 +615,13 @@ public class Settings
    */
   public static void addServer(String name, int port, String password)
   {
-    for (int i = 0; i < servers.size(); i++)
+    Server server = new Server(name,port,password);
+    servers.remove(server);
+    servers.add(server);
+    while (servers.size() > 10)
     {
-      Server server = servers.get(i);
-      if (   server.name.equals(name)
-          && (server.port == port)
-         )
-      {
-        servers.remove(i);
-        server.password = password;
-        servers.add(server);
-        return;
-      }
+      servers.remove(0);
     }
-
-    servers.add(new Server(name,port,password));
   }
 
   //-----------------------------------------------------------------------
