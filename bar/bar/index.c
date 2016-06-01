@@ -3537,7 +3537,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                                   NULL,  // entityId
                                   NULL,  // scheduleUUID
                                   &storageId,
-                                  NULL,  // storageName
+                                  storageName,
                                   NULL  // lastCheckedDateTime
                                  )
          && (error == ERROR_NONE)
