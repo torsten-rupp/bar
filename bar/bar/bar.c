@@ -2988,7 +2988,6 @@ LOCAL Errors initAll(void)
   sigaction(SIGILL,&signalAction,NULL);
   sigaction(SIGBUS,&signalAction,NULL);
   sigaction(SIGTERM,&signalAction,NULL);
-  sigaction(SIGQUIT,&signalAction,NULL);
   sigaction(SIGINT,&signalAction,NULL);
 
   // initialize variables
@@ -7139,12 +7138,12 @@ LOCAL Errors runDaemon(void)
   if (!stringIsEmpty(indexDatabaseFileName))
   {
     // open index database
-    printInfo(1,"Opening index database '%s'...",indexDatabaseFileName);
+    printInfo(1,"Init index database '%s'...",indexDatabaseFileName);
     error = Index_init(indexDatabaseFileName);
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("Cannot open index database '%s' (error: %s)!\n",
+      printError("Cannot init index database '%s' (error: %s)!\n",
                  indexDatabaseFileName,
                  Error_getText(error)
                 );
@@ -7171,13 +7170,15 @@ LOCAL Errors runDaemon(void)
                     );
   if (error != ERROR_NONE)
   {
+    if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
     closeLog();
     Continuous_done();
     deletePIDFile();
     return error;
   }
 
-  // close index database
+  // done index database
+  if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
 
   // close log file
   closeLog();
