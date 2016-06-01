@@ -410,26 +410,17 @@ public class Settings
      */
     public Object run(Object value)
     {
-      LinkedList<Server> servers = (LinkedList<Server>)value;
+      LinkedHashSet<Server> servers = (LinkedHashSet<Server>)value;
 
       for (String serverName : Settings.serverNames)
       {
-        boolean existsFlag = false;
-        for (Server server : servers)
-        {
-          if (   server.name.equals(serverName)
-              && (server.port == Settings.serverPort)
-             )
-          {
-            existsFlag = true;
-            break;
-          }
-        }
-
-        if (!existsFlag)
-        {
-          servers.add(new Server(serverName,Settings.serverPort,Settings.serverPassword));
-        }
+        Server server = new Server(serverName,Settings.serverPort,Settings.serverPassword);
+        servers.remove(server);
+        servers.add(server);
+      }
+      while (servers.size() > MAX_SERVER_HISTORY)
+      {
+        servers.remove(0);
       }
 
       return servers;
@@ -441,6 +432,8 @@ public class Settings
   static final int    DEFAULT_SERVER_PORT                 = 38523;
   static final int    DEFAULT_SERVER_TLS_PORT             = 38524;
   static final String DEFAULT_BARCONTROL_CONFIG_FILE_NAME = System.getProperty("user.home")+File.separator+".bar"+File.separator+"barcontrol.cfg";
+
+  static final int    MAX_SERVER_HISTORY = 10;
 
   /** archive types
    */
@@ -618,7 +611,7 @@ public class Settings
     Server server = new Server(name,port,password);
     servers.remove(server);
     servers.add(server);
-    while (servers.size() > 10)
+    while (servers.size() > MAX_SERVER_HISTORY)
     {
       servers.remove(0);
     }
