@@ -772,6 +772,8 @@ const char *Thread_getName(ThreadId threadId)
   #ifndef NDEBUG
     return debugThreadStackTraceGetThreadName(threadId);
   #else /* NDEBUG */
+    UNUSED_VARIABLE(threadId);
+
     return NULL;
   #endif /* not NDEBUG */
 }
