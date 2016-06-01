@@ -4879,6 +4879,7 @@ LOCAL void indexThreadCode(void)
     }
 
     // update index entries
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,Misc_getTimestamp());
     while (   !quitFlag
            && Index_findStorageByState(indexHandle,
                                        INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
@@ -5009,6 +5010,7 @@ LOCAL void indexThreadCode(void)
         }
       }
     }
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,Misc_getTimestamp());
 
     // free resources
     List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);

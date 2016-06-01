@@ -11141,7 +11141,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   // free resources
   String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,Misc_getTimestamp());
 
   return error;
 }
