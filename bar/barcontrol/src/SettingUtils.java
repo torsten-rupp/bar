@@ -261,7 +261,6 @@ Dprintf.dprintf("field.getType()=%s",type);
 
                             // convert to value
                             Object value = settingValueAdapter.toValue(string);
-Dprintf.dprintf("value=%s",value);
                             ((Set)field.get(null)).add(value);
                           }
                           else if (setType == int.class)
