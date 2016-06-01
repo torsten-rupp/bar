@@ -938,7 +938,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
     }
   }
   while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-         && ((timeout == WAIT_FOREVER) || (n < (timeout+SLEEP_TIME-1L)/SLEEP_TIME))
+         && ((timeout == WAIT_FOREVER) || (n < (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME)))
         );
 
   return sqliteResult;
@@ -1041,7 +1041,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
           }
         }
         while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-               && ((timeout == WAIT_FOREVER) || (n < (timeout+SLEEP_TIME-1L)/SLEEP_TIME))
+               && ((timeout == WAIT_FOREVER) || (n < (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME)))
               );
 
         // process row
