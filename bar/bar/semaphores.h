@@ -25,6 +25,7 @@
 #endif /* PLATFORM_... */
 
 #include "global.h"
+#include "threads.h"
 #ifndef NDEBUG
   #include "lists.h"
 #endif /* not NDEBUG */
@@ -85,7 +86,7 @@ typedef struct Semaphore
     const char *name;                        // semaphore name (variable)
     struct
     {
-      pthread_t  thread;                     // id of thread who locked semaphore
+      ThreadId   threadId;                   // id of thread who locked semaphore
       const char *fileName;                  // file+line number of lock
       ulong      lineNb;
     } lockedBy[16];
@@ -330,7 +331,7 @@ INLINE bool Semaphore_isOwned(const Semaphore *semaphore)
 {
   assert(semaphore != NULL);
 
-  return (semaphore->lockedByCount > 0) && (pthread_equal(semaphore->lockedBy[semaphore->lockedByCount-1].thread,pthread_self()) != 0);
+  return (semaphore->lockedByCount > 0) && (Thread_equalThreads(semaphore->lockedBy[semaphore->lockedByCount-1].threadId,Thread_getCurrentId()) != 0);
 }
 #endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
 #endif /* not NDEBUG */

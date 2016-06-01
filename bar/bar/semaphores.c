@@ -464,7 +464,7 @@ LOCAL void checkUnlocked(Semaphore *semaphore)
   if (semaphore->lockedByCount > 0)
   {
     HALT_INTERNAL_ERROR("Thread 0x%lx did not unlock semaphore '%s' which was locked at %s, line %lu!",
-                        semaphore->lockedBy[0].thread,
+                        semaphore->lockedBy[0].threadId,
                         semaphore->name,
                         semaphore->lockedBy[0].fileName,
                         semaphore->lockedBy[0].lineNb
@@ -567,7 +567,7 @@ LOCAL bool lock(const char         *fileName,
           // debug trace code: store lock information
           if (semaphore->lockedByCount < SIZE_OF_ARRAY(semaphore->lockedBy))
           {
-            semaphore->lockedBy[semaphore->lockedByCount].thread   = pthread_self();
+            semaphore->lockedBy[semaphore->lockedByCount].threadId = Thread_getCurrentId();
             semaphore->lockedBy[semaphore->lockedByCount].fileName = fileName;
             semaphore->lockedBy[semaphore->lockedByCount].lineNb   = lineNb;
             semaphore->lockedByCount++;
@@ -667,7 +667,7 @@ LOCAL bool lock(const char         *fileName,
         // debug trace code: store lock information
         if (semaphore->lockedByCount < SIZE_OF_ARRAY(semaphore->lockedBy))
         {
-          semaphore->lockedBy[semaphore->lockedByCount].thread   = pthread_self();
+          semaphore->lockedBy[semaphore->lockedByCount].threadId = Thread_getCurrentId();
           semaphore->lockedBy[semaphore->lockedByCount].fileName = fileName;
           semaphore->lockedBy[semaphore->lockedByCount].lineNb   = lineNb;
           semaphore->lockedByCount++;
@@ -775,7 +775,7 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
           threadSelf = pthread_self();
           z = (int)semaphore->lockedByCount-1;
           while (   (z >= 0)
-                 && (pthread_equal(threadSelf,semaphore->lockedBy[z].thread) == 0)
+                 && (pthread_equal(threadSelf,semaphore->lockedBy[z].threadId) == 0)
                 )
           {
             z--;
@@ -825,7 +825,7 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
         threadSelf = pthread_self();
         z = (int)semaphore->lockedByCount-1;
         while (   (z >=0)
-               && (pthread_equal(threadSelf,semaphore->lockedBy[z].thread) == 0)
+               && (pthread_equal(threadSelf,semaphore->lockedBy[z].threadId) == 0)
               )
         {
           z--;
@@ -1121,7 +1121,7 @@ void Semaphore_done(Semaphore *semaphore)
     {
       fprintf(stderr,
               "DEBUG WARNING: thread 0x%lx did not unlocked semaphore '%s' locked at %s, line %lu!\n",
-              semaphore->lockedBy[z].thread,
+              semaphore->lockedBy[z].threadId,
               semaphore->name,
               semaphore->lockedBy[z].fileName,
               semaphore->lockedBy[z].lineNb
@@ -1319,32 +1319,35 @@ void Semaphore_debugPrintInfo(void)
     fprintf(stderr,"Semaphore debug info:\n");
     LIST_ITERATE(&debugSemaphoreList,semaphore)
     {
-      fprintf(stderr,"  '%s' (%s, %ld):\n",semaphore->name,semaphore->fileName,semaphore->lineNb);
+      fprintf(stderr,"  '%s' at %s, line %lu:",semaphore->name,semaphore->fileName,semaphore->lineNb);
       switch (semaphore->lockType)
       {
         case SEMAPHORE_LOCK_TYPE_NONE:
           assert(semaphore->readLockCount == 0);
           assert(semaphore->readWriteLockCount == 0);
+          fprintf(stderr,"\n");
           break;
         case SEMAPHORE_LOCK_TYPE_READ:
-          fprintf(stderr,"    locked 'read'\n");
+          fprintf(stderr," LOCKED 'read'\n");
           for (z = 0; z < semaphore->lockedByCount; z++)
           {
             fprintf(stderr,
-                    "    by thread 0x%lx at %s, line %lu\n",
-                    semaphore->lockedBy[z].thread,
+                    "    by thread '%s' (0x%lx) at %s, line %lu\n",
+                    Thread_getName(semaphore->lockedBy[z].threadId),
+                    semaphore->lockedBy[z].threadId,
                     semaphore->lockedBy[z].fileName,
                     semaphore->lockedBy[z].lineNb
                    );
           }
           break;
         case SEMAPHORE_LOCK_TYPE_READ_WRITE:
-          fprintf(stderr,"    locked 'read/write'\n");
+          fprintf(stderr," LOCKED 'read/write'\n");
           for (z = 0; z < semaphore->lockedByCount; z++)
           {
             fprintf(stderr,
-                    "    by thread 0x%lx at %s, line %lu\n",
-                    semaphore->lockedBy[z].thread,
+                    "    by thread '%s' (0x%lx) at %s, line %lu\n",
+                    Thread_getName(semaphore->lockedBy[z].threadId),
+                    semaphore->lockedBy[z].threadId,
                     semaphore->lockedBy[z].fileName,
                     semaphore->lockedBy[z].lineNb
                    );
