@@ -503,6 +503,7 @@ LOCAL void debugThreadSignalSegVHandler(int signalNumber, siginfo_t *siginfo, vo
     pthread_mutex_unlock(&debugThreadSignalLock);
   }
 
+  // call previous handler
   if (debugThreadSignalSegVPrevHandler.sa_sigaction != NULL)
   {
     debugThreadSignalSegVPrevHandler.sa_sigaction(signalNumber,siginfo,context);
@@ -526,16 +527,17 @@ LOCAL void debugThreadSignalAbortHandler(int signalNumber, siginfo_t *siginfo, v
   {
     pthread_mutex_lock(&debugThreadSignalLock);
     {
-#ifndef NDEBUG
-      // Note: in debug mode only dump current stack trace
-      debugThreadDumpStackTrace(pthread_self()," *** ABORTED ***");
-#else /* not NDEBUG */
-      debugThreadDumpAllStackTraces(" *** ABORTED ***");
-#endif /* NDEBUG */
+      #ifndef NDEBUG
+        // Note: in debug mode only dump current stack trace
+        debugThreadDumpStackTrace(pthread_self()," *** ABORTED ***");
+      #else /* not NDEBUG */
+        debugThreadDumpAllStackTraces(" *** ABORTED ***");
+      #endif /* NDEBUG */
     }
     pthread_mutex_unlock(&debugThreadSignalLock);
   }
 
+  // call previous handler
   if (debugThreadSignalAbortPrevHandler.sa_sigaction != NULL)
   {
     debugThreadSignalAbortPrevHandler.sa_sigaction(signalNumber,siginfo,context);
@@ -560,10 +562,15 @@ LOCAL void debugThreadSignalQuitHandler(int signalNumber, siginfo_t *siginfo, vo
 
   if (signalNumber == SIGQUIT)
   {
+    // Note: do not lock; signal handler is called for every thread
     debugThreadDumpAllStackTraces(NULL);
   }
 
-  // Note: do not call previouos handler
+  // call previous handler
+  if (debugThreadSignalQuitPrevHandler.sa_sigaction != NULL)
+  {
+    debugThreadSignalQuitPrevHandler.sa_sigaction(signalNumber,siginfo,context);
+  }
 }
 
 /***********************************************************************\
