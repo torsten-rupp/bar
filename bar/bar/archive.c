@@ -10528,8 +10528,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            LogHandle                    *logHandle
                           )
 {
-  #define TRANSACTION_NAME "ARCHIVE_INDEXxxx"
-
   StorageSpecifier  storageSpecifier;
   String            printableStorageName;
   Errors            error;
@@ -10538,11 +10536,15 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
+  String            fileName;
+  String            imageName;
+  String            directoryName;
+  String            linkName;
+  String            destinationName;
 
   assert(indexHandle != NULL);
   assert(storageName != NULL);
 
-#if 1
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
@@ -10649,8 +10651,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-#if 0
-  error = Index_beginTransaction(indexHandle,TRANSACTION_NAME);
+  error = Index_beginTransaction(indexHandle);
   if (error != ERROR_NONE)
   {
     Archive_close(&archiveInfo);
@@ -10666,10 +10667,14 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
-#endif
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
+  fileName        = String_new();
+  imageName       = String_new();
+  directoryName   = String_new();
+  linkName        = String_new();
+  destinationName = String_new();
   while (   !Archive_eof(&archiveInfo,FALSE)
          && (error == ERROR_NONE)
          && !abortedFlag
@@ -10691,7 +10696,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       // wait
       while ((pauseCallback != NULL) && pauseCallback(pauseUserData))
       {
-        Misc_udelay(5000*1000);
+        Misc_udelay(10LL*MISC_US_PER_SECOND);
       }
 
       // reopen storage
@@ -10717,12 +10722,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
             ArchiveEntryInfo archiveEntryInfo;
-            String           fileName;
             FileInfo         fileInfo;
             uint64           fragmentOffset,fragmentSize;
 
             // open archive file
-            fileName = String_new();
             error = Archive_readFileEntry(&archiveEntryInfo,
                                           &archiveInfo,
                                           NULL,  // deltaCompressAlgorithm
@@ -10739,7 +10742,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                                          );
             if (error != ERROR_NONE)
             {
-              String_delete(fileName);
               break;
             }
 
@@ -10760,7 +10762,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             if (error != ERROR_NONE)
             {
               (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
               break;
             }
 
@@ -10771,19 +10772,16 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
             // close archive file, free resources
             (void)Archive_closeEntry(&archiveEntryInfo);
-            String_delete(fileName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            String           imageName;
             ArchiveEntryInfo archiveEntryInfo;
             DeviceInfo       deviceInfo;
             FileSystemTypes  fileSystemType;
             uint64           blockOffset,blockCount;
 
             // open archive file
-            imageName = String_new();
             error = Archive_readImageEntry(&archiveEntryInfo,
                                            &archiveInfo,
                                            NULL,  // deltaCompressAlgorithm
@@ -10800,7 +10798,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                                           );
             if (error != ERROR_NONE)
             {
-              String_delete(imageName);
               break;
             }
 
@@ -10817,23 +10814,19 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             if (error != ERROR_NONE)
             {
               (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(imageName);
               break;
             }
             pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(imageName),deviceInfo.size,String_cString(printableStorageName));
 
             // close archive file, free resources
             (void)Archive_closeEntry(&archiveEntryInfo);
-            String_delete(imageName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            String   directoryName;
             FileInfo fileInfo;
 
             // open archive directory
-            directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                                &archiveInfo,
                                                NULL,  // cryptAlgorithm
@@ -10844,7 +10837,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                                               );
             if (error != ERROR_NONE)
             {
-              String_delete(directoryName);
               break;
             }
 
@@ -10862,7 +10854,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             if (error != ERROR_NONE)
             {
               (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(directoryName);
               break;
             }
 
@@ -10873,18 +10864,13 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
             // close archive file, free resources
             (void)Archive_closeEntry(&archiveEntryInfo);
-            String_delete(directoryName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            String   linkName;
-            String   destinationName;
             FileInfo fileInfo;
 
             // open archive link
-            linkName        = String_new();
-            destinationName = String_new();
             error = Archive_readLinkEntry(&archiveEntryInfo,
                                           &archiveInfo,
                                           NULL,  // cryptAlgorithm
@@ -10896,8 +10882,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                                          );
             if (error != ERROR_NONE)
             {
-              String_delete(destinationName);
-              String_delete(linkName);
               break;
             }
 
@@ -10916,8 +10900,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             if (error != ERROR_NONE)
             {
               (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(destinationName);
-              String_delete(linkName);
               break;
             }
 
@@ -10928,18 +10910,16 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
             // close archive file, free resources
             (void)Archive_closeEntry(&archiveEntryInfo);
-            String_delete(destinationName);
-            String_delete(linkName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
             StringList       fileNameList;
+            String           fileName;
             ArchiveEntryInfo archiveEntryInfo;
             FileInfo         fileInfo;
             uint64           fragmentOffset,fragmentSize;
             const StringNode *stringNode;
-            String           fileName;
 
             // open archive file
             StringList_init(&fileNameList);
@@ -11003,11 +10983,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            String   fileName;
             FileInfo fileInfo;
 
             // open archive link
-            fileName = String_new();
             error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveInfo,
                                              NULL,  // cryptAlgorithm
@@ -11018,7 +10996,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                                             );
             if (error != ERROR_NONE)
             {
-              String_delete(fileName);
               break;
             }
 
@@ -11039,7 +11016,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             if (error != ERROR_NONE)
             {
               (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
               break;
             }
 
@@ -11050,7 +11026,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
             // close archive file, free resources
             (void)Archive_closeEntry(&archiveEntryInfo);
-            String_delete(fileName);
           }
           break;
         default:
@@ -11060,29 +11035,33 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
           break; /* not reached */
       }
 
+#if 0
       // update temporary entries, size (ignore error)
       Index_storageUpdate(indexHandle,
                           storageId,
                           NULL,  // storageName
                           Archive_getSize(&archiveInfo)
                          );
+#endif
     }
 
     // check if aborted, check if server allocation pending
     abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
   }
-#if 0
+  String_delete(destinationName);
+  String_delete(linkName);
+  String_delete(directoryName);
+  String_delete(imageName);
+  String_delete(fileName);
   if (error == ERROR_NONE)
   {
-    error = Index_endTransaction(indexHandle,TRANSACTION_NAME);
+    error = Index_endTransaction(indexHandle);
   }
   else
   {
-//TODO
-    (void)Index_rollbackTransaction(indexHandle,TRANSACTION_NAME);
+    (void)Index_rollbackTransaction(indexHandle);
   }
-#endif
   if      (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
@@ -11162,11 +11141,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   // free resources
   String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,Misc_getTimestamp());
 
   return error;
-#endif
-
-  #undef TRANSACTION_NAME
 }
 
 Errors Archive_remIndex(IndexHandle *indexHandle,
