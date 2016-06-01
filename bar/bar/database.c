@@ -108,7 +108,7 @@ typedef union
     { \
       assert(databaseHandle != NULL); \
       \
-      sqlite3_mutex_enter(databaseHandle->lock); \
+      Semaphore_lock(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
       if (format != NULL) \
       { \
         stringFormat(databaseHandle->locked.text,sizeof(databaseHandle->locked.text),format, ## __VA_ARGS__); \
@@ -125,6 +125,7 @@ typedef union
       } \
     } \
     while (0)
+
   #define DATABASE_UNLOCK(databaseHandle) \
     do \
     { \
@@ -157,7 +158,7 @@ typedef union
             ); \
       } \
       databaseHandle->locked.lineNb = 0; \
-      sqlite3_mutex_leave(databaseHandle->lock); \
+      Semaphore_unlock(&databaseHandle->lock); \
     } \
     while (0)
 #else /* NDEBUG */
@@ -166,7 +167,7 @@ typedef union
     { \
       assert(databaseHandle != NULL); \
       \
-      sqlite3_mutex_enter(databaseHandle->lock); \
+      Semaphore_lock(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
     } \
     while (0)
 
@@ -175,7 +176,7 @@ typedef union
     { \
       assert(databaseHandle != NULL); \
       \
-      sqlite3_mutex_leave(databaseHandle->lock); \
+      Semaphore_unlock(&databaseHandle->lock); \
     } \
     while (0)
 #endif /* not NDEBUG */
@@ -1360,7 +1361,10 @@ void Database_doneAll(void)
   assert(databaseHandle != NULL);
 
   // init variables
+#if 0
   databaseHandle->lock    = NULL;
+#else
+#endif
   databaseHandle->handle  = NULL;
   databaseHandle->timeout = timeout;
   sem_init(&databaseHandle->wakeUp,0,0);
@@ -1375,12 +1379,10 @@ void Database_doneAll(void)
   #endif /* not NDEBUG */
 
   // create lock
-  databaseHandle->lock = sqlite3_mutex_alloc(SQLITE_MUTEX_RECURSIVE);
-  if (databaseHandle->lock == NULL)
+  if (!Semaphore_init(&databaseHandle->lock))
   {
     return ERRORX_(DATABASE,0,"create lock fail");
   }
-
   // create directory if needed
   if (fileName != NULL)
   {
@@ -1397,7 +1399,7 @@ void Database_doneAll(void)
       if (error != ERROR_NONE)
       {
         File_deleteFileName(directory);
-        sqlite3_mutex_free(databaseHandle->lock);
+        Semaphore_done(&databaseHandle->lock);
         sem_destroy(&databaseHandle->wakeUp);
         return error;
       }
@@ -1422,7 +1424,7 @@ void Database_doneAll(void)
   if (sqliteResult != SQLITE_OK)
   {
     error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
-    sqlite3_mutex_free(databaseHandle->lock);
+    Semaphore_done(&databaseHandle->lock);
     sem_destroy(&databaseHandle->wakeUp);
     return error;
   }
@@ -1516,7 +1518,7 @@ void Database_doneAll(void)
   sqlite3_close(databaseHandle->handle);
 
   // free resources
-  sqlite3_mutex_free(databaseHandle->lock);
+  Semaphore_done(&databaseHandle->lock);
   sem_destroy(&databaseHandle->wakeUp);
 }
 
@@ -1531,7 +1533,11 @@ void Database_doneAll(void)
 {
   assert(databaseHandle != NULL);
 
-  sqlite3_mutex_enter(databaseHandle->lock);
+  #ifdef NDEBUG
+    Semaphore_lock(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+  #else
+    __Semaphore_lock(__fileName__,__lineNb__,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+  #endif
   #ifndef NDEBUG
     databaseHandle->locked.fileName = __fileName__;
     databaseHandle->locked.lineNb   = __lineNb__;
@@ -1539,7 +1545,15 @@ void Database_doneAll(void)
     databaseHandle->locked.t0       = Misc_getTimestamp();
   #endif /* not NDEBUG */
 }
-void Database_unlock(DatabaseHandle *databaseHandle)
+
+#ifdef NDEBUG
+  void Database_unlock(DatabaseHandle *databaseHandle)
+#else /* not NDEBUG */
+  void __Database_unlock(const char   *__fileName__,
+                         uint         __lineNb__,
+                         DatabaseHandle *databaseHandle
+                        )
+#endif /* NDEBUG */
 {
   assert(databaseHandle != NULL);
 
@@ -1548,7 +1562,11 @@ void Database_unlock(DatabaseHandle *databaseHandle)
     databaseHandle->locked.lineNb   = 0; \
     databaseHandle->locked.fileName = NULL;
   #endif /* not NDEBUG */
-  sqlite3_mutex_leave(databaseHandle->lock); \
+  #ifdef NDEBUG
+    Semaphore_unlock(&databaseHandle->lock);
+  #else
+    __Semaphore_unlock(__fileName__,__lineNb__,&databaseHandle->lock);
+  #endif
 }
 
 Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,

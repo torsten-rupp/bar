@@ -22,6 +22,7 @@
 #include "global.h"
 #include "strings.h"
 #include "threads.h"
+#include "semaphores.h"
 #include "errors.h"
 
 #include "sqlite3.h"
@@ -72,7 +73,7 @@ typedef enum
 // database handle
 typedef struct
 {
-  sqlite3_mutex *lock;
+  Semaphore     lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3       *handle;                    // SQlite3 handle
   long          timeout;                    // timeout [ms]
   sem_t         wakeUp;                     // unlock wake-up
@@ -170,6 +171,7 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
   #define Database_open(...)             __Database_open(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_close(...)            __Database_close(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_lock(...)             __Database_lock(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Database_unlock(...)           __Database_unlock(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_beginTransaction(...) __Database_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_prepare(...)          __Database_prepare(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_finalize(...)         __Database_finalize(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -278,7 +280,14 @@ void Database_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-void Database_unlock(DatabaseHandle *databaseHandle);
+#ifdef NDEBUG
+  void Database_unlock(DatabaseHandle *databaseHandle);
+#else /* not NDEBUG */
+  void __Database_unlock(const char   *__fileName__,
+                         uint         __lineNb__,
+                         DatabaseHandle *databaseHandle
+                        );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_setEnabledSync
