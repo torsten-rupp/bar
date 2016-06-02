@@ -1463,7 +1463,6 @@ public class BARControl
     for (Settings.Server server : Settings.servers)
     {
       serverDataList.add(server.getData());
-Dprintf.dprintf("serverData=%s",server.getData());
     }
     String serverData[] = serverDataList.toArray(new String[serverDataList.size()]);
     Arrays.sort(serverData);

@@ -327,12 +327,23 @@ public class Settings
       return new Server(name,port,password);
     }
 
+    /** get hashcode
+     * @return always 0
+     */
+    @Override
+    public int hashCode()
+    {
+      return 0;
+    }
+
     /** check if equals
-     * @param server server
+     * @param object server object
      * @return true iff equals
      */
-    public boolean equals(Server server)
+    @Override
+    public boolean equals(Object object)
     {
+      Server server = (Server)object;
       return this.name.equals(server.name) && (this.port == server.port);
     }
 
