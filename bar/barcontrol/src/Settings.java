@@ -439,6 +439,7 @@ public class Settings
    */
   public enum ArchiveTypes
   {
+    NONE,
     NORMAL,
     FULL,
     INCREMENTAL,
@@ -452,6 +453,7 @@ public class Settings
     {
       switch (this)
       {
+        case NONE:         return null;
         case NORMAL:       return "normal";
         case FULL:         return "full";
         case INCREMENTAL:  return "incremental";
