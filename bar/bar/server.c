@@ -13409,6 +13409,9 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
   }
 
   error = Index_getStoragesInfo(indexHandle,
+                                INDEX_ID_ANY,  // uuidId
+                                INDEX_ID_ANY,  // entityId,
+                                NULL,  // jobUUID
                                 Array_cArray(&clientInfo->indexIdArray),
                                 Array_length(&clientInfo->indexIdArray),
                                 INDEX_STATE_SET_ALL,
@@ -14597,7 +14600,8 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            storageName=<text>
+*            entityId=<id>|0|*
+*            name=<text>
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
 *          Result:
@@ -14608,7 +14612,9 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String        storageName;
+  uint64        n;
+  IndexId       entityId;
+  String        name;
   bool          indexStateAny;
   IndexStateSet indexStateSet;
   bool          indexModeAny;
@@ -14622,12 +14628,29 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
 
   UNUSED_VARIABLE(argumentMap);
 
-  // get filter pattern, index state set
-  storageName = String_new();
-  if (!StringMap_getString(argumentMap,"name",storageName,NULL))
+  // get entryId, name, index state set, index mode set
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
+  {
+    entityId = INDEX_ID_ANY;
+  }
+  else if (stringEquals(StringMap_getTextCString(argumentMap,"entityId","NONE"),"NONE"))
+  {
+    entityId = INDEX_ID_ENTITY_NONE;
+  }
+  else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_ANY))
+  {
+    entityId = (IndexId)n;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
-    String_delete(storageName);
+    String_delete(name);
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
@@ -14641,7 +14664,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   else
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    String_delete(storageName);
+    String_delete(name);
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
@@ -14655,7 +14678,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   else
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
-    String_delete(storageName);
+    String_delete(name);
     return;
   }
 
@@ -14663,16 +14686,20 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   if (indexHandle == NULL)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(name);
     return;
   }
 
   // get index info
   error = Index_getStoragesInfo(indexHandle,
+                                INDEX_ID_ANY,  // uuidId
+                                entityId,
+                                NULL,  // jobUUID
                                 NULL,  // indexIds,
                                 0,  // indexIdCount,
                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                 indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
-                                storageName,
+                                name,
                                 &storageCount,
                                 &totalEntryCount,
                                 &totalEntrySize
@@ -14680,7 +14707,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
-    String_delete(storageName);
+    String_delete(name);
     return;
   }
 
@@ -14688,7 +14715,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu",storageCount,totalEntryCount,totalEntrySize);
 
   // free resources
-  String_delete(storageName);
+  String_delete(name);
 }
 
 /***********************************************************************\

@@ -937,6 +937,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 * Purpose: get storages info
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
+*          entityId         - index id of entity entry id or INDEX_ID_ANY
+*          jobUUID          - unique job id or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
@@ -950,6 +953,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
+                             IndexId       uuidId,
+                             IndexId       entityId,
+                             ConstString   jobUUID,
                              const IndexId indexIds[],
                              uint          indexIdCount,
                              IndexStateSet indexStateSet,

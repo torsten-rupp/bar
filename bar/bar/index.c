@@ -6968,6 +6968,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 }
 
 Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
+                             IndexId       uuidId,
+                             IndexId       entityId,
+                             ConstString   jobUUID,
                              const IndexId indexIds[],
                              uint          indexIdCount,
                              IndexStateSet indexStateSet,
@@ -6980,9 +6983,10 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 {
   String              ftsName;
   String              regexpName;
+  String              filterString;
   String              uuidIdsString,entityIdsString,storageIdsString;
   uint                i;
-  String              filter,filterIds;
+  String              filterIdsString;
   String              indexStateSetString;
   String              indexModeSetString;
   DatabaseQueryHandle databaseQueryHandle;
@@ -6990,6 +6994,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   double              totalEntryCount_,totalEntrySize_;
 
   assert(indexHandle != NULL);
+  assert((uuidId == INDEX_ID_ANY) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
+  assert((entityId == INDEX_ID_ANY) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
   assert((indexIdCount == 0) || (indexIds != NULL));
 
   // init variables
@@ -7006,6 +7012,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
+  filterString = String_newCString("1");
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -7037,21 +7044,23 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
     }
   }
 
-  filter              = String_newCString("1");
-  filterIds           = String_new();
+  filterIdsString     = String_new();
   indexStateSetString = String_new();
   indexModeSetString  = String_new();
-  filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-  filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
-  filterAppend(filter,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
+  filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
+  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","entity.uuidId=%lld",Index_getDatabaseId(uuidId));
+  filterAppend(filterString,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
+  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 //  filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
-  filterAppend(filter,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
-  filterAppend(filter,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
+  filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
+  filterAppend(filterString,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
   String_delete(indexModeSetString);
   String_delete(indexStateSetString);
-  String_delete(filterIds);
+  String_delete(filterIdsString);
 
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
@@ -7068,7 +7077,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               WHERE %S \
                              ",
-                             filter
+                             filterString
                             );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
     if (error != ERROR_NONE)
@@ -7094,20 +7103,20 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   });
   if (error != ERROR_NONE)
   {
-    String_delete(filter);
     String_delete(storageIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
+    String_delete(filterString);
     String_delete(regexpName);
     String_delete(ftsName);
     return error;
   }
 
   // free resources
-  String_delete(filter);
   String_delete(storageIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
+  String_delete(filterString);
   String_delete(regexpName);
   String_delete(ftsName);
 
@@ -7131,11 +7140,12 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
 {
   String ftsName;
   String regexpName;
-  String uuidIdsString,entityIdsString,storageIdsString;
-  Errors error;
-  String filterString,orderString;
+  String filterString;
+  String orderString;
   String string;
+  String uuidIdsString,entityIdsString,storageIdsString;
   String filterIdsString;
+  Errors error;
   uint   i;
 
   assert(indexQueryHandle != NULL);
