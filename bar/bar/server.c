@@ -14840,7 +14840,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  0,  // indexIdCount
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
-                                 storageName,
+                                 name,
                                  DATABASE_ORDERING_NONE,
                                  offset,
                                  limit
