@@ -1653,14 +1653,14 @@ Dprintf.dprintf("cirrect?");
   {
     private final int PAGE_SIZE = 32;
 
-    private Object           trigger              = new Object();   // trigger update object
-    private boolean          updateStorageCount   = false;
-    private HashSet<Integer> updateOffsets        = new HashSet<Integer>();
-    private int              storageCount         = 0;
-    private String           storageName          = "";
-    private IndexStateSet    storageIndexStateSet = INDEX_STATE_SET_ALL;
-    private EntityStates     storageEntityState   = EntityStates.ANY;
-    private boolean          setUpdateIndicator   = false;          // true to set color/cursor at update
+    private Object           trigger                   = new Object();   // trigger update object
+    private boolean          requestUpdateStorageCount = false;
+    private HashSet<Integer> requestUpdateOffsets      = new HashSet<Integer>();
+    private int              storageCount              = 0;
+    private String           storageName               = "";
+    private IndexStateSet    storageIndexStateSet      = INDEX_STATE_SET_ALL;
+    private EntityStates     storageEntityState        = EntityStates.ANY;
+    private boolean          requestSetUpdateIndicator = false;          // true to set color/cursor at update
 
     /** create update storage list thread
      */
@@ -1705,27 +1705,30 @@ Dprintf.dprintf("cirrect?");
             // update tree/table
             try
             {
-              if (updateStorageCount)
+              // update count
+              if (!this.requestUpdateStorageCount && updateStorageCount)
               {
                 updateStorageTableCount();
               }
 
+              // update tree
               HashSet<TreeItem> uuidTreeItems = new HashSet<TreeItem>();
-              if (!this.updateStorageCount)
+              if (!this.requestUpdateStorageCount)
               {
                 updateUUIDTreeItems(uuidTreeItems);
               }
               HashSet<TreeItem> entityTreeItems = new HashSet<TreeItem>();
-              if (!this.updateStorageCount)
+              if (!this.requestUpdateStorageCount)
               {
                 updateEntityTreeItems(uuidTreeItems,entityTreeItems);
               }
-              if (!this.updateStorageCount)
+              if (!this.requestUpdateStorageCount)
               {
                 updateStorageTreeItems(entityTreeItems);
               }
 
-              if (!updateOffsets.isEmpty())
+              // update table
+              if (!this.requestUpdateStorageCount && !updateOffsets.isEmpty())
               {
                 updateStorageTable(updateOffsets);
               }
@@ -1773,19 +1776,19 @@ Dprintf.dprintf("cirrect?");
           // wait for trigger or sleep a short time
           synchronized(trigger)
           {
-            if (!this.updateStorageCount && this.updateOffsets.isEmpty())
+            if (!this.requestUpdateStorageCount && this.requestUpdateOffsets.isEmpty())
             {
               // wait for refresh request trigger or timeout
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // get update count, offsets to update
-            updateStorageCount = this.updateStorageCount;
-            updateOffsets.addAll(this.updateOffsets);
-            setUpdateIndicator = this.setUpdateIndicator;
+            updateStorageCount = this.requestUpdateStorageCount;
+            updateOffsets.addAll(this.requestUpdateOffsets);
+            setUpdateIndicator = this.requestSetUpdateIndicator;
 
             // if not triggered (timeout occurred) update count is done invisible (color is not set)
-            if (!this.updateStorageCount && this.updateOffsets.isEmpty())
+            if (!this.requestUpdateStorageCount && this.requestUpdateOffsets.isEmpty())
             {
               updateStorageCount = true;
               setUpdateIndicator = false;
@@ -1794,14 +1797,14 @@ Dprintf.dprintf("cirrect?");
             // wait for immediate further triggers
             do
             {
-              this.updateStorageCount = false;
-              this.updateOffsets.clear();
-              this.setUpdateIndicator = false;
+              this.requestUpdateStorageCount = false;
+              this.requestUpdateOffsets.clear();
+              this.requestSetUpdateIndicator = false;
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
-              updateOffsets.addAll(this.updateOffsets);
+              updateOffsets.addAll(this.requestUpdateOffsets);
             }
-            while (this.updateStorageCount || !this.updateOffsets.isEmpty());
+            while (this.requestUpdateStorageCount || !this.requestUpdateOffsets.isEmpty());
           }
         }
       }
@@ -1856,11 +1859,11 @@ Dprintf.dprintf("cirrect?");
             || (this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState)
            )
         {
-          this.storageName          = storageName;
-          this.storageIndexStateSet = storageIndexStateSet;
-          this.storageEntityState   = storageEntityState;
-          this.setUpdateIndicator   = true;
-          this.updateStorageCount   = true;
+          this.storageName               = storageName;
+          this.storageIndexStateSet      = storageIndexStateSet;
+          this.storageEntityState        = storageEntityState;
+          this.requestUpdateStorageCount = true;
+          this.requestSetUpdateIndicator = true;
           trigger.notify();
         }
       }
@@ -1882,9 +1885,9 @@ Dprintf.dprintf("cirrect?");
             || (((storageName.length() == 0) || (storageName.length() >= 3)) && !this.storageName.equals(storageName))
            )
         {
-          this.storageName        = storageName;
-          this.setUpdateIndicator = true;
-          this.updateStorageCount = true;
+          this.storageName               = storageName;
+          this.requestUpdateStorageCount = true;
+          this.requestSetUpdateIndicator = true;
           trigger.notify();
         }
       }
@@ -1900,10 +1903,10 @@ Dprintf.dprintf("cirrect?");
       {
         if ((this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState))
         {
-          this.storageIndexStateSet = storageIndexStateSet;
-          this.storageEntityState   = storageEntityState;
-          this.setUpdateIndicator   = true;
-          this.updateStorageCount   = true;
+          this.storageIndexStateSet      = storageIndexStateSet;
+          this.storageEntityState        = storageEntityState;
+          this.requestUpdateStorageCount = true;
+          this.requestSetUpdateIndicator = true;
           trigger.notify();
         }
       }
@@ -1917,9 +1920,9 @@ Dprintf.dprintf("cirrect?");
       synchronized(trigger)
       {
         int offset = (index/PAGE_SIZE)*PAGE_SIZE;
-        if (!updateOffsets.contains(offset))
+        if (!this.requestUpdateOffsets.contains(offset))
         {
-          updateOffsets.add(offset);
+          this.requestUpdateOffsets.add(offset);
           trigger.notify();
         }
       }
@@ -1931,8 +1934,8 @@ Dprintf.dprintf("cirrect?");
     {
       synchronized(trigger)
       {
-        this.setUpdateIndicator = true;
-        this.updateStorageCount = true;
+        this.requestUpdateStorageCount = true;
+        this.requestSetUpdateIndicator = true;
         trigger.notify();
       }
     }
@@ -1942,7 +1945,7 @@ Dprintf.dprintf("cirrect?");
      */
     private boolean isUpdateTriggered()
     {
-      return updateStorageCount || !updateOffsets.isEmpty();
+      return requestUpdateStorageCount || !requestUpdateOffsets.isEmpty();
     }
 
     /** update UUID tree items
@@ -2174,8 +2177,7 @@ Dprintf.dprintf("cirrect?");
                                                    uuidIndexData[0].id,
                                                    storageName
                                                   ),
-//TODO
-0,//                               1,  // debug level
+                               1,  // debug level
                                new CommandResultHandler()
                                {
                                  public int handleResult(int i, ValueMap valueMap)
@@ -2550,12 +2552,12 @@ Dprintf.dprintf("cirrect?");
       // get storages info
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO name=%'S indexStateSet=%s indexModeSet=%s ",
-                                                       storageName,
+      if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO entityId=%s indexStateSet=%s indexModeSet=* name=%'S",
+                                                       (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                        storageIndexStateSet.nameList("|"),
-                                                       "*"
+                                                       storageName
                                                       ),
-                                   0,  // debugLevel
+                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -3387,14 +3389,14 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
   {
     private final int PAGE_SIZE = 32;
 
-    private Object           trigger               = new Object();   // trigger update object
-    private boolean          updateTotalEntryCount = false;
-    private HashSet<Integer> updateOffsets         = new HashSet<Integer>();
-    private long             totalEntryCount       = 0;
-    private EntryTypes       entryType             = EntryTypes.ANY;
-    private String           entryName             = "";
-    private boolean          newestOnly            = false;
-    private boolean          setUpdateIndicator    = false;          // true to set color/cursor at update
+    private Object           trigger                      = new Object();   // trigger update object
+    private boolean          requestUpdateTotalEntryCount = false;
+    private HashSet<Integer> requestUpdateOffsets         = new HashSet<Integer>();
+    private long             totalEntryCount              = 0;
+    private EntryTypes       entryType                    = EntryTypes.ANY;
+    private String           entryName                    = "";
+    private boolean          newestOnly                   = false;
+    private boolean          requestSetUpdateIndicator    = false;          // true to set color/cursor at update
 
     /** create update entry list thread
      */
@@ -3435,11 +3437,11 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
           }
           try
           {
-            if (updateTotalEntryCount)
+            if (!this.requestUpdateTotalEntryCount && updateTotalEntryCount)
             {
               updateEntryTableTotalEntryCount();
             }
-            if (!updateOffsets.isEmpty())
+            if (!this.requestUpdateTotalEntryCount && !updateOffsets.isEmpty())
             {
               updateEntryTable(updateOffsets);
             }
@@ -3472,18 +3474,18 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
           synchronized(trigger)
           {
             // wait for refresh request trigger or timeout
-            if (!this.updateTotalEntryCount && this.updateOffsets.isEmpty())
+            if (!this.requestUpdateTotalEntryCount && this.requestUpdateOffsets.isEmpty())
             {
               try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // check if update count, offsets to update
-            updateTotalEntryCount = this.updateTotalEntryCount;
-            updateOffsets.addAll(this.updateOffsets);
-            setUpdateIndicator = this.setUpdateIndicator;
+            updateTotalEntryCount = this.requestUpdateTotalEntryCount;
+            updateOffsets.addAll(this.requestUpdateOffsets);
+            setUpdateIndicator = this.requestSetUpdateIndicator;
 
             // if not triggered (timeout occurred) update count is done invisible (color is not set)
-            if (!this.updateTotalEntryCount && this.updateOffsets.isEmpty())
+            if (!this.requestUpdateTotalEntryCount && this.requestUpdateOffsets.isEmpty())
             {
               updateTotalEntryCount = true;
               setUpdateIndicator    = false;
@@ -3492,14 +3494,14 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
             // wait for immediate further triggers
             do
             {
-              this.updateTotalEntryCount = false;
-              this.updateOffsets.clear();
-              this.setUpdateIndicator    = false;
+              this.requestUpdateTotalEntryCount = false;
+              this.requestUpdateOffsets.clear();
+              this.requestSetUpdateIndicator    = false;
 
               try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
-              updateOffsets.addAll(this.updateOffsets);
+              updateOffsets.addAll(this.requestUpdateOffsets);
             }
-            while (this.updateTotalEntryCount || !this.updateOffsets.isEmpty());
+            while (this.requestUpdateTotalEntryCount || !this.requestUpdateOffsets.isEmpty());
           }
         }
       }
@@ -3561,11 +3563,11 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
             || (this.newestOnly != newestOnly)
            )
         {
-          this.entryName             = entryName;
-          this.entryType             = entryType;
-          this.newestOnly            = newestOnly;
-          this.setUpdateIndicator    = true;
-          this.updateTotalEntryCount = true;
+          this.entryName                    = entryName;
+          this.entryType                    = entryType;
+          this.newestOnly                   = newestOnly;
+          this.requestUpdateTotalEntryCount = true;
+          this.requestSetUpdateIndicator    = true;
           trigger.notify();
         }
       }
@@ -3587,9 +3589,9 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
             || (((entryName.length() == 0) || (entryName.length() >= 3)) && !this.entryName.equals(entryName))
            )
         {
-          this.entryName             = entryName;
-          this.setUpdateIndicator    = true;
-          this.updateTotalEntryCount = true;
+          this.entryName                    = entryName;
+          this.requestUpdateTotalEntryCount = true;
+          this.requestSetUpdateIndicator    = true;
           trigger.notify();
         }
       }
@@ -3604,9 +3606,9 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       {
         if (entryType != this.entryType)
         {
-          this.entryType             = entryType;
-          this.setUpdateIndicator    = true;
-          this.updateTotalEntryCount = true;
+          this.entryType                    = entryType;
+          this.requestUpdateTotalEntryCount = true;
+          this.requestSetUpdateIndicator    = true;
           trigger.notify();
         }
       }
@@ -3622,9 +3624,9 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       {
         if (this.newestOnly != newestOnly)
         {
-          this.newestOnly            = newestOnly;
-          this.setUpdateIndicator    = true;
-          this.updateTotalEntryCount = true;
+          this.newestOnly                   = newestOnly;
+          this.requestUpdateTotalEntryCount = true;
+          this.requestSetUpdateIndicator    = true;
           trigger.notify();
         }
       }
@@ -3638,9 +3640,9 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       synchronized(trigger)
       {
         int offset = (index/PAGE_SIZE)*PAGE_SIZE;
-        if (!updateOffsets.contains(offset))
+        if (!this.requestUpdateOffsets.contains(offset))
         {
-          updateOffsets.add(offset);
+          this.requestUpdateOffsets.add(offset);
           trigger.notify();
         }
       }
@@ -3652,7 +3654,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
     {
       synchronized(trigger)
       {
-        updateTotalEntryCount = true;
+        this.requestUpdateTotalEntryCount = true;
         trigger.notify();
       }
     }
@@ -3662,7 +3664,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
      */
     private boolean isUpdateTriggered()
     {
-      return updateTotalEntryCount || !updateOffsets.isEmpty();
+      return requestUpdateTotalEntryCount || !requestUpdateOffsets.isEmpty();
     }
 
     /** refresh entry table display total count
@@ -3691,7 +3693,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
                                                        entryType.toString(),
                                                        newestOnly
                                                       ),
-0,//                                   1,  // debugLevel
+                                   1,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -5707,6 +5709,7 @@ Dprintf.dprintf("");
           @Override
           public void focusLost(FocusEvent focusEvent)
           {
+Dprintf.dprintf("");
 //            Text widget = (Text)focusEvent.widget;
 //            updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
           }
@@ -8114,7 +8117,7 @@ Dprintf.dprintf("");
 
               // get total number entries, size
               if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                           0,  // debugLevel
+                                           1,  // debugLevel
                                            errorMessage,
                                            valueMap
                                           ) == Errors.NONE
@@ -8186,7 +8189,7 @@ Dprintf.dprintf("");
 
               // get total number entries, size
               if (BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
-                                           0,  // debugLevel
+                                           1,  // debugLevel
                                            errorMessage,
                                            valueMap
                                           ) == Errors.NONE
