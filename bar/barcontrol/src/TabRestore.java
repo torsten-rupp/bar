@@ -6526,15 +6526,22 @@ Dprintf.dprintf("remove");
   {
     if (!indexDataHashSet.isEmpty())
     {
+      long dateTime = 0;
+      if (archiveType != Settings.ArchiveTypes.NONE)
+      {
+        dateTime = Dialogs.date(shell,"New entity date",(String)null,"New");
+      }
+
       try
       {
         int      error        = Errors.UNKNOWN;
         String[] errorMessage = new String[1];
         ValueMap valueMap     = new ValueMap();
 
-        error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S archiveType=%s",
+        error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S archiveType=%s createdDateTime=%ld",
                                                              toUUIDIndexData.jobUUID,
-                                                             archiveType.toString()
+                                                             archiveType.toString(),
+                                                             dateTime
                                                             ),
                                          0,  // debugLevel
                                          errorMessage,
