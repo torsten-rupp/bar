@@ -653,6 +653,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           packages/curl-*.tar.bz2 \
           packages/gmp-*.tar.bz2 \
           packages/gnutls-*.tar.xz \
+          packages/icu*.tgz \
           packages/libcdio-*.tar.gz \
           packages/libgcrypt-*.tar.bz2 \
           packages/libgpg-error-*.tar.bz2 \
@@ -684,8 +685,8 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
             packages/epm-*-source.tar.bz2 \
             tmp/$(DISTRIBUTION_NAME).orig/packages; \
         fi
-	# download not existing packages and extract archives
-	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig
+	# download not existing packages
+	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig -n
 	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
 	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
 
