@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -60,6 +61,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.DateTime;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -5345,6 +5347,428 @@ class Dialogs
   public static void closeSimpleProgress(SimpleProgressDialog simpleProgressDialog)
   {
     simpleProgressDialog.close();
+  }
+
+  /** simple date/time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @param style widget style (SWT.CALENDAR, SWT.TIME)
+   * @return string or null on cancel
+   */
+  public static long dateTime(Shell  parentShell,
+                              String title,
+                              String text,
+                              long   value,
+                              String okText,
+                              String cancelText,
+                              String toolTipText,
+                              int    style
+                             )
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    if (!parentShell.isDisposed())
+    {
+      final String[] result = new String[1];
+
+      final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      // string
+      final DateTime widgetDate;
+      final DateTime widgetTime;
+      final Button   widgetOkButton;
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      {
+        int row    = 0;
+        int column = 0;
+        if (text != null)
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setText(text);
+          label.setLayoutData(new TableLayoutData(0,column,TableLayoutData.NW));
+          column++;
+        }
+        if ((style & SWT.CALENDAR) != 0)
+        {
+          widgetDate = new DateTime(composite,SWT.CALENDAR);
+          if (value != 0)
+          {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(value*1000);
+            widgetDate.setDate(calendar.get(Calendar.YEAR),calendar.get(Calendar.MONTH),calendar.get(Calendar.DAY_OF_MONTH));
+          }
+          widgetDate.setLayoutData(new TableLayoutData(row,column,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+          if (toolTipText != null) widgetDate.setToolTipText(toolTipText);
+          row++;
+        }
+        else
+        {
+          widgetDate = null;
+        }
+        if ((style & SWT.TIME) != 0)
+        {
+          widgetTime = new DateTime(composite,SWT.TIME);
+          if (value != 0)
+          {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(value*1000);
+            widgetTime.setTime(calendar.get(Calendar.HOUR_OF_DAY),calendar.get(Calendar.MONTH),calendar.get(Calendar.SECOND));
+          }
+          widgetTime.setLayoutData(new TableLayoutData(row,column,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+          if (toolTipText != null) widgetTime.setToolTipText(toolTipText);
+          row++;
+        }
+        else
+        {
+          widgetTime = null;
+        }
+        column++;
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetOkButton = new Button(composite,SWT.CENTER);
+        widgetOkButton.setText(okText);
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Calendar calendar = Calendar.getInstance();
+            if (widgetDate != null)
+            {
+              calendar.set(Calendar.YEAR,widgetDate.getYear());
+              calendar.set(Calendar.MONTH,widgetDate.getMonth());
+              calendar.set(Calendar.DAY_OF_MONTH,widgetDate.getDay());
+            }
+            else
+            {
+              calendar.set(Calendar.YEAR,0);
+              calendar.set(Calendar.MONTH,0);
+              calendar.set(Calendar.DAY_OF_MONTH,1);
+            }
+            if (widgetTime != null)
+            {
+              calendar.set(Calendar.HOUR_OF_DAY,widgetDate.getHours());
+              calendar.set(Calendar.MINUTE,widgetDate.getMinutes());
+              calendar.set(Calendar.SECOND,widgetDate.getSeconds());
+            }
+            else
+            {
+              calendar.set(Calendar.HOUR,0);
+              calendar.set(Calendar.MINUTE,0);
+              calendar.set(Calendar.SECOND,0);
+            }
+            close(dialog,calendar.getTimeInMillis()/1000);
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,null);
+          }
+        });
+      }
+
+      // install handlers
+      widgetDate.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          widgetOkButton.setFocus();
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetDate.setFocus();
+      return (Long)run(dialog,null);
+    }
+    else
+    {
+      return 0;
+    }
+  }
+
+  /** simple date/time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param style widget style (SWT.CALENDAR, SWT.TIME)
+   * @return string or null on cancel
+   */
+  public static long dateTime(Shell  parentShell,
+                              String title,
+                              String text,
+                              long   value,
+                              String okText,
+                              String cancelText,
+                              int    style
+                             )
+  {
+    return dateTime(parentShell,title,text,value,okText,cancelText,(String)null,style);
+  }
+
+  /** simple date/time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @param style widget style (SWT.CALENDAR, SWT.TIME)
+   * @return string or null on cancel
+   */
+  public static long dateTime(Shell  parentShell,
+                              String title,
+                              String text,
+                              long   value,
+                              String okText,
+                              int    style
+                             )
+  {
+    return dateTime(parentShell,title,text,value,okText,Dialogs.tr("Cancel"),style);
+  }
+
+  /** simple date/time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param okText OK button text
+   * @param style widget style (SWT.CALENDAR, SWT.TIME)
+   * @return string or null on cancel
+   */
+  public static long dateTime(Shell  parentShell,
+                              String title,
+                              String text,
+                              String okText,
+                              int    style
+                             )
+  {
+    return dateTime(parentShell,title,text,0L,okText,style);
+  }
+
+  /** simple date/time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param okText OK button text
+   * @param style widget style (SWT.CALENDAR, SWT.TIME)
+   * @return string or null on cancel
+   */
+  public static long dateTime(Shell  parentShell,
+                              String title,
+                              String okText,
+                              int    style
+                             )
+  {
+    return dateTime(parentShell,title,(String)null,okText,style);
+  }
+
+  /** simple date dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return string or null on cancel
+   */
+  public static long date(Shell  parentShell,
+                          String title,
+                          String text,
+                          long   value,
+                          String okText,
+                          String cancelText,
+                          String toolTipText
+                         )
+  {
+    return dateTime(parentShell,title,text,value,okText,cancelText,toolTipText,SWT.CALENDAR);
+  }
+
+  /** simple date dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @return string or null on cancel
+   */
+  public static long date(Shell  parentShell,
+                          String title,
+                          String text,
+                          long   value,
+                          String okText,
+                          String cancelText
+                         )
+  {
+    return date(parentShell,title,text,value,okText,cancelText,(String)null);
+  }
+
+  /** simple date dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static long date(Shell  parentShell,
+                          String title,
+                          String text,
+                          long   value,
+                          String okText
+                         )
+  {
+    return date(parentShell,title,text,value,okText,Dialogs.tr("Cancel"));
+  }
+
+  /** simple date dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static long date(Shell  parentShell,
+                          String title,
+                          String text,
+                          String okText
+                         )
+  {
+    return date(parentShell,title,text,0L,okText);
+  }
+
+  /** simple date dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static long date(Shell  parentShell,
+                          String title,
+                          String okText
+                         )
+  {
+    return date(parentShell,title,(String)null,okText);
+  }
+
+  /** simple time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return string or null on cancel
+   */
+  public static long time(Shell  parentShell,
+                          String title,
+                          String text,
+                          long   value,
+                          String okText,
+                          String cancelText,
+                          String toolTipText
+                         )
+  {
+    return dateTime(parentShell,title,text,value,okText,cancelText,toolTipText,SWT.TIME);
+  }
+
+  /** simple date dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @return string or null on cancel
+   */
+  public static long time(Shell  parentShell,
+                          String title,
+                          String text,
+                          long   value,
+                          String okText,
+                          String cancelText
+                         )
+  {
+    return time(parentShell,title,text,value,okText,cancelText,(String)null);
+  }
+
+  /** simple time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be 0)
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static long time(Shell  parentShell,
+                          String title,
+                          String text,
+                          long   value,
+                          String okText
+                         )
+  {
+    return time(parentShell,title,text,value,okText,Dialogs.tr("Cancel"));
+  }
+
+  /** simple time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static long time(Shell  parentShell,
+                          String title,
+                          String text,
+                          String okText
+                         )
+  {
+    return time(parentShell,title,text,0L,okText);
+  }
+
+  /** simple time dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static long time(Shell  parentShell,
+                          String title,
+                          String okText
+                         )
+  {
+    return time(parentShell,title,(String)null,okText);
   }
 }
 
