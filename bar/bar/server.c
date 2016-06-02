@@ -608,7 +608,7 @@ LOCAL bool parseServerType(const char *name, ServerTypes *serverType)
 /***********************************************************************\
 * Name   : parseArchiveType
 * Purpose: parse archive type
-* Input  : name - normal|full|incremental|differential
+* Input  : name - normal|full|incremental|differential|continuous
 * Output : archiveType - archive type
 * Return : TRUE iff parsed
 * Notes  : -
@@ -616,25 +616,26 @@ LOCAL bool parseServerType(const char *name, ServerTypes *serverType)
 
 LOCAL bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
 {
-  const ConfigValueSelect *select;
+  const ConfigValueSelect *configValueSelect;
 
   assert(name != NULL);
   assert(archiveType != NULL);
 
-  select = CONFIG_VALUE_ARCHIVE_TYPES;
-  while (   (select->name != NULL)
-         && !stringEqualsIgnoreCase(select->name,name)
+  configValueSelect = CONFIG_VALUE_ARCHIVE_TYPES;
+  while (   (configValueSelect->name != NULL)
+         && !stringEqualsIgnoreCase(configValueSelect->name,name)
         )
   {
-    select++;
+    configValueSelect++;
   }
-  if (select->name != NULL)
+  if (configValueSelect->name != NULL)
   {
-    (*archiveType) = (ArchiveTypes)select->value;
+    (*archiveType) = (ArchiveTypes)configValueSelect->value;
     return TRUE;
   }
   else
   {
+    (*archiveType) = ARCHIVE_TYPE_NONE;
     return FALSE;
   }
 }
@@ -4879,7 +4880,6 @@ LOCAL void indexThreadCode(void)
     }
 
     // update index entries
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,Misc_getTimestamp());
     while (   !quitFlag
            && Index_findStorageByState(indexHandle,
                                        INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
@@ -5010,7 +5010,6 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,Misc_getTimestamp());
         }
       }
     }
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,Misc_getTimestamp());
 
     // free resources
     List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
@@ -14487,7 +14486,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
-  StringMap_getInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
+  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -14559,7 +14558,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
-  StringMap_getInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
+  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -15137,13 +15136,14 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 * Return : -
 * Notes  : Arguments:
 *            toJobUUID=<uuid>|""
-*            [archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL]
+*            [archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS|]
 *            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
 *
 *          or
 *
 *            toEntityId=<id>|0
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
+*            createdDateTime=<n>|0
 *            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
 *
 *          Result:
@@ -15154,6 +15154,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
   StaticString     (toJobUUID,MISC_UUID_STRING_LENGTH);
   IndexId          toEntityId;
   ArchiveTypes     archiveType;
+  uint64           createdDateTime;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   IndexId          entityId;
   IndexId          storageId;
@@ -15173,6 +15174,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
   StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE);
+  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
   String_clear(jobUUID);
   entityId  = INDEX_ID_NONE;
   storageId = INDEX_ID_NONE;
@@ -15219,7 +15221,7 @@ fprintf(stderr,"%s, %d: assign toEntityId=%lld archiveType=%d storageId=%lld\n",
                               toJobUUID,
                               NULL,  // scheduleUUID
                               archiveType,
-                              0LL,  // createdDateTime
+                              createdDateTime,
                               &toEntityId
                              );
       if (error != ERROR_NONE)
@@ -15272,7 +15274,7 @@ fprintf(stderr,"%s, %d: assign toEntityId=%lld archiveType=%d storageId=%lld\n",
                               toJobUUID,
                               NULL,  // scheduleUUID
                               archiveType,
-                              0LL,  // createdDateTime
+                              createdDateTime,
                               &toEntityId
                              );
       if (error != ERROR_NONE)
@@ -15324,7 +15326,7 @@ fprintf(stderr,"%s, %d: assign toEntityId=%lld archiveType=%d storageId=%lld\n",
                               toJobUUID,
                               NULL,
                               archiveType,
-                              0LL,  // createdDateTime
+                              createdDateTime,
                               &toEntityId
                              );
       if (error != ERROR_NONE)
