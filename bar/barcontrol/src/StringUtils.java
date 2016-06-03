@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
 * $Source: /tmp/cvs/onzen/src/StringUtils.java,v $
-* $Revision: 1279 $
-* $Author: trupp $
+* $Revision: 343 $
+* $Author: torsten $
 * Contents: String utility functions
 * Systems: all
 *
@@ -548,9 +548,12 @@ public class StringUtils
       {
         Object object = objects[index+i];
 
-        if (buffer.length() > 0) buffer.append(joinString);
-        string = object.toString();
-        buffer.append((quoteChar != '\0') ? escape(string,true,quoteChar) : string);
+        if (object != null)
+        {
+          if (buffer.length() > 0) buffer.append(joinString);
+          string = object.toString();
+          buffer.append((quoteChar != '\0') ? escape(string,true,quoteChar) : string);
+        }
       }
     }
 
