@@ -419,7 +419,7 @@ DESTROYER_SOURCES    = destroyer.c \
                        strings.c \
                        stacktraces.c \
 
-DESTROYER_HEADERS    = $(patsubst %.c,%.h,$(filter-out destroyer.c,$(DESTROYER_SOURCES))) \
+DESTROYER_HEADERS    = $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
 
 DESTROYER_OBJECTS    = $(foreach z,$(filter %.c,$(DESTROYER_SOURCES)),$(patsubst %.c,%.o,$z)) \
                        $(foreach z,$(filter %.cpp,$(DESTROYER_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
