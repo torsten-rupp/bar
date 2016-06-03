@@ -47,7 +47,7 @@ JAVA               = @JAVA@
 JAVA_FLAGS         = @JAVA_FLAGS@ -Xmx128m -enableassertions
 
 JAVAC              = @JAVAC@
-JAVAC_FLAGS        = @JAVAC_FLAGS@ -source 1.5
+JAVAC_FLAGS        = @JAVAC_FLAGS@ -source 1.6
 # -Xlint
 
 JAR                = @JAR@
