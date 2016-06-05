@@ -163,13 +163,134 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
-* Sun Aug 09 2015 Torsten Rupp <torsten.rupp@gmx.net> 0.19a
+* Tue May 31 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
+  - TLS port is now optional: if possible as SSL protected
+    connection is establed via the standard plain port, too.
+  - added option --archive-file-mode: stop, append or
+    override; removed configurationm option
+    overwrite-archive-files (deprecated)
+  - delete empty directories when purge old storage files
+  - BARControl: file requester with remote file list
+    local file requester with CTRL+click
+  - BARControl: added support to connect to different servers;
+    added connect menu
+  - BARControl: added unit TByte/TB
+  - added option --log-format for log date format, standard
+    log date format is now YYYY-MM-DD hh:mm:ss
+  - fixed clean-up duplicate database entries: delete
+    storage index
+  - separate log for each executed job
+  - removed macro %%last for archive names
+  - support full-text-search in database
+  - BARControl: removed "connector" button in restore tab;
+    search is automatically filtered by selected entities
+  - Added test button for scripts
+  - added option --mount: mount/unmount devices before/after
+    execution of job
+  - deprecated option --mount-device
+  - added option --include-command, --exclude-command
+  - added configuration options include-file-command,
+    include-image-command, exclude-command
+  - add job option comment: free text comment
+  - added code-coverage analysis to build process
+  - improved database access
+  - moved database file /usr/lib/bar -> /var/lib/bar
+  - change option: --stop-on-error -> --no-stop-on-error,
+    --stop-on-error is now deprecated
+  - webDAV: fixed race condition in receive data
+  - create temporary log file in system temporary directory
+  - upgrade libssh2: 1.7.0
+  - fixed possible dead-lock when a specific error
+    occurred while executing a job
+  - fixed possible wrong error text
+
+* Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
+  - fixed include of multiple entries with pattern: store
+  - and foo/b.* if exists
+  - fixed possible crash when files with %% in name may not
+    be readable
+  - upgrade PCRE 8.38
+  - BARControl: fixed typing errors in translation
+  - fixed memory leak
+
+* Sun Dec 06 2015 Torsten Rupp <torsten.rupp@gmx.net> 0.19c
+  - added user, group, permission to long list output
+  - fix get user/group name with large number of names
+  - BARControl: fixed parsing float number with different
+    locales
+  - BARControl: fixed edit pre/post-scripts on Windows:
+    replace line ending CRLR by LF.
+  - BARControl: improved restore dialog: show failed
+    entries, show total progress bar
+  - fixed assert in restore archives
+  - BARControl: fixed restore complete archives
+
+* Sun Nov 22 2015 Torsten Rupp <torsten.rupp@gmx.net> 0.19b
+  - fixed reading job files with none-LF at end
+  - try to delete temporary directory also on Ctrl-C or
+    a crash
+  - fixed index auto-update: search for .bar files in
+    directory and all sub-directories
+  - BARControl: fixed possible null-pointer-exception
+    on Windows
+  - BARControl: fixed layout buttons
+  - BARControl: fixed translation
+  - BARControl: fixed multi language support (language files
+    were missing in distribution)
+  - fixed scanning for .bar-archives: scan in sub-directories,
+    too
+  - BARControl: fixed typing error in help
+  - BARControl: fixed null-pointer-exception when delete
+    entity in restore tab
+  - fixed init scripts
+
+* Sat Oct 31 2015 Torsten Rupp <torsten.rupp@gmx.net> 0.19a
+  - changed upgrade database: do not lock database
+  - added support to output stacktraces! Press Ctrl-\
+    or send signal SIGQUIT to BAR
   - improved error handling in database
   - always unmount mounted device if init storage fail
   - fixed typing error in scp protocol init
   - fixed init SSH default password
   - fixed some compilation errors when packages are
     disabled
+  - added barserver.service for systemd
+  - fixed init.d-start script for Fedora
+  - fixed install init-scripts
+  - fixed --quiet option
+  - upgraded libgpg-error to 1.20: fixed problem with
+    pre-processor and newer gcc versions
+  - upgraded libgcrypt to 1.6.4: fixed problem with
+    pre-processor and newer gcc versions
+  - improved error message when ssh login fail
+  - fixed possible dead-lock in server when file
+    .nobackup cannot be created
+  - improved error message when SSL authentification
+    fail
+  - fixed compiling ring buffer when no backtrace()
+    function is available
+  - removed wrong assert in server.c
+  - fixed compiling without ulong
+  - fixed unintialized data with unknown job UUIDs
+  - fixed unintialized data in database access
+  - BARControl: fixed number format exception when BAR
+    and BARControl use different locales
+  - fixed memory corruption when stringmaps are
+    enlarged
+  - fixed error message for wrong double config values
+  - fixed exitcode list archives
+  - fixed possible deadlock in server when started as
+    a daemon
+  - fixed possible crash when index database could not
+    be opened or is created
+  - BARControl: fixed output of --list
+  - fixed possible crash when decompress broken archive
+    compressed with LZO
+  - upgraded LZO to 2.09
+  - use LZO safe-decompress, fixed valgrind warning
+  - disabled test Serpient for CentOS 5: do not use!
+    Probably bug in gcc 4.1 together with -O2; solved
+    in newer versions of gcc.
 
 * Fri May 01 2015 Torsten Rupp <torsten.rupp@gmx.net> 0.19
   - added LZO compression
@@ -292,11 +413,11 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
     both server and clients with this change.
   - added uuid to jobs
   - added custom text to schedule entries
-  - added macros %uuid, %text to storage name template
+  - added macros %%uuid, %%text to storage name template
   - added options --[ftp|ssh|webdav]-max-connections: limit
     number of concurrent network connections for server
-  - BARControl: added time macros %U2, %U4, %W, %W2 and %W4,
-    added macros %T, %uuid, %text
+  - BARControl: added time macros %%U2, %%U4, %%W, %%W2 and %%W4,
+    added macros %%T, %%uuid, %%text
   - BARControl: added file selector button to storage name
     input
   - support listing remote directory content
@@ -398,7 +519,7 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
     WARNING: modify your bar.cfg file!
   - added command line/config option --datbase-index-keep-time
   - set example for log-post-command to (removed quotes):
-    sh -c 'cat %file|mail -s "Backup log" root'
+    sh -c 'cat %%file|mail -s "Backup log" root'
   - fix parsing configuration files: strings must not be quoted
     explicitly
   - improved error output when log-post command cannot be executed:
@@ -500,7 +621,7 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
     is not set
   - improved FTP read: try to read all data when the network
     connection is bad
-  - fix CD/DVD/BD write command: must be %directory, not %file
+  - fix CD/DVD/BD write command: must be %%directory, not %%file
   - BARControl: add command to remove all archives with error
     state in tab restore
   - BARControl: fixed possible null-pointer-exception on communication
@@ -532,7 +653,7 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
     constant (self-assigned enum may change)
 
 * Sun Apr 17 2011 Torsten Rupp <torsten.rupp@gmx.net> 0.16c
-  - renamed macro %file -> %directory for cd/dvd/bd/device-commands
+  - renamed macro %%file -> %%directory for cd/dvd/bd/device-commands
   - fixed typing error in code when FTP is not available
   - added options --file-write-pre|post-command,
     --ftp-write-pre|post-command, --scp-write-pre|post-command,
@@ -718,7 +839,7 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
   - improved BARControl command line parser
   - BARControl: added file selector buttons for ssh keys, device name
   - fixed BARControl restore tab: listing path names
-  - fix C string parser: %s and %S can be empty strings
+  - fix C string parser: %%s and %%S can be empty strings
   - BARControl: fixed abort in restore dialog, some clean-up. Note:
     The restore tab will be improved in some of the next releases.
   - BARControl: fixed parsing of archive part size (job was ignored
@@ -875,11 +996,11 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
   - fixed detection of size of current archive (was always 0)
   - new scheme to build a incremental file name from an
     archive file name if no incremental file name is given:
-    - discard all %-macros
+    - discard all %%-macros
     - discard all #
     - remove - and _ between macros
     - replace file name extension .bar by .bid
-    A name like backup/system-%type-%a-####%last.bar will
+    A name like backup/system-%%type-%%a-####%%last.bar will
     be transformed to backup/system.bid
   - improved error messages
   - fixed debug function in string library: limit number of
@@ -1081,7 +1202,7 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
   - fixed static linkage
 
 * Mon Dec 31 2007 Torsten Rupp <torsten.rupp@gmx.net> 0.05
-  - added macros %type, %last to archive file name
+  - added macros %%type, %%last to archive file name
   - fixed path in bid-file name
   - removed option create-list-file; option --full create a list
     file, --incremental use the list and no option generate a
