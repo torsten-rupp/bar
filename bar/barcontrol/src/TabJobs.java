@@ -11529,9 +11529,10 @@ throw new Error("NYI");
      */
     StorageFileNameEditor(Composite parentComposite, String fileName)
     {
-      Composite  composite;
+      Composite  composite,subComposite;
       Label      label;
       Control    control;
+      Button     button;
       DragSource dragSource;
       DropTarget dropTarget;
 
@@ -11745,8 +11746,57 @@ throw new Error("NYI");
         addDragAndDrop(composite,"-","'-'",                                            0, 0);
         addDragAndDrop(composite,BARServer.fileSeparator,BARServer.fileSeparator,      1, 0);
         addDragAndDrop(composite,".bar","'.bar'",                                      2, 0);
-        widgetText = Widgets.newText(composite);
-        addDragAndDrop(composite,"Text",widgetText,                                    3, 0);
+        subComposite = Widgets.newComposite(composite,SWT.NONE);
+        subComposite.setToolTipText(BARControl.tr("Use drag&drop to add name parts."));
+        subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+        {
+          widgetText = Widgets.newText(subComposite);
+          Widgets.layout(widgetText,0,0,TableLayoutData.WE);
+
+          button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+          button.setToolTipText(BARControl.tr("Select remote file. CTRL+click to select local file."));
+          Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              String fileName;
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.ENTRY,
+                                        BARControl.tr("Select source file"),
+                                        widgetText.getText(),
+                                        new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        BARServer.remoteListDirectory
+                                       );
+              }
+              else
+              {
+                fileName = Dialogs.fileSave(shell,
+                                            BARControl.tr("Select source file"),
+                                            widgetText.getText(),
+                                            new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                         BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                        }
+                                           );
+              }
+              if (fileName != null)
+              {
+                widgetText.setText(fileName);
+              }
+            }
+          });
+        }
+        addDragAndDrop(composite,"Text",subComposite,widgetText,                       3, 0);
 
         addDragAndDrop(composite,"#","part number 1 digit",                            5, 0);
         addDragAndDrop(composite,"##","part number 2 digits",                          6, 0);
@@ -11898,6 +11948,7 @@ throw new Error("NYI");
       label.setBackground(composite.getDisplay().getSystemColor(SWT.COLOR_GRAY));
       label.setData(text);
       Widgets.layout(label,row,column*2+0,TableLayoutData.W);
+
       DragSource dragSource = new DragSource(label,DND.DROP_MOVE|DND.DROP_COPY);
       dragSource.setTransfer(new Transfer[]{TextTransfer.getInstance()});
       dragSource.addDragListener(new DragSourceListener()
@@ -11937,16 +11988,18 @@ throw new Error("NYI");
      * @param composite composite to add into
      * @param text text to show
      * @param control control to add
+     * @param dragControl drag control
      * @param row,column row/column
      */
-    private void addDragAndDrop(Composite composite, String text, Control control, int row, int column)
+    private void addDragAndDrop(Composite composite, String text, Control control, Control dragControl, int row, int column)
     {
       Label label;
 
       label = Widgets.newLabel(composite,text,SWT.LEFT|SWT.BORDER);
       label.setBackground(composite.getDisplay().getSystemColor(SWT.COLOR_GRAY));
-      label.setData(control);
+      label.setData(dragControl);
       Widgets.layout(label,row,column*2+0,TableLayoutData.W);
+
       DragSource dragSource = new DragSource(label,DND.DROP_MOVE|DND.DROP_COPY);
       dragSource.setTransfer(new Transfer[]{TextTransfer.getInstance()});
       dragSource.addDragListener(new DragSourceListener()
