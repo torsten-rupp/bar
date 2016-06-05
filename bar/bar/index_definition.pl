@@ -134,24 +134,26 @@ while ($line=<STDIN>)
       # create anonymous index
 
       # replace macros
+      my $table=$1;
       foreach $name (keys %constants)
       {
-        $1 =~ s/\$$name/$constants{$name}/g;
+        $table =~ s/\$$name/$constants{$name}/g;
       }
-      $1 =~ s/"/\\"/g;
+      $table =~ s/"/\\"/g;
+      my $definition=$1;
       foreach $name (keys %constants)
       {
-        $2 =~ s/\$$name/$constants{$name}/g;
+        $definition =~ s/\$$name/$constants{$name}/g;
       }
-      $2 =~ s/"/\\"/g;
+      $definition =~ s/"/\\"/g;
 
       # create index name
       my $index="index$id"; $id++;
 
-      $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."CREATE INDEX $index ON $1 $2\\\n";
+      $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."CREATE INDEX $index ON $table $definition\\\n";
       if ($databaseTableDefinitionName ne "")
       {
-        $databaseTableDefinition=$databaseTableDefinition."CREATE INDEX $index ON $1 $2\\\n";
+        $databaseTableDefinition=$databaseTableDefinition."CREATE INDEX $index ON $table $definition\\\n";
       }
     }
     elsif ($line =~ /\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
@@ -159,16 +161,17 @@ while ($line=<STDIN>)
       # create anonymous trigger
 
       # replace macros
+      my $definition=$1;
       foreach $name (keys %constants)
       {
-        $2 =~ s/\$$name/$constants{$name}/g;
+        $definition =~ s/\$$name/$constants{$name}/g;
       }
-      $2 =~ s/"/\\"/g;
+      $definition =~ s/"/\\"/g;
 
       # create trigger name
       my $trigger="trigger$id"; $id++;
 
-      $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."CREATE TRIGGER $trigger $1 $2\\\n";
+      $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."CREATE TRIGGER $trigger $1 $definition\\\n";
       if ($databaseTableDefinitionName ne "")
       {
         $databaseTableDefinition=$databaseTableDefinition."CREATE TRIGGER $trigger $1 $2\\\n";
