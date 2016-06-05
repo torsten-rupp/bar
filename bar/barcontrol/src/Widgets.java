@@ -6454,16 +6454,6 @@ e composite widget
     return insertTreeItem(tree,-1,data,folderFlag,values);
   }
 
-  /** add tree item at end
-   * @param tree tree widget
-   * @param data data
-   * @return new tree item
-   */
-  public static TreeItem addTreeItem(Tree tree, Object data, Object... values)
-  {
-    return addTreeItem(tree,data,false,values);
-  }
-
   /** insert sub-tree item
    * @param parentTreeItem parent tree item
    * @param index index (0..n)
