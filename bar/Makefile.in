@@ -660,8 +660,8 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           packages/libssh2-*.tar.gz \
           packages/lz4-*.tar.gz \
           packages/lzo-*.tar.gz \
-          packages/mxml-*.tar.gz \
           packages/mtx-*.tar.gz \
+          packages/mxml-*.tar.gz \
           packages/nettle-*.tar.gz \
           packages/openssl-*.tar.gz \
           packages/pcre-*.tar.bz2 \
@@ -670,6 +670,9 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           packages/xz-*.tar.gz \
           packages/zlib-*.tar.gz \
           tmp/$(DISTRIBUTION_NAME).orig/packages
+	$(INSTALL) \
+          third-party/breakpad-r1430.tar.bz2 \
+          tmp/$(DISTRIBUTION_NAME).orig/packages/breakpad.tar.bz2
 	if test -n "`ls packages/ftplib-*.tar.gz 2>/dev/null`"; then \
 	  $(INSTALL) \
             packages/ftplib-*.tar.gz \
