@@ -3,5 +3,17 @@
 chmod 700 /etc/bar
 chmod 600 /etc/bar/bar.cfg
 
-chkconfig --add barserver
-chkconfig barserver on
+type chkconfig 1>/dev/null 2>/dev/null
+if test $? -eq 0; then
+  chkconfig --add barserver
+  chkconfig barserver on
+fi
+type systemctl 1>/dev/null 2>/dev/null
+if test $? -eq 0; then
+  systemctl enable barserver
+  systemctl start barserver
+fi
+type service 1>/dev/null 2>/dev/null
+if test $? -eq 0; then
+  service barserver start
+fi

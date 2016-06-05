@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.19b
+Version:       0.20
 Release:       17.1
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
@@ -193,6 +193,68 @@ service barserver stop 1>/dev/null || echo "Warning: Cannot stop barserver with 
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
+* Tue May 31 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
+  - TLS port is now optional: if possible as SSL protected
+    connection is establed via the standard plain port, too.
+  - added option --archive-file-mode: stop, append or
+    override; removed configurationm option
+    overwrite-archive-files (deprecated)
+  - delete empty directories when purge old storage files
+  - BARControl: file requester with remote file list
+    local file requester with CTRL+click
+  - BARControl: added support to connect to different servers;
+    added connect menu
+  - BARControl: added unit TByte/TB
+  - added option --log-format for log date format, standard
+    log date format is now YYYY-MM-DD hh:mm:ss
+  - fixed clean-up duplicate database entries: delete
+    storage index
+  - separate log for each executed job
+  - removed macro %%last for archive names
+  - support full-text-search in database
+  - BARControl: removed "connector" button in restore tab;
+    search is automatically filtered by selected entities
+  - Added test button for scripts
+  - added option --mount: mount/unmount devices before/after
+    execution of job
+  - deprecated option --mount-device
+  - added option --include-command, --exclude-command
+  - added configuration options include-file-command,
+    include-image-command, exclude-command
+  - add job option comment: free text comment
+  - added code-coverage analysis to build process
+  - improved database access
+  - moved database file /usr/lib/bar -> /var/lib/bar
+  - change option: --stop-on-error -> --no-stop-on-error,
+    --stop-on-error is now deprecated
+  - webDAV: fixed race condition in receive data
+  - create temporary log file in system temporary directory
+  - upgrade libssh2: 1.7.0
+  - fixed possible dead-lock when a specific error
+    occurred while executing a job
+  - fixed possible wrong error text
+
+* Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
+  - fixed include of multiple entries with pattern: store
+  - and foo/b.* if exists
+  - fixed possible crash when files with %% in name may not
+    be readable
+  - upgrade PCRE 8.38
+  - BARControl: fixed typing errors in translation
+  - fixed memory leak
+
+* Sun Dec 06 2015 Torsten Rupp <torsten.rupp@gmx.net> 0.19c
+  - added user, group, permission to long list output
+  - fix get user/group name with large number of names
+  - BARControl: fixed parsing float number with different
+    locales
+  - BARControl: fixed edit pre/post-scripts on Windows:
+    replace line ending CRLR by LF.
+  - BARControl: improved restore dialog: show failed
+    entries, show total progress bar
+  - fixed assert in restore archives
+  - BARControl: fixed restore complete archives
+
 * Sun Nov 22 2015 Torsten Rupp <torsten.rupp@gmx.net> 0.19b
   - fixed reading job files with none-LF at end
   - try to delete temporary directory also on Ctrl-C or
