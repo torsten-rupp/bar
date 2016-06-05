@@ -1,4 +1,4 @@
-2016-10-?? 0.20
+2016-05-31 0.20
   * TLS port is now optional: if possible as SSL protected
     connection is establed via the standard plain port, too.
   * added option --archive-file-mode: stop, append or
