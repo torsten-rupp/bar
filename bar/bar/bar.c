@@ -4284,12 +4284,7 @@ void logPostProcess(LogHandle        *logHandle,
   StringNode *stringNode;
   String     string;
 
-//TODO jobOptions
-#ifndef WERROR
-#warning jobOptions
-#else
-UNUSED_VARIABLE(jobOptions);
-#endif
+  UNUSED_VARIABLE(jobOptions);
 
   assert(jobName != NULL);
   assert(jobOptions != NULL);
