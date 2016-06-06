@@ -92,6 +92,10 @@
   LOCAL char      debugTestCodeName[256];
 #endif /* not NDEBUG */
 
+#ifdef i386
+  LOCAL pthread_mutex_t syncLock = PTHREAD_MUTEX_INITIALIZER;
+#endif /* i386 */
+
 /****************************** Macros *********************************/
 
 /**************************** Functions ********************************/
@@ -220,6 +224,33 @@ void __abortAt(const char *fileName,
   fprintf(stderr," - program aborted in file %s, line %u\n",fileName,lineNb);
   abort();
 }
+
+#ifdef i386
+
+/***********************************************************************\
+* Name   : __sync_add_and_fetch_4
+* Purpose: atomic add+fetch 32bit
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : Some older GCC versions do not implemented
+*          __sync_add_and_fetch() on 32bit. This is a replacement.
+\***********************************************************************/
+uint __sync_add_and_fetch_4(uint *p, uint n)
+{
+  uint x;
+
+  pthread_mutex_lock(&syncLock);
+  {
+    (*p) += n;
+    x = (*p);
+  }
+  pthread_mutex_unlock(&syncLock);
+
+  return x;
+}
+
+#endif /* i386 */
 
 #ifndef NDEBUG
 void __cyg_profile_func_enter(void *functionCode, void *callAddress) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
