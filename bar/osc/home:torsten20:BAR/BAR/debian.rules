@@ -17,134 +17,135 @@ endif
 
 build: build-stamp
 build-stamp:
-    dh_testdir
+	dh_testdir
 
-    # Add here commands to compile the package.
-    ls -la packages
-    #(cd packages; tar xjf binutils-*); ln -s `find packages -maxdepth 1 -type d -name 'binutils-*'|head -1` binutils
-    #(cd packages; tar xjf breakpad*); ln -s `find packages -maxdepth 1 -type d -name 'breakpad*'|head -1` breakpad
-    #(cd packages; tar xjf curl-*); ln -s `find packages -maxdepth 1 -type d -name 'curl-*'|head -1` curl
-    #(cd packages; tar xjf gmp-*); ln -s `find packages -maxdepth 1 -type d -name 'gmp-*'|head -1` gmp
-    #(cd packages; tar xJf gnutls-*); ln -s `find packages -maxdepth 1 -type d -name 'gnutls-*'|head -1` gnutls
-    #(cd packages; tar xjf libgcrypt-*); ln -s `find packages -maxdepth 1 -type d -name 'libgcrypt-*'|head -1` libgcrypt
-    #(cd packages; tar xjf libgpg-error-*); ln -s `find packages -maxdepth 1 -type d -name 'libgpg-error-*'|head -1` libgpg-error
-    #(cd packages; tar xjf pcre-*); ln -s `find packages -maxdepth 1 -type d -name 'pcre-*'|head -1` pcre
-    #(cd packages; tar xzf bzip2-*); ln -s `find packages -maxdepth 1 -type d -name 'bzip2-*'|head -1` bzip2
-    #(cd packages; tar xzf c-ares-*); ln -s `find packages -maxdepth 1 -type d -name 'c-ares-*'|head -1` c-ares
-    #(cd packages; tar xzf libcdio-*); ln -s `find packages -maxdepth 1 -type d -name 'libcdio-*'|head -1` libcdio
-    #(cd packages; tar xzf libssh2-*); ln -s `find packages -maxdepth 1 -type d -name 'libssh2-*'|head -1` libssh2
-    #(cd packages; tar xzf lz4-*); ln -s `find packages -maxdepth 1 -type d -name 'lz4-*'|head -1` lz4
-    #(cd packages; tar xzf lzo-*); ln -s `find packages -maxdepth 1 -type d -name 'lzo-*'|head -1` lzo
-    #(cd packages; tar xzf mtx-*); ln -s `find packages -maxdepth 1 -type d -name 'mtx-*'|head -1` mxml
-    #(cd packages; tar xzf mxml-*); ln -s `find packages -maxdepth 1 -type d -name 'mxml-*'|head -1` mxml
-    #(cd packages; tar xzf nettle-*); ln -s `find packages -maxdepth 1 -type d -name 'nettle-*'|head -1` nettle
-    #(cd packages; tar xzf openssl-*); ln -s `find packages -maxdepth 1 -type d -name 'openssl-*'|head -1` openssl
-    #(cd packages; tar xzf xdelta*); ln -s `find packages -maxdepth 1 -type d -name 'xdelta*'|head -1` xdelta3
-    #(cd packages; tar xzf xz-*); ln -s `find packages -maxdepth 1 -type d -name 'xz*'|head -1` xz
-    #(cd packages; tar xzf zlib-*); ln -s `find packages -maxdepth 1 -type d -name 'zlib-*'|head -1` zlib
-    ./download-third-party-packages.sh
-    ls -la packages
-    ./configure --enable-package-check
-    make all
-    # --- end custom part for compiling
+	# Add here commands to compile the package.
+	ls -la packages
+	#ln -s `find packages -maxdepth 1 -type d -name 'zlib-*'|head -1` zlib
+	#ln -s `find packages -maxdepth 1 -type d -name 'bzip2-*'|head -1` bzip2
+	#ln -s `find packages -maxdepth 1 -type d -name 'xz*'|head -1` xz
+	#ln -s `find packages -maxdepth 1 -type d -name 'lzo-*'|head -1` lzo
+	#ln -s `find packages -maxdepth 1 -type d -name 'lz4-*'|head -1` lz4
+	#ln -s `find packages -maxdepth 1 -type d -name 'xdelta*'|head -1` xdelta3
+	#ln -s packages/ftplib-3.1 ftplib
+	#ln -s `find packages -maxdepth 1 -type d -name 'libgpg-error-*'|head -1` libgpg-error
+	#ln -s `find packages -maxdepth 1 -type d -name 'libgcrypt-*'|head -1` libgcrypt
+	#ln -s `find packages -maxdepth 1 -type d -name 'gmp-*'|head -1` gmp
+	#ln -s `find packages -maxdepth 1 -type d -name 'nettle-*'|head -1` nettle
+	#ln -s `find packages -maxdepth 1 -type d -name 'gnutls-*'|head -1` gnutls
+	#ln -s `find packages -maxdepth 1 -type d -name 'openssl-*'|head -1` openssl
+	#ln -s `find packages -maxdepth 1 -type d -name 'libssh2-*'|head -1` libssh2
+	#ln -s `find packages -maxdepth 1 -type d -name 'curl-*'|head -1` curl
+	#ln -s `find packages -maxdepth 1 -type d -name 'c-ares-*'|head -1` c-ares
+	#ln -s `find packages -maxdepth 1 -type d -name 'mxml-*'|head -1` mxml
+	#ln -s `find packages -maxdepth 1 -type d -name 'libcdio-*'|head -1` libcdio
+	#ln -s `find packages -maxdepth 1 -type d -name 'pcre-*'|head -1` pcre
+	#ln -s `find packages -maxdepth 1 -type d -name 'binutils-*'|head -1` binutils
+	#ln -s `find packages -maxdepth 1 -type d -name 'breakpad'|head -1` breakpad
+	ls -la
+	ls -la packages
+	./download-third-party-packages.sh
+	./configure --enable-package-check
+	make all
+	# --- end custom part for compiling
 
-    touch build-stamp
+	touch build-stamp
 
 build-arch:
 
 clean:
-    dh_testdir
-    dh_testroot
-    rm -f build-stamp
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
 
-    # Add here commands to clean up after the build process.
-    make clean || true
-    # --- end custom part for cleaning up
+	# Add here commands to clean up after the build process.
+	make clean || true
+	# --- end custom part for cleaning up
 
-    dh_clean
+	dh_clean
 
 install: build
-    dh_testdir
-    dh_testroot
-    dh_clean -k
-    dh_installdirs
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
 
-    # Add here commands to install the package
-    # --- end custom part for installing
+	# Add here commands to install the package
+	# --- end custom part for installing
 
 install-bar: build
-    dh_testdir
-    dh_testroot
-    dh_clean -k
-    dh_installdirs
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
 
-    # Add here commands to install the package
-    # The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
-    make \
+	# Add here commands to install the package
+	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
+	make \
           DESTDIR=/usr/src/packages/BUILD/debian/bar DIST=1 SYSTEM=Debian \
           install_bar install_scripts install_man
-    # --- end custom part for installing
+	# --- end custom part for installing
 
 install-bar-gui: build
-    dh_testdir
-    dh_testroot
-    dh_clean -k
-    dh_installdirs
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
 
-    # Add here commands to install the package
-    # The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
-    make \
+	# Add here commands to install the package
+	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
+	make \
           DESTDIR=/usr/src/packages/BUILD/debian/bar-gui DIST=1 SYSTEM=Debian \
           install_barcontrol
-    # --- end custom part for installing
+	# --- end custom part for installing
 
 # Build architecture-independent files here.
 binary-indep: build install
-    # We have nothing to do by default.
+	# We have nothing to do by default.
 
 # Build architecture-dependent files here.
 bar: build install-bar
-    dh_testdir
-    dh_testroot
-    dh_installdirs -p$@
-    dh_installdocs -p$@
-    dh_installexamples -p$@
-    dh_installmenu -p$@
-    dh_installcron -p$@
-    dh_installman -p$@
-    dh_installinfo -p$@
-    dh_installchangelogs -p$@
-    dh_link -p$@
-    dh_strip -p$@
-    dh_compress -p$@
-    dh_fixperms -p$@
-    dh_installdeb -p$@
-    dh_shlibdeps -p$@
-    dh_gencontrol -p$@
-    dh_md5sums -p$@
-    dh_builddeb -p$@
+	dh_testdir
+	dh_testroot
+	dh_installdirs -p$@
+	dh_installdocs -p$@
+	dh_installexamples -p$@
+	dh_installmenu -p$@
+	dh_installcron -p$@
+	dh_installman -p$@
+	dh_installinfo -p$@
+	dh_installchangelogs -p$@
+	dh_link -p$@
+	dh_strip -p$@
+	dh_compress -p$@
+	dh_fixperms -p$@
+	dh_installdeb -p$@
+	dh_shlibdeps -p$@
+	dh_gencontrol -p$@
+	dh_md5sums -p$@
+	dh_builddeb -p$@
 
 # Build architecture-dependent files here.
 bar-gui: build install-bar-gui
-    dh_testdir
-    dh_testroot
-    dh_installdirs -p$@
-    dh_installdocs -p$@
-    dh_installexamples -p$@
-    dh_installmenu -p$@
-    dh_installcron -p$@
-    dh_installman -p$@
-    dh_installinfo -p$@
-    dh_installchangelogs -p$@
-    dh_link -p$@
-    dh_strip -p$@
-    dh_compress -p$@
-    dh_fixperms -p$@
-    dh_installdeb -p$@
-    dh_shlibdeps -p$@
-    dh_gencontrol -p$@
-    dh_md5sums -p$@
-    dh_builddeb -p$@
+	dh_testdir
+	dh_testroot
+	dh_installdirs -p$@
+	dh_installdocs -p$@
+	dh_installexamples -p$@
+	dh_installmenu -p$@
+	dh_installcron -p$@
+	dh_installman -p$@
+	dh_installinfo -p$@
+	dh_installchangelogs -p$@
+	dh_link -p$@
+	dh_strip -p$@
+	dh_compress -p$@
+	dh_fixperms -p$@
+	dh_installdeb -p$@
+	dh_shlibdeps -p$@
+	dh_gencontrol -p$@
+	dh_md5sums -p$@
+	dh_builddeb -p$@
 
 binary: binary-indep bar bar-gui
 .PHONY: build clean install install-bar install-bar gui binary-indep bar bar-gui binary
