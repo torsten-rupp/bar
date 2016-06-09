@@ -512,7 +512,7 @@ LOCAL void debugThreadSignalSegVHandler(int signalNumber, siginfo_t *siginfo, vo
 
 /***********************************************************************\
 * Name   : debugThreadSignalAbortHandler
-* Purpose: signal-segmantation vault handler to print stack trace
+* Purpose: signal-abort handler to print stack trace
 * Input  : signalNumber - signal number
 *          siginfo      - signal info
 *          context      - context variable
