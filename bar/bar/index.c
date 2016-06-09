@@ -134,9 +134,9 @@ LOCAL bool   quitFlag;
   // create index database
   (void)File_deleteCString(databaseFileName,FALSE);
   #ifdef NDEBUG
-    error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,0);
+    error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
   #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,0);
+    error = __Database_open(__fileName__,__lineNb__,&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
