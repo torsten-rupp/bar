@@ -77,6 +77,8 @@
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD (10*60)
 
+#define INDEX_TIMEOUT (10L*60L*1000L)  // index timeout [ms]
+
 /***************************** Datatypes *******************************/
 
 // server states
@@ -3100,7 +3102,7 @@ LOCAL void jobThreadCode(void)
   script             = String_new();
 
   // open index
-  indexHandle = Index_open(WAIT_FOREVER);
+  indexHandle = Index_open(INDEX_TIMEOUT);
 
   while (!quitFlag)
   {
@@ -4503,7 +4505,7 @@ LOCAL void schedulerThreadCode(void)
   uint         sleepTime;
 
   // init index
-  indexHandle = Index_open(WAIT_FOREVER);
+  indexHandle = Index_open(INDEX_TIMEOUT);
 
   while (!quitFlag)
   {
@@ -4843,7 +4845,7 @@ LOCAL void indexThreadCode(void)
   List_init(&indexCryptPasswordList);
 
   // init index
-  indexHandle = Index_open(WAIT_FOREVER);
+  indexHandle = Index_open(INDEX_TIMEOUT);
   if (indexHandle == NULL)
   {
     List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
@@ -5108,7 +5110,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   storageName          = String_new();
 
   // init index
-  indexHandle = Index_open(WAIT_FOREVER);
+  indexHandle = Index_open(INDEX_TIMEOUT);
   if (indexHandle == NULL)
   {
     String_delete(storageName);
@@ -16747,7 +16749,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   result = String_new();
 
   // init index
-  indexHandle = Index_open(WAIT_FOREVER);
+  indexHandle = Index_open(INDEX_TIMEOUT);
 
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
