@@ -976,7 +976,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo, IndexHandle *indexHandl
                                  archiveInfo->entityId,
                                  NULL, // storageName
                                  INDEX_STATE_CREATE,
-                                 INDEX_MODE_MANUAL,
+                                 INDEX_MODE_AUTO,
                                  &archiveInfo->storageId
                                 );
         if (error != ERROR_NONE)
