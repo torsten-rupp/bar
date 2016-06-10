@@ -140,6 +140,7 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - test with archive with unknown/invalid compression algorithm
 - ERROR: Cannot create process id file 'test/barserver.pid' (error: No such file or directory)
 - support partclone
+- improve BARControl progress dialogs: refresh index, remove index
 
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok

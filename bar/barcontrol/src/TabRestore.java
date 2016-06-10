@@ -6813,7 +6813,25 @@ Dprintf.dprintf("remove");
       HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
       if (!indexDataHashSet.isEmpty())
       {
-        if (Dialogs.confirm(shell,BARControl.tr("Refresh index for {0} {0,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size())))
+        int jobCount     = 0;
+        int entityCount  = 0;
+        int storageCount = 0;
+        for (IndexData indexData : indexDataHashSet)
+        {
+          if      (indexData instanceof UUIDIndexData)
+          {
+            jobCount++;
+          }
+          else if (indexData instanceof EntityIndexData)
+          {
+            entityCount++;
+          }
+          else if (indexData instanceof StorageIndexData)
+          {
+            storageCount++;
+          }
+        }
+        if (Dialogs.confirm(shell,BARControl.tr("Refresh index for {0}{0,choice,0#jobs|1#job|1<jobs}/{1}{1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives}?",jobCount,entityCount,storageCount)))
         {
           for (IndexData indexData : indexDataHashSet)
           {
@@ -7034,7 +7052,25 @@ Dprintf.dprintf("remove");
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     if (!indexDataHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Remove index of {0} {0,choice,0#entries|1#entry|1<entries}?",indexDataHashSet.size())))
+      int jobCount     = 0;
+      int entityCount  = 0;
+      int storageCount = 0;
+      for (IndexData indexData : indexDataHashSet)
+      {
+        if      (indexData instanceof UUIDIndexData)
+        {
+          jobCount++;
+        }
+        else if (indexData instanceof EntityIndexData)
+        {
+          entityCount++;
+        }
+        else if (indexData instanceof StorageIndexData)
+        {
+          storageCount++;
+        }
+      }
+      if (Dialogs.confirm(shell,BARControl.tr("Remove index with {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives}?",jobCount,entityCount,storageCount)))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE);
         busyDialog.setMaximum(indexDataHashSet.size());
@@ -7072,8 +7108,8 @@ Dprintf.dprintf("remove");
                 else if (indexData instanceof EntityIndexData)
                 {
                   error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%lld",
-                                                                        indexData.id
-                                                                       ),
+                                                                       indexData.id
+                                                                      ),
                                                     0,  // debugLevel
                                                     errorMessage
                                                    );
