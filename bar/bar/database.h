@@ -290,6 +290,23 @@ void Database_doneAll(void);
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Database_isLocked
+* Purpose: check if database is locked
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : TRUE iff locked
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Database_isLocked(DatabaseHandle *databaseHandle);
+#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENATION__)
+INLINE bool Database_isLocked(DatabaseHandle *databaseHandle)
+{
+  return Semaphore_isLocked(&databaseHandle->lock);
+}
+#endif /* NDEBUG || __DATABASE_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : Database_setEnabledSync
 * Purpose: enable/disable synchronous mode
 * Input  : databaseHandle - database handle
