@@ -332,7 +332,7 @@ INLINE bool Index_isAvailable(void)
 {
   return __databaseFileName != NULL;
 }
-#endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
+#endif /* NDEBUG || __INDEX_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Index_open
@@ -413,7 +413,7 @@ INLINE IndexTypes Index_getType(IndexId indexId)
 {
   return INDEX_TYPE_(indexId);
 }
-#endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
+#endif /* NDEBUG || __INDEX_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Index_containsType
@@ -446,7 +446,7 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 {
   return INDEX_DATABASE_ID_(indexId);
 }
-#endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
+#endif /* NDEBUG || __INDEX_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Index_findUUIDByJobUUID
