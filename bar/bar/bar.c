@@ -477,7 +477,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                cmdOptionParseDeltaSource,NULL,                        "source pattern","pattern"                                                 ),
 
-  CMD_OPTION_SPECIAL      ("config",                       0,  1,1,NULL,                                            cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
+  CMD_OPTION_SPECIAL      ("config",                       0,  1,2,NULL,                                            cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
   CMD_OPTION_STRING       ("tmp-directory",                0,  1,1,globalOptions.tmpDirectory,                                                                             "temporary directory","path"                                               ),
   CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,1,globalOptions.maxTmpSize,                        0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "max. size of temporary files","unlimited"                                 ),
@@ -2637,8 +2637,6 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, c
     // add to mount list
     mountNode = newMountNodeCString(value,TRUE);
     assert(mountNode != NULL);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
     List_append((MountList*)variable,mountNode);
   }
 
@@ -2681,7 +2679,7 @@ LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, c
 * Purpose: command line option call back for parsing configuration file
 * Input  : -
 * Output : -
-* Return : -
+* Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -7672,6 +7670,25 @@ exit(1);
     }
 
     String_delete(fileName);
+  }
+
+  // parse command line: post-options
+  if (!CmdOption_parse(argv,&argc,
+                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
+                       2,
+                       stderr,"ERROR: ","Warning: "
+                      )
+     )
+  {
+    doneAll();
+    #ifndef NDEBUG
+      debugResourceDone();
+      File_debugDone();
+      Array_debugDone();
+      String_debugDone();
+      List_debugDone();
+    #endif /* not NDEBUG */
+    return ERROR_INVALID_ARGUMENT;
   }
 
   // if daemon then print info
