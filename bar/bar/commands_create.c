@@ -3604,6 +3604,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                  LogHandle   *logHandle
                                 )
 {
+//TODO
 #if 1
   String           storageName;
   StorageSpecifier storageSpecifier;
@@ -3633,7 +3634,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
   Storage_initSpecifier(&storageSpecifier);
   dateTime          = String_new();
 
-fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageSize);
+fprintf(stderr,"%s, %d: start purgeStorage by jobUUID=%s maxStorageSize=%llu\n",__FILE__,__LINE__,String_cString(jobUUID),maxStorageSize);
   do
   {
     // get total storage size, find oldest storage entry
@@ -3688,7 +3689,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
                                )
           )
     {
-//fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
+fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
       if (createdDateTime < oldestCreatedDateTime)
       {
         oldestUUIDId          = uuidId;
@@ -3702,6 +3703,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
     }
     Index_doneList(&indexQueryHandle);
 
+fprintf(stderr,"%s, %d: totalStorageSize=%llu\n",__FILE__,__LINE__,totalStorageSize);
     if ((totalStorageSize > maxStorageSize) && (oldestStorageId != INDEX_ID_NONE))
     {
 fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
@@ -3877,7 +3879,7 @@ fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageS
 
     if ((totalStorageSize > maxStorageSize) && (oldestStorageId != INDEX_ID_NONE))
     {
-fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
+fprintf(stderr,"%s, %d: purge storage id=%lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
       // delete oldest storage entry
       error = Storage_parseName(&storageSpecifier,oldestStorageName);
       if (error == ERROR_NONE)
@@ -3995,7 +3997,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
   oldestStorageName    = String_new();
   dateTime             = String_new();
 
-fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,maxStorageSize);
+fprintf(stderr,"%s, %d: start purgeStorageByServer maxStorageSize=%llu\n",__FILE__,__LINE__,maxStorageSize);
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //asm("int3");
   do
@@ -4074,7 +4076,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer %llu\n",__FILE__,__LINE__,max
 
     if ((totalStorageSize > maxStorageSize) && (oldestStorageId != INDEX_ID_NONE))
     {
-fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
+fprintf(stderr,"%s, %d: purge storage id=%lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
       // delete oldest storage entry
       error = Storage_parseName(&storageSpecifier,oldestStorageName);
       if (error == ERROR_NONE)
