@@ -118,7 +118,7 @@ typedef struct
 } InitNotifyMsg;
 
 /***************************** Variables *******************************/
-LOCAL Semaphore      notifyLock;
+LOCAL Semaphore      notifyLock;                  // lock
 LOCAL Dictionary     notifyHandles;
 LOCAL Dictionary     notifyDirectories;
 LOCAL DatabaseHandle continuousDatabaseHandle;
@@ -1558,6 +1558,7 @@ LOCAL bool existsContinuousEntry(const char  *jobUUID,
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
   assert(name != NULL);
+  assert(Database_isLocked(&continuousDatabaseHandle));
 
   return Database_exists(&continuousDatabaseHandle,
                          "names",
@@ -1585,38 +1586,30 @@ LOCAL Errors addContinuousEntry(const char  *jobUUID,
                                 ConstString name
                                )
 {
-  Errors error;
-
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
   assert(name != NULL);
+  assert(Database_isLocked(&continuousDatabaseHandle));
 
-  BLOCK_DOX(error,
-            Database_lock(&continuousDatabaseHandle),
-            Database_unlock(&continuousDatabaseHandle),
-  {
-    return Database_execute(&continuousDatabaseHandle,
-                            CALLBACK(NULL,NULL),
-                            "INSERT OR IGNORE INTO names \
-                               (\
-                                jobUUID,\
-                                scheduleUUID,\
-                                name\
-                               ) \
-                             VALUES \
-                               (\
-                                %'s,\
-                                %'s,\
-                                %'S\
-                               ); \
-                            ",
-                            jobUUID,
-                            scheduleUUID,
-                            name
-                           );
-  });
-
-  return error;
+  return Database_execute(&continuousDatabaseHandle,
+                          CALLBACK(NULL,NULL),
+                          "INSERT OR IGNORE INTO names \
+                             (\
+                              jobUUID,\
+                              scheduleUUID,\
+                              name\
+                             ) \
+                           VALUES \
+                             (\
+                              %'s,\
+                              %'s,\
+                              %'S\
+                             ); \
+                          ",
+                          jobUUID,
+                          scheduleUUID,
+                          name
+                         );
 }
 
 /***********************************************************************\
@@ -1630,6 +1623,8 @@ LOCAL Errors addContinuousEntry(const char  *jobUUID,
 
 LOCAL Errors removeContinuousEntry(DatabaseId databaseId)
 {
+  assert(Database_isLocked(&continuousDatabaseHandle));
+
   return Database_execute(&continuousDatabaseHandle,
                           CALLBACK(NULL,NULL),
                           "DELETE FROM names WHERE id=%ld;",
@@ -1739,32 +1734,36 @@ fprintf(stderr,"\n");
             {
               if      ((inotifyEvent->mask & IN_CREATE) == IN_CREATE)
               {
-                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                BLOCK_DO(Database_lock(&continuousDatabaseHandle),
+                         Database_unlock(&continuousDatabaseHandle),
                 {
-                  // store into notify database
-                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                  if (error == ERROR_NONE)
+                  LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                   {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Marked for storage '%s'\n",
-                                String_cString(name)
-                               );
-                  }
-                  else
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)\n",
-                                Error_getText(error)
-                               );
-                  }
+                    // store into notify database
+                    error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                    if (error == ERROR_NONE)
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_CONTINUOUS,
+                                  "CONTINUOUS",
+                                  "Marked for storage '%s'\n",
+                                  String_cString(name)
+                                 );
+                    }
+                    else
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_CONTINUOUS,
+                                  "CONTINUOUS",
+                                  "Store continuous entry fail (error: %s)\n",
+                                  Error_getText(error)
+                                 );
+                    }
 
-                  // add directory and sub-directories to notify
-                  addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                }
+                    // add directory and sub-directories to notify
+                    addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                  }
+                });
               }
               else if ((inotifyEvent->mask & IN_DELETE) == IN_DELETE)
               {
@@ -1778,71 +1777,45 @@ fprintf(stderr,"\n");
               }
               else if ((inotifyEvent->mask & IN_MOVED_TO) == IN_MOVED_TO)
               {
-                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                BLOCK_DO(Database_lock(&continuousDatabaseHandle),
+                         Database_unlock(&continuousDatabaseHandle),
                 {
-                  // store into notify database
-                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                  if (error == ERROR_NONE)
+                  LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                   {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Marked for storage '%s'\n",
-                                String_cString(name)
-                               );
-                  }
-                  else
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)\n",
-                                Error_getText(error)
-                               );
-                  }
+                    // store into notify database
+                    error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                    if (error == ERROR_NONE)
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_CONTINUOUS,
+                                  "CONTINUOUS",
+                                  "Marked for storage '%s'\n",
+                                  String_cString(name)
+                                 );
+                    }
+                    else
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_CONTINUOUS,
+                                  "CONTINUOUS",
+                                  "Store continuous entry fail (error: %s)\n",
+                                  Error_getText(error)
+                                 );
+                    }
 
-                  // add directory and sub-directories to notify
-                  addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                }
+                    // add directory and sub-directories to notify
+                    addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                  }
+                });
               }
               else
               {
-                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                BLOCK_DO(Database_lock(&continuousDatabaseHandle),
+                         Database_unlock(&continuousDatabaseHandle),
                 {
-                  // store into notify database
-                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
-                  if (error == ERROR_NONE)
+                  LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                   {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Marked for storage '%s'\n",
-                                String_cString(name)
-                               );
-                  }
-                  else
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)\n",
-                                Error_getText(error)
-                               );
-                  }
-                }
-              }
-            }
-            else
-            {
-              if (   ((inotifyEvent->mask & IN_DELETE) != IN_DELETE)
-                  && ((inotifyEvent->mask & IN_MOVED_FROM) != IN_MOVED_FROM)
-                 )
-              {
-                // store into notify database
-                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
-                {
-                  if (!existsContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name))
-                  {
+                    // store into notify database
                     error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
                     if (error == ERROR_NONE)
                     {
@@ -1863,7 +1836,45 @@ fprintf(stderr,"\n");
                                  );
                     }
                   }
-                }
+                });
+              }
+            }
+            else
+            {
+              if (   ((inotifyEvent->mask & IN_DELETE) != IN_DELETE)
+                  && ((inotifyEvent->mask & IN_MOVED_FROM) != IN_MOVED_FROM)
+                 )
+              {
+                // store into notify database
+                BLOCK_DO(Database_lock(&continuousDatabaseHandle),
+                         Database_unlock(&continuousDatabaseHandle),
+                {
+                  LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                  {
+                    if (!existsContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name))
+                    {
+                      error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,name);
+                      if (error == ERROR_NONE)
+                      {
+                        plogMessage(NULL,  // logHandle
+                                    LOG_TYPE_CONTINUOUS,
+                                    "CONTINUOUS",
+                                    "Marked for storage '%s'\n",
+                                    String_cString(name)
+                                   );
+                      }
+                      else
+                      {
+                        plogMessage(NULL,  // logHandle
+                                    LOG_TYPE_CONTINUOUS,
+                                    "CONTINUOUS",
+                                    "Store continuous entry fail (error: %s)\n",
+                                    Error_getText(error)
+                                   );
+                      }
+                    }
+                  }
+                });
               }
             }
           }
@@ -2063,11 +2074,20 @@ Errors Continuous_add(ConstString jobUUID,
                       ConstString name
                      )
 {
+  Errors error;
+
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
   assert(!String_isEmpty(name));
 
-  return addContinuousEntry(String_cString(jobUUID),String_cString(scheduleUUID),name);
+  BLOCK_DOX(error,
+            Database_lock(&continuousDatabaseHandle),
+            Database_unlock(&continuousDatabaseHandle),
+  {
+    return addContinuousEntry(String_cString(jobUUID),String_cString(scheduleUUID),name);
+  });
+
+  return error;
 }
 
 Errors Continuous_remove(DatabaseId databaseId)
@@ -2077,16 +2097,25 @@ Errors Continuous_remove(DatabaseId databaseId)
 
 bool Continuous_isAvailable(ConstString jobUUID, ConstString scheduleUUID)
 {
+  Errors error;
+
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
-  return Database_exists(&continuousDatabaseHandle,
-                         "names",
-                         "id",
-                         "WHERE jobUUID=%'S AND scheduleUUID=%'S",
-                         jobUUID,
-                         scheduleUUID
-                        );
+  BLOCK_DOX(error,
+            Database_lock(&continuousDatabaseHandle),
+            Database_unlock(&continuousDatabaseHandle),
+  {
+    return Database_exists(&continuousDatabaseHandle,
+                           "names",
+                           "id",
+                           "WHERE jobUUID=%'S AND scheduleUUID=%'S",
+                           jobUUID,
+                           scheduleUUID
+                          );
+  });
+
+  return error;
 }
 
 Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
