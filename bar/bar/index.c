@@ -5779,7 +5779,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                                      UNIXTIMESTAMP(storage.lastChecked) \
                               FROM storage \
                                 LEFT JOIN entities ON storage.entityId=entities.id \
-                                LEFT JOIN uuids ON entitys.jobUUID=uuids.jobUUID \
+                                LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
                               WHERE storage.id=%lld \
                               GROUP BY storage.id \
                               LIMIT 0,1 \
