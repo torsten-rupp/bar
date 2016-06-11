@@ -3758,7 +3758,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
         break;
       }
       (void)Index_pruneEntity(indexHandle,oldestEntityId);
-      (void)Index_pruneEntity(indexHandle,oldestUUIDId);
+      (void)Index_pruneUUID(indexHandle,oldestUUIDId);
 
       // log
       Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
