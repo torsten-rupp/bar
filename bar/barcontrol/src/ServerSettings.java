@@ -471,7 +471,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       row++;
 
       button = BARWidgets.newCheckbox(composite,
-                                      BARControl.tr("Auto index udate database."),
+                                      BARControl.tr("Auto index update database."),
                                       indexDatabaseAutoUpdate,
                                       "Auto index update"
                                      );
@@ -2383,7 +2383,7 @@ Dprintf.dprintf("log=%s",log);
           }
         });
 
-        button = Widgets.newButton(subComposite,BARControl.tr("Load\u2026"));
+        button = Widgets.newButton(subComposite,BARControl.tr("Load")+"\u2026");
         Widgets.layout(button,1,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
