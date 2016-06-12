@@ -3480,27 +3480,27 @@ class Dialogs
         };
 
         tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
-        tableColumn.setText("Name");
+        tableColumn.setText(Dialogs.tr("Name"));
         tableColumn.setData(new TableLayoutData(0,0,TableLayoutData.WE,0,0,0,0,600,SWT.DEFAULT));
         tableColumn.setResizable(true);
         tableColumn.addSelectionListener(selectionListener);
 
         tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
-        tableColumn.setText("Type");
+        tableColumn.setText(Dialogs.tr("Type"));
         tableColumn.setData(new TableLayoutData(0,1,TableLayoutData.NONE));
         tableColumn.setWidth(50);
         tableColumn.setResizable(false);
         tableColumn.addSelectionListener(selectionListener);
 
         tableColumn = new TableColumn(widgetFileList,SWT.LEFT);
-        tableColumn.setText("Modified");
+        tableColumn.setText(Dialogs.tr("Modified"));
         tableColumn.setData(new TableLayoutData(0,2,TableLayoutData.NONE));
         tableColumn.setWidth(160);
         tableColumn.setResizable(false);
         tableColumn.addSelectionListener(selectionListener);
 
         tableColumn = new TableColumn(widgetFileList,SWT.RIGHT);
-        tableColumn.setText("Size");
+        tableColumn.setText(Dialogs.tr("Size"));
         tableColumn.setData(new TableLayoutData(0,3,TableLayoutData.NONE));
         tableColumn.setWidth(80);
         tableColumn.setResizable(false);

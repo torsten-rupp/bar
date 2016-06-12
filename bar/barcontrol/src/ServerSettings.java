@@ -437,16 +437,24 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                    new String[]{"0","64K","128K","256K","512K","1M","2M","4M","8M","16M","32M","64M","128M","256M","512M","1G","10G"}
                                   );
       Widgets.layout(combo,row,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
-      row++;*/
+      row++;
+*/
 
       label = Widgets.newLabel(composite,BARControl.tr("Min. compress size")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
-      combo = BARWidgets.newNumber(composite,
-                                   BARControl.tr("Min. size of files for compression [bytes]."),
-                                   compressMinSize,
-                                   new String[]{"0","32","64","128","256","512","1K","4K","8K"}
-                                  );
-      Widgets.layout(combo,row,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(0.0,0.0));
+      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      {
+        combo = BARWidgets.newNumber(subComposite,
+                                     BARControl.tr("Min. size of files for compression."),
+                                     compressMinSize,
+                                     new String[]{"0","32","64","128","256","512","1K","4K","8K"}
+                                    );
+        Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+        label = Widgets.newLabel(subComposite,BARControl.tr("bytes"));
+        Widgets.layout(label,0,1,TableLayoutData.W);
+      }
       row++;
 
       label = Widgets.newLabel(composite,BARControl.tr("Jobs directory")+":");
@@ -473,7 +481,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       button = BARWidgets.newCheckbox(composite,
                                       BARControl.tr("Auto index update database."),
                                       indexDatabaseAutoUpdate,
-                                      "Auto index update"
+                                      BARControl.tr("Auto index update")
                                      );
       Widgets.layout(button,row,1,TableLayoutData.W);
       row++;
@@ -501,7 +509,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("CA file")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("BAR CA file."),
+                                           BARControl.tr("BAR certificate authority file."),
                                            serverCAFile,
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
@@ -513,7 +521,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("Cert file")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("BAR cert file."),
+                                           BARControl.tr("BAR certificate file."),
                                            serverCertFile,
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
@@ -1492,7 +1500,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log errors."),
                                         log,
-                                        "errors",
+                                        BARControl.tr("errors"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1526,7 +1534,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log warnings."),
                                         log,
-                                        "warnings",
+                                        BARControl.tr("warnings"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1560,7 +1568,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log stored/restored files."),
                                         log,
-                                        "ok",
+                                        BARControl.tr("ok"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1594,7 +1602,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log unknown files."),
                                         log,
-                                        "unknown files",
+                                        BARControl.tr("unknown files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1628,7 +1636,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log skipped files."),
                                         log,
-                                        "skipped files",
+                                        BARControl.tr("skipped files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1662,7 +1670,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log missing files."),
                                         log,
-                                        "missing files",
+                                        BARControl.tr("missing files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1696,7 +1704,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log incomplete files."),
                                         log,
-                                        "incomplete files",
+                                        BARControl.tr("incomplete files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1730,7 +1738,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log excluded files."),
                                         log,
-                                        "excluded files",
+                                        BARControl.tr("excluded files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1764,7 +1772,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log storage operations."),
                                         log,
-                                        "storage operations",
+                                        BARControl.tr("storage operations"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1798,7 +1806,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log index operations."),
                                         log,
-                                        "index operations",
+                                        BARControl.tr("index operations"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1832,7 +1840,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log continous operations."),
                                         log,
-                                        "continous operations",
+                                        BARControl.tr("continous operations"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -1866,7 +1874,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("all"),
                                         log,
-                                        "all",
+                                        BARControl.tr("all"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2450,7 +2458,7 @@ Dprintf.dprintf("log=%s",log);
           }
         });
 
-        button = Widgets.newButton(subComposite,BARControl.tr("Load\u2026"));
+        button = Widgets.newButton(subComposite,BARControl.tr("Load")+"\u2026");
         Widgets.layout(button,1,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {

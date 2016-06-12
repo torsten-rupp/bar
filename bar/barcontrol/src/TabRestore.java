@@ -4212,7 +4212,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(uuidIndexData.getEntrySize()),uuidIndexData.getEntrySize()));
+      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(uuidIndexData.getEntrySize()),uuidIndexData.getEntrySize())));
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4315,7 +4315,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entityIndexData.getEntrySize()),entityIndexData.getEntrySize()));
+      label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entityIndexData.getEntrySize()),entityIndexData.getEntrySize())));
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4438,7 +4438,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(storageIndexData.getEntrySize()),storageIndexData.getEntrySize()));
+      label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(storageIndexData.getEntrySize()),storageIndexData.getEntrySize())));
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4609,7 +4609,7 @@ if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       label.setForeground(COLOR_FORGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(entryIndexData.size),entryIndexData.size));
+      label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entryIndexData.size),entryIndexData.size)));
       label.setForeground(COLOR_FORGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -5757,7 +5757,7 @@ Dprintf.dprintf("");
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
-        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
+        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,140,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
         {
           @Override
@@ -6248,7 +6248,7 @@ Dprintf.dprintf("remove");
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
-        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,120,SWT.DEFAULT);
+        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,140,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           @Override
@@ -8040,7 +8040,7 @@ Dprintf.dprintf("");
     {
       widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
       widgetRestore.setEnabled(false);
-      Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetRestore.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -8061,7 +8061,7 @@ Dprintf.dprintf("");
       });
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,120,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -8168,7 +8168,7 @@ Dprintf.dprintf("");
                   {
                     if (!widgetTotal.isDisposed())
                     {
-                      widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                      widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
                       widgetTotal.pack();
                     }
                   }
@@ -8240,7 +8240,7 @@ Dprintf.dprintf("");
                   {
                     if (!widgetTotal.isDisposed())
                     {
-                      widgetTotal.setText(BARControl.tr("{0} entries/{1} ({2} bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                      widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
                       widgetTotal.pack();
                     }
                   }
