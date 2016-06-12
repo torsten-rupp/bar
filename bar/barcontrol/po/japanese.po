@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-06-10 11:03+0200\n"
+"POT-Creation-Date: 2016-06-12 02:39+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -472,7 +472,7 @@ msgstr "すべてのファイル"
 
 #: src/ServerSettings.java:474
 #, fuzzy
-msgid "Auto index udate database."
+msgid "Auto index update database."
 msgstr "保存ファイルをインデックス・データベースに追加"
 
 #: src/ServerSettings.java:483
@@ -1041,8 +1041,8 @@ msgstr "パブリックキー"
 msgid "Set initial or new public key. Note: existing public key is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:2386 src/ServerSettings.java:2453
-msgid "Load…"
+#: src/ServerSettings.java:2386
+msgid "Load"
 msgstr ""
 
 #: src/ServerSettings.java:2396 src/TabJobs.java:4773 src/TabJobs.java:4785
@@ -1072,6 +1072,10 @@ msgstr "SSHプライベートキー"
 #: src/ServerSettings.java:2439
 msgid ""
 "Set initial or new private key. Note: existing private key is not shown."
+msgstr ""
+
+#: src/ServerSettings.java:2453
+msgid "Load…"
 msgstr ""
 
 #: src/ServerSettings.java:2463

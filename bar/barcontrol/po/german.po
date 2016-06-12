@@ -7,15 +7,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-06-10 11:03+0200\n"
-"PO-Revision-Date: 2015-12-25 11:45+0100\n"
+"POT-Creation-Date: 2016-06-12 02:39+0200\n"
+"PO-Revision-Date: 2016-06-12 02:46+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"Language: DE\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-Bookmarks: 304,-1,-1,-1,-1,-1,-1,-1,-1,-1\n"
+"X-Generator: Poedit 1.5.4\n"
 
 #: src/BARControl.java:807 src/TabStatus.java:975 src/TabStatus.java:1059
 #: src/TabStatus.java:1150 src/TabStatus.java:1191 src/TabStatus.java:1256
@@ -174,9 +175,8 @@ msgid "Written by Torsten Rupp"
 msgstr "Erstellt von Torsten Rupp"
 
 #: src/BARControl.java:2049
-#, fuzzy
 msgid "Connection lost"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "Verbindung verloren"
 
 #: src/BARControl.java:2049 src/BARControl.java:2069 src/BARControl.java:2090
 #: src/BARControl.java:2939
@@ -192,14 +192,13 @@ msgid "Connection fail"
 msgstr "Verbindung fehlgeschlagen"
 
 #: src/BARControl.java:2090
-#, fuzzy
 msgid "Internal error"
-msgstr "Interval"
+msgstr "Interner Fehler"
 
 #: src/BARControl.java:2749 src/TabRestore.java:8388
-#, fuzzy, java-format
+#, java-format
 msgid "Please enter {0} login for: {1}"
-msgstr "Bitte FTP Passwort eingeben für: {0}"
+msgstr "Bitte {0} Passwort eingeben für: {1}"
 
 #: src/BARControl.java:2750 src/Dialogs.java:2626 src/Dialogs.java:2854
 #: src/Dialogs.java:3536 src/ServerSettings.java:555
@@ -212,17 +211,14 @@ msgid "Name"
 msgstr "Name"
 
 #: src/BARControl.java:2774 src/TabRestore.java:8416
-#, fuzzy, java-format
+#, java-format
 msgid "Please enter {0} password for: {1}"
-msgstr "Bitte FTP Passwort eingeben für: {0}"
+msgstr "Bitte {0} Passwort eingeben für: {1}"
 
 #: src/BARControl.java:2801
-#, fuzzy, java-format
+#, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
-msgstr ""
-"Fehler bei der Wiederherstellung des Archives\n"
-"\n"
-"{0}"
+msgstr "Fehler bei der Wiederherstellung von ''{0}'': {1}"
 
 #: src/BARWidgets.java:545 src/BARWidgets.java:575 src/BARWidgets.java:614
 #: src/TabJobs.java:4011 src/TabJobs.java:4034 src/TabJobs.java:4066
@@ -242,10 +238,8 @@ msgstr ""
 "MB oder GB angehängt werden."
 
 #: src/BARWidgets.java:765
-#, fuzzy
 msgid "Select path name. Ctrl+Click to select local directory."
-msgstr ""
-"Entfernten Pfad auswählen. Strg+Klick um einen lokalen Pfad auszuwählen."
+msgstr "Pfad auswählen. Strg+Klick um einen lokalen Pfad auszuwählen."
 
 #: src/BARWidgets.java:779 src/BARWidgets.java:787 src/Dialogs.java:4315
 #: src/TabRestore.java:8004 src/TabRestore.java:8012
@@ -253,15 +247,12 @@ msgid "Select path"
 msgstr "Pfad auswählen"
 
 #: src/BARWidgets.java:885
-#, fuzzy
 msgid "Select file name. Ctrl+Click to select local file."
-msgstr ""
-"Entfernte Datei auswählen. Strg+Klick um eine lokale Datei auszuwählen."
+msgstr "Datei auswählen. Strg+Klick um eine lokale Datei auszuwählen."
 
 #: src/BARWidgets.java:899 src/BARWidgets.java:909
-#, fuzzy
 msgid "Select file"
-msgstr "Wähle lokale Archivedatei aus"
+msgstr "Datei auswählen"
 
 #: src/BusyDialog.java:572 src/Dialogs.java:1433 src/Dialogs.java:1598
 #: src/Dialogs.java:1779
@@ -315,9 +306,8 @@ msgstr "Pfad"
 #: src/TabJobs.java:3256 src/TabJobs.java:3340 src/TabJobs.java:3725
 #: src/TabJobs.java:3808 src/TabJobs.java:4457 src/TabJobs.java:4537
 #: src/TabJobs.java:8117 src/TabJobs.java:8202
-#, fuzzy
 msgid "Remove"
-msgstr "Löschen…"
+msgstr "Löschen"
 
 #: src/Dialogs.java:3518 src/TabRestore.java:5667 src/TabRestore.java:6143
 msgid "Filter"
@@ -362,71 +352,63 @@ msgstr "Fortschritt"
 
 #: src/ServerSettings.java:378
 msgid "General"
-msgstr ""
+msgstr "Allgemein"
 
 #: src/ServerSettings.java:384
 msgid "Temporary directory"
-msgstr ""
+msgstr "Temporäres Verzeichnis"
 
 #: src/ServerSettings.java:392
-#, fuzzy
 msgid "Path to temporary directory."
-msgstr "Max. Speicherplatzgrößer"
+msgstr "Pfad für temporäres Verzeichnis."
 
 #: src/ServerSettings.java:397
-#, fuzzy
 msgid "Max. size"
-msgstr "Max. Speicherplatzgrößer"
+msgstr "Max. Speicherplatzgröße"
 
 #: src/ServerSettings.java:401
-#, fuzzy
 msgid "Size limit for temporary files."
-msgstr "Größenlimit für eine Archivdatei."
+msgstr "Größenlimit für temporäre Dateien."
 
 #: src/ServerSettings.java:409
 msgid "Nice level"
-msgstr ""
+msgstr "\"Nice\"-Level"
 
 #: src/ServerSettings.java:412
 msgid "Process nice level."
-msgstr ""
+msgstr "Prozess \"Nice\"-Level"
 
 #: src/ServerSettings.java:420
-#, fuzzy
 msgid "Max. number of threads"
-msgstr "Max. Anzahl Einträge in Liste."
+msgstr "Max. Anzahl von Threads."
 
 #: src/ServerSettings.java:423
 msgid "Max. number of compression and encryption threads."
-msgstr ""
+msgstr "Max. Anzahl von Kompressions- und Verschlüsselungsthreads."
 
 #: src/ServerSettings.java:442
-#, fuzzy
 msgid "Min. compress size"
-msgstr "Max. Speicherplatzgrößer"
+msgstr "Min. Kompressionsgröße"
 
 #: src/ServerSettings.java:445
 msgid "Min. size of files for compression [bytes]."
-msgstr ""
+msgstr "Min. Dateigröße für Kompression [Bytes]."
 
 #: src/ServerSettings.java:452
-#, fuzzy
 msgid "Jobs directory"
-msgstr "Verzeichnisgröße"
+msgstr "Verzeichnis mit Aufträgen"
 
 #: src/ServerSettings.java:455
-#, fuzzy
 msgid "Jobs directory."
-msgstr "Verzeichnisgröße"
+msgstr "Verzeichnis mit Aufträgen."
 
 #: src/ServerSettings.java:461
-#, fuzzy
 msgid "Index database"
-msgstr "Archive zu Index hinzufügen"
+msgstr "Indexdatenbank"
 
 #: src/ServerSettings.java:464
 msgid "Index database."
-msgstr ""
+msgstr "Indexdatenbank."
 
 #: src/ServerSettings.java:466 src/ServerSettings.java:506
 #: src/ServerSettings.java:518 src/ServerSettings.java:530
@@ -473,12 +455,10 @@ msgid "All files"
 msgstr "Alle Dateien"
 
 #: src/ServerSettings.java:474
-#, fuzzy
-msgid "Auto index udate database."
-msgstr "Archive zu Index hinzufügen"
+msgid "Auto index update database."
+msgstr "Archivindex automatisch aktualisieren."
 
 #: src/ServerSettings.java:483
-#, fuzzy
 msgid "Servers"
 msgstr "Server"
 
@@ -488,49 +468,40 @@ msgid "Port"
 msgstr "Portnummer"
 
 #: src/ServerSettings.java:493
-#, fuzzy
 msgid "BAR server port number."
-msgstr "FTP-Server Name."
+msgstr "BAR Serverportnummer."
 
 #: src/ServerSettings.java:501
-#, fuzzy
 msgid "CA file"
-msgstr "Alle Dateien"
+msgstr "CA-Datei"
 
 #: src/ServerSettings.java:504
-#, fuzzy
 msgid "BAR CA file."
-msgstr "Alle Dateien"
+msgstr "BAR CA-Datei."
 
 #: src/ServerSettings.java:513
-#, fuzzy
 msgid "Cert file"
-msgstr "Wähle lokale Archivedatei aus"
+msgstr "Zertifikatsdatei"
 
 #: src/ServerSettings.java:516
-#, fuzzy
 msgid "BAR cert file."
-msgstr "Wähle lokale Archivedatei aus"
+msgstr "BAR Zertifikatsdatei."
 
 #: src/ServerSettings.java:525
-#, fuzzy
 msgid "Key file"
-msgstr "Datei"
+msgstr "Schlüsseldatei."
 
 #: src/ServerSettings.java:528
-#, fuzzy
 msgid "BAR key file."
-msgstr "Datei"
+msgstr "BAR Schüsseldatei."
 
 #: src/ServerSettings.java:540
-#, fuzzy
 msgid "BAR password."
-msgstr "Entschlüsselungspasswort"
+msgstr "BAR Passwort."
 
 #: src/ServerSettings.java:546
-#, fuzzy
 msgid "Storage servers"
-msgstr "Server"
+msgstr "Server für Speicherung"
 
 #: src/ServerSettings.java:552 src/TabJobs.java:9930 src/TabJobs.java:12824
 #: src/TabRestore.java:4417 src/TabRestore.java:4554 src/TabRestore.java:4598
@@ -549,12 +520,11 @@ msgstr "Klicken um nach Namen zu sortieren."
 
 #: src/ServerSettings.java:558
 msgid "#"
-msgstr ""
+msgstr "#"
 
 #: src/ServerSettings.java:559
-#, fuzzy
 msgid "Click to sort by max. number of concurrent connections."
-msgstr "Max. Anzahl Einträge in Liste."
+msgstr "Klicken um nach max. Anzahl gleichzeitiger Verbindungen zu sortieren."
 
 #: src/ServerSettings.java:561 src/TabJobs.java:7269 src/TabJobs.java:7592
 #: src/TabRestore.java:4437 src/TabRestore.java:4608 src/TabRestore.java:4816
@@ -563,18 +533,16 @@ msgid "Size"
 msgstr "Größe"
 
 #: src/ServerSettings.java:562
-#, fuzzy
 msgid "Click to sort by max. storage size."
-msgstr "Klicken um nach Teilgrößen zu sortieren."
+msgstr "Klicken um nach Speichergrößen zu sortieren."
 
 #: src/ServerSettings.java:572
 msgid "Add…"
 msgstr "Hinzufügen…"
 
 #: src/ServerSettings.java:583
-#, fuzzy
 msgid "Add storage server"
-msgstr "Server"
+msgstr "Speicherserver hinzufügen"
 
 #: src/ServerSettings.java:583 src/ServerSettings.java:695
 #: src/TabJobs.java:2994 src/TabJobs.java:3071 src/TabJobs.java:3202
@@ -586,21 +554,23 @@ msgid "Add"
 msgstr "Hinzufügen"
 
 #: src/ServerSettings.java:618 src/ServerSettings.java:730
-#, fuzzy, java-format
+#, java-format
 msgid ""
 "Add storage server fail:\n"
 "\n"
 "{0}"
-msgstr "Server"
+msgstr ""
+"Hinzufügen des Speicherservers fehltgeschlagen:\n"
+"\n"
+"{0}"
 
 #: src/ServerSettings.java:624
 msgid "Edit…"
 msgstr "Ändern…"
 
 #: src/ServerSettings.java:639
-#, fuzzy
 msgid "Edit storage server"
-msgstr "Server"
+msgstr "Speicherserver editieren"
 
 #: src/ServerSettings.java:672
 #, java-format
@@ -609,15 +579,17 @@ msgid ""
 "\n"
 "{0}"
 msgstr ""
+"Speicher der Einstellungen fehlgeschlagen:\n"
+"\n"
+"{0}"
 
 #: src/ServerSettings.java:679
 msgid "Clone…"
 msgstr "Duplizieren…"
 
 #: src/ServerSettings.java:695
-#, fuzzy
 msgid "Clone storage server"
-msgstr "Server"
+msgstr "Speicherserver duplizieren"
 
 #: src/ServerSettings.java:737
 msgid "Remove…"
@@ -626,7 +598,7 @@ msgstr "Löschen…"
 #: src/ServerSettings.java:752
 #, java-format
 msgid "Delete settings of storage server ''{0}''?"
-msgstr ""
+msgstr "Einstellungen für Speicherserver ''{0}'' löschen?"
 
 #: src/ServerSettings.java:772
 #, java-format
@@ -635,10 +607,13 @@ msgid ""
 "\n"
 "{0}"
 msgstr ""
+"Löschen der Einstellungen für Speicherserver fehgeschlagen:\n"
+"\n"
+"{0}"
 
 #: src/ServerSettings.java:783
 msgid "Commands"
-msgstr ""
+msgstr "Befehle"
 
 #: src/ServerSettings.java:790 src/TabJobs.java:5534
 msgid "CD"
@@ -651,69 +626,66 @@ msgid "Device"
 msgstr "Gerätename"
 
 #: src/ServerSettings.java:799
-#, fuzzy
 msgid "CD device name."
-msgstr "Gerätename."
+msgstr "CD Gerätename."
 
 #: src/ServerSettings.java:808 src/ServerSettings.java:982
 #: src/ServerSettings.java:1157 src/ServerSettings.java:1332
 msgid "Request volumn command"
-msgstr ""
+msgstr "Befehle neues Medium"
 
 #: src/ServerSettings.java:811 src/ServerSettings.java:985
 #: src/ServerSettings.java:1160 src/ServerSettings.java:1335
 msgid "Request volumn command."
-msgstr ""
+msgstr "Befehl für Medium."
 
 #: src/ServerSettings.java:820 src/ServerSettings.java:994
 #: src/ServerSettings.java:1169 src/ServerSettings.java:1344
-#, fuzzy
 msgid "Unload command"
-msgstr "Schublade öffnen"
+msgstr "Befehl zum Schublade öffnen"
 
 #: src/ServerSettings.java:823
 msgid "Command to unload CD."
-msgstr ""
+msgstr "Befehl zum Auswerfen einer CD."
 
 #: src/ServerSettings.java:832 src/ServerSettings.java:1006
 #: src/ServerSettings.java:1181 src/ServerSettings.java:1356
 msgid "Load command"
-msgstr ""
+msgstr "Befehl zum Laden einer CD"
 
 #: src/ServerSettings.java:835
 msgid "Command to load CD."
-msgstr ""
+msgstr "Befehl zum Laden einer CD."
 
 #: src/ServerSettings.java:844 src/ServerSettings.java:1018
 #: src/ServerSettings.java:1193 src/ServerSettings.java:1368
 msgid "Image pre-command"
-msgstr ""
+msgstr "Befehlszeile, die vor dem Erstellen eines Abbilds ausgeführt wird."
 
 #: src/ServerSettings.java:847
-#, fuzzy
 msgid "Command to execute before creating CD image."
-msgstr "Befehlszeile, die vor dem Start eines Auftrags ausgeführt werden soll."
+msgstr ""
+"Befehlszeile, die vor dem Erstellen eines CD-Abbilds ausgeführt werden soll."
 
 #: src/ServerSettings.java:856 src/ServerSettings.java:1030
 #: src/ServerSettings.java:1205 src/ServerSettings.java:1380
 msgid "Image post-command"
-msgstr ""
+msgstr "Befehlszeile, die nach dem Erstellen eines Abbilds ausgeführt wird"
 
 #: src/ServerSettings.java:859
-#, fuzzy
 msgid "Command to execute after creating CD image."
 msgstr ""
-"Befehlszeile, die vor dem Abschluss eines Auftrags ausgeführt werden soll."
+"Befehlszeile, die vor dem Erstellen eines CD-Abbilds ausgeführt werden soll."
 
 #: src/ServerSettings.java:868 src/ServerSettings.java:1042
 #: src/ServerSettings.java:1217 src/ServerSettings.java:1392
 msgid "Image command"
-msgstr ""
+msgstr "Befehl für Erzeugung eines Abbilds."
 
 #: src/ServerSettings.java:871 src/ServerSettings.java:1045
 #: src/ServerSettings.java:1220 src/ServerSettings.java:1395
 msgid "Image create command."
-msgstr ""
+msgstr "Befehl für Erzeugung eines Abbilds."
 
 #: src/ServerSettings.java:880 src/ServerSettings.java:1054
 #: src/ServerSettings.java:1229 src/ServerSettings.java:1404
@@ -977,11 +949,11 @@ msgstr "Speichern"
 
 #: src/ServerSettings.java:1833
 msgid "Log continous operations."
-msgstr ""
+msgstr "Kontinuierliche Operation in Log schreiben."
 
 #: src/ServerSettings.java:1867
 msgid "all"
-msgstr ""
+msgstr "alle"
 
 #: src/ServerSettings.java:1891
 #, fuzzy
@@ -1000,19 +972,19 @@ msgstr "Datei"
 
 #: src/ServerSettings.java:1903
 msgid "Log format"
-msgstr ""
+msgstr "Log-Format"
 
 #: src/ServerSettings.java:1906
 msgid "Log format string."
-msgstr ""
+msgstr "Log-Format Zeichenkette."
 
 #: src/ServerSettings.java:1911
 msgid "Log post command"
-msgstr ""
+msgstr "Nachbearbeitungsbefehl für Logdatei."
 
 #: src/ServerSettings.java:1914
 msgid "Log post command."
-msgstr ""
+msgstr "Nachbearbeitungsbefehl für Logdatei."
 
 #: src/ServerSettings.java:2123
 #, fuzzy, java-format
@@ -1050,8 +1022,8 @@ msgstr "Öffentlicher Schlüssel"
 msgid "Set initial or new public key. Note: existing public key is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:2386 src/ServerSettings.java:2453
-msgid "Load…"
+#: src/ServerSettings.java:2386
+msgid "Load"
 msgstr ""
 
 #: src/ServerSettings.java:2396 src/TabJobs.java:4773 src/TabJobs.java:4785
@@ -1081,6 +1053,10 @@ msgstr "Privater SSH-Schlüssel"
 #: src/ServerSettings.java:2439
 msgid ""
 "Set initial or new private key. Note: existing private key is not shown."
+msgstr ""
+
+#: src/ServerSettings.java:2453
+msgid "Load…"
 msgstr ""
 
 #: src/ServerSettings.java:2463
@@ -1374,7 +1350,7 @@ msgstr "Eintrag in der Filterliste ändern."
 #: src/TabJobs.java:3424 src/TabJobs.java:3498 src/TabJobs.java:3574
 #: src/TabJobs.java:7778 src/TabJobs.java:7855
 msgid "Test"
-msgstr ""
+msgstr "Test"
 
 #: src/TabJobs.java:3425 src/TabJobs.java:3499 src/TabJobs.java:3575
 #: src/TabJobs.java:7779 src/TabJobs.java:7856
@@ -1399,7 +1375,7 @@ msgstr "Eintrag in der Filterliste ändern."
 
 #: src/TabJobs.java:3592
 msgid "Mounts"
-msgstr ""
+msgstr "Dateisysteme"
 
 #: src/TabJobs.java:3597
 #, fuzzy
@@ -2790,7 +2766,7 @@ msgstr "Wiederherstellen"
 #: src/TabRestore.java:4780 src/TabRestore.java:5823
 #, java-format
 msgid "Count: {0}"
-msgstr ""
+msgstr "Anzahl: {0}"
 
 #: src/TabRestore.java:4814 src/TabRestore.java:5141 src/TabRestore.java:5867
 #: src/TabStatus.java:564
@@ -2861,7 +2837,7 @@ msgstr "Alle Markierungen entfernen"
 
 #: src/TabRestore.java:5526 src/TabRestore.java:6037 src/TabStatus.java:862
 msgid "Info"
-msgstr ""
+msgstr "Info"
 
 #: src/TabRestore.java:5633 src/TabRestore.java:5662 src/TabRestore.java:6110
 #: src/TabRestore.java:6133
@@ -3464,9 +3440,8 @@ msgid "ERROR"
 msgstr ""
 
 #: src/TabStatus.java:101
-#, fuzzy
 msgid "aborted"
-msgstr "Abbrechen"
+msgstr "abgebrochen"
 
 #: src/TabStatus.java:502
 msgid "Status"
@@ -3744,14 +3719,12 @@ msgid "Cannot change volume (error: {0})"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: {0})"
 
 #: src/TabStatus.java:2250
-#, fuzzy
 msgid "Entities"
-msgstr "Datensätze gesamt"
+msgstr "Datensätze"
 
 #: src/TabStatus.java:2302
-#, fuzzy
 msgid "Execution count"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "Anzahl Ausführungen"
 
 #: src/TabStatus.java:2312
 msgid "Average execution time"
