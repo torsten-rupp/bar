@@ -5717,7 +5717,8 @@ e composite widget
   {
     for (TableItem tableItem : table.getItems())
     {
-      if (comparator.compare(data,(T)tableItem.getData()) == 0)
+      assert tableItem.getData() != null;
+      if (comparator.compare((T)tableItem.getData(),data) == 0)
       {
         return tableItem;
       }
@@ -6628,7 +6629,8 @@ e composite widget
   {
     for (TreeItem treeItem : parentTreeItem.getItems())
     {
-      if (comparator.compare(data,(T)treeItem.getData()) == 0)
+      assert treeItem.getData() != null;
+      if (comparator.compare((T)treeItem.getData(),data) == 0)
       {
         return treeItem;
       }
@@ -6712,7 +6714,8 @@ e composite widget
 
     for (TreeItem treeItem : tree.getItems())
     {
-      if (comparator.compare(data,(T)treeItem.getData()) == 0)
+      assert treeItem.getData() != null;
+      if (comparator.compare((T)treeItem.getData(),data) == 0)
       {
         return treeItem;
       }
