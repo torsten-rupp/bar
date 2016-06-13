@@ -3417,90 +3417,6 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
   oldStorageName = String_new();
   Storage_initSpecifier(&oldStorageSpecifier);
 
-#if 0
-  do
-  {
-    deleteStorageId = INDEX_ID_NONE;
-
-    // find old indizes for same storage file
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY, // uuidId
-                                   INDEX_ID_ANY, // entityId
-                                   NULL, // jobUUID,
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   archiveName,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &oldUUIDId,
-                                NULL, // job UUID
-                                &oldEntityId,
-                                NULL, // scheduleUUID
-                                NULL, // archiveType
-                                &oldStorageId,
-                                oldStorageName,
-                                NULL, // createdDateTime
-                                NULL, // entries
-                                NULL, // size
-                                NULL, // indexState,
-                                NULL, // indexMode,
-                                NULL, // lastCheckedDateTime,
-                                NULL  // errorMessage
-                               )
-          )
-    {
-      if (   (oldStorageId != storageId)
-          && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
-          && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
-         )
-      {
-        purgeUUIDId     = oldUUIDId;
-        purgeEntityId   = oldEntityId;
-        deleteStorageId = oldStorageId;
-        break;
-      }
-    }
-    Index_doneList(&indexQueryHandle);
-
-    if (deleteStorageId != INDEX_ID_NONE)
-    {
-fprintf(stderr,"%s, %d: deleteStorageId=%llu\n",__FILE__,__LINE__,deleteStorageId);
-      // delete old storage index
-      error = Index_deleteStorage(indexHandle,deleteStorageId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-
-      // delete entity if empty
-      error = Index_pruneEntity(indexHandle,purgeEntityId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-
-      // delete uuid if empty
-      error = Index_pruneUUID(indexHandle,purgeUUIDId);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-    }
-  }
-  while ((error == ERROR_NONE) && (deleteStorageId != INDEX_ID_NONE));
-#elif 1
   // delete old indizes for same storage file
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
@@ -3553,7 +3469,7 @@ fprintf(stderr,"%s, %d: deleteStorageId=%llu\n",__FILE__,__LINE__,deleteStorageI
       }
       DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
-      // delete entity if empty
+      // delete entity index if empty
       error = Index_pruneEntity(indexHandle,oldEntityId);
       if (error != ERROR_NONE)
       {
@@ -3561,7 +3477,7 @@ fprintf(stderr,"%s, %d: deleteStorageId=%llu\n",__FILE__,__LINE__,deleteStorageI
       }
       DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
-      // delete uuid if empty
+      // delete uuid index if empty
       error = Index_pruneUUID(indexHandle,oldUUIDId);
       if (error != ERROR_NONE)
       {
@@ -3571,7 +3487,6 @@ fprintf(stderr,"%s, %d: deleteStorageId=%llu\n",__FILE__,__LINE__,deleteStorageI
     }
   }
   Index_doneList(&indexQueryHandle);
-#endif
   if (error != ERROR_NONE)
   {
     Storage_doneSpecifier(&oldStorageSpecifier);
@@ -3604,8 +3519,6 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                  LogHandle   *logHandle
                                 )
 {
-//TODO
-#if 1
   String           storageName;
   StorageSpecifier storageSpecifier;
   Errors           error;
@@ -3634,7 +3547,8 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
   Storage_initSpecifier(&storageSpecifier);
   dateTime          = String_new();
 
-fprintf(stderr,"%s, %d: start purgeStorage by jobUUID=%s maxStorageSize=%llu\n",__FILE__,__LINE__,String_cString(jobUUID),maxStorageSize);
+//TODO
+//fprintf(stderr,"%s, %d: start purgeStorage by jobUUID=%s maxStorageSize=%llu\n",__FILE__,__LINE__,String_cString(jobUUID),maxStorageSize);
   do
   {
     // get total storage size, find oldest storage entry
@@ -3689,7 +3603,7 @@ fprintf(stderr,"%s, %d: start purgeStorage by jobUUID=%s maxStorageSize=%llu\n",
                                )
           )
     {
-fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
+//fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
       if (createdDateTime < oldestCreatedDateTime)
       {
         oldestUUIDId          = uuidId;
@@ -3703,7 +3617,7 @@ fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LI
     }
     Index_doneList(&indexQueryHandle);
 
-fprintf(stderr,"%s, %d: totalStorageSize=%llu\n",__FILE__,__LINE__,totalStorageSize);
+//fprintf(stderr,"%s, %d: totalStorageSize=%llu\n",__FILE__,__LINE__,totalStorageSize);
     if ((totalStorageSize > maxStorageSize) && (oldestStorageId != INDEX_ID_NONE))
     {
 fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
@@ -3781,173 +3695,6 @@ fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(oldestStorageName);
   String_delete(storageName);
-#else
-  String           storageName;
-  StorageSpecifier storageSpecifier;
-  Errors           error;
-  uint64           totalStorageSize;
-  IndexId          oldestUUIDId;
-  IndexId          oldestEntityId;
-  IndexId          oldestStorageId;
-  String           oldestStorageName;
-  uint64           oldestCreatedDateTime;
-  uint64           oldestSize;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          uuidId;
-  IndexId          entityId;
-  IndexId          storageId;
-  uint64           createdDateTime;
-  uint64           size;
-  StorageHandle    storageHandle;
-  String           dateTime;
-
-  assert(jobUUID != NULL);
-  assert(maxStorageSize > 0LL);
-
-  // init variables
-  storageName       = String_new();
-  oldestStorageName = String_new();
-  Storage_initSpecifier(&storageSpecifier);
-  dateTime          = String_new();
-
-fprintf(stderr,"%s, %d: start purgeStorage %llu\n",__FILE__,__LINE__,maxStorageSize);
-  do
-  {
-    // get total storage size, find oldest storage entry
-    totalStorageSize      = 0LL;
-    oldestStorageId       = INDEX_ID_NONE;
-    oldestEntityId        = INDEX_ID_NONE;
-    String_clear(oldestStorageName);
-    oldestCreatedDateTime = MAX_UINT64;
-    oldestSize            = 0LL;
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entityId
-                                   jobUUID,
-                                   NULL,  // storageIds
-                                   0,   // storageIdCount
-                                     INDEX_STATE_SET(INDEX_STATE_OK)
-                                   | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
-                                   | INDEX_STATE_SET(INDEX_STATE_ERROR),
-                                   INDEX_MODE_SET(INDEX_MODE_AUTO),
-                                   NULL,  // name
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      logMessage(logHandle,
-                 LOG_TYPE_STORAGE,
-                 "Purged storage for job '%s' fail (error: %s)\n",
-                 String_cString(jobUUID),
-                 Error_getText(error)
-                );
-      break;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                &uuidId,
-                                NULL,  // jobUUID,
-                                &entityId,
-                                NULL,  // scheduleUUID,
-                                NULL,  // archiveType,
-                                &storageId,
-                                storageName,
-                                &createdDateTime,
-                                NULL,  // entries,
-                                &size,
-                                NULL,  // indexState,
-                                NULL,  // indexMode,
-                                NULL,  // lastCheckedDateTime,
-                                NULL   // errorMessage
-                               )
-          )
-    {
-//fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
-      if (createdDateTime < oldestCreatedDateTime)
-      {
-        oldestUUIDId          = uuidId;
-        oldestEntityId        = entityId;
-        oldestStorageId       = storageId;
-        String_set(oldestStorageName,storageName);
-        oldestCreatedDateTime = createdDateTime;
-        oldestSize            = size;
-      }
-      totalStorageSize += size;
-    }
-    Index_doneList(&indexQueryHandle);
-
-    if ((totalStorageSize > maxStorageSize) && (oldestStorageId != INDEX_ID_NONE))
-    {
-fprintf(stderr,"%s, %d: purge storage id=%lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
-      // delete oldest storage entry
-      error = Storage_parseName(&storageSpecifier,oldestStorageName);
-      if (error == ERROR_NONE)
-      {
-        error = Storage_init(&storageHandle,
-                             &storageSpecifier,
-                             NULL,  // jobOptions
-                             &globalOptions.indexDatabaseMaxBandWidthList,
-                             SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK(NULL,NULL),  // updateStatusInfo
-                             CALLBACK(NULL,NULL),  // getPassword
-                             CALLBACK(NULL,NULL)  // requestVolume
-                            );
-        if (error == ERROR_NONE)
-        {
-          // delete storage
-          (void)Storage_delete(&storageHandle,
-                               NULL  // archiveName
-                              );
-
-          // prune empty directories
-          (void)Storage_pruneDirectories(&storageHandle,oldestStorageName);
-        }
-        else
-        {
-          logMessage(logHandle,
-                     LOG_TYPE_STORAGE,
-                     "Purged storage file %s, %.1f%s (%llu bytes) fail (error: %s)\n",
-                     String_cString(oldestStorageName),
-                     BYTES_SHORT(oldestSize),
-                     BYTES_UNIT(oldestSize),
-                     oldestSize,
-                     Error_getText(error)
-                    );
-        }
-        Storage_done(&storageHandle);
-      }
-
-      // purge database entry
-      error = Index_setState(indexHandle,
-                             oldestStorageId,
-                             INDEX_STATE_PURGE,
-                             0LL,  // lastCheckedDateTime
-                             NULL // errorMessage
-                            );
-      if (error != ERROR_NONE)
-      {
-        logMessage(logHandle,
-                   LOG_TYPE_STORAGE,
-                   "Purged storage index #%llu fail (error: %s)\n",
-                   oldestStorageId,
-                   Error_getText(error)
-                  );
-        break;
-      }
-    }
-  }
-  while (   (totalStorageSize > maxStorageSize)
-         && (oldestStorageId != INDEX_ID_NONE)
-        );
-fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
-
-  // free resources
-  String_delete(dateTime);
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(oldestStorageName);
-  String_delete(storageName);
-#endif
 }
 
 /***********************************************************************\
