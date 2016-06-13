@@ -2240,6 +2240,8 @@ Dprintf.dprintf("cirrect?");
       {
         for (final EntityIndexData entityIndexData : entityIndexDataList)
         {
+          assert entityIndexData != null;
+
           display.syncExec(new Runnable()
           {
             public void run()
@@ -3359,8 +3361,8 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
      */
     public int compare(EntryIndexData entryIndexData1, EntryIndexData entryIndexData2)
     {
-Dprintf.dprintf("");
-if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
+//Dprintf.dprintf("");
+//if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       switch (sortMode)
       {
         case ARCHIVE:
