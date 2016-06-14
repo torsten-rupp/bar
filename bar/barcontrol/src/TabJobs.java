@@ -1688,7 +1688,7 @@ public class TabJobs
   private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("include-file-command","");
   private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("include-image-command","");
   private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("exclude-command","");
-  private WidgetVariable  archiveType             = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential"},"normal");
+  private WidgetVariable  archiveType             = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable<Boolean>(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable<Long>   ("archive-part-size",0);
   private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String> ("delta-compress-algorithm",
@@ -6446,7 +6446,7 @@ widgetArchivePartSize.setListVisible(true);
                   fileName = Dialogs.file(shell,
                                           Dialogs.FileDialogTypes.OPEN,
                                           BARControl.tr("Select SSH public key file"),
-                                          incrementalListFileName.getString(),
+                                          sshPublicKeyFileName.getString(),
                                           new String[]{BARControl.tr("Public key files"),"*.pub",
                                                        BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
@@ -6458,7 +6458,7 @@ widgetArchivePartSize.setListVisible(true);
                 {
                   fileName = Dialogs.fileOpen(shell,
                                               BARControl.tr("Select SSH public key file"),
-                                              incrementalListFileName.getString(),
+                                              sshPublicKeyFileName.getString(),
                                               new String[]{BARControl.tr("Public key files"),"*.pub",
                                                            BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                           }
@@ -6550,7 +6550,7 @@ widgetArchivePartSize.setListVisible(true);
                   fileName = Dialogs.file(shell,
                                           Dialogs.FileDialogTypes.OPEN,
                                           BARControl.tr("Select SSH private key file"),
-                                          incrementalListFileName.getString(),
+                                          sshPrivateKeyFileName.getString(),
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
@@ -6561,7 +6561,7 @@ widgetArchivePartSize.setListVisible(true);
                 {
                   fileName = Dialogs.fileOpen(shell,
                                               BARControl.tr("Select SSH private key file"),
-                                              incrementalListFileName.getString(),
+                                              sshPrivateKeyFileName.getString(),
                                               new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                           }
                                              );
@@ -6958,7 +6958,7 @@ widgetArchivePartSize.setListVisible(true);
                   fileName = Dialogs.file(shell,
                                           Dialogs.FileDialogTypes.OPEN,
                                           BARControl.tr("Select SSH public key file"),
-                                          incrementalListFileName.getString(),
+                                          sshPublicKeyFileName.getString(),
                                           new String[]{BARControl.tr("Public key files"),"*.pub",
                                                        BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
@@ -6970,7 +6970,7 @@ widgetArchivePartSize.setListVisible(true);
                 {
                   fileName = Dialogs.fileOpen(shell,
                                               BARControl.tr("Select SSH public key file"),
-                                              incrementalListFileName.getString(),
+                                              sshPublicKeyFileName.getString(),
                                               new String[]{BARControl.tr("Public key files"),"*.pub",
                                                            BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                           }
@@ -7062,7 +7062,7 @@ widgetArchivePartSize.setListVisible(true);
                   fileName = Dialogs.file(shell,
                                           Dialogs.FileDialogTypes.OPEN,
                                           BARControl.tr("Select SSH private key file"),
-                                          incrementalListFileName.getString(),
+                                          sshPrivateKeyFileName.getString(),
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
@@ -7073,7 +7073,7 @@ widgetArchivePartSize.setListVisible(true);
                 {
                   fileName = Dialogs.fileOpen(shell,
                                               BARControl.tr("Select SSH private key file"),
-                                              incrementalListFileName.getString(),
+                                              sshPrivateKeyFileName.getString(),
                                               new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                           }
                                              );
@@ -7241,7 +7241,7 @@ widgetArchivePartSize.setListVisible(true);
                   fileName = Dialogs.file(shell,
                                           Dialogs.FileDialogTypes.OPEN,
                                           BARControl.tr("Select device name"),
-                                          incrementalListFileName.getString(),
+                                          storageDeviceName.getString(),
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
@@ -7252,7 +7252,7 @@ widgetArchivePartSize.setListVisible(true);
                 {
                   fileName = Dialogs.fileOpen(shell,
                                               BARControl.tr("Select device name"),
-                                              incrementalListFileName.getString(),
+                                              storageDeviceName.getString(),
                                               new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                           }
                                              );
@@ -7564,7 +7564,7 @@ widgetArchivePartSize.setListVisible(true);
                   fileName = Dialogs.file(shell,
                                           Dialogs.FileDialogTypes.OPEN,
                                           BARControl.tr("Select device name"),
-                                          incrementalListFileName.getString(),
+                                          storageDeviceName.getString(),
                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                       },
                                           "*",
@@ -7575,7 +7575,7 @@ widgetArchivePartSize.setListVisible(true);
                 {
                   fileName = Dialogs.fileOpen(shell,
                                               BARControl.tr("Select device name"),
-                                              incrementalListFileName.getString(),
+                                              storageDeviceName.getString(),
                                               new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                           }
                                              );
