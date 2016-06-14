@@ -485,6 +485,21 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                      );
       Widgets.layout(button,row,1,TableLayoutData.W);
       row++;
+
+      label = Widgets.newLabel(composite,BARControl.tr("Index database keep time")+":");
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(0.0,0.0));
+      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      {
+        combo = BARWidgets.newNumber(subComposite,
+                                     BARControl.tr("Index database keep time for not existing storages."),
+                                     indexDatabaseKeepTime,
+                                     new String[]{"0","1day","3days","7days","14days","21days","30days"}
+                                    );
+        Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      }
+      row++;
     }
 
     // servers
