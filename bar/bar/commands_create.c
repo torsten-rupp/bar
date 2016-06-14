@@ -6884,9 +6884,6 @@ Errors Command_create(ConstString                  jobUUID,
     AUTOFREE_REMOVE(&autoFreeList,mountNode);
   }
 
-  // close index
-  Index_close(indexHandle);
-
   // output statics
   if (createInfo.failError == ERROR_NONE)
   {
