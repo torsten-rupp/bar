@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-06-13 15:39+0200\n"
+"POT-Creation-Date: 2016-06-14 04:52+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -1173,6 +1173,31 @@ msgstr "パートサイズ"
 msgid "Total size limit for storage."
 msgstr "保存ファイル１パートあたりの制限サイズ。"
 
+#: src/Settings.java:468 src/Settings.java:473 src/TabJobs.java:5071
+#: src/TabJobs.java:12830 src/TabRestore.java:5327
+msgid "normal"
+msgstr "通常の"
+
+#: src/Settings.java:469 src/TabJobs.java:5096 src/TabJobs.java:12835
+#: src/TabRestore.java:5343
+msgid "full"
+msgstr "フル"
+
+#: src/Settings.java:470 src/TabJobs.java:5121 src/TabJobs.java:12840
+#: src/TabRestore.java:5359
+msgid "incremental"
+msgstr "インクリメンタル"
+
+#: src/Settings.java:471 src/TabJobs.java:5146 src/TabJobs.java:12845
+#: src/TabRestore.java:5375
+msgid "differential"
+msgstr "差分"
+
+#: src/Settings.java:472 src/TabJobs.java:12850 src/TabRestore.java:5391
+#, fuzzy
+msgid "continuous"
+msgstr "先へ"
+
 #: src/TabJobs.java:1833 src/TabRestore.java:4793
 msgid "Jobs"
 msgstr "タスク"
@@ -1709,26 +1734,14 @@ msgstr "暗号化パスワード入力に誤りがあります！"
 msgid "Mode"
 msgstr "モード"
 
-#: src/TabJobs.java:5071 src/TabJobs.java:12830 src/TabRestore.java:5327
-msgid "normal"
-msgstr "通常の"
-
 #: src/TabJobs.java:5072
 msgid "Normal mode: do not create incremental data files."
 msgstr "通常モード:インクリメンタル・データファイルは作成しません。"
-
-#: src/TabJobs.java:5096 src/TabJobs.java:12835 src/TabRestore.java:5343
-msgid "full"
-msgstr "フル"
 
 #: src/TabJobs.java:5097
 msgid "Full mode: store all entries and create incremental data files."
 msgstr ""
 "フルモード:すべてのエントリを保存し、インクリメンタル・データファイル作成。"
-
-#: src/TabJobs.java:5121 src/TabJobs.java:12840 src/TabRestore.java:5359
-msgid "incremental"
-msgstr "インクリメンタル"
 
 #: src/TabJobs.java:5122
 msgid ""
@@ -1737,10 +1750,6 @@ msgid ""
 msgstr ""
 "インクリメンタルモード:最終フル保存またはインクリメンタル保存以降変更したエン"
 "トリのみ保存。"
-
-#: src/TabJobs.java:5146 src/TabJobs.java:12845 src/TabRestore.java:5375
-msgid "differential"
-msgstr "差分"
 
 #: src/TabJobs.java:5147
 msgid "Differential mode: store only modified entries since last full storage."
@@ -2643,11 +2652,6 @@ msgstr "インクリメンタル・バックアップとしてタスク実行。
 #: src/TabJobs.java:12846
 msgid "Execute job as differential backup."
 msgstr "差分バックアップとしてタスクを実行。"
-
-#: src/TabJobs.java:12850 src/TabRestore.java:5391
-#, fuzzy
-msgid "continuous"
-msgstr "先へ"
 
 #: src/TabJobs.java:12851
 #, fuzzy

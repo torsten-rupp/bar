@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-06-13 15:39+0200\n"
+"POT-Creation-Date: 2016-06-14 04:52+0200\n"
 "PO-Revision-Date: 2016-06-12 12:29+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1116,6 +1116,30 @@ msgstr "Max. Speicherplatzgröße"
 msgid "Total size limit for storage."
 msgstr "Größenlimit für eine Speicherung."
 
+#: src/Settings.java:468 src/Settings.java:473 src/TabJobs.java:5071
+#: src/TabJobs.java:12830 src/TabRestore.java:5327
+msgid "normal"
+msgstr "normal"
+
+#: src/Settings.java:469 src/TabJobs.java:5096 src/TabJobs.java:12835
+#: src/TabRestore.java:5343
+msgid "full"
+msgstr "voll"
+
+#: src/Settings.java:470 src/TabJobs.java:5121 src/TabJobs.java:12840
+#: src/TabRestore.java:5359
+msgid "incremental"
+msgstr "inkrementell"
+
+#: src/Settings.java:471 src/TabJobs.java:5146 src/TabJobs.java:12845
+#: src/TabRestore.java:5375
+msgid "differential"
+msgstr "differentiell"
+
+#: src/Settings.java:472 src/TabJobs.java:12850 src/TabRestore.java:5391
+msgid "continuous"
+msgstr "fortlaufend"
+
 #: src/TabJobs.java:1833 src/TabRestore.java:4793
 msgid "Jobs"
 msgstr "Aufträge"
@@ -1638,25 +1662,13 @@ msgstr "Verschlüsselungspassworte sind nicht gleich!"
 msgid "Mode"
 msgstr "Modus"
 
-#: src/TabJobs.java:5071 src/TabJobs.java:12830 src/TabRestore.java:5327
-msgid "normal"
-msgstr "normal"
-
 #: src/TabJobs.java:5072
 msgid "Normal mode: do not create incremental data files."
 msgstr "Alle Dateien speichern: keine Inkrementdaten erzeugen."
 
-#: src/TabJobs.java:5096 src/TabJobs.java:12835 src/TabRestore.java:5343
-msgid "full"
-msgstr "voll"
-
 #: src/TabJobs.java:5097
 msgid "Full mode: store all entries and create incremental data files."
 msgstr "Alle Dateien speichern: Inkrementdaten erzeugen."
-
-#: src/TabJobs.java:5121 src/TabJobs.java:12840 src/TabRestore.java:5359
-msgid "incremental"
-msgstr "inkrementell"
 
 #: src/TabJobs.java:5122
 msgid ""
@@ -1665,10 +1677,6 @@ msgid ""
 msgstr ""
 "Inkrementell: speichern von veränderten Dateien seit dem letzten "
 "vollständigen oder inkrementellen Speichern."
-
-#: src/TabJobs.java:5146 src/TabJobs.java:12845 src/TabRestore.java:5375
-msgid "differential"
-msgstr "differentiell"
 
 #: src/TabJobs.java:5147
 msgid "Differential mode: store only modified entries since last full storage."
@@ -2599,10 +2607,6 @@ msgstr "Auftrag als inkrementelle Sicherung ausführen."
 #: src/TabJobs.java:12846
 msgid "Execute job as differential backup."
 msgstr "Auftrag als differentielle Sicherung ausführen."
-
-#: src/TabJobs.java:12850 src/TabRestore.java:5391
-msgid "continuous"
-msgstr "fortlaufend"
 
 #: src/TabJobs.java:12851
 msgid "Execute job as continuous backup."

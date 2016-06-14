@@ -465,12 +465,12 @@ public class Settings
       switch (this)
       {
         case NONE:         return null;
-        case NORMAL:       return "normal";
-        case FULL:         return "full";
-        case INCREMENTAL:  return "incremental";
-        case DIFFERENTIAL: return "differential";
-        case CONTINUOUS:   return "continuous";
-        default:           return "normal";
+        case NORMAL:       return BARControl.tr("normal");
+        case FULL:         return BARControl.tr("full");
+        case INCREMENTAL:  return BARControl.tr("incremental");
+        case DIFFERENTIAL: return BARControl.tr("differential");
+        case CONTINUOUS:   return BARControl.tr("continuous");
+        default:           return BARControl.tr("normal");
       }
     }
   };
