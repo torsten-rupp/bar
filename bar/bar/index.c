@@ -5502,13 +5502,13 @@ IndexHandle *__Index_open(const char *__fileName__,
       free(indexHandle);
       return NULL;
     }
-  }
 
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(indexHandle,sizeof(IndexHandle));
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,indexHandle,sizeof(IndexHandle));
-  #endif /* NDEBUG */
+    #ifdef NDEBUG
+      DEBUG_ADD_RESOURCE_TRACE(indexHandle,sizeof(IndexHandle));
+    #else /* not NDEBUG */
+      DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,indexHandle,sizeof(IndexHandle));
+    #endif /* NDEBUG */
+  }
 
   return indexHandle;
 }
