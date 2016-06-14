@@ -1461,7 +1461,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
           switch (fileInfo.type)
           {
             case FILE_TYPE_FILE:
-              if (   isInIncludedList(createInfo->includeEntryList,name)
+              if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
+                  && isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                   && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
                  )
@@ -1510,7 +1511,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               }
               break;
             case FILE_TYPE_HARDLINK:
-              if (   isInIncludedList(createInfo->includeEntryList,name)
+              if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
+                  && isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                   && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
                   )
@@ -2134,15 +2136,29 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
 
-                  // add to entry list
-                  if (createInfo->partialFlag && isPrintInfo(2))
+                  if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                   {
-                    printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                    // add to entry list
+                    if (createInfo->partialFlag && isPrintInfo(2))
+                    {
+                      printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                    }
+                    appendFileToEntryList(&createInfo->entryMsgQueue,
+                                          ENTRY_TYPE_FILE,
+                                          name
+                                         );
                   }
-                  appendFileToEntryList(&createInfo->entryMsgQueue,
-                                        ENTRY_TYPE_FILE,
-                                        name
-                                       );
+                  else
+                  {
+                    logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'\n",String_cString(name));
+
+                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                    {
+                      createInfo->statusInfo.skippedEntryCount++;
+                      createInfo->statusInfo.skippedEntrySize += fileInfo.size;
+                      updateStatusInfo(createInfo,FALSE);
+                    }
+                  }
                 }
               }
               else
@@ -2217,57 +2233,71 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
 
-                  if (Dictionary_find(&hardLinksDictionary,
-                                      &fileInfo.id,
-                                      sizeof(fileInfo.id),
-                                      &data.value,
-                                      NULL
-                                     )
-                      )
+                  if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                   {
-                    // append name to hard link name list
-                    StringList_append(&data.hardLinkInfo->nameList,name);
-
-                    if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
-                    {
-                      // found last hardlink -> add to entry list
-                      appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                ENTRY_TYPE_FILE,
-                                                &data.hardLinkInfo->nameList
-                                               );
-
-                      // clear entry
-                      Dictionary_remove(&hardLinksDictionary,
+                    if (Dictionary_find(&hardLinksDictionary,
                                         &fileInfo.id,
-                                        sizeof(fileInfo.id)
-                                       );
+                                        sizeof(fileInfo.id),
+                                        &data.value,
+                                        NULL
+                                       )
+                        )
+                    {
+                      // append name to hard link name list
+                      StringList_append(&data.hardLinkInfo->nameList,name);
+
+                      if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                      {
+                        // found last hardlink -> add to entry list
+                        appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                                  ENTRY_TYPE_FILE,
+                                                  &data.hardLinkInfo->nameList
+                                                 );
+
+                        // clear entry
+                        Dictionary_remove(&hardLinksDictionary,
+                                          &fileInfo.id,
+                                          sizeof(fileInfo.id)
+                                         );
+                      }
+                    }
+                    else
+                    {
+                      // create hard link name list
+                      if (createInfo->partialFlag && isPrintInfo(2))
+                      {
+                        printIncrementalInfo(&createInfo->namesDictionary,
+                                              name,
+                                              &fileInfo.cast
+                                            );
+                      }
+
+                      hardLinkInfo.count = fileInfo.linkCount;
+                      StringList_init(&hardLinkInfo.nameList);
+                      StringList_append(&hardLinkInfo.nameList,name);
+
+                      if (!Dictionary_add(&hardLinksDictionary,
+                                          &fileInfo.id,
+                                          sizeof(fileInfo.id),
+                                          &hardLinkInfo,
+                                          sizeof(hardLinkInfo),
+                                          DICTIONARY_BYTE_COPY
+                                         )
+                          )
+                      {
+                        HALT_INSUFFICIENT_MEMORY();
+                      }
                     }
                   }
                   else
                   {
-                    // create hard link name list
-                    if (createInfo->partialFlag && isPrintInfo(2))
-                    {
-                      printIncrementalInfo(&createInfo->namesDictionary,
-                                            name,
-                                            &fileInfo.cast
-                                          );
-                    }
+                    logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'\n",String_cString(name));
 
-                    hardLinkInfo.count = fileInfo.linkCount;
-                    StringList_init(&hardLinkInfo.nameList);
-                    StringList_append(&hardLinkInfo.nameList,name);
-
-                    if (!Dictionary_add(&hardLinksDictionary,
-                                        &fileInfo.id,
-                                        sizeof(fileInfo.id),
-                                        &hardLinkInfo,
-                                        sizeof(hardLinkInfo),
-                                        DICTIONARY_BYTE_COPY
-                                       )
-                        )
+                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                     {
-                      HALT_INSUFFICIENT_MEMORY();
+                      createInfo->statusInfo.skippedEntryCount++;
+                      createInfo->statusInfo.skippedEntrySize += fileInfo.size;
+                      updateStatusInfo(createInfo,FALSE);
                     }
                   }
                 }
@@ -6914,6 +6944,7 @@ Errors Command_create(ConstString                  jobUUID,
   }
   Storage_done(&createInfo.storageHandle);
   doneCreateInfo(&createInfo);
+  Index_close(indexHandle);
   free(createThreads);
   Storage_doneSpecifier(&storageSpecifier);
   AutoFree_done(&autoFreeList);
