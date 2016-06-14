@@ -12860,6 +12860,7 @@ Dprintf.dprintf("line=%s",line);
       widgetInterval.setEnabled(scheduleData.archiveType.equals("continuous"));
       widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
       Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",        0,
+                                                             "5min",    5,
                                                              "10min",  10,
                                                              "30min",  30,
                                                              "1h",   1*60,

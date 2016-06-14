@@ -281,6 +281,8 @@ public class ServerSettings
     WidgetVariable          compressMinSize            = new WidgetVariable<String >("compress-min-size",             ""   );
     WidgetVariable          serverJobsDirectory        = new WidgetVariable<String >("server-jobs-directory",         ""   );
 
+    WidgetVariable          continuousMaxSize          = new WidgetVariable<String >("continuous-max-size",           ""   );
+
     WidgetVariable          indexDatabase              = new WidgetVariable<String >("index-database",                ""   );
     WidgetVariable          indexDatabaseAutoUpdate    = new WidgetVariable<Boolean>("index-database-auto-update",    false);
 //    WidgetVariable          indexDatabaseMaxBandWidth  = new WidgetVariable<String>("index-database-max-band-width",""   );
@@ -464,6 +466,23 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                                 serverJobsDirectory
                                                );
       Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+      row++;
+
+      label = Widgets.newLabel(composite,BARControl.tr("Max. continuous size")+":");
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(0.0,0.0));
+      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      {
+        combo = BARWidgets.newNumber(subComposite,
+                                     BARControl.tr("Size limit for continuous stored entries."),
+                                     continuousMaxSize,
+                                     new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
+                                    );
+        Widgets.layout(combo,0,0,TableLayoutData.WE);
+        label = Widgets.newLabel(subComposite,BARControl.tr("bytes"));
+        Widgets.layout(label,0,1,TableLayoutData.W);
+      }
       row++;
 
       label = Widgets.newLabel(composite,BARControl.tr("Index database")+":");
@@ -2020,6 +2039,8 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
 //    BARServer.getServerOption(maxBandWidth               );
     BARServer.getServerOption(compressMinSize            );
 
+    BARServer.getServerOption(continuousMaxSize          );
+
     BARServer.getServerOption(indexDatabase              );
     BARServer.getServerOption(indexDatabaseAutoUpdate    );
 //    BARServer.getServerOption(indexDatabaseMaxBandWidth  );
@@ -2173,17 +2194,19 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
 
     if ((Boolean)Dialogs.run(dialog,false))
     {
-      BARServer.setServerOption(tmpDirectory);
-      BARServer.setServerOption(maxTmpSize);
-      BARServer.setServerOption(niceLevel);
-      BARServer.setServerOption(maxThreads);
+      BARServer.setServerOption(tmpDirectory               );
+      BARServer.setServerOption(maxTmpSize                 );
+      BARServer.setServerOption(niceLevel                  );
+      BARServer.setServerOption(maxThreads                 );
 //      BARServer.setServerOption(maxBandWidth);
-      BARServer.setServerOption(compressMinSize);
+      BARServer.setServerOption(compressMinSize            );
+
+      BARServer.setServerOption(continuousMaxSize          );
 
       BARServer.setServerOption(indexDatabase);
-      BARServer.setServerOption(indexDatabaseAutoUpdate);
+      BARServer.setServerOption(indexDatabaseAutoUpdate    );
 //      BARServer.setServerOption(indexDatabaseMaxBandWidth);
-      BARServer.setServerOption(indexDatabaseKeepTime);
+      BARServer.setServerOption(indexDatabaseKeepTime      );
 
       BARServer.setServerOption(cdDevice                   );
       BARServer.setServerOption(cdRequestVolumeCommand     );
