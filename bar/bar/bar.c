@@ -411,7 +411,9 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_TYPES[] = CMD_VAL
 LOCAL const CommandLineUnit COMMAND_LINE_TIME_UNITS[] = CMD_VALUE_UNIT_ARRAY
 (
   {"weeks",7*24*60*60},
+  {"week",7*24*60*60},
   {"days",24*60*60},
+  {"day",24*60*60},
   {"h",60*60},
   {"m",60},
   {"s",1},
@@ -656,7 +658,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("index-database",               0,  1,1,indexDatabaseFileName,                                                                                  "index database file name","file name"                                     ),
   CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,                                                              "enabled automatic update index database"                                  ),
   CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,    cmdOptionParseBandWidth,NULL,                          "max. band width to use for index updates [bis/s]","number or file name"   ),
-  CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,1,globalOptions.indexDatabaseKeepTime,             0,MAX_INT,COMMAND_LINE_TIME_UNITS,                     "time to keep index data of not existing storage",NULL                     ),
+  CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,1,globalOptions.indexDatabaseKeepTime,             0,MAX_INT,COMMAND_LINE_TIME_UNITS,                     "time to keep index data of not existing storages",NULL                    ),
 
   CMD_OPTION_SET          ("log",                          0,  1,1,logTypes,                                        COMMAND_LINE_OPTIONS_LOG_TYPES,                        "log types"                                                                ),
   CMD_OPTION_CSTRING      ("log-file",                     0,  1,1,logFileName,                                                                                            "log file name","file name"                                                ),
@@ -831,7 +833,9 @@ const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] = CONFIG_VALUE_SELECT_ARRA
 const ConfigValueUnit CONFIG_VALUE_TIME_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
 (
   {"weeks",7*24*60*60},
+  {"week",7*24*60*60},
   {"days",24*60*60},
+  {"day",24*60*60},
   {"h",60*60},
   {"m",60},
   {"s",1},
