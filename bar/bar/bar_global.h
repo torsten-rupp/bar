@@ -423,6 +423,8 @@ typedef struct
   Device                 *device;                             // current selected device
   Device                 *defaultDevice;                      // default device
 
+  uint64                 continuousMaxSize;                   // max. entry size for continuous backup
+
   bool                   indexDatabaseAutoUpdateFlag;         // TRUE for automatic update of index datbase
   BandWidthList          indexDatabaseMaxBandWidthList;       // list of max. band width to use for index updates [bits/s]
   uint                   indexDatabaseKeepTime;               // number of seconds to keep index data of not existing storage

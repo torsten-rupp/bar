@@ -655,6 +655,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                                                                       "always create image for CD/DVD/BD/device"                                 ),
 
   CMD_OPTION_CSTRING      ("continuous-database",          0,  2,1,continuousDatabaseFileName,                                                                             "continuous database file name (default: in memory)","file name"           ),
+  CMD_OPTION_INTEGER64    ("continuous-max-size",          0,  1,2,globalOptions.continuousMaxSize,                 0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "max. continuous size","unlimited"                                         ),
+
   CMD_OPTION_CSTRING      ("index-database",               0,  1,1,indexDatabaseFileName,                                                                                  "index database file name","file name"                                     ),
   CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,                                                              "enabled automatic update index database"                                  ),
   CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,    cmdOptionParseBandWidth,NULL,                          "max. band width to use for index updates [bis/s]","number or file name"   ),
@@ -887,6 +889,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("compress-exclude",             &compressExcludePatternList,-1,                                configValueParsePattern,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_CSTRING           ("continuous-database",          &continuousDatabaseFileName,-1                                 ),
+  CONFIG_VALUE_INTEGER64         ("continuous-max-size",          &globalOptions.continuousMaxSize,-1,                           0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_VALUE_CSTRING           ("index-database",               &indexDatabaseFileName,-1                                      ),
   CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",   &globalOptions.indexDatabaseAutoUpdateFlag,-1                  ),
@@ -2857,6 +2860,8 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.device                                          = globalOptions.defaultDevice;
   globalOptions.defaultDevice                                   = &defaultDevice;
+
+  globalOptions.continuousMaxSize                               = 0LL;
 
   globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
   List_init(&globalOptions.indexDatabaseMaxBandWidthList);

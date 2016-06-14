@@ -4282,6 +4282,7 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
   const uint64 SECONDS_PER_DAY = 24*60*60;
 
   String             jobName;
+  String             string;
   uint64             now;
   Errors             error;
   IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
@@ -4296,16 +4297,15 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
   ArchiveTypes       archiveType;
   ulong              totalEntryCount;
   uint64             totalEntrySize;
-  String             dateTime;
 
   assert(indexHandle != NULL);
 
   if (!quitFlag)
   {
     // init variables
-    jobName  = String_new();
-    dateTime = String_new();
-    now      = Misc_getCurrentDateTime();
+    jobName = String_new();
+    string  = String_new();
+    now     = Misc_getCurrentDateTime();
 
     // check entities
     error = Index_initListEntities(&indexQueryHandle1,
@@ -4320,7 +4320,7 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
                                   );
     if (error != ERROR_NONE)
     {
-      String_delete(dateTime);
+      String_delete(string);
       String_delete(jobName);
       return;
     }
@@ -4401,14 +4401,14 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
                   error = deleteEntity(indexHandle,entityId);
                   if (error == ERROR_NONE)
                   {
-                    Misc_formatDateTime(dateTime,createdDateTime,NULL);
+                    ;
                     plogMessage(NULL,  // logHandle,
                                 LOG_TYPE_INDEX,
                                 "INDEX",
                                 "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                 String_cString(jobName),
                                 ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                                String_cString(dateTime),
+                                String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
                                 totalEntryCount,
                                 BYTES_SHORT(totalEntrySize),
                                 BYTES_UNIT(totalEntrySize),
@@ -4453,14 +4453,13 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
                 error = deleteEntity(indexHandle,entityId);
                 if (error == ERROR_NONE)
                 {
-                  Misc_formatDateTime(dateTime,createdDateTime,NULL);
                   plogMessage(NULL,  // logHandle,
                               LOG_TYPE_INDEX,
                               "INDEX",
                               "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                               String_cString(jobName),
                               ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                              String_cString(dateTime),
+                              String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
                               totalEntryCount,
                               BYTES_SHORT(totalEntrySize),
                               BYTES_UNIT(totalEntrySize),
@@ -4477,7 +4476,7 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
     Index_doneList(&indexQueryHandle1);
 
     // free resources
-    String_delete(dateTime);
+    String_delete(string);
     String_delete(jobName);
   }
 }
@@ -5096,7 +5095,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   IndexStates                indexState;
   uint64                     lastCheckedDateTime;
   uint64                     now;
-  String                     dateTime;
+  String                     string;
   IndexQueryHandle           indexQueryHandle;
   IndexModes                 indexMode;
   uint                       sleepTime;
@@ -5300,8 +5299,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                   );
     if (error == ERROR_NONE)
     {
-      now      = Misc_getCurrentDateTime();
-      dateTime = String_new();
+      now    = Misc_getCurrentDateTime();
+      string = String_new();
       while (   Index_getNextStorage(&indexQueryHandle,
                                      NULL,  // uuidId
                                      NULL,  // jobUUID
@@ -5341,18 +5340,18 @@ LOCAL void autoIndexUpdateThreadCode(void)
         {
           Index_deleteStorage(indexHandle,storageId);
 
-          Misc_formatDateTime(dateTime,lastCheckedDateTime,NULL);
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Deleted index for '%s', last checked %s\n",
+                      "Deleted index for '%s', last checked %s -- xxxx %d\n",
                       String_cString(printableStorageName),
-                      String_cString(dateTime)
+                      String_cString(Misc_formatDateTime(string,lastCheckedDateTime,NULL)),
+globalOptions.indexDatabaseKeepTime
                      );
         }
       }
       Index_doneList(&indexQueryHandle);
-      String_delete(dateTime);
+      String_delete(string);
     }
 
     // sleep, check quit flag
