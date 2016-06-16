@@ -1290,6 +1290,7 @@ public class BARControl
     System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
     System.out.println("                                                      )" );
     System.out.println("");
+    System.out.println("         --select-job=<name>                        - select job <name>");
     System.out.println("         -j|--job=<name>                            - start execution of job <name>");
     System.out.println("         --archive-type=<mode>                      - archive type");
     System.out.println("                                                        normal (default)");
