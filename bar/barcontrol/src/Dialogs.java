@@ -161,7 +161,7 @@ class SimpleBusyDialog
       {
         button = new Button(composite,SWT.CENTER);
         button.setText(Dialogs.tr("Abort"));
-        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1431,7 +1431,7 @@ class Dialogs
         {
           button = new Button(composite,SWT.CENTER);
           button.setText(Dialogs.tr("Close"));
-          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1571,7 +1571,7 @@ class Dialogs
             row++;
             text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
             text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
-            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100));
+            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,120));
             row++;
           }
 
@@ -1597,7 +1597,7 @@ class Dialogs
           button = new Button(composite,SWT.CENTER);
           button.setText(Dialogs.tr("Close"));
           button.setFocus();
-          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1778,7 +1778,7 @@ class Dialogs
           button = new Button(composite,SWT.CENTER);
           button.setText(Dialogs.tr("Close"));
           button.setFocus();
-          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,100,SWT.DEFAULT));
+          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1897,7 +1897,7 @@ class Dialogs
           button = new Button(composite,SWT.CENTER);
           button.setText(yesText);
           if (defaultValue == true) button.setFocus();
-          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1912,7 +1912,7 @@ class Dialogs
           button = new Button(composite,SWT.CENTER);
           button.setText(noText);
           if (defaultValue == false) button.setFocus();
-          button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+          button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -2297,7 +2297,7 @@ class Dialogs
           {
             button = new Button(composite,SWT.CENTER);
             button.setText(okText);
-            button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+            button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
             button.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2314,7 +2314,7 @@ class Dialogs
           {
             button = new Button(composite,SWT.CENTER);
             button.setText(cancelText);
-            button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+            button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
             button.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2510,7 +2510,7 @@ class Dialogs
       {
         button = new Button(composite,SWT.CENTER);
         button.setText(yesText);
-        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -2524,7 +2524,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(noText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -2667,7 +2667,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2693,7 +2693,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2892,7 +2892,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2919,7 +2919,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3567,11 +3567,11 @@ class Dialogs
             break;
         }
         widgetDone.setEnabled(false);
-        widgetDone.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetDone.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
 
         button = new Button(composite,SWT.CENTER);
         button.setText(Dialogs.tr("Cancel"));
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4304,7 +4304,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setImage(IMAGE);
-        button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4329,7 +4329,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4493,7 +4493,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4507,7 +4507,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4643,7 +4643,7 @@ class Dialogs
     {
       final String[] result = new String[1];
 
-      final Shell dialog = openModal(parentShell,title,100,SWT.DEFAULT);
+      final Shell dialog = openModal(parentShell,title,120,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
       // string
@@ -4677,7 +4677,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4691,7 +4691,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4829,7 +4829,7 @@ class Dialogs
           widgetSlider.setMaximum(maxValue);
           widgetSlider.setIncrement(increment);
           widgetSlider.setSelection(value);
-          widgetSlider.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));//,0,0,0,0,100,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+          widgetSlider.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));//,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
           if (toolTipText != null) widgetSlider.setToolTipText(toolTipText);
         }
       }
@@ -4841,7 +4841,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4856,7 +4856,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4977,7 +4977,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4992,7 +4992,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5442,7 +5442,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
-        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5481,7 +5481,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,100,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
