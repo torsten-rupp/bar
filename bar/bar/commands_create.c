@@ -156,6 +156,7 @@ typedef struct
 // storage message, send from main -> storage thread
 typedef struct
 {
+  IndexId      uuidId;
   IndexId      entityId;
   ArchiveTypes archiveType;
   IndexId      storageId;
@@ -3232,7 +3233,6 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 * Name   : archiveGetSize
 * Purpose: call back to get archive size
 * Input  : indexHandle - index handle or NULL if no index
-*          entityId    - index entity id
 *          storageId   - index storage id
 *          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
 *                        single part
@@ -3243,7 +3243,6 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 \***********************************************************************/
 
 LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
-                            IndexId     entityId,
                             IndexId     storageId,
                             int         partNumber,
                             void        *userData
@@ -3258,7 +3257,6 @@ LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
   assert(createInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
-  UNUSED_VARIABLE(entityId);
   UNUSED_VARIABLE(storageId);
 
   archiveSize = 0LL;
@@ -3317,6 +3315,7 @@ LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
 \***********************************************************************/
 
 LOCAL Errors archiveStore(IndexHandle  *indexHandle,
+                          IndexId      uuidId,
                           ConstString  jobUUID,
                           ConstString  scheduleUUID,
                           IndexId      entityId,
@@ -3370,6 +3369,7 @@ LOCAL Errors archiveStore(IndexHandle  *indexHandle,
   DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   // send to storage thread
+  storageMsg.uuidId      = uuidId;
   storageMsg.entityId    = entityId;
   storageMsg.archiveType = archiveType;
   storageMsg.storageId   = storageId;
@@ -4295,13 +4295,74 @@ fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
+      }
 
-        // if continuous and entity exists with same directory => assign storage to existing entity
-        if (storageMsg.archiveType == ARCHIVE_TYPE_CONTINUOUS)
-        {
+      // append storage to existing entity with same directory
+      if (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+      {
+fprintf(stderr,"%s, %d: APPPPPPPPPPPPPPPPPPPPP %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
 //TODO
+  IndexId          oldUUIDId;
+  IndexId          oldEntityId;
+  IndexId          oldStorageId;
+  String           oldStorageName;
+  StorageSpecifier oldStorageSpecifier;
+IndexQueryHandle indexQueryHandle;
+StorageSpecifier storageSpecifier;
+
           printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
-        }
+
+          error = Index_initListStorages(&indexQueryHandle,
+                                         createInfo->indexHandle,
+                                         storageMsg.uuidId,
+                                         INDEX_ID_ANY, // entityId
+                                         NULL, // jobUUID,
+                                         NULL,  // storageIds
+                                         0,  // storageIdCount
+                                         INDEX_STATE_SET_ALL,
+                                         INDEX_MODE_SET_ALL,
+                                         storageMsg.archiveName,
+                                         DATABASE_ORDERING_NONE,
+                                         0LL,  // offset
+                                         INDEX_UNLIMITED
+                                        );
+          if (error != ERROR_NONE)
+          {
+            Storage_doneSpecifier(&oldStorageSpecifier);
+            String_delete(oldStorageName);
+
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+            continue;
+          }
+          while (Index_getNextStorage(&indexQueryHandle,
+                                      &oldUUIDId,
+                                      NULL, // job UUID
+                                      &oldEntityId,
+                                      NULL, // schedule UUID
+                                      NULL, // archiveType
+                                      &oldStorageId,
+                                      oldStorageName,
+                                      NULL, // createdDateTime
+                                      NULL, // entries
+                                      NULL, // size
+                                      NULL, // indexState,
+                                      NULL, // indexMode,
+                                      NULL, // lastCheckedDateTime,
+                                      NULL  // errorMessage
+                                     )
+                )
+          {
+            if (   (oldStorageId != storageId)
+                && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
+                && Storage_equalSpecifiers(&storageSpecifier,storageMsg.archiveName,&oldStorageSpecifier,NULL)
+               )
+            {
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+            }
+          }
+          Index_doneList(&indexQueryHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
 
       // update index database archive name and size
@@ -6342,6 +6403,7 @@ Errors Command_create(ConstString                  jobUUID,
   IndexHandle      *indexHandle;
   StorageSpecifier storageSpecifier;
   CreateInfo       createInfo;
+  IndexId          uuidId;
   IndexId          entityId;
   Thread           collectorSumThread;                 // files collector sum thread
   Thread           collectorThread;                    // files collector thread
@@ -6532,7 +6594,24 @@ Errors Command_create(ConstString                  jobUUID,
     }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_rollbackTransaction(indexHandle); });
 
-    // create new entity
+    // get/create index job UUID
+    error = Index_getUUID(indexHandle,jobUUID,&uuidId);
+    if (error != ERROR_NONE)
+    {
+      error = Index_newUUID(indexHandle,jobUUID,&uuidId);
+    }
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create index for '%s' (error: %s)!\n",
+                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    assert(uuidId != INDEX_ID_NONE);
+
+    // create new index entity
     error = Index_newEntity(indexHandle,
                             jobUUID,
                             scheduleUUID,
@@ -6549,11 +6628,13 @@ Errors Command_create(ConstString                  jobUUID,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
+    assert(entityId != INDEX_ID_NONE);
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
   }
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
+                         uuidId,
                          jobUUID,
                          scheduleUUID,
                          deltaSourceList,
