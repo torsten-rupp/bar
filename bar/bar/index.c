@@ -6554,6 +6554,49 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   return TRUE;
 }
 
+Errors Index_getUUID(IndexHandle *indexHandle,
+                     ConstString jobUUID,
+                     IndexId     *uuidId
+                    )
+{
+  Errors     error;
+  DatabaseId databaseId;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_getId(&indexHandle->databaseHandle,
+                           &databaseId,
+                           "uuids",
+                           "WHERE jobUUID=%'S",
+                           jobUUID
+                          );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(databaseId);
+
+  return ERROR_NONE;
+}
+
 Errors Index_newUUID(IndexHandle *indexHandle,
                      ConstString jobUUID,
                      IndexId     *uuidId

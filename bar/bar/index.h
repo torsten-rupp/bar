@@ -813,8 +813,23 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                       );
 
 /***********************************************************************\
+* Name   : Index_getUUID
+* Purpose: get UUID index id
+* Input  : indexHandle  - index handle
+*          jobUUID      - unique job id (can be NULL)
+* Output : uuidId - index id of new UUID entry (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_getUUID(IndexHandle *indexHandle,
+                     ConstString jobUUID,
+                     IndexId     *uuidId
+                    );
+
+/***********************************************************************\
 * Name   : Index_newUUID
-* Purpose: create new entity index
+* Purpose: create new UUID index
 * Input  : indexHandle  - index handle
 *          jobUUID      - unique job id (can be NULL)
 * Output : uuidId - index id of new UUID entry (can be NULL)
