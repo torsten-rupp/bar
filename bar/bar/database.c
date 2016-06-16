@@ -836,7 +836,7 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   assert(databaseHandle != NULL);
 
   #ifndef NDEBUG
-//    fprintf(stderr,"Warning: database busy handler called %p: %d\n",Thread_getCurrentId(),n);
+//    fprintf(stderr,"Warning: database busy handler called %s: %d\n",Thread_getCurrentIdString(),n);
   #endif /* not NDEBUG */
 
   delay(SLEEP_TIME);
@@ -2606,13 +2606,13 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
       name1 = Thread_getCurrentName();
       name2 = Thread_getName(databaseHandle->transaction.threadId);
-      fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread '%s' (%p) at %s, %u and previously thread '%s' (%p) at %s, %u!\n",
+      fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread '%s' (%s) at %s, %u and previously thread '%s' (%s) at %s, %u!\n",
               (name1 != NULL) ? name1 : "none",
-              (void*)Thread_getCurrentId(),
+              Thread_getCurrentIdString(),
               __fileName__,
               __lineNb__,
               (name2 != NULL) ? name2 : "none",
-              (void*)databaseHandle->transaction.threadId,
+              Thread_getIdString(databaseHandle->transaction.threadId),
               databaseHandle->transaction.fileName,
               databaseHandle->transaction.lineNb
              );
@@ -3236,6 +3236,88 @@ bool Database_exists(DatabaseHandle *databaseHandle,
   return existsFlag;
 }
 
+Errors Database_getId(DatabaseHandle *databaseHandle,
+                      DatabaseId     *value,
+                      const char     *tableName,
+                      const char     *additional,
+                      ...
+                     )
+{
+  String       sqlString;
+  va_list      arguments;
+  Errors       error;
+  sqlite3_stmt *statementHandle;
+  int          sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(value != NULL);
+  assert(tableName != NULL);
+
+  // format SQL command string
+  sqlString = formatSQLString(String_new(),
+                              "SELECT id \
+                               FROM %s \
+                              ",
+                              tableName
+                             );
+  if (additional != NULL)
+  {
+    String_appendChar(sqlString,' ');
+    va_start(arguments,additional);
+    vformatSQLString(sqlString,
+                     additional,
+                     arguments
+                    );
+    va_end(arguments);
+  }
+  String_appendCString(sqlString," LIMIT 0,1");
+
+  // execute SQL command
+  DATABASE_DEBUG_SQLX(databaseHandle,"get id",sqlString);
+  sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                    String_cString(sqlString),
+                                    -1,
+                                    &statementHandle,
+                                    NULL
+                                   );
+  if      (sqliteResult == SQLITE_OK)
+  {
+    error = ERROR_NONE;
+  }
+  else if (sqliteResult == SQLITE_MISUSE)
+  {
+    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+  }
+  else
+  {
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+  }
+  #ifndef NDEBUG
+    if (statementHandle == NULL)
+    {
+      fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      abort();
+    }
+  #endif /* not NDEBUG */
+
+  if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+  {
+    (*value) = (DatabaseId)sqlite3_column_int64(statementHandle,0);
+  }
+  sqlite3_finalize(statementHandle);
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  // free resources
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              int64          *value,
                              const char     *tableName,
@@ -3701,8 +3783,6 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 
 int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
 {
-  int64 databaseId;
-
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 

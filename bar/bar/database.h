@@ -595,6 +595,26 @@ bool Database_exists(DatabaseHandle *databaseHandle,
                     );
 
 /***********************************************************************\
+* Name   : Database_getId
+* Purpose: get database id of value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : value - database id
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getId(DatabaseHandle *databaseHandle,
+                      DatabaseId     *value,
+                      const char     *tableName,
+                      const char     *additional,
+                      ...
+                     );
+
+/***********************************************************************\
 * Name   : Database_getInteger64
 * Purpose: get int64 value from database table
 * Input  : databaseHandle - database handle
