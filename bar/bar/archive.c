@@ -649,7 +649,6 @@ LOCAL void findNextArchivePart(ArchiveInfo *archiveInfo, IndexHandle *indexHandl
     do
     {
       storageSize = archiveInfo->archiveGetSizeFunction(indexHandle,
-                                                        archiveInfo->entityId,
                                                         archiveInfo->storageId,
                                                         archiveInfo->partNumber,
                                                         archiveInfo->archiveGetSizeUserData
@@ -996,6 +995,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo, IndexHandle *indexHandl
       if (archiveInfo->archiveInitFunction != NULL)
       {
         error = archiveInfo->archiveInitFunction(indexHandle,
+                                                 archiveInfo->uuidId,
                                                  archiveInfo->jobUUID,
                                                  archiveInfo->scheduleUUID,
                                                  archiveInfo->entityId,
@@ -1061,6 +1061,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     if (archiveInfo->archiveStoreFunction != NULL)
     {
       error = archiveInfo->archiveStoreFunction(indexHandle,
+                                                archiveInfo->uuidId,
                                                 archiveInfo->jobUUID,
                                                 archiveInfo->scheduleUUID,
                                                 archiveInfo->entityId,
@@ -1085,6 +1086,7 @@ if (!archiveInfo->file.openFlag) return ERROR_NONE;
     if (archiveInfo->archiveDoneFunction != NULL)
     {
       error = archiveInfo->archiveDoneFunction(indexHandle,
+                                               archiveInfo->uuidId,
                                                archiveInfo->jobUUID,
                                                archiveInfo->scheduleUUID,
                                                archiveInfo->entityId,
@@ -3167,6 +3169,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo            *archiveInfo,
+                        IndexId                uuidId,
                         ConstString            jobUUID,
                         ConstString            scheduleUUID,
                         DeltaSourceList        *deltaSourceList,
@@ -3190,6 +3193,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   Errors __Archive_create(const char             *__fileName__,
                           ulong                   __lineNb__,
                           ArchiveInfo            *archiveInfo,
+                          IndexId                uuidId,
                           ConstString            jobUUID,
                           ConstString            scheduleUUID,
                           DeltaSourceList        *deltaSourceList,
@@ -3244,6 +3248,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveInfo->jobOptions              = jobOptions;
   archiveInfo->deltaSourceList         = deltaSourceList;
   archiveInfo->indexHandle             = indexHandle;
+  archiveInfo->uuidId                  = uuidId;
   archiveInfo->entityId                = entityId;
   archiveInfo->archiveType             = archiveType;
   archiveInfo->archiveInitFunction     = archiveInitFunction;
