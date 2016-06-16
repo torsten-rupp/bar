@@ -182,9 +182,9 @@ INLINE ThreadId Thread_getCurrentId(void)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Thread_equalThreads(ThreadId threadId0, ThreadId threadId1);
+INLINE bool Thread_equalThreads(const ThreadId threadId0, const ThreadId threadId1);
 #if defined(NDEBUG) || defined(__THREADS_IMPLEMENATION__)
-INLINE bool Thread_equalThreads(ThreadId threadId0, ThreadId threadId1)
+INLINE bool Thread_equalThreads(const ThreadId threadId0, const ThreadId threadId1)
 {
   return pthread_equal(threadId0,threadId1) != 0;
 }
@@ -199,9 +199,9 @@ INLINE bool Thread_equalThreads(ThreadId threadId0, ThreadId threadId1)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Thread_isCurrentThread(ThreadId threadId);
+INLINE bool Thread_isCurrentThread(const ThreadId threadId);
 #if defined(NDEBUG) || defined(__THREADS_IMPLEMENATION__)
-INLINE bool Thread_isCurrentThread(ThreadId threadId)
+INLINE bool Thread_isCurrentThread(const ThreadId threadId)
 {
   return pthread_equal(threadId,pthread_self()) != 0;
 }
@@ -216,7 +216,7 @@ INLINE bool Thread_isCurrentThread(ThreadId threadId)
 * Notes  : -
 \***********************************************************************/
 
-const char *Thread_getName(ThreadId threadId);
+const char *Thread_getName(const ThreadId threadId);
 
 /***********************************************************************\
 * Name   : Thread_getCurrentName
@@ -228,6 +228,28 @@ const char *Thread_getName(ThreadId threadId);
 \***********************************************************************/
 
 const char *Thread_getCurrentName(void);
+
+/***********************************************************************\
+* Name   : Thread_getIdString
+* Purpose: get id string of thread
+* Input  : threadId - thread id
+* Output : -
+* Return : thread id string or NULL
+* Notes  : -
+\***********************************************************************/
+
+const char *Thread_getIdString(const ThreadId threadId);
+
+/***********************************************************************\
+* Name   : Thread_getCurrentIdString
+* Purpose: get id string of current thread
+* Input  : -
+* Output : -
+* Return : thread id string or NULL
+* Notes  : -
+\***********************************************************************/
+
+const char *Thread_getCurrentIdString(void);
 
 /***********************************************************************\
 * Name   : Thread_initLocalVariable

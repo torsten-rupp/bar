@@ -774,7 +774,7 @@ void Thread_delay(uint time)
   #endif
 }
 
-const char *Thread_getName(ThreadId threadId)
+const char *Thread_getName(const ThreadId threadId)
 {
   #ifndef NDEBUG
     return debugThreadStackTraceGetThreadName(threadId);
@@ -788,6 +788,33 @@ const char *Thread_getName(ThreadId threadId)
 const char *Thread_getCurrentName(void)
 {
   return Thread_getName(pthread_self());
+}
+
+const char *Thread_getIdString(const ThreadId threadId)
+{
+  static char idString[64+1];
+
+  uint  i;
+  uint8 *p;
+  char  *s;
+
+  assert(sizeof(ThreadId)*2 < (sizeof(idString)-1));
+
+  p = (uint8*)(void*)(&threadId);
+  s = idString;
+  for (i = 0; i < sizeof(ThreadId); i++)
+  {
+    sprintf(s,"%02x",p[i]);
+    s += 2;
+  }
+  (*s) = '\0';
+
+  return idString;
+}
+
+const char *Thread_getCurrentIdString(void)
+{
+  return Thread_getIdString(pthread_self());
 }
 
 void Thread_initLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLocalStorageAllocFunction threadLocalStorageAllocFunction, void *threadLocalStorageAllocUserData)
