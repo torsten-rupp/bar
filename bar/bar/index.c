@@ -4980,9 +4980,9 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
     return error;
   }
   while (Index_getNextEntity(&indexQueryHandle,
+                             NULL,  // uuidId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
-                             NULL,  // uuidId,
                              &entityId,
                              NULL,  // archiveType,
                              NULL,  // createdDateTime,
@@ -5154,9 +5154,9 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
     return error;
   }
   while (Index_getNextEntity(&indexQueryHandle,
+                             NULL,  // uuidId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
-                             NULL,  // uuidId,
                              &entityId,
                              NULL,  // archiveType,
                              NULL,  // createdDateTime,
@@ -5663,7 +5663,7 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
                                uint64       *totalEntrySize
                               )
 {
-  String              filter;
+  String              filterString;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   bool                result;
@@ -5678,9 +5678,9 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
   }
 
   // get filters
-  filter = String_newCString("1");
-  filterAppend(filter,!String_isEmpty(jobUUID),"AND","jobUUID=%'S",jobUUID);
-  filterAppend(filter,!String_isEmpty(scheduleUUID),"AND","scheduleUUID=%'S",scheduleUUID);
+  filterString = String_newCString("1");
+  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","jobUUID=%'S",jobUUID);
+  filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","scheduleUUID=%'S",scheduleUUID);
 
 //TODO get errorMessage
   BLOCK_DOX(error,
@@ -5702,7 +5702,7 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
                               GROUP BY entities.id \
                               LIMIT 0,1 \
                              ",
-                             filter
+                             filterString
                             );
     if (error != ERROR_NONE)
     {
@@ -5726,7 +5726,7 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
   });
   if (error != ERROR_NONE)
   {
-    String_delete(filter);
+    String_delete(filterString);
     return FALSE;
   }
 
@@ -5734,7 +5734,7 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
   if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
 
   // free resources
-  String_delete(filter);
+  String_delete(filterString);
 
   return result;
 }
@@ -6213,11 +6213,13 @@ long Index_countState(IndexHandle *indexHandle,
 
 Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
+                             IndexId          uuidId,
                              ConstString      jobUUID,
                              uint64           offset,
                              uint64           limit
                             )
 {
+  String filterString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -6229,6 +6231,11 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
+  // get filters
+  filterString = String_newCString("1");
+  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",uuidId);
+  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
+
   // lock
   Database_lock(&indexHandle->databaseHandle);
 
@@ -6236,24 +6243,26 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT id, \
-                                   jobUUID, \
-                                   scheduleUUID, \
-                                   hostName, \
-                                   UNIXTIMESTAMP(lastCreated), \
-                                   errorMessage, \
-                                   duration, \
-                                   totalEntryCount, \
-                                   totalEntrySize, \
-                                   skippedEntryCount, \
-                                   skippedEntrySize, \
-                                   errorEntryCount, \
-                                   errorEntrySize \
-                            FROM uuids \
-                            WHERE jobUUID=%'S \
+                           "SELECT history.id, \
+                                   uuids.id, \
+                                   history.jobUUID, \
+                                   history.scheduleUUID, \
+                                   history.hostName, \
+                                   history.UNIXTIMESTAMP(created), \
+                                   history.errorMessage, \
+                                   history.duration, \
+                                   history.totalEntryCount, \
+                                   history.totalEntrySize, \
+                                   history.skippedEntryCount, \
+                                   history.skippedEntrySize, \
+                                   history.errorEntryCount, \
+                                   history.errorEntrySize \
+                            FROM history \
+                              LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                            WHERE %S \
                             LIMIT %llu,%llu \
                            ",
-                           jobUUID,
+                           filterString,
                            offset,
                            limit
                           );
@@ -6271,6 +6280,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           IndexId          *historyId,
+                          IndexId          *uuidId,
                           String           jobUUID,
                           String           scheduleUUID,
                           String           hostName,
@@ -6285,7 +6295,8 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           uint64           *errorEntrySize
                          )
 {
-  DatabaseId databaseId;
+  DatabaseId historyId_;
+  DatabaseId uuidId_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -6298,7 +6309,8 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                            "%lld %S %S %S %llu %S %llu %lu %llu %lu %llu %lu %llu",
-                           &databaseId,
+                           &historyId_,
+                           &uuidId_,
                            jobUUID,
                            scheduleUUID,
                            hostName,
@@ -6316,7 +6328,8 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-  if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(databaseId);
+  if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(historyId_);
+  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
 
   return ERROR_NONE;
 }
@@ -6449,7 +6462,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 {
   String ftsName;
   String regexpName;
-  String filter;
+  String filterString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -6470,8 +6483,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   getREGEXPString(regexpName,name);
 
   // get filters
-  filter = String_newCString("1");
-  filterAppend(filter,!String_isEmpty(name),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+  filterString = String_newCString("1");
+  filterAppend(filterString,!String_isEmpty(name),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -6493,7 +6506,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                             GROUP BY uuids.id \
                             LIMIT %llu,%llu \
                            ",
-                           filter,
+                           filterString,
                            offset,
                            limit
                           );
@@ -6554,49 +6567,6 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   return TRUE;
 }
 
-Errors Index_getUUID(IndexHandle *indexHandle,
-                     ConstString jobUUID,
-                     IndexId     *uuidId
-                    )
-{
-  Errors     error;
-  DatabaseId databaseId;
-
-  assert(indexHandle != NULL);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-    error = Database_getId(&indexHandle->databaseHandle,
-                           &databaseId,
-                           "uuids",
-                           "WHERE jobUUID=%'S",
-                           jobUUID
-                          );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(databaseId);
-
-  return ERROR_NONE;
-}
-
 Errors Index_newUUID(IndexHandle *indexHandle,
                      ConstString jobUUID,
                      IndexId     *uuidId
@@ -6647,7 +6617,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
 }
 
 Errors Index_deleteUUID(IndexHandle *indexHandle,
-                        ConstString jobUUID
+                        IndexId     uuidId
                        )
 {
   Errors              error;
@@ -6662,24 +6632,22 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(jobUUID));
-//asm("int3");
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    // delete entities of UUID
+    // delete entities
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
-                             "SELECT id \
+                             "SELECT entities.id \
                               FROM entities \
-                              WHERE jobUUID=%'S; \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                              WHERE uuids.id=%lld \
                              ",
-                             jobUUID
+                             Index_getDatabaseId(uuidId)
                             );
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
       return error;
     }
     while (   Database_getNextRow(&databaseQueryHandle,
@@ -6689,30 +6657,26 @@ fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
            && (error == ERROR_NONE)
           )
     {
-fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
       error = Index_deleteEntity(indexHandle,INDEX_ID_ENTITY(entityId));
     }
     Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: 3\n",__FILE__,__LINE__);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
       return error;
     }
-fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
 
     // delete UUID
     error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
-                               "DELETE FROM uuids WHERE jobUUID=%'S;",
-                               jobUUID
+                               "DELETE FROM uuids \
+                                WHERE id=%lld; \
+                               ",
+                               Index_getDatabaseId(uuidId)
                               );
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
       return error;
     }
-fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
 
     return ERROR_NONE;
   });
@@ -6816,9 +6780,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
+                         IndexId          *uuidId,
                          String           jobUUID,
                          String           scheduleUUID,
-                         IndexId          *uuidId,
                          IndexId          *entityId,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
@@ -7098,7 +7062,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
-//  filterAppend(filter,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
+//  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
   filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
   filterAppend(filterString,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
   String_delete(indexModeSetString);
@@ -7245,7 +7209,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","entity.uuidId=%lld",Index_getDatabaseId(uuidId));
+  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,(entityId != INDEX_ID_ANY),"AND","storage.entityId=%lld",Index_getDatabaseId(entityId));
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
@@ -7889,7 +7853,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   String              uuidIdsString,entityIdsString,storageIdsString;
   String              entryIdsString;
   uint                i;
-  String              filter,filterIds;
+  String              filterString,filterIdsString;
   String              indexTypeSetString;
   double              count_;
   double              size_;
@@ -7950,16 +7914,16 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   }
 
   error              = ERROR_NONE;
-  filter             = String_newCString("1");
-  filterIds          = String_new();
+  filterString       = String_newCString("1");
   indexTypeSetString = String_new();
 
   // get filters
-  filterAppend(filterIds,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  filterAppend(filterIds,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-  filterAppend(filterIds,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(filterIds),"AND","(%S)",filterIds);
-  String_delete(filterIds);
+  filterIdsString = String_new();
+  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
+  filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
+  String_delete(filterIdsString);
 
   if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
@@ -7981,7 +7945,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  ",
                                  newestOnly ? "storage.totalFileCountNewest" : "storage.totalFileCount",
                                  newestOnly ? "storage.totalFileSizeNewest" : "storage.totalFileSize",
-                                 filter
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8013,7 +7977,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  ",
                                  newestOnly ? "storage.totalImageCountNewest" : "storage.totalImageCount",
                                  newestOnly ? "storage.totalImageSizeNewest" : "storage.totalImageSize",
-                                 filter
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8044,7 +8008,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalDirectoryCountNewest" : "storage.totalDirectoryCount",
-                                 filter
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8072,7 +8036,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalLinkCountNewest" : "storage.totalLinkCount",
-                                 filter
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8101,7 +8065,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                  ",
                                  newestOnly ? "storage.totalHardlinkCountNewest" : "storage.totalHardlinkCount",
                                  newestOnly ? "storage.totalHardlinkSizeNewest" : "storage.totalHardlinkSize",
-                                 filter
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8132,7 +8096,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalSpecialCountNewest" : "storage.totalSpecialCount",
-                                 filter
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8158,18 +8122,18 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     // pattern/entries selected
 
     // get filters
-    filterAppend(filter,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
+    filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
     if (newestOnly)
     {
-//      filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entriesNewest.name)",regexpString);
-      filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
-      filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+//      filterAppend(filterString,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entriesNewest.name)",regexpString);
+      filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+      filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
     else
     {
-//      filterAppend(filter,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
-      filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
-      filterAppend(filter,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+//      filterAppend(filterString,!String_isEmpty(pattern),"AND","REGEXP(%S,0,entries.name)",regexpString);
+      filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+      filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
     BLOCK_DOX(error,
               Database_lock(&indexHandle->databaseHandle),
@@ -8188,7 +8152,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                       LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                     WHERE %S \
                                  ",
-                                 filter
+                                 filterString
                                 );
       }
       else
@@ -8203,7 +8167,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                       LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                     WHERE %S \
                                  ",
-                                 filter
+                                 filterString
                                 );
       }
       if (error != ERROR_NONE)
@@ -8231,7 +8195,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
   // free resources
   String_delete(indexTypeSetString);
-  String_delete(filter);
+  String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(entityIdsString);
@@ -8867,7 +8831,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   String storageIdsString;
   String entryIdsString;
   uint   i;
-  String filter;
+  String filterString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -8909,12 +8873,12 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   }
 
   // get filters
-  filter = String_new();
-  filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_FILE);
-  filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
-  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  filterString = String_new();
+  filterAppend(filterString,TRUE,"AND","entries.type=%d",INDEX_TYPE_FILE);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//  filterAppend(filterString,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
+  filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -8939,13 +8903,13 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                               LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
                             WHERE %S \
                            ",
-                           filter
+                           filterString
                           );
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(filter);
+    String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
@@ -8954,7 +8918,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filter);
+  String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
@@ -9072,7 +9036,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   String storageIdsString;
   String entryIdsString;
   uint   i;
-  String filter;
+  String filterString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -9113,12 +9077,12 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   }
 
   // get filters
-  filter = String_new();
-  filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
-  filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
-  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  filterString = String_new();
+  filterAppend(filterString,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//  filterAppend(filterString,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
+  filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -9140,13 +9104,13 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                               LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
                             WHERE %S \
                            ",
-                           filter
+                           filterString
                           );
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(filter);
+    String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
@@ -9155,7 +9119,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filter);
+  String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
@@ -9266,7 +9230,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   String storageIdsString;
   String entryIdsString;
   uint   i;
-  String filter;
+  String filterString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -9307,12 +9271,12 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   }
 
   // get filters
-  filter = String_new();
-  filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
-  filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
-  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  filterString = String_new();
+  filterAppend(filterString,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//  filterAppend(filterString,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
+  filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -9335,14 +9299,14 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                               LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
                             WHERE %S \
                            ",
-                           filter
+                           filterString
                           );
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(filter);
+    String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
@@ -9351,7 +9315,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filter);
+  String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
@@ -9462,7 +9426,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   String storageIdsString;
   String entryIdsString;
   uint   i;
-  String filter;
+  String filterString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -9504,12 +9468,12 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   String_appendCString(entryIdsString,"))");
 
   // get filters
-  filter = String_new();
-  filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
-  filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
-  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  filterString = String_new();
+  filterAppend(filterString,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//  filterAppend(filterString,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
+  filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -9532,13 +9496,13 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                               LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                             WHERE %S \
                            ",
-                           filter
+                           filterString
                           );
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(filter);
+    String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
@@ -9547,7 +9511,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filter);
+  String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
@@ -9660,7 +9624,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   String storageIdsString;
   String entryIdsString;
   uint   i;
-  String filter;
+  String filterString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -9701,12 +9665,12 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // get filters
-  filter = String_new();
-  filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
-  filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
-  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  filterString = String_new();
+  filterAppend(filterString,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//  filterAppend(filterString,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,entries.name)",regexpString);
+  filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -9731,13 +9695,13 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                               LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                             WHERE %S \
                            ",
-                           filter
+                           filterString
                           );
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(filter);
+    String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
@@ -9746,7 +9710,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filter);
+  String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
@@ -9863,7 +9827,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   String storageIdsString;
   String entryIdsString;
   uint   i;
-  String filter;
+  String filterString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -9904,12 +9868,12 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   }
 
   // get filters
-  filter = String_new();
-  filterAppend(filter,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
-  filterAppend(filter,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
-//  filterAppend(filter,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,special.name)",regexpString);
-  filterAppend(filter,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
-  filterAppend(filter,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  filterString = String_new();
+  filterAppend(filterString,TRUE,"AND","entries.type=%d",INDEX_TYPE_DIRECTORY);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH %S)",ftsName);
+//  filterAppend(filterString,!String_isEmpty(regexpString),"AND","REGEXP(%S,0,special.name)",regexpString);
+  filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -9931,13 +9895,13 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                               LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
                             WHERE %S \
                            ",
-                           filter
+                           filterString
                           );
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(filter);
+    String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(storageIdsString);
     String_delete(regexpName);
@@ -9946,7 +9910,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filter);
+  String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(storageIdsString);
   String_delete(regexpName);
@@ -10912,7 +10876,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
     error = Index_initListEntities(&indexQueryHandle,
                                    indexHandle,
                                    uuidId,
-                                   NULL,  // jobUUID,
+                                   NULL,  // jobUUID
                                    NULL,  // scheduldUUID
                                    NULL,  // name
                                    DATABASE_ORDERING_ASCENDING,
@@ -10924,9 +10888,9 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
       return error;
     }
     while (Index_getNextEntity(&indexQueryHandle,
+                               NULL,  // uuidId,
                                NULL,  // jobUUID,
                                NULL,  // scheduleUUID,
-                               NULL,  // uuidId,
                                &entityId,
                                NULL,  // archiveType,
                                NULL,  // createdDateTime,
