@@ -3939,6 +3939,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   void                       *autoFreeSavePoint;
   StorageMsg                 storageMsg;
   Errors                     error;
+          IndexId          existingEntityId;
+          IndexId          existingStorageId;
+  String                     existingStorageName;
+  StorageSpecifier           existingStorageSpecifier;
   ConstString                printableStorageName;
 
   FileInfo                   fileInfo;
@@ -3965,7 +3969,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  existingStorageName = String_new();
+  Storage_initSpecifier(&existingStorageSpecifier);
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
+  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(existingStorageName); });
+  AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
 
   // initial storage pre-processing
   if (!isAborted(createInfo))
@@ -4295,74 +4303,71 @@ fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
-      }
 
-      // append storage to existing entity with same directory
-      if (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
-      {
+#if 1
+        // append storage to existing entity with same directory
+        if (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+        {
+  //TODO
+
 fprintf(stderr,"%s, %d: APPPPPPPPPPPPPPPPPPPPP %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
-//TODO
-  IndexId          oldUUIDId;
-  IndexId          oldEntityId;
-  IndexId          oldStorageId;
-  String           oldStorageName;
-  StorageSpecifier oldStorageSpecifier;
-IndexQueryHandle indexQueryHandle;
-StorageSpecifier storageSpecifier;
+            printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
 
-          printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
-
-          error = Index_initListStorages(&indexQueryHandle,
-                                         createInfo->indexHandle,
-                                         storageMsg.uuidId,
-                                         INDEX_ID_ANY, // entityId
-                                         NULL, // jobUUID,
-                                         NULL,  // storageIds
-                                         0,  // storageIdCount
-                                         INDEX_STATE_SET_ALL,
-                                         INDEX_MODE_SET_ALL,
-                                         storageMsg.archiveName,
-                                         DATABASE_ORDERING_NONE,
-                                         0LL,  // offset
-                                         INDEX_UNLIMITED
-                                        );
-          if (error != ERROR_NONE)
-          {
-            Storage_doneSpecifier(&oldStorageSpecifier);
-            String_delete(oldStorageName);
-
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-            continue;
-          }
-          while (Index_getNextStorage(&indexQueryHandle,
-                                      &oldUUIDId,
-                                      NULL, // job UUID
-                                      &oldEntityId,
-                                      NULL, // schedule UUID
-                                      NULL, // archiveType
-                                      &oldStorageId,
-                                      oldStorageName,
-                                      NULL, // createdDateTime
-                                      NULL, // entries
-                                      NULL, // size
-                                      NULL, // indexState,
-                                      NULL, // indexMode,
-                                      NULL, // lastCheckedDateTime,
-                                      NULL  // errorMessage
-                                     )
-                )
-          {
-            if (   (oldStorageId != storageId)
-                && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
-                && Storage_equalSpecifiers(&storageSpecifier,storageMsg.archiveName,&oldStorageSpecifier,NULL)
-               )
+            error = Index_initListStorages(&indexQueryHandle,
+                                           createInfo->indexHandle,
+                                           storageMsg.uuidId,
+                                           INDEX_ID_ANY, // entityId
+                                           NULL, // jobUUID,
+                                           NULL,  // storageIds
+                                           0,  // storageIdCount
+                                           INDEX_STATE_SET_ALL,
+                                           INDEX_MODE_SET_ALL,
+                                           NULL,  // archiveName,
+                                           DATABASE_ORDERING_NONE,
+                                           0LL,  // offset
+                                           INDEX_UNLIMITED
+                                          );
+            if (error != ERROR_NONE)
             {
-//TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+              if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              continue;
             }
-          }
-          Index_doneList(&indexQueryHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+            while (Index_getNextStorage(&indexQueryHandle,
+                                        NULL,  // uuidId
+                                        NULL,  // job UUID
+                                        existingEntityId,  // entityId,
+                                        NULL,  // schedule UUID
+                                        NULL,  // archiveType
+                                        &existingStorageId,
+                                        existingStorageName,
+                                        NULL,  // createdDateTime
+                                        NULL,  // entries
+                                        NULL,  // size
+                                        NULL,  // indexState,
+                                        NULL,  // indexMode,
+                                        NULL,  // lastCheckedDateTime,
+                                        NULL  // errorMessage
+                                       )
+                  )
+            {
+
+              if (   (storageId != existingStorageId)
+                  && (Storage_parseName(&storageSpecifier,existingStorageName) == ERROR_NONE)
+                  && Storage_equalSpecifiers(&storageSpecifier,storageMsg.archiveName,&storageSpecifier,existingStorageName)
+                 )
+              {
+  //TODO
+fprintf(stderr,"%s, %d: existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
+              }
+            }
+            Index_doneList(&indexQueryHandle);
+            String_delete(existingStorageName);
+            Storage_doneSpecifier(&storageSpecifier);
+  fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        }
+#endif
       }
 
       // update index database archive name and size
@@ -4539,6 +4544,8 @@ fprintf(stderr,"%s, %d: --- update storage %lld %s: %llu\n",__FILE__,__LINE__,In
   }
 
   // free resoures
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageName);
   free(buffer);
   AutoFree_done(&autoFreeList);
 
@@ -6595,21 +6602,32 @@ Errors Command_create(ConstString                  jobUUID,
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_rollbackTransaction(indexHandle); });
 
     // get/create index job UUID
-    error = Index_getUUID(indexHandle,jobUUID,&uuidId);
-    if (error != ERROR_NONE)
+    if (!Index_findUUIDByJobUUID(indexHandle,
+                                 jobUUID,
+                                 &uuidId,
+                                 NULL,  // lastCreatedDateTime,
+                                 NULL,  // lastErrorMessage,
+                                 NULL,  // executionCount,
+                                 NULL,  // averageDuration,
+                                 NULL,  // totalEntityCount,
+                                 NULL,  // totalStorageCount,
+                                 NULL,  // totalStorageSize,
+                                 NULL,  // totalEntryCount,
+                                 NULL  // totalEntrySize
+                                )
+       )
     {
       error = Index_newUUID(indexHandle,jobUUID,&uuidId);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot create index for '%s' (error: %s)!\n",
+                   Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
     }
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot create index for '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    assert(uuidId != INDEX_ID_NONE);
 
     // create new index entity
     error = Index_newEntity(indexHandle,
