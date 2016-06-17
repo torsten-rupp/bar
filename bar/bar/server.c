@@ -4222,44 +4222,32 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 {
   Errors           error;
   IndexQueryHandle indexQueryHandle;
-  IndexId          entityId;
+  IndexId          uuidId;
 
   assert(indexHandle != NULL);
 
-  // delete all entities with specified job UUID
-  error = Index_initListEntities(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 jobUUID,
-                                 NULL,  // scheduldUUID
-                                 NULL,  // name
-                                 DATABASE_ORDERING_ASCENDING,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error != ERROR_NONE)
+  // find UUID
+  if (!Index_findUUIDByJobUUID(indexHandle,
+                               jobUUID,
+                               &uuidId,
+                               NULL,  // lastCreatedDateTime,
+                               NULL,  // lastErrorMessage,
+                               NULL,  // executionCount,
+                               NULL,  // averageDuration,
+                               NULL,  // totalEntityCount,
+                               NULL,  // totalStorageCount,
+                               NULL,  // totalStorageSize,
+                               NULL,  // totalEntryCount,
+                               NULL  // totalEntrySize
+                              )
+     )
   {
-    return error;
+//TODO: which error?
+    return ERROR_DATABASE_INDEX_NOT_FOUND;
   }
-  while (Index_getNextEntity(&indexQueryHandle,
-                             NULL,  // jobUUID,
-                             NULL,  // scheduleUUID,
-                             NULL,  // uudId,
-                             &entityId,
-                             NULL,  // archiveType,
-                             NULL,  // createdDateTime,
-                             NULL,  // lastErrorMessage,
-                             NULL,  // totalEntryCount,
-                             NULL  // totalEntrySize,
-                            )
-        )
-  {
-    (void)deleteEntity(indexHandle,entityId);
-  }
-  Index_doneList(&indexQueryHandle);
 
-  // delete uuid
-  error = Index_deleteUUID(indexHandle,jobUUID);
+  // delete UUID
+  error = Index_deleteUUID(indexHandle,uuidId);
   if (error != ERROR_NONE)
   {
     return error;
@@ -4326,9 +4314,9 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
     }
     while (   !quitFlag
            && Index_getNextEntity(&indexQueryHandle1,
+                                  NULL,  // uudId,
                                   jobUUID,
                                   scheduleUUID,
-                                  NULL,  // uudId,
                                   &entityId,
                                   NULL,  // archiveType,
                                   NULL,  // createdDateTime,
@@ -4384,9 +4372,9 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
             {
               while (   !quitFlag
                      && Index_getNextEntity(&indexQueryHandle2,
+                                            NULL,  // uudId,
                                             NULL,  // jobUUID
                                             NULL,  // scheduleUUID
-                                            NULL,  // uudId,
                                             &entityId,
                                             &archiveType,
                                             &createdDateTime,
@@ -4438,9 +4426,9 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
             {
               while (   !quitFlag
                      && Index_getNextEntity(&indexQueryHandle2,
+                                            NULL,  // uudId,
                                             NULL,  // jobUUID
                                             NULL,  // scheduleUUID
-                                            NULL,  // uudId,
                                             &entityId,
                                             &archiveType,
                                             &createdDateTime,
@@ -11437,9 +11425,9 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         if (error == ERROR_NONE)
         {
           while (Index_getNextEntity(&indexQueryHandle,
+                                     NULL,  // uudId,
                                      NULL,  // jobUUID,
                                      NULL,  // scheduleUUID,
-                                     NULL,  // uudId,
                                      NULL,  // entityId,
                                      NULL,  // archiveType,
                                      &createdDateTime,  // createdDateTime,
@@ -14417,9 +14405,9 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntity(&indexQueryHandle,
+                                NULL,  // uudId,
                                 jobUUID,
                                 scheduleUUID,
-                                NULL,  // uudId,
                                 &entityId,
                                 &archiveType,
                                 &createdDateTime,
