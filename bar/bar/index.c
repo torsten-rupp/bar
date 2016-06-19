@@ -4815,6 +4815,7 @@ LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(Index_getType(toStorageId) == INDEX_TYPE_STORAGE);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   // assign storage entries to other storage
   error = Database_execute(&indexHandle->databaseHandle,
@@ -4877,6 +4878,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert(Index_getType(toStorageId) == INDEX_TYPE_STORAGE);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
@@ -4964,6 +4966,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
   assert(Index_getType(toStorageId) == INDEX_TYPE_STORAGE);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
@@ -5005,7 +5008,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : assignStorageToStorage
+* Name   : assignStorageToEntity
 * Purpose: assign storage entries to other entity
 * Input  : indexHandle - index handle
 *          storageId   - storage id
@@ -5025,6 +5028,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(Index_getType(toEntityId) == INDEX_TYPE_ENTITY);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -5066,6 +5070,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert((toEntityId == INDEX_ID_NONE) || Index_getType(toEntityId) == INDEX_TYPE_ENTITY);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   // assign to entity
   if (entityId != toEntityId)
@@ -5138,6 +5143,7 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
 
   assert(indexHandle != NULL);
   assert(Index_getType(toEntityId) == INDEX_TYPE_ENTITY);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
@@ -5200,6 +5206,8 @@ LOCAL Errors assignJobToJob(IndexHandle *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(!String_isEmpty(toJobUUID));
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK(NULL,NULL),
@@ -10762,98 +10770,105 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  if      (toEntityId != INDEX_ID_NONE)
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
   {
-    // assign to other entity
-
-    if (storageId != INDEX_ID_NONE)
+    if      (toEntityId != INDEX_ID_NONE)
     {
-      assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+      // assign to other entity
 
-      // assign storage to other entity
-      error = assignStorageToEntity(indexHandle,
-                                    storageId,
-                                    toEntityId
-                                   );
-      if (error != ERROR_NONE)
+      if (storageId != INDEX_ID_NONE)
       {
-        return error;
+        assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+        // assign storage to other entity
+        error = assignStorageToEntity(indexHandle,
+                                      storageId,
+                                      toEntityId
+                                     );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+
+      if (entityId != INDEX_ID_NONE)
+      {
+        assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+        // assign all storage entries of entity to other entity
+        error = assignEntityToEntity(indexHandle,
+                                     entityId,
+                                     toEntityId,
+                                     toArchiveType
+                                    );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+
+      if (!String_isEmpty(jobUUID))
+      {
+        // assign all entities of job to other entity
+        error = assignJobToEntity(indexHandle,
+                                  jobUUID,
+                                  toEntityId,
+                                  toArchiveType
+                                 );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
     }
-
-    if (entityId != INDEX_ID_NONE)
+    else if (toStorageId != INDEX_ID_NONE)
     {
-      assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+      // assign to other storage
 
-      // assign all storage entries of entity to other entity
-      error = assignEntityToEntity(indexHandle,
-                                   entityId,
-                                   toEntityId,
-                                   toArchiveType
+      if (storageId != INDEX_ID_NONE)
+      {
+        assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+        // assign storage entries to other storage
+        error = assignStorageToStorage(indexHandle,storageId,toStorageId);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+
+      if (entityId != INDEX_ID_NONE)
+      {
+        assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+        // assign all storage entries of entity to other storage
+        error = assignEntityToStorage(indexHandle,entityId,toStorageId);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+
+      if (!String_isEmpty(jobUUID))
+      {
+        // assign all storage entries of all entities of job to other storage
+        error = assignJobToStorage(indexHandle,
+                                   jobUUID,
+                                   toStorageId
                                   );
-      if (error != ERROR_NONE)
-      {
-        return error;
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
     }
 
-    if (!String_isEmpty(jobUUID))
-    {
-      // assign all entities of job to other entity
-      error = assignJobToEntity(indexHandle,
-                                jobUUID,
-                                toEntityId,
-                                toArchiveType
-                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-  }
-  else if (toStorageId != INDEX_ID_NONE)
-  {
-    // assign to other storage
+    return ERROR_NONE;
+  });
 
-    if (storageId != INDEX_ID_NONE)
-    {
-      assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
-
-      // assign storage entries to other storage
-      error = assignStorageToStorage(indexHandle,storageId,toStorageId);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-
-    if (entityId != INDEX_ID_NONE)
-    {
-      assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
-
-      // assign all storage entries of entity to other storage
-      error = assignEntityToStorage(indexHandle,entityId,toStorageId);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-
-    if (!String_isEmpty(jobUUID))
-    {
-      // assign all storage entries of all entities of job to other storage
-      error = assignJobToStorage(indexHandle,
-                                 jobUUID,
-                                 toStorageId
-                                );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-  }
-
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Index_pruneUUID(IndexHandle *indexHandle,
