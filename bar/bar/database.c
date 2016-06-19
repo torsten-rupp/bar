@@ -1363,6 +1363,7 @@ void Database_doneAll(void)
   assert(databaseHandle != NULL);
 
   // init variables
+//TODO
 #if 0
   databaseHandle->lock    = NULL;
 #else
