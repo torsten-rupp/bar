@@ -11860,24 +11860,24 @@ throw new Error("NYI");
         // parse file name
         storageNamePartList.add(new StorageNamePart(null));
         StringBuilder buffer = new StringBuilder();
-        int z = 0;
-        while (z < fileName.length())
+        int i = 0;
+        while (i < fileName.length())
         {
-          switch (fileName.charAt(z))
+          switch (fileName.charAt(i))
           {
             case '%':
               // add variable part
               buffer = new StringBuilder();
-              buffer.append('%'); z++;
-              if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
+              buffer.append('%'); i++;
+              if ((i < fileName.length()) && (fileName.charAt(i) == '%'))
               {
-                buffer.append('%'); z++;
+                buffer.append('%'); i++;
               }
               else
               {
-                while ((z < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(z))))
+                while ((i < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(i))))
                 {
-                  buffer.append(fileName.charAt(z)); z++;
+                  buffer.append(fileName.charAt(i)); i++;
                 }
               }
               storageNamePartList.add(new StorageNamePart(buffer.toString()));
@@ -11886,22 +11886,28 @@ throw new Error("NYI");
             case '#':
               // add number part
               buffer = new StringBuilder();
-              while ((z < fileName.length()) && (fileName.charAt(z) == '#'))
+              while ((i < fileName.length()) && (fileName.charAt(i) == '#'))
               {
-                buffer.append(fileName.charAt(z)); z++;
+                buffer.append(fileName.charAt(i)); i++;
               }
               storageNamePartList.add(new StorageNamePart(buffer.toString()));
+              storageNamePartList.add(new StorageNamePart(null));
+              break;
+            case '/':
+              i++;
+              storageNamePartList.add(new StorageNamePart("/"));
               storageNamePartList.add(new StorageNamePart(null));
               break;
             default:
               // text part
               buffer = new StringBuilder();
-              while (   (z < fileName.length())
-                     && (fileName.charAt(z) != '%')
-                     && (fileName.charAt(z) != '#')
+              while (   (i < fileName.length())
+                     && (fileName.charAt(i) != '%')
+                     && (fileName.charAt(i) != '#')
+                     && (fileName.charAt(i) != '/')
                     )
               {
-                buffer.append(fileName.charAt(z)); z++;
+                buffer.append(fileName.charAt(i)); i++;
               }
               storageNamePartList.add(new StorageNamePart(buffer.toString()));
               storageNamePartList.add(new StorageNamePart(null));
