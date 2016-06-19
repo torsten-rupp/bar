@@ -140,7 +140,7 @@ while ($line=<STDIN>)
         $table =~ s/\$$name/$constants{$name}/g;
       }
       $table =~ s/"/\\"/g;
-      my $definition=$1;
+      my $definition=$2;
       foreach $name (keys %constants)
       {
         $definition =~ s/\$$name/$constants{$name}/g;
@@ -161,7 +161,7 @@ while ($line=<STDIN>)
       # create anonymous trigger
 
       # replace macros
-      my $definition=$1;
+      my $definition=$2;
       foreach $name (keys %constants)
       {
         $definition =~ s/\$$name/$constants{$name}/g;
