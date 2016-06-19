@@ -631,10 +631,12 @@ typedef struct
 
 /***********************************************************************\
 * Name   : StorageFunction
-* Purpose:
-* Input  : -
+* Purpose: storage call back
+* Input  : storageName - storage name
+*          fileInfo    - file info
+*          userData    - user data
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
