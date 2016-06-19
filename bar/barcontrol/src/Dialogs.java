@@ -3041,10 +3041,11 @@ class Dialogs
     class FileComparator implements Comparator<File>
     {
       // Note: enum in inner classes are not possible in Java, thus use the old way...
-      private final static int SORTMODE_NAME     = 0;
-      private final static int SORTMODE_TYPE     = 1;
-      private final static int SORTMODE_MODIFIED = 2;
-      private final static int SORTMODE_SIZE     = 3;
+      private final static int SORTMODE_NONE     = 0;
+      private final static int SORTMODE_NAME     = 1;
+      private final static int SORTMODE_TYPE     = 2;
+      private final static int SORTMODE_MODIFIED = 3;
+      private final static int SORTMODE_SIZE     = 4;
 
       private int sortMode;
 
@@ -3072,33 +3073,57 @@ class Dialogs
        */
       public int compare(File file1, File file2)
       {
-//System.out.println(String.format("file1=%s file2=%s",file1,file2));
-        switch (sortMode)
+        int result;
+        if     (file1.isDirectory())
         {
-          case SORTMODE_NAME:
-            return file1.getName().compareTo(file2.getName());
-          case SORTMODE_TYPE:
-            if      (file1.isDirectory())
-            {
-              if   (file2.isDirectory()) return 0;
-              else                       return 1;
-            }
-            else
-            {
-              if   (file2.isDirectory()) return -1;
-              else                       return 0;
-            }
-          case SORTMODE_MODIFIED:
-            if      (file1.lastModified() < file2.lastModified()) return -1;
-            else if (file1.lastModified() > file2.lastModified()) return  1;
-            else                                                  return  0;
-          case SORTMODE_SIZE:
-            if      (file1.length() < file2.length()) return -1;
-            else if (file1.length() > file2.length()) return  1;
-            else                                      return  0;
-          default:
-            return 0;
+          if   (file2.isDirectory()) result = 0;
+          else                       result = -1;
         }
+        else
+        {
+          if   (file2.isDirectory()) result = 1;
+          else                       result = 0;
+        }
+        int nextSortMode = sortMode;
+        while ((result == 0) && (nextSortMode != SORTMODE_NONE))
+        {
+          switch (nextSortMode)
+          {
+            case SORTMODE_NONE:
+              break;
+            case SORTMODE_NAME:
+              result = file1.getName().compareTo(file2.getName());
+              nextSortMode = SORTMODE_MODIFIED;
+              break;
+            case SORTMODE_TYPE:
+              if     (file1.isDirectory())
+              {
+                if   (file2.isDirectory()) result = 0;
+                else                       result = 1;
+              }
+              else
+              {
+                if   (file2.isDirectory()) result = -1;
+                else                       result = 0;
+              }
+              nextSortMode = SORTMODE_NAME;
+              break;
+            case SORTMODE_MODIFIED:
+              if      (file1.lastModified() < file2.lastModified()) result = -1;
+              else if (file1.lastModified() > file2.lastModified()) result =  1;
+              else                                                  result =  0;
+              nextSortMode = SORTMODE_SIZE;
+              break;
+            case SORTMODE_SIZE:
+              if      (file1.length() < file2.length()) result = -1;
+              else if (file1.length() > file2.length()) result =  1;
+              else                                      result =  0;
+              nextSortMode = SORTMODE_NONE;
+              break;
+          }
+        }
+
+        return result;
       }
 
       /** convert data to string
@@ -3376,7 +3401,7 @@ class Dialogs
     {
       final String[] result = new String[1];
 
-      final FileComparator  fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);;
+      final FileComparator  fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);
       final Updater         updater        = new Updater(fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
       final ArrayList<File> shortcutList   = new ArrayList<File>();
 
