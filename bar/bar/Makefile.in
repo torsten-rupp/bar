@@ -821,7 +821,7 @@ showchunks@EXEEXT@: showchunks.o
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
 # create bar-sqlite3
-bar-sqlite3.o: bar-sqlite3.c index_definition.h
+bar-sqlite3.o: bar-sqlite3.c errors.h index_definition.h
 	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 bar-sqlite3: bar-sqlite3.o debug/global.o debug/lists.o debug/strings.o debug/stringlists.o debug/files.o debug/devices.o debug/stacktraces.o debug/errors.o sqlite3.o
