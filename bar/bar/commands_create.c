@@ -3939,12 +3939,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   void                       *autoFreeSavePoint;
   StorageMsg                 storageMsg;
   Errors                     error;
-          IndexId          existingEntityId;
-          IndexId          existingStorageId;
-  String                     existingStorageName;
-  StorageSpecifier           existingStorageSpecifier;
   ConstString                printableStorageName;
-
   FileInfo                   fileInfo;
   Server                     server;
   FileHandle                 fileHandle;
@@ -3956,7 +3951,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   SemaphoreLock              semaphoreLock;
   String                     pattern;
 
+  String                     pathName;
+  IndexQueryHandle           indexQueryHandle;
   IndexId                    storageId;
+  IndexId                    existingEntityId;
+  IndexId                    existingStorageId;
+  String                     existingStorageName;
+  String                     existingPathName;
+  StorageSpecifier           existingStorageSpecifier;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -3969,10 +3971,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  pathName = String_new();
   existingStorageName = String_new();
+  existingPathName = String_new();
   Storage_initSpecifier(&existingStorageSpecifier);
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
-  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(existingStorageName); });
+  AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(pathName); });
+  AUTOFREE_ADD(&autoFreeList,existingStorageName,{ String_delete(existingStorageName); });
+  AUTOFREE_ADD(&autoFreeList,existingPathName,{ String_delete(existingPathName); });
   AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
 
   // initial storage pre-processing
@@ -4262,9 +4268,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
         error = Index_assignTo(createInfo->indexHandle,
                                NULL,  // jobUUID
-                               INDEX_ID_NONE,  // enityId
+                               INDEX_ID_NONE,  // entityId
                                storageMsg.storageId,
-                               INDEX_ID_NONE,  // toEnityId
+                               INDEX_ID_NONE,  // toEntityId
                                ARCHIVE_TYPE_NONE,
                                storageId
                               );
@@ -4313,6 +4319,7 @@ fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: APPPPPPPPPPPPPPPPPPPPP %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
             printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
 
+            File_getFilePathName(pathName,storageMsg.archiveName);
             error = Index_initListStorages(&indexQueryHandle,
                                            createInfo->indexHandle,
                                            storageMsg.uuidId,
@@ -4337,7 +4344,7 @@ fprintf(stderr,"%s, %d: APPPPPPPPPPPPPPPPPPPPP %llu\n",__FILE__,__LINE__,storage
             while (Index_getNextStorage(&indexQueryHandle,
                                         NULL,  // uuidId
                                         NULL,  // job UUID
-                                        existingEntityId,  // entityId,
+                                        &existingEntityId,  // entityId,
                                         NULL,  // schedule UUID
                                         NULL,  // archiveType
                                         &existingStorageId,
@@ -4352,19 +4359,33 @@ fprintf(stderr,"%s, %d: APPPPPPPPPPPPPPPPPPPPP %llu\n",__FILE__,__LINE__,storage
                                        )
                   )
             {
-
+              File_getFilePathName(existingPathName,existingStorageName);
               if (   (storageId != existingStorageId)
-                  && (Storage_parseName(&storageSpecifier,existingStorageName) == ERROR_NONE)
-                  && Storage_equalSpecifiers(&storageSpecifier,storageMsg.archiveName,&storageSpecifier,existingStorageName)
+                  && (Storage_parseName(&existingStorageSpecifier,existingStorageName) == ERROR_NONE)
+                  && Storage_equalSpecifiers(&existingStorageSpecifier,pathName,&existingStorageSpecifier,existingPathName)
                  )
               {
   //TODO
-fprintf(stderr,"%s, %d: existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
+fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
+                error = Index_assignTo(createInfo->indexHandle,
+                                       NULL,  // jobUUID
+                                       INDEX_ID_NONE,  // entityId
+                                       storageId,
+                                       existingEntityId,
+                                       ARCHIVE_TYPE_NONE,
+                                       INDEX_ID_NONE  // toStorageId
+                                      );
+                break;
               }
             }
             Index_doneList(&indexQueryHandle);
-            String_delete(existingStorageName);
-            Storage_doneSpecifier(&storageSpecifier);
+            if (error != ERROR_NONE)
+            {
+              if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+              continue;
+            }
   fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         }
 #endif
@@ -4544,8 +4565,10 @@ fprintf(stderr,"%s, %d: --- update storage %lld %s: %llu\n",__FILE__,__LINE__,In
   }
 
   // free resoures
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageName);
+  Storage_doneSpecifier(&existingStorageSpecifier);
+  String_delete(existingPathName);
+  String_delete(existingStorageName);
+  String_delete(pathName);
   free(buffer);
   AutoFree_done(&autoFreeList);
 
