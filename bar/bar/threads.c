@@ -183,7 +183,7 @@ LOCAL void debugThreadStackTraceSetThreadName(ThreadId threadId, const char *nam
 }
 
 /***********************************************************************\
-* Name   : debugStackTraceGetThreadName
+* Name   : debugThreadStackTraceGetThreadName
 * Purpose: get thread name
 * Input  : threadId - thread id
 * Output : -
@@ -323,7 +323,6 @@ LOCAL void debugThreadDumpStackTrace(ThreadId threadId, const char *reason)
 
   pthread_mutex_lock(&debugConsoleLock);
   {
-    name = debugThreadStackTraceGetThreadName(threadId);
     fprintf(stderr,
             "Thread stack trace: '%s' (%s)%s\n",
             (name != NULL) ? name : "<none>",
