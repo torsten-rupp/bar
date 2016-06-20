@@ -33,6 +33,9 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#ifndef NDEBUG
+  #define __SEMAPHORE_MAX_THREAD_INFO 16
+#endif /* not NDEBUG */
 
 /***************************** Datatypes *******************************/
 
@@ -44,12 +47,20 @@ typedef enum
   SEMAPHORE_LOCK_TYPE_READ_WRITE,
 } SemaphoreLockTypes;
 
+#ifndef NDEBUG
+  typedef struct
+  {
+    ThreadId   threadId;                   // id of thread who locked semaphore
+    const char *fileName;                  // file+line number of lock call
+    ulong      lineNb;
+  } __SemaphoreThreadInfo;
+#endif /* not NDEBUG */
+
 typedef struct Semaphore
 {
   #ifndef NDEBUG
     LIST_NODE_HEADER(struct Semaphore);
   #endif /* not NDEBUG */
-
 
   #if   defined(PLATFORM_LINUX)
     pthread_mutex_t     requestLock;         // lock to update request counters
@@ -81,16 +92,13 @@ typedef struct Semaphore
 
 
   #ifndef NDEBUG
-    const char *fileName;                    // file+line number of creation
-    ulong      lineNb;
-    const char *name;                        // semaphore name (variable)
-    struct
-    {
-      ThreadId   threadId;                   // id of thread who locked semaphore
-      const char *fileName;                  // file+line number of lock
-      ulong      lineNb;
-    } lockedBy[16];
-    uint       lockedByCount;                // number of threads who locked semaphore
+    const char            *fileName;         // file+line number of creation
+    ulong                 lineNb;
+    const char            *name;             // semaphore name (variable)
+    __SemaphoreThreadInfo pendingBy[__SEMAPHORE_MAX_THREAD_INFO];  // threads who wait for semaphore
+    uint                  pendingByCount;    // number of threads who wait for semaphore
+    __SemaphoreThreadInfo lockedBy[__SEMAPHORE_MAX_THREAD_INFO];  // threads who locked semaphore
+    uint                  lockedByCount;     // number of threads who locked semaphore
   #endif /* not NDEBUG */
 } Semaphore;
 
