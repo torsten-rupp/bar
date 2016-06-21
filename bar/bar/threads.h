@@ -212,7 +212,7 @@ INLINE bool Thread_isCurrentThread(const ThreadId threadId)
 * Purpose: get name of thread
 * Input  : threadId - thread id
 * Output : -
-* Return : thread name or NULL
+* Return : thread name or "unknown"
 * Notes  : -
 \***********************************************************************/
 

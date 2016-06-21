@@ -187,7 +187,7 @@ LOCAL void debugThreadStackTraceSetThreadName(ThreadId threadId, const char *nam
 * Purpose: get thread name
 * Input  : threadId - thread id
 * Output : -
-* Return : thread name or NULL
+* Return : thread name or "unknown"
 * Notes  : -
 \***********************************************************************/
 
@@ -195,8 +195,6 @@ LOCAL const char *debugThreadStackTraceGetThreadName(ThreadId threadId)
 {
   uint       i;
   const char *name;
-
-  assert(debugThreadStackTraceThreadCount > 0);
 
   i = 0;
   while ((i < debugThreadStackTraceThreadCount) && pthread_equal(debugThreadStackTraceThreads[i].id,threadId) == 0)
@@ -209,7 +207,7 @@ LOCAL const char *debugThreadStackTraceGetThreadName(ThreadId threadId)
   }
   else
   {
-    name = NULL;
+    name = "unknown";
   }
 
   return name;
