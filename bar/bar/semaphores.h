@@ -51,6 +51,7 @@ typedef enum
   typedef struct
   {
     ThreadId   threadId;                   // id of thread who locked semaphore
+    SemaphoreLockTypes lockType;
     const char *fileName;                  // file+line number of lock call
     ulong      lineNb;
   } __SemaphoreThreadInfo;
@@ -81,11 +82,12 @@ typedef struct Semaphore
   SemaphoreLockTypes  lockType;              // current lock type
   uint                readLockCount;         // number of read locks
   uint                readWriteLockCount;    // number of read/write locks
+//TODO
   #if   defined(PLATFORM_LINUX)
     pthread_cond_t      readLockZero;        // signal read-lock became 0
     pthread_cond_t      modified;            // signal values are modified
   #elif defined(PLATFORM_WINDOWS)
-    pthread_cond_t      readLockZero;        // signal read-lock beaome 0
+    pthread_cond_t      readLockZero;        // signal read-lock became 0
     pthread_cond_t      modified;            // signal values are modified
   #endif /* PLATFORM_... */
   bool                endFlag;
