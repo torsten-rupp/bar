@@ -10143,6 +10143,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     Index_getDatabaseId(storageId)
                                    );
       assert(error == ERROR_NONE);
+if (n<0) fprintf(stderr,"%s, %d: totalEntrySize=%lld name=%s size=%llu\n",__FILE__,__LINE__,String_cString(fileName),size);
       assert(n >= 0LL);
       error = Database_getInteger64(&indexHandle->databaseHandle,
                                     &n,
@@ -10152,6 +10153,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     Index_getDatabaseId(storageId)
                                    );
       assert(error == ERROR_NONE);
+if (n<0) fprintf(stderr,"%s, %d: totalFileSize=%lld name=%s size=%llu\n",__FILE__,__LINE__,String_cString(fileName),size);
       assert(n >= 0LL);
     #endif /* not NDEBUG */
 
