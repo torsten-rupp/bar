@@ -77,8 +77,6 @@
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD (10*60)
 
-#define INDEX_TIMEOUT (10L*60L*1000L)  // index timeout [ms]
-
 /***************************** Datatypes *******************************/
 
 // server states
@@ -3107,6 +3105,8 @@ LOCAL void jobThreadCode(void)
   while (!quitFlag)
   {
     // lock
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//Semaphore_debugPrintInfo();
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
 
     // wait for and get next job to execute
@@ -3157,6 +3157,7 @@ LOCAL void jobThreadCode(void)
     }
 
     // unlock (Note: job is now protected by running state)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Semaphore_unlock(&jobList.lock);
 
     // init log
@@ -3537,6 +3538,7 @@ NULL,//                                                        scheduleTitle,
     doneLog(&logHandle);
 
     // lock
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
     // free resources
@@ -3557,6 +3559,7 @@ NULL,//                                                        scheduleTitle,
     }
 
     // unlock
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Semaphore_unlock(&jobList.lock);
   }
 
