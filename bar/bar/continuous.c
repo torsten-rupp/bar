@@ -221,9 +221,9 @@ LOCAL void printNotifies(void)
 
   // open continuous database
   #ifdef NDEBUG
-    error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,WAIT_FOREVER);
+    error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,NO_WAIT);
   #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,WAIT_FOREVER);
+    error = __Database_open(__fileName__,__lineNb__,databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,NO_WAIT);
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
@@ -264,9 +264,9 @@ LOCAL void printNotifies(void)
   // create continuous database
   if (databaseFileName != NULL) (void)File_deleteCString(databaseFileName,FALSE);
   #ifdef NDEBUG
-    error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,WAIT_FOREVER);
+    error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
   #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,WAIT_FOREVER);
+    error = __Database_open(__fileName__,__lineNb__,databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
