@@ -683,12 +683,14 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
       WHERE id=NEW.entryId;
 
     // update count/size in storage
+ insert into log values('trigger fileEntries: before UPDATE storage totalEntryCount='||(select totalEntryCount from storage where id=NEW.storageId)||' totalEntrySize='||(select totalEntrySize from storage where id=NEW.storageId));
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.fragmentSize,
           totalFileCount =totalFileCount +1,
           totalFileSize  =totalFileSize  +NEW.fragmentSize
       WHERE id=NEW.storageId;
+ insert into log values('trigger fileEntries: after UPDATE storage totalEntryCount='||(select totalEntryCount from storage where id=NEW.storageId)||' totalEntrySize='||(select totalEntrySize from storage where id=NEW.storageId));
 
     // update count/size in parent directories
     UPDATE directoryEntries
@@ -742,9 +744,9 @@ CREATE TABLE IF NOT EXISTS imageEntries(
   entryId         INTEGER NOT NULL REFERENCES entries(id),
   size            INTEGER,
   fileSystemType  INTEGER,
-  blockSize       INTEGER,
-  blockOffset     INTEGER,
-  blockCount      INTEGER
+  blockSize       INTEGER,                 // size of image block
+  blockOffset     INTEGER,                 // block offset [blocks]
+  blockCount      INTEGER                  // block count [blocks]
 );
 CREATE INDEX ON imageEntries (entryId);
 
@@ -760,9 +762,9 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
     // update count/size in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
-          totalEntrySize =totalEntrySize +NEW.blockCount *NEW.blockSize,
+          totalEntrySize =totalEntrySize +NEW.blockCount*NEW.blockSize,
           totalImageCount=totalImageCount+1,
-          totalImageSize =totalImageSize +NEW.blockCount *NEW.blockSize
+          totalImageSize =totalImageSize +NEW.blockCount*NEW.blockSize
       WHERE id=NEW.storageId;
   END;
 
