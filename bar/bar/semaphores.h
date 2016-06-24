@@ -63,16 +63,15 @@ typedef struct Semaphore
     LIST_NODE_HEADER(struct Semaphore);
   #endif /* not NDEBUG */
 
-  #if   defined(PLATFORM_LINUX)
-    pthread_mutex_t     requestLock;         // lock to update request counters
+  #if   defined(PLATFORM_LINUX)              // lock to update request counters, thread info
+    pthread_mutex_t     requestLock;
   #elif defined(PLATFORM_WINDOWS)
     HANDLE              requestLock;
   #endif /* PLATFORM_... */
   uint                readRequestCount;      // number of pending read locks
   uint                readWriteRequestCount; // number of pending read/write locks
 
-  // lock (thread who own lock is allowed to change the following semaphore variables)
-  #if   defined(PLATFORM_LINUX)
+  #if   defined(PLATFORM_LINUX)              // lock (thread who own lock is allowed to change the following semaphore variables)
     pthread_mutex_t     lock;
   #elif defined(PLATFORM_WINDOWS)
     HANDLE              lock;
@@ -91,7 +90,6 @@ typedef struct Semaphore
     pthread_cond_t      modified;            // signal values are modified
   #endif /* PLATFORM_... */
   bool                endFlag;
-
 
   #ifndef NDEBUG
     const char            *fileName;         // file+line number of creation
