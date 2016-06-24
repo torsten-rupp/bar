@@ -30,6 +30,7 @@
 #include "storage.h"
 #include "index_definition.h"
 #include "bar.h"
+#include "bar_global.h"
 
 #include "index.h"
 
@@ -274,7 +275,7 @@ LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
   IndexHandle indexHandle;
 
   // open index database
-  error = openIndex(&indexHandle,databaseFileName,INDEX_OPEN_MODE_READ,0);
+  error = openIndex(&indexHandle,databaseFileName,INDEX_OPEN_MODE_READ,NO_WAIT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -3368,7 +3369,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   int64       indexVersion;
 
   // open old index
-  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ,0);
+  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ,NO_WAIT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -4315,7 +4316,7 @@ LOCAL void cleanupIndexThreadCode(void)
   assert(__databaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE,WAIT_FOREVER);
+  error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
