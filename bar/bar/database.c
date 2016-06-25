@@ -3381,7 +3381,6 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-fprintf(stderr,"%s, %d:ddddddddddddddddddddddddddd \n",__FILE__,__LINE__);
   // format SQL command string
   sqlString = formatSQLString(String_new(),
                               "SELECT %s \
