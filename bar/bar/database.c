@@ -329,7 +329,7 @@ LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], ch
 #endif
 
 /***********************************************************************\
-* Name   : vformatSQLString
+* Name   : Database_vformatSQLString
 * Purpose: format SQL string from command
 * Input  : sqlString - SQL string variable
 *          command   - command string with %[l]d, %S, %s
@@ -541,7 +541,7 @@ LOCAL String vformatSQLString(String     sqlString,
 }
 
 /***********************************************************************\
-* Name   : vformatSQLString
+* Name   : Database_formatSQLString
 * Purpose: format SQL string from command
 * Input  : sqlString - SQL string variable
 *          command   - command string with %[l]d, %S, %s
@@ -3244,8 +3244,29 @@ Errors Database_getId(DatabaseHandle *databaseHandle,
                       ...
                      )
 {
+  va_list arguments;
+  Errors  error;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(value != NULL);
+  assert(tableName != NULL);
+
+  va_start(arguments,additional);
+  error = Database_getId(databaseHandle,value,tableName,additional,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
+Errors Database_vgetId(DatabaseHandle *databaseHandle,
+                       DatabaseId     *value,
+                       const char     *tableName,
+                       const char     *additional,
+                       va_list        arguments
+                      )
+{
   String       sqlString;
-  va_list      arguments;
   Errors       error;
   sqlite3_stmt *statementHandle;
   int          sqliteResult;
@@ -3265,12 +3286,10 @@ Errors Database_getId(DatabaseHandle *databaseHandle,
   if (additional != NULL)
   {
     String_appendChar(sqlString,' ');
-    va_start(arguments,additional);
     vformatSQLString(sqlString,
                      additional,
                      arguments
                     );
-    va_end(arguments);
   }
   String_appendCString(sqlString," LIMIT 0,1");
 
@@ -3327,8 +3346,31 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              ...
                             )
 {
+  va_list arguments;
+  Errors  error;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(value != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  va_start(arguments,additional);
+  error = Database_vgetInteger64(databaseHandle,value,tableName,columnName,additional,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
+Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
+                              int64          *value,
+                              const char     *tableName,
+                              const char     *columnName,
+                              const char     *additional,
+                              va_list        arguments
+                             )
+{
   String       sqlString;
-  va_list      arguments;
   Errors       error;
   sqlite3_stmt *statementHandle;
   int          sqliteResult;
@@ -3339,6 +3381,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
+fprintf(stderr,"%s, %d:ddddddddddddddddddddddddddd \n",__FILE__,__LINE__);
   // format SQL command string
   sqlString = formatSQLString(String_new(),
                               "SELECT %s \
@@ -3350,12 +3393,10 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   if (additional != NULL)
   {
     String_appendChar(sqlString,' ');
-    va_start(arguments,additional);
     vformatSQLString(sqlString,
                      additional,
                      arguments
                     );
-    va_end(arguments);
   }
   String_appendCString(sqlString," LIMIT 0,1");
 
@@ -3412,9 +3453,31 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                              ...
                             )
 {
-  String  sqlString;
   va_list arguments;
   Errors  error;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  va_start(arguments,additional);
+  error = Database_vsetInteger64(databaseHandle,value,tableName,columnName,additional,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
+Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
+                              int64          value,
+                              const char     *tableName,
+                              const char     *columnName,
+                              const char     *additional,
+                              va_list        arguments
+                             )
+{
+  String sqlString;
+  Errors error;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
@@ -3436,12 +3499,10 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   if (additional != NULL)
   {
     String_appendChar(sqlString,' ');
-    va_start(arguments,additional);
     vformatSQLString(sqlString,
                      additional,
                      arguments
                     );
-    va_end(arguments);
   }
   DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
   error = sqliteExecute(databaseHandle,
@@ -3488,8 +3549,31 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
                           ...
                          )
 {
+  va_list arguments;
+  Errors  error;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(value != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  va_start(arguments,additional);
+  error = Database_vgetDouble(databaseHandle,value,tableName,columnName,additional,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
+Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
+                           double         *value,
+                           const char     *tableName,
+                           const char     *columnName,
+                           const char     *additional,
+                           va_list        arguments
+                          )
+{
   String       sqlString;
-  va_list      arguments;
   Errors       error;
   sqlite3_stmt *statementHandle;
   int          sqliteResult;
@@ -3511,12 +3595,10 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
   if (additional != NULL)
   {
     String_appendChar(sqlString,' ');
-    va_start(arguments,additional);
     vformatSQLString(sqlString,
                      additional,
                      arguments
                     );
-    va_end(arguments);
   }
   String_appendCString(sqlString," LIMIT 0,1");
 
@@ -3573,8 +3655,30 @@ Errors Database_setDouble(DatabaseHandle *databaseHandle,
                           ...
                          )
 {
-  String  sqlString;
   va_list arguments;
+  Errors  error;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  va_start(arguments,additional);
+  error = Database_vsetDouble(databaseHandle,value,tableName,columnName,additional,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
+Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
+                           double         value,
+                           const char     *tableName,
+                           const char     *columnName,
+                           const char     *additional,
+                           va_list        arguments
+                          )
+{
+  String  sqlString;
   Errors  error;
 
   assert(databaseHandle != NULL);
@@ -3597,12 +3701,10 @@ Errors Database_setDouble(DatabaseHandle *databaseHandle,
   if (additional != NULL)
   {
     String_appendChar(sqlString,' ');
-    va_start(arguments,additional);
     vformatSQLString(sqlString,
                      additional,
                      arguments
                     );
-    va_end(arguments);
   }
   DATABASE_DEBUG_SQLX(databaseHandle,"set double",sqlString);
   error = sqliteExecute(databaseHandle,
@@ -3642,22 +3744,45 @@ Errors Database_setDouble(DatabaseHandle *databaseHandle,
 }
 
 Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         value,
+                          String         string,
                           const char     *tableName,
                           const char     *columnName,
                           const char     *additional,
                           ...
                          )
 {
+  va_list arguments;
+  Errors  error;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(string != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  va_start(arguments,additional);
+  error = Database_vgetString(databaseHandle,string,tableName,columnName,additional,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
+Errors Database_vgetString(DatabaseHandle *databaseHandle,
+                           String         string,
+                           const char     *tableName,
+                           const char     *columnName,
+                           const char     *additional,
+                           va_list        arguments
+                          )
+{
   String       sqlString;
-  va_list      arguments;
   Errors       error;
   sqlite3_stmt *statementHandle;
   int          sqliteResult;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
-  assert(value != NULL);
+  assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -3672,12 +3797,10 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   if (additional != NULL)
   {
     String_appendChar(sqlString,' ');
-    va_start(arguments,additional);
     vformatSQLString(sqlString,
                      additional,
                      arguments
                     );
-    va_end(arguments);
   }
   String_appendCString(sqlString," LIMIT 0,1");
 
@@ -3711,7 +3834,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
   if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
   {
-    String_setCString(value,(const char*)sqlite3_column_text(statementHandle,0));
+    String_setCString(string,(const char*)sqlite3_column_text(statementHandle,0));
   }
   sqlite3_finalize(statementHandle);
   if (error != ERROR_NONE)
@@ -3727,19 +3850,43 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 }
 
 Errors Database_setString(DatabaseHandle *databaseHandle,
-                          const String   value,
+                          const String   string,
                           const char     *tableName,
                           const char     *columnName,
                           const char     *additional,
                           ...
                          )
 {
-  String  sqlString;
   va_list arguments;
   Errors  error;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
+  assert(string != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  va_start(arguments,additional);
+  error = Database_vsetString(databaseHandle,string,tableName,columnName,additional,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
+Errors Database_vsetString(DatabaseHandle *databaseHandle,
+                           const String   string,
+                           const char     *tableName,
+                           const char     *columnName,
+                           const char     *additional,
+                           va_list        arguments
+                          )
+{
+  String sqlString;
+  Errors error;
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+  assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -3750,17 +3897,15 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
                               ",
                               tableName,
                               columnName,
-                              value
+                              string
                              );
   if (additional != NULL)
   {
     String_appendChar(sqlString,' ');
-    va_start(arguments,additional);
     vformatSQLString(sqlString,
                      additional,
                      arguments
                     );
-    va_end(arguments);
   }
 
   // execute SQL command

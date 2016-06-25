@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <semaphore.h>
 #include <assert.h>
 
@@ -595,7 +596,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
                     );
 
 /***********************************************************************\
-* Name   : Database_getId
+* Name   : Database_getId, Database_vgetId
 * Purpose: get database id of value from database table
 * Input  : databaseHandle - database handle
 *          tableName      - table name
@@ -613,9 +614,15 @@ Errors Database_getId(DatabaseHandle *databaseHandle,
                       const char     *additional,
                       ...
                      );
+Errors Database_vgetId(DatabaseHandle *databaseHandle,
+                       DatabaseId     *value,
+                       const char     *tableName,
+                       const char     *additional,
+                       va_list        arguments
+                      );
 
 /***********************************************************************\
-* Name   : Database_getInteger64
+* Name   : Database_getInteger64, Database_vgetInteger64
 * Purpose: get int64 value from database table
 * Input  : databaseHandle - database handle
 *          tableName      - table name
@@ -635,9 +642,16 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              const char     *additional,
                              ...
                             );
+Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
+                              int64          *value,
+                              const char     *tableName,
+                              const char     *columnName,
+                              const char     *additional,
+                              va_list        arguments
+                             );
 
 /***********************************************************************\
-* Name   : Database_setInteger64
+* Name   : Database_setInteger64, Database_vsetInteger64
 * Purpose: insert or update int64 value in database table
 * Input  : databaseHandle - database handle
 *          value          - int64 value
@@ -658,9 +672,16 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                              const char     *additional,
                              ...
                             );
+Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
+                              int64          value,
+                              const char     *tableName,
+                              const char     *columnName,
+                              const char     *additional,
+                              va_list        arguments
+                             );
 
 /***********************************************************************\
-* Name   : Database_getDouble
+* Name   : Database_getDouble, Database_vgetDouble
 * Purpose: get int64 value from database table
 * Input  : databaseHandle - database handle
 *          tableName      - table name
@@ -680,9 +701,16 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
                           const char     *additional,
                           ...
                          );
+Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
+                           double         *value,
+                           const char     *tableName,
+                           const char     *columnName,
+                           const char     *additional,
+                           va_list        arguments
+                          );
 
 /***********************************************************************\
-* Name   : Database_setDouble
+* Name   : Database_setDouble, Database_vsetDouble
 * Purpose: insert or update double value in database table
 * Input  : databaseHandle - database handle
 *          value          - double value
@@ -703,9 +731,16 @@ Errors Database_setDouble(DatabaseHandle *databaseHandle,
                           const char     *additional,
                           ...
                          );
+Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
+                           double         value,
+                           const char     *tableName,
+                           const char     *columnName,
+                           const char     *additional,
+                           va_list        arguments
+                          );
 
 /***********************************************************************\
-* Name   : Database_getString
+* Name   : Database_getString, Database_vgetString
 * Purpose: get string value from database table
 * Input  : databaseHandle - database handle
 *          tableName      - table name
@@ -713,21 +748,28 @@ Errors Database_setDouble(DatabaseHandle *databaseHandle,
 *          additional     - additional string (e. g. WHERE...)
 *                           special functions:
 *                             REGEXP(pattern,case-flag,text)
-* Output : value - string value
+* Output : string - string value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         value,
+                          String         string,
                           const char     *tableName,
                           const char     *columnName,
                           const char     *additional,
                           ...
                          );
+Errors Database_vgetString(DatabaseHandle *databaseHandle,
+                           String         string,
+                           const char     *tableName,
+                           const char     *columnName,
+                           const char     *additional,
+                           va_list        arguments
+                          );
 
 /***********************************************************************\
-* Name   : Database_setString
+* Name   : Database_setString, Database_vsetString
 * Purpose: insert or update string value in database table
 * Input  : databaseHandle - database handle
 *          string         - string value
@@ -748,6 +790,13 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
                           const char     *additional,
                           ...
                          );
+Errors Database_vsetString(DatabaseHandle *databaseHandle,
+                           const String   string,
+                           const char     *tableName,
+                           const char     *columnName,
+                           const char     *additional,
+                           va_list        arguments
+                          );
 
 /***********************************************************************\
 * Name   : Database_getLastRowId
