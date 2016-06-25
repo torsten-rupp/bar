@@ -300,6 +300,39 @@ LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
   return ERROR_NONE;
 }
 
+#ifndef NDEBUG
+LOCAL void verify(IndexHandle *indexHandle,
+                  const char  *tableName,
+                  const char  *columnName,
+                  uint64      value,
+                  const char  *condition,
+                  ...
+                 )
+{
+  va_list arguments;
+  Errors  error;
+  int64   n;
+
+  assert(indexHandle != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+  assert(condition != NULL);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  va_start(arguments,condition);
+  error = Database_vgetInteger64(&indexHandle->databaseHandle,
+                                &n,
+                                tableName,
+                                columnName,
+                                condition,
+                                arguments
+                               );
+  assert(error == ERROR_NONE);
+  assert(n == value);
+  va_end(arguments);
+}
+#endif /* not NDEBUG */
+
 /***********************************************************************\
 * Name   : fixBrokenIds
 * Purpose: fix broken ids
@@ -8689,12 +8722,14 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   {
     return FALSE;
   }
-  assert(fileSize_ >= 0.0);
-  assert(fragmentOffset_ >= 0.0);
-  assert(fragmentSize_ >= 0.0);
-  assert(blockOffset_ >= 0.0);
-  assert(blockCount_ >= 0.0);
-  assert(hardlinkSize_ >= 0.0);
+  assert(fileSize_ >= 0LL);
+  assert(fragmentOffset_ >= 0LL);
+  assert(fragmentSize_ >= 0LL);
+  assert(imageSize_ >= 0LL);
+  assert(blockOffset_ >= 0LL);
+  assert(blockCount_ >= 0LL);
+  assert(directorySize_ >= 0LL);
+  assert(hardlinkSize_ >= 0LL);
   if (uuidId != NULL)    (*uuidId   ) = INDEX_ID_(INDEX_TYPE_UUID,   uuidId_   );
   if (entityId != NULL)  (*entityId ) = INDEX_ID_(INDEX_TYPE_ENTITY, entityId_ );
   if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
@@ -8819,6 +8854,23 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalImageCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalImageSize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalDirectoryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalLinkCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalHardlinkCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalHardlinkSize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalSpecialCount<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
@@ -8953,6 +9005,7 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
                       )
 {
   DatabaseId databaseId;
+  uint64     fragmentOffset_,fragmentSize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -8974,14 +9027,18 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
                            userId,
                            groupId,
                            permission,
-                           fragmentOffset,
-                           fragmentSize
+                           &fragmentOffset_,
+                           &fragmentSize_
                           )
      )
   {
     return FALSE;
   }
+  assert(fragmentOffset_ >= 0LL);
+  assert(fragmentSize_ >= 0LL);
   if (indexId != NULL) (*indexId) = INDEX_ID_FILE(databaseId);
+  if (fragmentOffset != NULL) (*fragmentOffset) = fragmentOffset_;
+  if (fragmentSize != NULL) (*fragmentSize) = fragmentSize_;
 
   return TRUE;
 }
@@ -9024,6 +9081,16 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
@@ -9151,6 +9218,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                        )
 {
   DatabaseId databaseId;
+  uint64     blockOffset_,blockCount_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -9169,14 +9237,18 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                            imageName,
                            fileSystemType,
                            size,
-                           blockOffset,
-                           blockCount
+                           &blockOffset_,
+                           &blockCount_
                           )
      )
   {
     return FALSE;
   }
+  assert(blockOffset_ >= 0LL);
+  assert(blockCount_ >= 0LL);
   if (indexId != NULL) (*indexId) = INDEX_ID_IMAGE(databaseId);
+  if (blockOffset != NULL) (*blockOffset) = blockOffset_;
+  if (blockCount != NULL) (*blockCount) = blockCount_;
 
   return TRUE;
 }
@@ -9218,6 +9290,16 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalImageCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalImageSize<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
@@ -9414,6 +9496,15 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalDirectoryCount<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
@@ -9613,6 +9704,15 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
       return error;
     }
 
+    #ifndef NDEBUG
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalLinkCount<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
+
     return ERROR_NONE;
   });
 
@@ -9745,6 +9845,7 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
                           )
 {
   DatabaseId databaseId;
+  uint64     fragmentOffset_,fragmentSize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -9766,14 +9867,18 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
                            userId,
                            groupId,
                            permission,
-                           fragmentOffset,
-                           fragmentSize
+                           &fragmentOffset_,
+                           &fragmentSize_
                           )
      )
   {
     return FALSE;
   }
   if (indexId != NULL) (*indexId) = INDEX_ID_HARDLINK(databaseId);
+  assert(fragmentOffset_ >= 0LL);
+  assert(fragmentSize_ >= 0LL);
+  if (fragmentOffset != NULL) (*fragmentOffset) = fragmentOffset_;
+  if (fragmentSize != NULL) (*fragmentSize) = fragmentSize_;
 
   return TRUE;
 }
@@ -9815,6 +9920,16 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalHardlinkCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalHardlinkSize<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
@@ -10010,6 +10125,15 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
       return error;
     }
 
+    #ifndef NDEBUG
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalSpecialCount<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
+
     return ERROR_NONE;
   });
 
@@ -10043,9 +10167,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
 {
   Errors     error;
   DatabaseId entryId;
-  #ifndef NDEBUG
-    int64 n;
-  #endif /* not NDEBUG */
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -10136,26 +10257,13 @@ Errors Index_addFile(IndexHandle *indexHandle,
     }
 
     #ifndef NDEBUG
-      error = Database_getInteger64(&indexHandle->databaseHandle,
-                                    &n,
-                                    "storage",
-                                    "totalEntrySize",
-                                    "WHERE id=%lld",
-                                    Index_getDatabaseId(storageId)
-                                   );
-      assert(error == ERROR_NONE);
-if (n<0) fprintf(stderr,"%s, %d: totalEntrySize=%lld name=%s size=%llu\n",__FILE__,__LINE__,String_cString(fileName),size);
-      assert(n >= 0LL);
-      error = Database_getInteger64(&indexHandle->databaseHandle,
-                                    &n,
-                                    "storage",
-                                    "totalFileSize",
-                                    "WHERE id=%lld",
-                                    Index_getDatabaseId(storageId)
-                                   );
-      assert(error == ERROR_NONE);
-if (n<0) fprintf(stderr,"%s, %d: totalFileSize=%lld name=%s size=%llu\n",__FILE__,__LINE__,String_cString(fileName),size);
-      assert(n >= 0LL);
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
 
     return ERROR_NONE;
@@ -10176,9 +10284,6 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 {
   Errors     error;
   DatabaseId entryId;
-  #ifndef NDEBUG
-    int64 n;
-  #endif /* not NDEBUG */
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -10274,24 +10379,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     }
 
     #ifndef NDEBUG
-      error = Database_getInteger64(&indexHandle->databaseHandle,
-                                    &n,
-                                    "storage",
-                                    "totalEntrySize",
-                                    "WHERE id=%lld",
-                                    Index_getDatabaseId(storageId)
-                                   );
-      assert(error == ERROR_NONE);
-      assert(n >= 0LL);
-      error = Database_getInteger64(&indexHandle->databaseHandle,
-                                    &n,
-                                    "storage",
-                                    "totalImageSize",
-                                    "WHERE id=%lld",
-                                    Index_getDatabaseId(storageId)
-                                   );
-      assert(error == ERROR_NONE);
-      assert(n >= 0LL);
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE id=%lld AND totalEntrySize<0",Index_getDatabaseId(storageId));
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE id=%lld AND totalFileSize<0",Index_getDatabaseId(storageId));
     #endif /* not NDEBUG */
 
     return ERROR_NONE;
@@ -10395,6 +10484,14 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     {
       return error;
     }
+
+    #ifndef NDEBUG
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalDirectoryCount<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
@@ -10617,24 +10714,13 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     }
 
     #ifndef NDEBUG
-      error = Database_getInteger64(&indexHandle->databaseHandle,
-                                    &n,
-                                    "storage",
-                                    "totalEntrySize",
-                                    "WHERE id=%lld",
-                                    Index_getDatabaseId(storageId)
-                                   );
-      assert(error == ERROR_NONE);
-      assert(n >= 0LL);
-      error = Database_getInteger64(&indexHandle->databaseHandle,
-                                    &n,
-                                    "storage",
-                                    "totalHardlinkSize",
-                                    "WHERE id=%lld",
-                                    Index_getDatabaseId(storageId)
-                                   );
-      assert(error == ERROR_NONE);
-      assert(n >= 0LL);
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileCount<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
 
     return ERROR_NONE;
@@ -10867,6 +10953,26 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
         }
       }
     }
+
+    #ifndef NDEBUG
+      verify(indexHandle,"uuids","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"uuids","COUNT(id)",0,"WHERE totalFileSize<0");
+      verify(indexHandle,"uuids","COUNT(id)",0,"WHERE totalImageSize<0");
+      verify(indexHandle,"uuids","COUNT(id)",0,"WHERE totalHardlinkSize<0");
+
+      verify(indexHandle,"entities","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"entities","COUNT(id)",0,"WHERE totalFileSize<0");
+      verify(indexHandle,"entities","COUNT(id)",0,"WHERE totalImageSize<0");
+      verify(indexHandle,"entities","COUNT(id)",0,"WHERE totalHardlinkSize<0");
+
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalImageSize<0");
+      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalHardlinkSize<0");
+
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+    #endif /* not NDEBUG */
 
     return ERROR_NONE;
   });
