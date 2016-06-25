@@ -40,7 +40,7 @@
 #ifndef NDEBUG
   #define DEBUG_FLAG_READ       FALSE
   #define DEBUG_FLAG_READ_WRITE FALSE
-  #define DEBUG_FLAG_MODIFIED   TRUE//FALSE
+  #define DEBUG_FLAG_MODIFIED   FALSE
 
   const char *SEMAPHORE_LOCK_TYPE_NAMES[] =
   {
