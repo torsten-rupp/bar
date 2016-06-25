@@ -87,16 +87,16 @@ CREATE TABLE IF NOT EXISTS entities(
   lastErrorMessage    TEXT DEFAULT '',    // last storage error message
 
   totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
-  totalEntrySize      INTEGER DEFAULT 0,  // total size of entries [bytes]
+  totalEntrySize      INTEGER DEFAULT 0,  // total size of entries (sum of fragments) [bytes]
 
   totalFileCount      INTEGER DEFAULT 0,  // total number of file entries
-  totalFileSize       INTEGER DEFAULT 0,  // total size of file entries [bytes]
+  totalFileSize       INTEGER DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
   totalImageCount     INTEGER DEFAULT 0,  // total number of image entries
-  totalImageSize      INTEGER DEFAULT 0,  // total size of image entries [bytes]
+  totalImageSize      INTEGER DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
   totalDirectoryCount INTEGER DEFAULT 0,  // total number of directory entries
   totalLinkCount      INTEGER DEFAULT 0,  // total number of link entries
   totalHardlinkCount  INTEGER DEFAULT 0,  // total number of hardlink entries
-  totalHardlinkSize   INTEGER DEFAULT 0,  // total size of hardlink entries [bytes]
+  totalHardlinkSize   INTEGER DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
   totalSpecialCount   INTEGER DEFAULT 0   // total number of file entries
 );
 CREATE INDEX ON entities (jobUUID,created,type,lastCreated);
@@ -157,7 +157,7 @@ CREATE TRIGGER BEFORE DELETE ON entities
   END;
 CREATE TRIGGER AFTER UPDATE OF jobUUID,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount ON entities
   BEGIN
- insert into log values('trigger entities: UPDATE OF totalStorageCount='||OLD.totalStorageCount||'->'||NEW.totalStorageCount||' totalStorageSize='||OLD.totalStorageSize||'->'||NEW.totalStorageSize);
+ insert into log values('trigger entities: UPDATE OF jobUUID='||OLD.jobUUID||'->'||NEW.jobUUID||' totalStorageCount='||OLD.totalStorageCount||'->'||NEW.totalStorageCount||' totalStorageSize='||OLD.totalStorageSize||'->'||NEW.totalStorageSize);
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   -1,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
@@ -219,26 +219,26 @@ CREATE TABLE IF NOT EXISTS storage(
   totalEntrySize            INTEGER DEFAULT 0,  // total size of entries [bytes]
 
   totalFileCount            INTEGER DEFAULT 0,  // total number of file entries
-  totalFileSize             INTEGER DEFAULT 0,  // total size of file entries [bytes]
+  totalFileSize             INTEGER DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
   totalImageCount           INTEGER DEFAULT 0,  // total number of image entries
-  totalImageSize            INTEGER DEFAULT 0,  // total size of image entries [bytes]
+  totalImageSize            INTEGER DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
   totalDirectoryCount       INTEGER DEFAULT 0,  // total number of directory entries
   totalLinkCount            INTEGER DEFAULT 0,  // total number of link entries
   totalHardlinkCount        INTEGER DEFAULT 0,  // total number of hardlink entries
-  totalHardlinkSize         INTEGER DEFAULT 0,  // total size of hardlink entries [bytes]
+  totalHardlinkSize         INTEGER DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
   totalSpecialCount         INTEGER DEFAULT 0,  // total number of special entries
 
   totalEntryCountNewest     INTEGER DEFAULT 0,  // total number of newest entries
   totalEntrySizeNewest      INTEGER DEFAULT 0,  // total size of newest entries [bytes]
 
   totalFileCountNewest      INTEGER DEFAULT 0,  // total number of newest file entries
-  totalFileSizeNewest       INTEGER DEFAULT 0,  // total size of newest file entries [bytes]
+  totalFileSizeNewest       INTEGER DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
   totalImageCountNewest     INTEGER DEFAULT 0,  // total number of newest image entries
-  totalImageSizeNewest      INTEGER DEFAULT 0,  // total size of newest image entries [bytes]
+  totalImageSizeNewest      INTEGER DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
   totalDirectoryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
   totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
   totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
-  totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries [bytes]
+  totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
   totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
 );
 CREATE INDEX ON storage (entityId,name,created,state);
