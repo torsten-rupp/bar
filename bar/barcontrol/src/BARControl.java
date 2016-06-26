@@ -1684,10 +1684,9 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          final Settings.Server defaultServer = Settings.getLastServer();
-          loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
-                                    (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                    (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
+          loginData = new LoginData((server != null) ? server.name : Settings.DEFAULT_SERVER_NAME,
+                                    (server != null) ? server.port : Settings.DEFAULT_SERVER_PORT,
+                                    (server != null) ? server.port : Settings.DEFAULT_SERVER_PORT
                                    );
           try
           {
