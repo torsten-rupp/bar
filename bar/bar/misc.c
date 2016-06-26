@@ -131,6 +131,21 @@ LOCAL bool readProcessIO(int fd, String line)
   return FALSE;
 }
 
+/***********************************************************************\
+* Name   : execute
+* Purpose: execute command
+* Input  : command   - command to execute
+*          arguments - arguments
+*          errorText - error text or NULL
+*          stdoutExecuteIOFunction - stdout callback
+*          stdoutExecuteIOUserData - stdout callback user data
+*          stderrExecuteIOFunction - stderr callback
+*          stderrExecuteIOUserData - stderr callback user data
+* Output : ERROR_NONE or error code
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors execute(const char        *command,
                      const char const  *arguments[],
                      const char        *errorText,
