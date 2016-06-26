@@ -649,16 +649,11 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
   id              INTEGER PRIMARY KEY,
   storageId       INTEGER NOT NULL REFERENCES storage(id),
   type            INTEGER,
-  name            TEXT,
-  timeLastAccess  INTEGER,
-  timeModified    INTEGER,
-  timeLastChanged INTEGER,
-  userId          INTEGER,
-  groupId         INTEGER,
-  permission      INTEGER
+  name            TEXT
 );
+CREATE INDEX ON skippedEntries (storageId,type,name);
 CREATE INDEX ON skippedEntries (name);
-CREATE INDEX ON skippedEntries (type);
+CREATE INDEX ON skippedEntries (type,name);
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
