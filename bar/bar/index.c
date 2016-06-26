@@ -318,7 +318,6 @@ LOCAL void verify(IndexHandle *indexHandle,
   assert(columnName != NULL);
   assert(condition != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   va_start(arguments,condition);
   error = Database_vgetInteger64(&indexHandle->databaseHandle,
                                 &n,
@@ -5979,11 +5978,6 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
   assert(indexHandle != NULL);
   assert(storageId != NULL);
 
-  if (entityId != NULL) (*entityId) = INDEX_ID_NONE;
-  (*storageId) = INDEX_ID_NONE;
-  if (storageName != NULL) String_clear(storageName);
-  if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = 0LL;
-
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
@@ -7048,9 +7042,6 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   assert((indexIdCount == 0) || (indexIds != NULL));
 
   // init variables
-  if (storageCount != NULL) (*storageCount) = 0L;
-  if (totalEntryCount != NULL) (*totalEntryCount) = 0L;
-  if (totalEntrySize != NULL) (*totalEntrySize) = 0LL;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7143,8 +7134,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
     {
       assert(totalEntryCount_ >= 0.0);
       assert(totalEntrySize_ >= 0.0);
-      if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
-      if (totalEntrySize != NULL) (*totalEntrySize) = (uint64)totalEntrySize_;
+      if (totalEntryCount != NULL) (*totalEntryCount) = (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+      if (totalEntrySize != NULL) (*totalEntrySize) = (totalEntrySize_ >= 0LL) ? (uint64)totalEntrySize_ : 0LL;
     }
     Database_finalize(&databaseQueryHandle);
 
@@ -8002,8 +7993,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           assert(count_ >= 0.0);
           assert(size_ >= 0.0);
-          if (count != NULL) (*count) += (uint64)count_;
-          if (size != NULL) (*size) += (uint64)size_;
+          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
+          if (size != NULL) (*size) += (size_ >= 0.0) ? (uint64)size_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8034,8 +8025,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           assert(count_ >= 0.0);
           assert(size_ >= 0.0);
-          if (count != NULL) (*count) += (uint64)count_;
-          if (size != NULL) (*size) += (uint64)size_;
+          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
+          if (size != NULL) (*size) += (size_ >= 0.0) ? (uint64)size_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8063,7 +8054,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           assert(count_ >= 0.0);
-          if (count != NULL) (*count) += (uint64)count_;
+          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8091,7 +8082,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           assert(count_ >= 0.0);
-          if (count != NULL) (*count) += (uint64)count_;
+          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8122,8 +8113,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           assert(count_ >= 0.0);
           assert(size_ >= 0.0);
-          if (count != NULL) (*count) += (uint64)count_;
-          if (size != NULL) (*size) += (uint64)size_;
+          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
+          if (size != NULL) (*size) += (size_ >= 0.0) ? (uint64)size_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8151,7 +8142,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           assert(count_ >= 0.0);
-          if (count != NULL) (*count) += (uint64)count_;
+          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8226,8 +8217,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         assert(count_ >= 0.0);
         assert(size_ >= 0.0);
-        if (count != NULL) (*count) += (uint64)count_;
-        if (size != NULL) (*size) += (uint64)size_;
+        if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
+        if (size != NULL) (*size) += (size_ >= 0.0) ? (uint64)size_ : 0LL;
       }
       Database_finalize(&databaseQueryHandle);
 
@@ -8730,10 +8721,10 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   assert(blockCount_ >= 0LL);
   assert(directorySize_ >= 0LL);
   assert(hardlinkSize_ >= 0LL);
-  if (uuidId != NULL)    (*uuidId   ) = INDEX_ID_(INDEX_TYPE_UUID,   uuidId_   );
-  if (entityId != NULL)  (*entityId ) = INDEX_ID_(INDEX_TYPE_ENTITY, entityId_ );
+  if (uuidId    != NULL) (*uuidId   ) = INDEX_ID_(INDEX_TYPE_UUID,   uuidId_   );
+  if (entityId  != NULL) (*entityId ) = INDEX_ID_(INDEX_TYPE_ENTITY, entityId_ );
   if (storageId != NULL) (*storageId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageId_);
-  if (entryId != NULL)   (*entryId  ) = INDEX_ID_(indexType,         entryId_  );
+  if (entryId   != NULL) (*entryId  ) = INDEX_ID_(indexType,         entryId_  );
   if (size != NULL)
   {
     switch (indexType)
@@ -9037,8 +9028,8 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
   assert(fragmentOffset_ >= 0LL);
   assert(fragmentSize_ >= 0LL);
   if (indexId != NULL) (*indexId) = INDEX_ID_FILE(databaseId);
-  if (fragmentOffset != NULL) (*fragmentOffset) = fragmentOffset_;
-  if (fragmentSize != NULL) (*fragmentSize) = fragmentSize_;
+  if (fragmentOffset != NULL) (*fragmentOffset) = (fragmentOffset_ >= 0LL) ? fragmentOffset_ : 0LL;
+  if (fragmentSize != NULL) (*fragmentSize) = (fragmentSize_ >= 0LL) ? fragmentSize_ : 0LL;
 
   return TRUE;
 }
@@ -9247,8 +9238,8 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   assert(blockOffset_ >= 0LL);
   assert(blockCount_ >= 0LL);
   if (indexId != NULL) (*indexId) = INDEX_ID_IMAGE(databaseId);
-  if (blockOffset != NULL) (*blockOffset) = blockOffset_;
-  if (blockCount != NULL) (*blockCount) = blockCount_;
+  if (blockOffset != NULL) (*blockOffset) = (blockOffset_ >= 0LL) ? blockOffset_ : 0LL;
+  if (blockCount != NULL) (*blockCount) = (blockCount_ >= 0LL) ? blockCount_ : 0LL;
 
   return TRUE;
 }
@@ -9877,8 +9868,8 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   if (indexId != NULL) (*indexId) = INDEX_ID_HARDLINK(databaseId);
   assert(fragmentOffset_ >= 0LL);
   assert(fragmentSize_ >= 0LL);
-  if (fragmentOffset != NULL) (*fragmentOffset) = fragmentOffset_;
-  if (fragmentSize != NULL) (*fragmentSize) = fragmentSize_;
+  if (fragmentOffset != NULL) (*fragmentOffset) = (fragmentOffset_ >= 0LL) ? fragmentOffset_ : 0LL;
+  if (fragmentSize != NULL) (*fragmentSize) = (fragmentSize >= 0LL) ? fragmentSize_ : 0LL;
 
   return TRUE;
 }
@@ -11194,6 +11185,133 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
     }
 
     return ERROR_NONE;
+  });
+
+  return error;
+}
+
+Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
+                                  IndexHandle      *indexHandle,
+                                  const IndexId    indexIds[],
+                                  uint             indexIdCount,
+                                  const IndexId    entryIds[],
+                                  uint             entryIdCount,
+                                  IndexTypeSet     indexTypeSet,
+                                  ConstString      name,
+                                  DatabaseOrdering ordering,
+                                  uint64           offset,
+                                  uint64           limit
+                                 )
+{
+
+  return ERROR_STILL_NOT_IMPLEMENTED;
+}
+
+bool Index_getNextSkippedEntry(IndexQueryHandle *indexQueryHandle,
+                               IndexId          *uuidId,
+                               String           jobUUID,
+                               IndexId          *entityId,
+                               String           scheduleUUID,
+                               ArchiveTypes     *archiveType,
+                               IndexId          *storageId,
+                               String           storageName,
+                               uint64           *storageDateTime,
+                               IndexId          *entryId,
+                               String           entryName
+                              )
+{
+  return ERROR_STILL_NOT_IMPLEMENTED;
+}
+
+Errors Index_addSkippedEntry(IndexHandle *indexHandle,
+                             IndexId     storageId,
+                             IndexTypes  type,
+                             ConstString entryName
+                            )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(   (type == INDEX_TYPE_FILE           )
+         || (type == INDEX_CONST_TYPE_IMAGE    )
+         || (type == INDEX_CONST_TYPE_DIRECTORY)
+         || (type == INDEX_CONST_TYPE_LINK     )
+         || (type == INDEX_CONST_TYPE_HARDLINK )
+         || (type == INDEX_CONST_TYPE_SPECIAL  )
+        );
+  assert(entryName != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "INSERT INTO skippedEntries \
+                                ( \
+                                 storageId, \
+                                 type, \
+                                 name \
+                                ) \
+                              VALUES \
+                                ( \
+                                 %lld, \
+                                 %d, \
+                                 %'S \
+                                ); \
+                             ",
+                             Index_getDatabaseId(storageId),
+                             type,
+                             entryName
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+
+Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
+                                IndexId     entryId
+                               )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(   (Index_getType(entryId) == INDEX_TYPE_FILE           )
+         || (Index_getType(entryId) == INDEX_CONST_TYPE_IMAGE    )
+         || (Index_getType(entryId) == INDEX_CONST_TYPE_DIRECTORY)
+         || (Index_getType(entryId) == INDEX_CONST_TYPE_LINK     )
+         || (Index_getType(entryId) == INDEX_CONST_TYPE_HARDLINK )
+         || (Index_getType(entryId) == INDEX_CONST_TYPE_SPECIAL  )
+        );
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    return Database_execute(&indexHandle->databaseHandle,
+                            CALLBACK(NULL,NULL),
+                            "DELETE FROM skippedEntries WHERE id=%lld;",
+                            Index_getDatabaseId(entryId)
+                           );
   });
 
   return error;

@@ -1940,6 +1940,99 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
                           IndexId     storageId
                          );
 
+/***********************************************************************\
+* Name   : Index_initListSkippedEntry
+* Purpose: list skipped entries
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          indexIds         - uuid/entity/storage ids or NULL
+*          indexIdCount     - uuid/entity/storage id count or 0
+*          entryIds         - entry ids or NULL
+*          entryIdCount     - entry id count or 0
+*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
+*          name             - name pattern (glob, can be NULL)
+*          offset           - offset or 0
+*          limit            - numer of entries to list or
+*                             INDEX_UNLIMITED
+* Output : indexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
+                                  IndexHandle      *indexHandle,
+                                  const IndexId    indexIds[],
+                                  uint             indexIdCount,
+                                  const IndexId    entryIds[],
+                                  uint             entryIdCount,
+                                  IndexTypeSet     indexTypeSet,
+                                  ConstString      name,
+                                  DatabaseOrdering ordering,
+                                  uint64           offset,
+                                  uint64           limit
+                                 );
+
+/***********************************************************************\
+* Name   : Index_getNextSkippedEntry
+* Purpose: get next skipped entry
+* Input  : indexQueryHandle - index query handle
+* Output : uuidId          - index if of uuid
+*          jobUUID         - job UUID (can be NULL)
+*          entityId        - index id of entity (can be NULL)
+*          scheduleUUID    - schedule UUID (can be NULL)
+*          archiveType     - archive type (can be NULL)
+*          storageId       - index id of storage (can be NULL)
+*          storageName     - storage name (can be NULL)
+*          storageDateTime - storage date/time stamp [s]
+*          entryId         - index id of entry
+*          entryName       - entry name
+* Return : TRUE if entry read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_getNextSkippedEntry(IndexQueryHandle *indexQueryHandle,
+                               IndexId          *uuidId,
+                               String           jobUUID,
+                               IndexId          *entityId,
+                               String           scheduleUUID,
+                               ArchiveTypes     *archiveType,
+                               IndexId          *storageId,
+                               String           storageName,
+                               uint64           *storageDateTime,
+                               IndexId          *entryId,
+                               String           entryName
+                              );
+
+/***********************************************************************\
+* Name   : Index_addFile
+* Purpose: add file entry
+* Input  : indexHandle - index handle
+*          storageId   - index id of index
+*          entryName   - name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_addSkippedEntry(IndexHandle *indexHandle,
+                             IndexId     storageId,
+                             IndexTypes  type,
+                             ConstString entryName
+                            );
+
+/***********************************************************************\
+* Name   : Index_deleteSkippedEntry
+* Purpose: delete skipped entry
+* Input  : indexHandle - index handle
+*          entryId     - index id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
+                                IndexId     entryId
+                               );
+
 #ifdef __cplusplus
   }
 #endif
