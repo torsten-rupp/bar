@@ -1367,6 +1367,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     StringBuilder buffer = new StringBuilder();
 
     buffer.append(name);
+    buffer.append(':');
+    buffer.append(port);
     if (socket instanceof SSLSocket)
     {
       buffer.append(" (TLS)");
