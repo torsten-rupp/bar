@@ -503,6 +503,7 @@ LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
   UNUSED_VARIABLE(initialFlag);
 
   error = ERROR_NONE;
+
   if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
   {
     // request next volume
@@ -525,26 +526,30 @@ LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
     TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                               NULL);
     TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageHandle->requestedVolumeNumber,      NULL);
 
-    // get pre script
-    script = expandTemplate(String_cString(storageHandle->device.writePreProcessCommand),
-                            EXPAND_MACRO_MODE_STRING,
-                            timestamp,
-                            initialFlag,
-                            textMacros,
-                            SIZE_OF_ARRAY(textMacros)
-                           );
-    if (script != NULL)
+    // write pre-processing
+    if ((globalOptions.device != NULL) && (globalOptions.device->writePreProcessCommand != NULL))
     {
-      // execute script
-      error = Misc_executeScript(String_cString(script),
-                                 CALLBACK(executeIOOutput,NULL),
-                                 CALLBACK(executeIOOutput,NULL)
-                                );
-      String_delete(script);
-    }
-    else
-    {
-      error = ERROR_EXPAND_TEMPLATE;
+      // get script
+      script = expandTemplate(String_cString(storageHandle->device.writePreProcessCommand),
+                              EXPAND_MACRO_MODE_STRING,
+                              timestamp,
+                              initialFlag,
+                              textMacros,
+                              SIZE_OF_ARRAY(textMacros)
+                             );
+      if (script != NULL)
+      {
+        // execute script
+        error = Misc_executeScript(String_cString(script),
+                                   CALLBACK(executeIOOutput,NULL),
+                                   CALLBACK(executeIOOutput,NULL)
+                                  );
+        String_delete(script);
+      }
+      else
+      {
+        error = ERROR_EXPAND_TEMPLATE;
+      }
     }
   }
 
@@ -708,26 +713,30 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
       storageHandle->device.totalSize     = 0;
     }
 
-    // get post script
-    script = expandTemplate(String_cString(storageHandle->device.writePostProcessCommand),
-                            EXPAND_MACRO_MODE_STRING,
-                            timestamp,
-                            finalFlag,
-                            textMacros,
-                            SIZE_OF_ARRAY(textMacros)
-                           );
-    if (script != NULL)
+    // write post-processing
+    if ((globalOptions.device != NULL) && (globalOptions.device->writePostProcessCommand != NULL))
     {
-      // execute script
-      error = Misc_executeScript(String_cString(script),
-                                 CALLBACK(executeIOOutput,NULL),
-                                 CALLBACK(executeIOOutput,NULL)
-                                );
-      String_delete(script);
-    }
-    else
-    {
-      error = ERROR_EXPAND_TEMPLATE;
+      // get script
+      script = expandTemplate(String_cString(storageHandle->device.writePostProcessCommand),
+                              EXPAND_MACRO_MODE_STRING,
+                              timestamp,
+                              finalFlag,
+                              textMacros,
+                              SIZE_OF_ARRAY(textMacros)
+                             );
+      if (script != NULL)
+      {
+        // execute script
+        error = Misc_executeScript(String_cString(script),
+                                   CALLBACK(executeIOOutput,NULL),
+                                   CALLBACK(executeIOOutput,NULL)
+                                  );
+        String_delete(script);
+      }
+      else
+      {
+        error = ERROR_EXPAND_TEMPLATE;
+      }
     }
   }
   else

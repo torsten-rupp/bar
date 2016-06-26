@@ -519,6 +519,7 @@ LOCAL Errors StorageSCP_preProcess(StorageHandle *storageHandle,
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   error = ERROR_NONE;
+
   #ifdef HAVE_SSH2
     {
       if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
@@ -532,34 +533,31 @@ LOCAL Errors StorageSCP_preProcess(StorageHandle *storageHandle,
           if (globalOptions.scp.writePreProcessCommand != NULL)
           {
             // write pre-processing
-            if (error == ERROR_NONE)
+            printInfo(0,"Write pre-processing...");
+
+            // get script
+            script = expandTemplate(String_cString(globalOptions.scp.writePreProcessCommand),
+                                    EXPAND_MACRO_MODE_STRING,
+                                    timestamp,
+                                    initialFlag,
+                                    textMacros,
+                                    SIZE_OF_ARRAY(textMacros)
+                                   );
+            if (script != NULL)
             {
-              printInfo(0,"Write pre-processing...");
-
-              // get script
-              script = expandTemplate(String_cString(globalOptions.scp.writePreProcessCommand),
-                                      EXPAND_MACRO_MODE_STRING,
-                                      timestamp,
-                                      initialFlag,
-                                      textMacros,
-                                      SIZE_OF_ARRAY(textMacros)
-                                     );
-              if (script != NULL)
-              {
-                // execute script
-                error = Misc_executeScript(String_cString(script),
-                                           CALLBACK(executeIOOutput,NULL),
-                                           CALLBACK(executeIOOutput,NULL)
-                                          );
-                String_delete(script);
-              }
-              else
-              {
-                error = ERROR_EXPAND_TEMPLATE;
-              }
-
-              printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+              // execute script
+              error = Misc_executeScript(String_cString(script),
+                                         CALLBACK(executeIOOutput,NULL),
+                                         CALLBACK(executeIOOutput,NULL)
+                                        );
+              String_delete(script);
             }
+            else
+            {
+              error = ERROR_EXPAND_TEMPLATE;
+            }
+
+            printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
           }
         }
       }
@@ -592,6 +590,7 @@ LOCAL Errors StorageSCP_postProcess(StorageHandle *storageHandle,
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   error = ERROR_NONE;
+
   #ifdef HAVE_SSH2
     {
       if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
@@ -605,34 +604,31 @@ LOCAL Errors StorageSCP_postProcess(StorageHandle *storageHandle,
           if (globalOptions.scp.writePostProcessCommand != NULL)
           {
             // write post-process
-            if (error == ERROR_NONE)
+            printInfo(0,"Write post-processing...");
+
+            // get script
+            script = expandTemplate(String_cString(globalOptions.scp.writePostProcessCommand),
+                                    EXPAND_MACRO_MODE_STRING,
+                                    timestamp,
+                                    finalFlag,
+                                    textMacros,
+                                    SIZE_OF_ARRAY(textMacros)
+                                   );
+            if (script != NULL)
             {
-              printInfo(0,"Write post-processing...");
-
-              // get script
-              script = expandTemplate(String_cString(globalOptions.scp.writePostProcessCommand),
-                                      EXPAND_MACRO_MODE_STRING,
-                                      timestamp,
-                                      finalFlag,
-                                      textMacros,
-                                      SIZE_OF_ARRAY(textMacros)
-                                     );
-              if (script != NULL)
-              {
-                // execute script
-                error = Misc_executeScript(String_cString(script),
-                                           CALLBACK(executeIOOutput,NULL),
-                                           CALLBACK(executeIOOutput,NULL)
-                                          );
-                String_delete(script);
-              }
-              else
-              {
-                error = ERROR_EXPAND_TEMPLATE;
-              }
-
-              printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+              // execute script
+              error = Misc_executeScript(String_cString(script),
+                                         CALLBACK(executeIOOutput,NULL),
+                                         CALLBACK(executeIOOutput,NULL)
+                                        );
+              String_delete(script);
             }
+            else
+            {
+              error = ERROR_EXPAND_TEMPLATE;
+            }
+
+            printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
           }
         }
       }

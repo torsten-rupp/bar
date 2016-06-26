@@ -803,9 +803,10 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
                                        bool          initialFlag
                                       )
 {
-  TextMacro textMacros[3];
-  Errors    error;
-  String    script;
+  TextMacro   textMacros[3];
+  Errors      error;
+  ConstString template;
+  String      script;
 
   assert(storageHandle != NULL);
   assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -836,26 +837,42 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
     TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                               NULL);
     TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageHandle->requestedVolumeNumber,      NULL);
 
-    // get pre script
-    script = expandTemplate(String_cString(storageHandle->opticalDisk.write.writePreProcessCommand),
-                            EXPAND_MACRO_MODE_STRING,
-                            timestamp,
-                            initialFlag,
-                            textMacros,
-                            SIZE_OF_ARRAY(textMacros)
-                           );
-    if (script != NULL)
+    // write pre-processing
+    switch (storageHandle->storageSpecifier.type)
     {
-      // execute script
-      error = Misc_executeScript(String_cString(script),
-                                 CALLBACK(executeIOOutput,NULL),
-                                 CALLBACK(executeIOOutput,NULL)
-                                );
-      String_delete(script);
+      case STORAGE_TYPE_CD:  template = globalOptions.cd.writePreProcessCommand;  break;
+      case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePreProcessCommand; break;
+      case STORAGE_TYPE_BD:  template = globalOptions.bd.writePreProcessCommand;  break;
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
     }
-    else
+    if (template != NULL)
     {
-      error = ERROR_EXPAND_TEMPLATE;
+      // get script
+      script = expandTemplate(String_cString(template),
+                              EXPAND_MACRO_MODE_STRING,
+                              timestamp,
+                              initialFlag,
+                              textMacros,
+                              SIZE_OF_ARRAY(textMacros)
+                             );
+      if (script != NULL)
+      {
+        // execute script
+        error = Misc_executeScript(String_cString(script),
+                                   CALLBACK(executeIOOutput,NULL),
+                                   CALLBACK(executeIOOutput,NULL)
+                                  );
+        String_delete(script);
+      }
+      else
+      {
+        error = ERROR_EXPAND_TEMPLATE;
+      }
     }
   }
 
@@ -868,14 +885,15 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
                                         bool          finalFlag
                                        )
 {
-  Errors     error;
-  StringList stderrList;
-  String     imageFileName;
-  TextMacro  textMacros[6];
-  String     fileName;
-  FileInfo   fileInfo;
-  bool       retryFlag;
-  String     script;
+  Errors      error;
+  StringList  stderrList;
+  String      imageFileName;
+  TextMacro   textMacros[6];
+  String      fileName;
+  FileInfo    fileInfo;
+  bool        retryFlag;
+  ConstString template;
+  String      script;
 
   assert(storageHandle != NULL);
   assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -1104,26 +1122,42 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       StringList_done(&stderrList);
     }
 
-    // get post script
-    script = expandTemplate(String_cString(storageHandle->opticalDisk.write.writePostProcessCommand),
-                            EXPAND_MACRO_MODE_STRING,
-                            timestamp,
-                            finalFlag,
-                            textMacros,
-                            SIZE_OF_ARRAY(textMacros)
-                           );
-    if (script != NULL)
+    // write post-processing
+    switch (storageHandle->storageSpecifier.type)
     {
-      // execute script
-      error = Misc_executeScript(String_cString(script),
-                                 CALLBACK(executeIOOutput,NULL),
-                                 CALLBACK(executeIOOutput,NULL)
-                                );
-      String_delete(script);
+      case STORAGE_TYPE_CD:  template = globalOptions.cd.writePostProcessCommand;  break;
+      case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePostProcessCommand; break;
+      case STORAGE_TYPE_BD:  template = globalOptions.bd.writePostProcessCommand;  break;
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
     }
-    else
+    if (template != NULL)
     {
-      error = ERROR_EXPAND_TEMPLATE;
+      // get script
+      script = expandTemplate(String_cString(template),
+                              EXPAND_MACRO_MODE_STRING,
+                              timestamp,
+                              finalFlag,
+                              textMacros,
+                              SIZE_OF_ARRAY(textMacros)
+                             );
+      if (script != NULL)
+      {
+        // execute script
+        error = Misc_executeScript(String_cString(script),
+                                   CALLBACK(executeIOOutput,NULL),
+                                   CALLBACK(executeIOOutput,NULL)
+                                  );
+        String_delete(script);
+      }
+      else
+      {
+        error = ERROR_EXPAND_TEMPLATE;
+      }
     }
   }
   else
@@ -1473,35 +1507,12 @@ LOCAL Errors StorageOptical_write(StorageArchiveHandle *storageArchiveHandle,
   assert(buffer != NULL);
 
   error = ERROR_NONE;
-      if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
-      {
-        error = File_write(&storageArchiveHandle->opticalDisk.write.fileHandle,buffer,size);
-      }
-  assert(error != ERROR_UNKNOWN);
+  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+  {
+    error = File_write(&storageArchiveHandle->opticalDisk.write.fileHandle,buffer,size);
+  }
 
   return error;
-}
-
-LOCAL uint64 StorageOptical_getSize(StorageArchiveHandle *storageArchiveHandle)
-{
-  uint64 size;
-
-  assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
-
-  size = 0LL;
-  #ifdef HAVE_ISO9660
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
-    {
-      size = (uint64)storageArchiveHandle->opticalDisk.read.iso9660Stat->size;
-    }
-  #else /* not HAVE_ISO9660 */
-    UNUSED_VARIABLE(storageArchiveHandle);
-  #endif /* HAVE_ISO9660 */
-
-  return size;
 }
 
 LOCAL Errors StorageOptical_tell(StorageArchiveHandle *storageArchiveHandle,
@@ -1522,8 +1533,16 @@ LOCAL Errors StorageOptical_tell(StorageArchiveHandle *storageArchiveHandle,
   #ifdef HAVE_ISO9660
     if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
     {
-      (*offset) = storageArchiveHandle->opticalDisk.read.index;
-      error     = ERROR_NONE;
+      switch (storageArchiveHandle->mode)
+      {
+        case STORAGE_MODE_READ:
+          (*offset) = storageArchiveHandle->opticalDisk.read.index;
+          error     = ERROR_NONE;
+          break;
+        case STORAGE_MODE_WRITE:
+          error = File_tell(&storageArchiveHandle->opticalDisk.write.fileHandle,offset);
+          break;
+      }
     }
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageArchiveHandle);
@@ -1549,8 +1568,16 @@ LOCAL Errors StorageOptical_seek(StorageArchiveHandle *storageArchiveHandle,
   #ifdef HAVE_ISO9660
     if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
     {
-      storageArchiveHandle->opticalDisk.read.index = offset;
-      error = ERROR_NONE;
+      switch (storageArchiveHandle->mode)
+      {
+        case STORAGE_MODE_READ:
+          storageArchiveHandle->opticalDisk.read.index = offset;
+          error = ERROR_NONE;
+          break;
+        case STORAGE_MODE_WRITE:
+          error = File_seek(&storageArchiveHandle->opticalDisk.write.fileHandle,offset);
+          break;
+      }
     }
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageArchiveHandle);
@@ -1559,6 +1586,37 @@ LOCAL Errors StorageOptical_seek(StorageArchiveHandle *storageArchiveHandle,
   assert(error != ERROR_UNKNOWN);
 
   return error;
+}
+
+LOCAL uint64 StorageOptical_getSize(StorageArchiveHandle *storageArchiveHandle)
+{
+  uint64 size;
+
+  assert(storageArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
+  assert(storageArchiveHandle->storageHandle != NULL);
+  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+
+  size = 0LL;
+  #ifdef HAVE_ISO9660
+    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    {
+      switch (storageArchiveHandle->mode)
+      {
+        case STORAGE_MODE_READ:
+          assert(storageArchiveHandle->opticalDisk.read.iso9660Stat);
+          size = (uint64)storageArchiveHandle->opticalDisk.read.iso9660Stat->size;
+          break;
+        case STORAGE_MODE_WRITE:
+          size = File_getSize(&storageArchiveHandle->opticalDisk.write.fileHandle);
+          break;
+      }
+    }
+  #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageArchiveHandle);
+  #endif /* HAVE_ISO9660 */
+
+  return size;
 }
 
 LOCAL Errors StorageOptical_delete(StorageHandle *storageHandle,
