@@ -132,7 +132,7 @@ LOCAL bool readProcessIO(int fd, String line)
 }
 
 LOCAL Errors execute(const char        *command,
-                     const char const  **arguments,
+                     const char const  *arguments[],
                      const char        *errorText,
                      ExecuteIOFunction stdoutExecuteIOFunction,
                      void              *stdoutExecuteIOUserData,
@@ -140,6 +140,8 @@ LOCAL Errors execute(const char        *command,
                      void              *stderrExecuteIOUserData
                     )
 {
+  String     text;
+  const char * const *s;
   Errors     error;
   int        pipeStdin[2],pipeStdout[2],pipeStderr[2];
   pid_t      pid;
@@ -149,43 +151,55 @@ LOCAL Errors execute(const char        *command,
   int        exitcode;
   int        terminateSignal;
 
+  // init variables
+  text  = String_new();
   error = ERROR_NONE;
 
-#if 0
-{
-fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,command);
-
-const char **t = arguments;
-while (*t != NULL)
-{
-fprintf(stderr,"%s,%d: argument %s\n",__FILE__,__LINE__,*t);
-t++;
-}
-}
-#endif /* 0 */
+  // get command as text
+  if (errorText != NULL)
+  {
+    String_setCString(text,errorText);
+  }
+  else
+  {
+    String_setCString(text,command);
+    if (arguments != NULL)
+    {
+      s = arguments;
+      while ((*s) != NULL)
+      {
+        String_joinCString(text,*s,' ' );
+        s++;
+      }
+    }
+  }
+//fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(text));
 
   #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
 #if 1
     // create i/o pipes
     if (pipe(pipeStdin) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",errorText);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
+      String_delete(text);
       return error;
     }
     if (pipe(pipeStdout) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",errorText);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
       close(pipeStdin[0]);
       close(pipeStdin[1]);
+      String_delete(text);
       return error;
     }
     if (pipe(pipeStderr) != 0)
     {
-      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",errorText);
+      error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
       close(pipeStdout[0]);
       close(pipeStdout[1]);
       close(pipeStdin[0]);
       close(pipeStdin[1]);
+      String_delete(text);
       return error;
     }
 
@@ -222,7 +236,7 @@ t++;
     }
     else if (pid < 0)
     {
-      error = ERRORX_(EXEC_FAIL,errno,"%s",errorText);
+      error = ERRORX_(EXEC_FAIL,errno,"%s",String_cString(text));
 
       close(pipeStderr[0]);
       close(pipeStderr[1]);
@@ -230,6 +244,7 @@ t++;
       close(pipeStdout[1]);
       close(pipeStdin[0]);
       close(pipeStdin[1]);
+      String_delete(text);
       return error;
     }
 
@@ -301,20 +316,23 @@ error = ERROR_NONE;
       else
       {
         printInfo(3,"FAIL (exitcode %d)\n",exitcode);
-        error = ERRORX_(EXEC_FAIL,exitcode,"%s",errorText);
+        error = ERRORX_(EXEC_FAIL,exitcode,"%s",String_cString(text));
+        String_delete(text);
         return error;
       }
     }
     else if (WIFSIGNALED(status))
     {
       terminateSignal = WTERMSIG(status);
-      error = ERRORX_(EXEC_FAIL,terminateSignal,"%s",errorText);
+      error = ERRORX_(EXEC_FAIL,terminateSignal,"%s",String_cString(text));
       printInfo(3,"FAIL (signal %d)\n",terminateSignal);
+      String_delete(text);
       return error;
     }
     else
     {
       printInfo(3,"FAIL (unknown exit)\n");
+      String_delete(text);
       return ERROR_UNKNOWN;
     }
   #elif defined(WIN32)
@@ -422,6 +440,9 @@ HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
   #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
     #error pipe()/fork()/waitpid() not available nor Windows system!
   #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
+
+  // free resources
+  String_delete(text);
 
   return error;
 }
@@ -1336,7 +1357,7 @@ stringNode = stringNode->next;
     // execute command
     error = execute(String_cString(command),
                     arguments,
-                    String_cString(command),
+                    NULL,
                     CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
                     CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
                    );
