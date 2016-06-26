@@ -594,8 +594,9 @@ ERROR EXEC_FAIL
     \
     strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"', exitcode: ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"' (exitcode: ",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,s,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,")",sizeof(errorText)-1-strlen(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
 
