@@ -2767,10 +2767,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
   // get archive name
   if (archiveName == NULL) archiveName = storageSpecifier->archiveName;
-  if (String_isEmpty(archiveName))
-  {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
 
   // initialize variables
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
