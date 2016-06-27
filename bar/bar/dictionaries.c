@@ -356,7 +356,7 @@ LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
       for (i = 0; i < LINEAR_PROBING_COUNT; i++)
       {
         entryIndex = addModulo(hash,i,TABLE_SIZES[z]);
-        if (entryTable->entries[entryIndex].data == NULL)
+        if (entryTable->entries[entryIndex].keyData == NULL)
         {
           return entryIndex;
         }
@@ -364,19 +364,19 @@ LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
     #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING */
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING
       entryIndex = modulo(hash,TABLE_SIZES[z]);
-      if (entryTable->entries[entryIndex].data == NULL)
+      if (entryTable->entries[entryIndex].keyData == NULL)
       {
         return entryIndex;
       }
       for (i = 0; i < QUADRATIC_PROBING_COUNT; i++)
       {
         entryIndex = addModulo(hash,i*i,TABLE_SIZES[z]);
-        if (entryTable->entries[entryIndex].data == NULL)
+        if (entryTable->entries[entryIndex].keyData == NULL)
         {
           return entryIndex;
         }
         entryIndex = subModulo(hash,i*i,TABLE_SIZES[z]);
-        if (entryTable->entries[entryIndex].data == NULL)
+        if (entryTable->entries[entryIndex].keyData == NULL)
         {
           return entryIndex;
         }
@@ -386,7 +386,7 @@ LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
       for (i = 0; i < REHASHING_COUNT; i++)
       {
         entryIndex = rotHash(hash,i)%TABLE_SIZES[z];
-        if (entryTable->entries[entryIndex].data == NULL)
+        if (entryTable->entries[entryIndex].keyData == NULL)
         {
           return entryIndex;
         }
@@ -616,6 +616,13 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
                                              dictionary->dictionaryFreeUserData
                                             );
         }
+        if (dictionary->entryTables[z].entries[index].allocatedFlag)
+        {
+          free(dictionary->entryTables[z].entries[index].data);
+        }
+      }
+      if (dictionary->entryTables[z].entries[index].keyData != NULL)
+      {
         free(dictionary->entryTables[z].entries[index].keyData);
       }
     }
@@ -651,9 +658,12 @@ void Dictionary_clear(Dictionary *dictionary)
                                                dictionary->dictionaryFreeUserData
                                               );
           }
-          free(dictionary->entryTables[z].entries[index].keyData);
-
           dictionary->entryTables[z].entries[index].data = NULL;
+        }
+        if (dictionary->entryTables[z].entries[index].keyData != NULL)
+        {
+          free(dictionary->entryTables[z].entries[index].keyData);
+          dictionary->entryTables[z].entries[index].keyData = NULL;
         }
       }
     }
@@ -747,8 +757,9 @@ bool Dictionary_add(Dictionary             *dictionary,
             return FALSE;
           }
 
-          dictionaryEntryTable->entries[entryIndex].data   = newData;
-          dictionaryEntryTable->entries[entryIndex].length = length;
+          dictionaryEntryTable->entries[entryIndex].data          = newData;
+          dictionaryEntryTable->entries[entryIndex].length        = length;
+          dictionaryEntryTable->entries[entryIndex].allocatedFlag = TRUE;
         }
 
         // copy data
@@ -766,16 +777,21 @@ bool Dictionary_add(Dictionary             *dictionary,
       else
       {
         // free old entry
-        if ((dictionaryEntryTable->entries[entryIndex].data != data) && (dictionary->dictionaryFreeFunction != NULL))
+        if (dictionary->dictionaryFreeFunction != NULL)
         {
           dictionary->dictionaryFreeFunction(dictionaryEntryTable->entries[entryIndex].data,
                                              dictionaryEntryTable->entries[entryIndex].length,
                                              dictionary->dictionaryFreeUserData
                                             );
         }
+        if (dictionaryEntryTable->entries[entryIndex].allocatedFlag)
+        {
+          free(dictionaryEntryTable->entries[entryIndex].data);
+        }
 
         // use orginal data
-        dictionaryEntryTable->entries[entryIndex].data = (void*)data;
+        dictionaryEntryTable->entries[entryIndex].data          = (void*)data;
+        dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
       }
 
       Semaphore_unlock(&dictionary->lock);
@@ -824,12 +840,14 @@ bool Dictionary_add(Dictionary             *dictionary,
           Semaphore_unlock(&dictionary->lock);
           return FALSE;
         }
-        dictionaryEntryTable->entries[entryIndex].data = newData;
+        dictionaryEntryTable->entries[entryIndex].data          = newData;
+        dictionaryEntryTable->entries[entryIndex].allocatedFlag = TRUE;
       }
       else
       {
         // use orginal data
-        dictionaryEntryTable->entries[entryIndex].data = (void*)data;
+        dictionaryEntryTable->entries[entryIndex].data          = (void*)data;
+        dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
       }
       dictionaryEntryTable->entries[entryIndex].length = length;
 
@@ -887,7 +905,7 @@ bool Dictionary_add(Dictionary             *dictionary,
         #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_REHASH */
         if (entryIndex >= TABLE_SIZES[dictionary->entryTables[tableIndex].sizeIndex])
         {
-  //fprintf(stderr,"%s,%d: vor grow %p\n",__FILE__,__LINE__,dictionary->entryTables[tableIndex].entries);
+//fprintf(stderr,"%s,%d: before grow %p\n",__FILE__,__LINE__,dictionary->entryTables[tableIndex].entries);
           newEntries = growTable(dictionary->entryTables[tableIndex].entries,
                                  TABLE_SIZES[dictionary->entryTables[tableIndex].sizeIndex],
                                  TABLE_SIZES[newSizeIndex]
@@ -899,7 +917,7 @@ bool Dictionary_add(Dictionary             *dictionary,
 
             dictionaryEntryTable = &dictionary->entryTables[tableIndex];
           }
-  //fprintf(stderr,"%s,%d: nach grow %p\n",__FILE__,__LINE__,dictionary->entryTables[tableIndex].entries);
+//fprintf(stderr,"%s,%d: after grow %p\n",__FILE__,__LINE__,dictionary->entryTables[tableIndex].entries);
         }
         newSizeIndex++;
       }
@@ -946,12 +964,14 @@ bool Dictionary_add(Dictionary             *dictionary,
           Semaphore_unlock(&dictionary->lock);
           return FALSE;
         }
-        dictionaryEntryTable->entries[entryIndex].data = newData;
+        dictionaryEntryTable->entries[entryIndex].data          = newData;
+        dictionaryEntryTable->entries[entryIndex].allocatedFlag = TRUE;
       }
       else
       {
         // use orginal data
-        dictionaryEntryTable->entries[entryIndex].data = (void*)data;
+        dictionaryEntryTable->entries[entryIndex].data          = (void*)data;
+        dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
       }
       dictionaryEntryTable->entries[entryIndex].length = length;
 
@@ -990,6 +1010,8 @@ bool Dictionary_add(Dictionary             *dictionary,
       return FALSE;
     }
 
+//TODO
+#if 1
     dictionaryEntryTable->entries[entryIndex].data = malloc(length);
     if (dictionaryEntryTable->entries[entryIndex].data == NULL)
     {
@@ -997,6 +1019,7 @@ bool Dictionary_add(Dictionary             *dictionary,
       Semaphore_unlock(&dictionary->lock);
       return FALSE;
     }
+#endif
 
     dictionaryEntryTable->entries[entryIndex].hash = hash;
 
@@ -1027,12 +1050,14 @@ bool Dictionary_add(Dictionary             *dictionary,
         Semaphore_unlock(&dictionary->lock);
         return FALSE;
       }
-      dictionaryEntryTable->entries[entryIndex].data = newData;
+      dictionaryEntryTable->entries[entryIndex].data          = newData;
+      dictionaryEntryTable->entries[entryIndex].allocatedFlag = TRUE;
     }
     else
     {
       // use orginal data
-      dictionaryEntryTable->entries[entryIndex].data = (void*)data;
+      dictionaryEntryTable->entries[entryIndex].data          = (void*)data;
+      dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
     }
     dictionaryEntryTable->entries[entryIndex].length = length;
 
