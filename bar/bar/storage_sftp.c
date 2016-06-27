@@ -1577,7 +1577,6 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
-  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(serverConnectionPriority);

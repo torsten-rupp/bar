@@ -1068,7 +1068,6 @@ LOCAL Errors StorageDevice_openDirectoryList(StorageDirectoryListHandle *storage
 {
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
-  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
   UNUSED_VARIABLE(storageSpecifier);
