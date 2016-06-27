@@ -268,7 +268,7 @@ LOCAL bool StorageDevice_parseSpecifier(ConstString deviceSpecifier,
   }
   else
   {
-    if (deviceName != NULL) String_set(deviceName,defaultDeviceName);
+    if (defaultDeviceName != NULL) String_set(deviceName,defaultDeviceName);
 
     result = TRUE;
   }
