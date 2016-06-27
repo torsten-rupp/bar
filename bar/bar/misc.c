@@ -178,7 +178,7 @@ LOCAL Errors execute(const char        *command,
   else
   {
     String_setCString(text,command);
-    if (arguments != NULL)
+    if ((arguments != NULL) && (arguments[0] != NULL))
     {
       s = &arguments[1];
       while ((*s) != NULL)
