@@ -50,6 +50,8 @@ typedef enum
   CONFIG_VALUE_TYPE_BEGIN_SECTION,
   CONFIG_VALUE_TYPE_END_SECTION,
 
+  CONFIG_VALUE_TYPE_COMMENT,
+
   CONFIG_VALUE_TYPE_END
 } ConfigValueTypes;
 
@@ -94,7 +96,7 @@ typedef struct
     String     *string;
     void       *special;
     void       *deprecated;
-  }                variable;                      // variable, new name or NULL
+  }                variable;                      // variable
   int              offset;                        // offset in struct or -1
   struct
   {
@@ -146,6 +148,10 @@ typedef struct
     void       *userData;                         // user data for parse deprecated
     const char *newName;                          // new name
   } deprecatedValue;
+  struct
+  {
+    const char *text;
+  } comment;
 } ConfigValue;
 
 /* example
@@ -165,6 +171,7 @@ CONFIG_VALUE_CSTRING        (<name>,<variable>,<offset>|-1,                     
 CONFIG_VALUE_STRING         (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_SPECIAL        (<name>,<function>,<offset>|-1,<parse>,<formatInit>,<formatDone>,<format>,<userData>)
 CONFIG_VALUE_DEPRECATED     (<name>,<function>,<offset>|-1,<parse>,<userData>,<newName>                         )
+CONFIG_VALUE_COMMENT        (<comment>                                                                          )
 
 const ConfigValueUnit COMMAND_LINE_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
 (
@@ -182,28 +189,32 @@ const ConfigValueSelect CONFIG_VALUE_SELECT_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
 
 const ConfigValue CONFIG_VALUES[] =
 {
-  CONFIG_VALUE_INTEGER      ("integer", &intValue,     offsetof(X,a),0,0,123,NULL,              ),
-  CONFIG_VALUE_INTEGER      ("unit",    &intValue,     NULL,-1,      0,0,123,COMMAND_LINE_UNITS ),
-  CONFIG_VALUE_INTEGER_RANGE("range1",  &intValue,     offsetof(X,b),0,0,123,COMMAND_LINE_UNITS ),
+  CONFIG_VALUE_INTEGER      ("integer", &intValue,     offsetof(X,a),0,0,123,NULL,                   ),
+  CONFIG_VALUE_INTEGER      ("unit",    &intValue,     NULL,-1,      0,0,123,COMMAND_LINE_UNITS      ),
+  CONFIG_VALUE_INTEGER_RANGE("range1",  &intValue,     offsetof(X,b),0,0,123,COMMAND_LINE_UNITS      ),
 
-  CONFIG_VALUE_DOUBLE       ("double",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,              ),
-  CONFIG_VALUE_DOUBLE_RANGE ("range2",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,              ),
+  CONFIG_VALUE_DOUBLE       ("double",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,                   ),
+  CONFIG_VALUE_DOUBLE_RANGE ("range2",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,                   ),
 
-  CONFIG_VALUE_BOOLEAN_YESNO("bool",    &boolValue,    NULL,-1,      FALSE,                     ),
+  CONFIG_VALUE_BOOLEAN_YESNO("bool",    &boolValue,    NULL,-1,      FALSE,                          ),
 
-  CONFIG_VALUE_SELECT       ("type",    &selectValue,  NULL,-1,      CONFIG_VALUE_SELECT_TYPES  ),
+  CONFIG_VALUE_SELECT       ("type",    &selectValue,  NULL,-1,      CONFIG_VALUE_SELECT_TYPES       ),
 
-  CONFIG_VALUE_CSTRING      ("string",  &stringValue,  NULL,-1,      "",                        ),
-  CONFIG_VALUE_STRING       ("string",  &stringValue,  NULL,-1,      "",                        ),
+  CONFIG_VALUE_CSTRING      ("string",  &stringValue,  NULL,-1,      "",                             ),
+  CONFIG_VALUE_STRING       ("string",  &stringValue,  NULL,-1,      "",                             ),
 
-  CONFIG_VALUE_ENUM         ("e1",      &enumValue,    NULL,-1,      ENUM1,                     ),
-  CONFIG_VALUE_ENUM         ("e2",      &enumValue,    NULL,-1,      ENUM2,                     ),
-  CONFIG_VALUE_ENUM         ("e3",      &enumValue,    NULL,-1,      ENUM3,                     ),
-  CONFIG_VALUE_ENUM         ("e4",      &enumValue,    NULL,-1,      ENUM4,                     ),
+  CONFIG_VALUE_ENUM         ("e1",      &enumValue,    NULL,-1,      ENUM1,                          ),
+  CONFIG_VALUE_ENUM         ("e2",      &enumValue,    NULL,-1,      ENUM2,                          ),
+  CONFIG_VALUE_ENUM         ("e3",      &enumValue,    NULL,-1,      ENUM3,                          ),
+  CONFIG_VALUE_ENUM         ("e4",      &enumValue,    NULL,-1,      ENUM4,                          ),
 
-  CONFIG_VALUE_SPECIAL      ("special", &specialValue, NULL,-1,      parseSpecial,123,          ),
+  CONFIG_VALUE_SPECIAL      ("special", &specialValue, NULL,-1,      parseSpecial,123,               ),
 
-  CONFIG_VALUE_BOOLEAN      ("flag",    &helpFlag,     NULL,-1,      FALSE,                     ),
+  CONFIG_VALUE_BOOLEAN      ("flag",    &helpFlag,     NULL,-1,      FALSE,                          ),
+
+  CONFIG_VALUE_DEPRECATED   ("foo",     &foo,               -1,      configValueParseFoo,NULL,  "new"),
+
+  CONFIG_VALUE_COMMENT      ("comment"                                                               ),
 };
 
 const ConfigValue CONFIG_STRUCT_VALUES[] =
@@ -322,7 +333,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   } \
 }; \
 
@@ -353,7 +365,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }, \
   __VA_ARGS__ \
   { \
@@ -371,7 +384,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 
 /***********************************************************************\
@@ -405,7 +419,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units)
@@ -441,7 +456,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units)
@@ -477,7 +493,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units) \
   CONFIG_VALUE_DOUBLE(name,NULL,offsetof(type,member),min,max,units)
@@ -511,7 +528,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member) \
   CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member))
@@ -545,7 +563,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
   CONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
@@ -580,7 +599,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
   CONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value)
@@ -615,7 +635,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects) \
   CONFIG_VALUE_SELECT(name,NULL,offsetof(type,member),selects)
@@ -650,7 +671,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SET(name,type,member,set) \
   CONFIG_VALUE_SET(name,NULL,offsetof(type,member),set)
@@ -684,7 +706,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_CSTRING(name,type,member) \
   CONFIG_VALUE_CSTRING(name,NULL,offsetof(type,member))
@@ -718,7 +741,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_STRING(name,type,member) \
   CONFIG_VALUE_STRING(name,NULL,offsetof(type,member))
@@ -757,7 +781,8 @@ typedef struct
     {},\
     {},\
     {parse,formatInit,formatDone,format,userData},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SPECIAL(name,type,member,parse,formatInit,formatDone,format,userData) \
   CONFIG_VALUE_SPECIAL(name,NULL,offsetof(type,member),parse,formatInit,formatDone,format,userData)
@@ -787,7 +812,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_IGNORE(name) \
   CONFIG_VALUE_IGNORE(name)
@@ -824,7 +850,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {parse,userData,newName}\
+    {parse,userData,newName},\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName) \
   CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),parse,userData,newName)
@@ -855,7 +882,8 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
   }
 
 #define CONFIG_VALUE_END_SECTION() \
@@ -874,7 +902,37 @@ typedef struct
     {},\
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL},\
+    {NULL}\
+  }
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_COMMENT
+* Purpose: comment
+* Input  : text - comment text
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_COMMENT(text) \
+  { \
+    CONFIG_VALUE_TYPE_COMMENT,\
+    NULL,\
+    {NULL},\
+    -1,\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
+    {},\
+    {0},\
+    {NULL},\
+    {NULL}, \
+    {},\
+    {},\
+    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    {text}\
   }
 
 /***********************************************************************\
