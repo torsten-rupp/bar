@@ -180,7 +180,7 @@ LOCAL Errors execute(const char        *command,
     String_setCString(text,command);
     if (arguments != NULL)
     {
-      s = arguments;
+      s = &arguments[1];
       while ((*s) != NULL)
       {
         String_joinCString(text,*s,' ' );
