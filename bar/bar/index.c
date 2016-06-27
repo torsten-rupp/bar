@@ -4066,6 +4066,123 @@ return ERROR_NONE;
 }
 
 /***********************************************************************\
+* Name   : pruneStorages
+* Purpose: prune all storages which are empty
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneStorages(IndexHandle *indexHandle)
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          storageId;
+
+  // try to set entityId in storage entries
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT id \
+                            FROM storage \
+                           "
+                          );
+  if (error == ERROR_NONE)
+  {
+    while (   (error == ERROR_NONE)
+           && Database_getNextRow(&databaseQueryHandle,
+                                  "%llu",
+                                  &storageId
+                                 )
+          )
+    {
+      error = Index_pruneStorage(indexHandle,INDEX_ID_STORAGE(storageId));
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : pruneEntities
+* Purpose: prune all entities which are empty
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneEntities(IndexHandle *indexHandle)
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          entityId;
+
+  // try to set entityId in storage entries
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT id \
+                            FROM entities \
+                           "
+                          );
+  if (error == ERROR_NONE)
+  {
+    while (   (error == ERROR_NONE)
+           && Database_getNextRow(&databaseQueryHandle,
+                                  "%llu",
+                                  &entityId
+                                 )
+          )
+    {
+      error = Index_pruneEntity(indexHandle,INDEX_ID_ENTITY(entityId));
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : pruneUUIDs
+* Purpose: prune all UUIDs which are empty
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          uuidId;
+
+  // try to set entityId in storage entries
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT id \
+                            FROM uuids \
+                           "
+                          );
+  if (error == ERROR_NONE)
+  {
+    while (   (error == ERROR_NONE)
+           && Database_getNextRow(&databaseQueryHandle,
+                                  "%llu",
+                                  &uuidId
+                                 )
+          )
+    {
+      error = Index_pruneUUID(indexHandle,INDEX_ID_UUID(uuidId));
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : rebuildNewestInfo
 * Purpose:
 * Input  : indexHandle - index handle
@@ -4461,6 +4578,9 @@ LOCAL void cleanupIndexThreadCode(void)
   (void)cleanUpIncompleteCreate(&indexHandle);
   (void)cleanUpStorageNoName(&indexHandle);
   (void)cleanUpStorageNoEntity(&indexHandle);
+  (void)pruneStorages(&indexHandle);
+  (void)pruneEntities(&indexHandle);
+  (void)pruneUUIDs(&indexHandle);
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
