@@ -930,7 +930,6 @@ bool Storage_parseOpticalSpecifier(ConstString opticalSpecifier,
                                   )
 {
   assert(opticalSpecifier != NULL);
-  assert(defaultDeviceName != NULL);
   assert(deviceName != NULL);
 
   return StorageOptical_parseSpecifier(opticalSpecifier,defaultDeviceName,deviceName);
@@ -942,7 +941,6 @@ bool Storage_parseDeviceSpecifier(ConstString deviceSpecifier,
                                  )
 {
   assert(deviceSpecifier != NULL);
-  assert(defaultDeviceName != NULL);
   assert(deviceName != NULL);
 
   return StorageDevice_parseSpecifier(deviceSpecifier,defaultDeviceName,deviceName);
@@ -1152,15 +1150,14 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"cd://"))
   {
-    if (String_matchCString(storageName,5,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
+    if (String_matchCString(storageName,5,"^[^:]*:",&nextIndex,NULL,NULL))  // cd://<device>:<file name>
     {
-      // cd://<device name>:<file name>
       String_sub(string,storageName,5,nextIndex-5);
       String_trimRight(string,"/");
-      if (!Storage_parseDeviceSpecifier(string,
-                                        NULL,
-                                        storageSpecifier->deviceName
-                                       )
+      if (!Storage_parseOpticalSpecifier(string,
+                                         NULL,  // defaultDeviceName
+                                         storageSpecifier->deviceName
+                                        )
          )
       {
         AutoFree_cleanup(&autoFreeList);
@@ -1178,15 +1175,14 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"dvd://"))
   {
-    if (String_matchCString(storageName,6,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
+    if (String_matchCString(storageName,6,"^[^:]*:",&nextIndex,NULL,NULL))  // dvd://<device>:<file name>
     {
-      // dvd://<device name>:<file name>
       String_sub(string,storageName,6,nextIndex-6);
       String_trimRight(string,"/");
-      if (!Storage_parseDeviceSpecifier(string,
-                                        NULL,
-                                        storageSpecifier->deviceName
-                                       )
+      if (!Storage_parseOpticalSpecifier(string,
+                                         NULL,  // defaultDeviceName
+                                         storageSpecifier->deviceName
+                                        )
          )
       {
         AutoFree_cleanup(&autoFreeList);
@@ -1204,15 +1200,14 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"bd://"))
   {
-    if (String_matchCString(storageName,5,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
+    if (String_matchCString(storageName,5,"^[^:]*:",&nextIndex,NULL,NULL))  // bd://<device>:<file name>
     {
-      // bd://<device name>:<file name>
       String_sub(string,storageName,5,nextIndex-5);
       String_trimRight(string,"/");
-      if (!Storage_parseDeviceSpecifier(string,
-                                        NULL,
-                                        storageSpecifier->deviceName
-                                       )
+      if (!Storage_parseOpticalSpecifier(string,
+                                         NULL,  // defaultDeviceName
+                                         storageSpecifier->deviceName
+                                        )
          )
       {
         AutoFree_cleanup(&autoFreeList);
@@ -1230,9 +1225,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"device://"))
   {
-    if (String_matchCString(storageName,9,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
+    if (String_matchCString(storageName,9,"^[^:]*:",&nextIndex,NULL,NULL))  // device://<device>:<file name>
     {
-      // device://<device name>:<file name>
       String_sub(string,storageName,9,nextIndex-9);
       String_trimRight(string,"/");
       if (!Storage_parseDeviceSpecifier(string,
