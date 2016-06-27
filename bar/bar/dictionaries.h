@@ -73,8 +73,7 @@ typedef struct
   ulong keyLength;                                       // length of key data
   void  *data;                                           // data of entry
   ulong length;                                          // length of data in entry
-//TOOD
-  bool  allocatedFlag;
+  bool  allocatedFlag;                                   // TRUE iff data was allocated
 } DictionaryEntry;
 
 // table with dictionary entries
