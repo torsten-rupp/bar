@@ -50,10 +50,10 @@ typedef enum
 #ifndef NDEBUG
   typedef struct
   {
-    ThreadId   threadId;                   // id of thread who locked semaphore
+    ThreadId           threadId;             // id of thread who locked semaphore
     SemaphoreLockTypes lockType;
-    const char *fileName;                  // file+line number of lock call
-    ulong      lineNb;
+    const char         *fileName;            // file+line number of lock call
+    ulong              lineNb;
   } __SemaphoreThreadInfo;
 #endif /* not NDEBUG */
 
