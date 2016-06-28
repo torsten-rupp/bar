@@ -515,8 +515,7 @@ LOCAL Errors readIncrementalList(ConstString fileName,
                    keyData,
                    keyLength,
                    &incrementalListInfo,
-                   sizeof(incrementalListInfo),
-                   DICTIONARY_BYTE_COPY
+                   sizeof(incrementalListInfo)
                   );
   }
 
@@ -872,8 +871,7 @@ LOCAL void addIncrementalList(Dictionary     *namesDictionary,
                  String_cString(fileName),
                  String_length(fileName),
                  &incrementalListInfo,
-                 sizeof(incrementalListInfo),
-                 DICTIONARY_BYTE_COPY
+                 sizeof(incrementalListInfo)
                 );
 }
 
@@ -1421,7 +1419,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   assert(createInfo->jobOptions != NULL);
 
   // initialize variables
-  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_NULL,CALLBACK_NULL))
+  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_NULL,CALLBACK_NULL,CALLBACK_NULL))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -1469,7 +1467,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
@@ -1482,7 +1480,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               break;
             case FILE_TYPE_DIRECTORY:
               // add to known names history
-              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
               SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
@@ -1499,7 +1497,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
@@ -1519,7 +1517,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
@@ -1539,7 +1537,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                   {
@@ -1633,7 +1631,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                  )
               {
                 // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                 switch (includeEntryNode->type)
                 {
@@ -1662,7 +1660,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               break;
             case FILE_TYPE_DIRECTORY:
               // add to known names history
-              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
               if (!isNoBackup(name))
               {
@@ -1733,7 +1731,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
                             {
                               // add to known names history
-                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
                               switch (includeEntryNode->type)
                               {
@@ -1768,7 +1766,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
                             {
                               // add to known names history
-                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
                               switch (includeEntryNode->type)
                               {
@@ -1798,7 +1796,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
                             {
                               // add to known names history
-                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
                               switch (includeEntryNode->type)
                               {
@@ -1829,7 +1827,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
                             {
                               // add to known names history
-                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
                               switch (includeEntryNode->type)
                               {
@@ -1889,7 +1887,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                  )
               {
                 // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                 switch (includeEntryNode->type)
                 {
@@ -1922,7 +1920,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                  )
               {
                 // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                 switch (includeEntryNode->type)
                 {
@@ -1956,7 +1954,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                  )
               {
                 // add to known names history
-                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                 switch (includeEntryNode->type)
                 {
@@ -2067,12 +2065,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_NULL,CALLBACK_NULL))
+  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_NULL,CALLBACK_NULL,CALLBACK_NULL))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  name     = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_FREE,CALLBACK_NULL))
+  name = String_new();
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK_NULL,CALLBACK_NULL))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -2133,7 +2131,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                   {
@@ -2174,7 +2172,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               break;
             case FILE_TYPE_DIRECTORY:
               // add to known names history
-              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
               // add to entry list
               if (createInfo->partialFlag && isPrintInfo(2))
@@ -2194,7 +2192,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   // add to entry list
                   if (createInfo->partialFlag && isPrintInfo(2))
@@ -2230,7 +2228,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   HardLinkInfo hardLinkInfo;
 
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                   {
@@ -2279,8 +2277,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                           &fileInfo.id,
                                           sizeof(fileInfo.id),
                                           &hardLinkInfo,
-                                          sizeof(hardLinkInfo),
-                                          DICTIONARY_BYTE_COPY
+                                          sizeof(hardLinkInfo)
                                          )
                           )
                       {
@@ -2321,7 +2318,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   // add to entry list
                   if (createInfo->partialFlag && isPrintInfo(2))
@@ -2453,7 +2450,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   switch (includeEntryNode->type)
                   {
@@ -2497,7 +2494,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               break;
             case FILE_TYPE_DIRECTORY:
               // add to known names history
-              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
               if (!isNoBackup(name))
               {
@@ -2603,7 +2600,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
                             {
                               // add to known names history
-                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
                               switch (includeEntryNode->type)
                               {
@@ -2641,7 +2638,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
                             {
                               // add to known names history
-                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
                               switch (includeEntryNode->type)
                               {
@@ -2675,7 +2672,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
                             {
                               // add to known names history
-                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
                               switch (includeEntryNode->type)
                               {
@@ -2733,8 +2730,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                             &fileInfo.id,
                                                             sizeof(fileInfo.id),
                                                             &hardLinkInfo,
-                                                            sizeof(hardLinkInfo),
-                                                            DICTIONARY_BYTE_COPY
+                                                            sizeof(hardLinkInfo)
                                                            )
                                             )
                                         {
@@ -2758,7 +2754,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
                             {
                               // add to known names history
-                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0,CALLBACK_NULL);
+                              Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
                               switch (includeEntryNode->type)
                               {
@@ -2865,7 +2861,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   switch (includeEntryNode->type)
                   {
@@ -2915,7 +2911,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   switch (includeEntryNode->type)
                   {
@@ -2976,8 +2972,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                 &fileInfo.id,
                                                 sizeof(fileInfo.id),
                                                 &hardLinkInfo,
-                                                sizeof(hardLinkInfo),
-                                                DICTIONARY_BYTE_COPY
+                                                sizeof(hardLinkInfo)
                                                )
                                 )
                             {
@@ -3017,7 +3012,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
                   // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0,CALLBACK_NULL);
+                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                   switch (includeEntryNode->type)
                   {
@@ -5640,13 +5635,8 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
       return error;
     }
-// /sys/class/hwmon
+
     // close archive entry
-if (String_equalsCString(linkName,"/sys/devices/LNXSYSTM:00/device:00/PNP0A08:00/PNP0C14:00/path"))
-{
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
-}
     error = Archive_closeEntry(&archiveEntryInfo);
     if (error != ERROR_NONE)
     {
@@ -6570,7 +6560,7 @@ Errors Command_create(ConstString                  jobUUID,
                                 createInfo.storageSpecifier
                                );
     }
-    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_FREE,CALLBACK_NULL);
+    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_NULL,CALLBACK_NULL);
     AUTOFREE_ADD(&autoFreeList,incrementalListFileName,{ String_delete(incrementalListFileName); });
     AUTOFREE_ADD(&autoFreeList,&createInfo.namesDictionary,{ Dictionary_done(&createInfo.namesDictionary); });
 
