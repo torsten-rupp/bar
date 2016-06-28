@@ -693,12 +693,14 @@ ulong Dictionary_count(Dictionary *dictionary)
 
 bool Dictionary_byteCopy(const void *fromData, void *toData, ulong length, void *userData)
 {
-  assert(fromData != NULL);
   assert(toData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  memcpy(toData,fromData,length);
+  if (fromData != NULL)
+  {
+    memcpy(toData,fromData,length);
+  }
 
   return TRUE;
 }
