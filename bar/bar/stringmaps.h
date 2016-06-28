@@ -134,7 +134,8 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 * Purpose: iterate over string map
 * Input  : stringMap       - string map
 *          iteratorVariable - iterator variable (type int)
-*          name             - iteration name (must not be initalised!)
+*          name_            - iteration name (must not be initalised!)
+*          type_            - iteration type
 *          value            - iteration value (must not be initalised!)
 * Output : -
 * Return : -
@@ -164,7 +165,8 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 * Purpose: iterate over string map
 * Input  : stringMap       - string map
 *          iteratorVariable - iterator variable (type int)
-*          name             - iteration name (must not be initalised!)
+*          name_             - iteration name (must not be initalised!)
+*          type_            - iteration type
 *          value            - iteration value (must not be initalised!)
 *          condition        - additional condition
 * Output : -
@@ -185,7 +187,7 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 \***********************************************************************/
 
 #define STRINGMAP_ITERATEX(stringMap,iteratorVariable,name_,type_,value_,condition) \
-  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), type_ = SstringMap_indexType(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
+  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), type_ = StringMap_indexType(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
        ((iteratorVariable) < StringMap_count(stringMap)) && (condition); \
        (iteratorVariable)++, name_ = StringMap_indexName(stringMap,iteratorVariable), type_ = StringMap_indexType(stringMap,iteratorVariable), value_ = StringMap_indexValue(stringMap,iteratorVariable) \
       )
