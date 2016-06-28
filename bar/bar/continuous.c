@@ -969,13 +969,11 @@ LOCAL NotifyInfo *addNotify(ConstString directory)
     List_init(&notifyInfo->uuidList);
     Dictionary_add(&notifyHandles,
                    &notifyInfo->watchHandle,sizeof(notifyInfo->watchHandle),
-                   notifyInfo,sizeof(NotifyInfo*),
-                   CALLBACK(NULL,NULL)
+                   notifyInfo,sizeof(NotifyInfo*)
                   );
     Dictionary_add(&notifyDirectories,
                    String_cString(notifyInfo->directory),String_length(notifyInfo->directory),
-                   notifyInfo,sizeof(NotifyInfo*),
-                   CALLBACK(NULL,NULL)
+                   notifyInfo,sizeof(NotifyInfo*)
                   );
   }
 //fprintf(stderr,"%s, %d: add notify %d: %s\n",__FILE__,__LINE__,notifyInfo->watchHandle,String_cString(notifyInfo->directory));
@@ -1907,8 +1905,8 @@ Errors Continuous_initAll(void)
 
   // init variables
   Semaphore_init(&notifyLock);
-  Dictionary_init(&notifyHandles,CALLBACK_NULL,CALLBACK_NULL);
-  Dictionary_init(&notifyDirectories,CALLBACK_NULL,CALLBACK_NULL);
+  Dictionary_init(&notifyHandles,CALLBACK_NULL,CALLBACK_NULL,CALLBACK_NULL);
+  Dictionary_init(&notifyDirectories,CALLBACK_NULL,CALLBACK_NULL,CALLBACK_NULL);
 
   // check number of possible notifies
   n = getMaxNotifies();
