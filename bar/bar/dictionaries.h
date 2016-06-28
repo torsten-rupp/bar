@@ -90,9 +90,11 @@ typedef struct
   Semaphore                 lock;
   DictionaryEntryTable      *entryTables;                // tables array
   uint                      entryTableCount;             // number of tables
-  DictionaryFreeFunction    dictionaryFreeFunction;      // free entry function or NULL
+  DictionaryCopyFunction    dictionaryCopyFunction;      // copy entry function call back or NULL
+  void                      *dictionaryCopyUserData;
+  DictionaryFreeFunction    dictionaryFreeFunction;      // free entry function call back or NULL
   void                      *dictionaryFreeUserData;
-  DictionaryCompareFunction dictionaryCompareFunction;   // compare key data function or NULL
+  DictionaryCompareFunction dictionaryCompareFunction;   // compare key data function call back or NULL
   void                      *dictionaryCompareUserData;
 } Dictionary;
 
@@ -146,10 +148,12 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 * Name   : Dictionary_init
 * Purpose: initialize dictionary
 * Input  : dictionary                - dictionary variable
-*          dictionaryFreeFunction    - free function or NULL
-*          dictionaryFreeUserData    - free function user data
-*          dictionaryCompareFunction - compare function or NULL
-*          dictionaryCompareUserData - compare function user data
+*          dictionaryCopyFunction    - copy function call back or NULL
+*          dictionaryCopyUserData    - copy function call back user data
+*          dictionaryFreeFunction    - free function call back or NULL
+*          dictionaryFreeUserData    - free function call back user data
+*          dictionaryCompareFunction - compare function call back or NULL
+*          dictionaryCompareUserData - compare function call back user data
 * Output : -
 * Return : TRUE if dictionary initialized, FALSE otherwise
 * Notes  : -
@@ -157,6 +161,8 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 
 #ifdef NDEBUG
   bool Dictionary_init(Dictionary                *dictionary,
+                       DictionaryCopyFunction    dictionaryCopyFunction,
+                       void                      *dictionaryCopyUserData,
                        DictionaryFreeFunction    dictionaryFreeFunction,
                        void                      *dictionaryFreeUserData,
                        DictionaryCompareFunction dictionaryCompareFunction,
@@ -166,6 +172,8 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
   bool __Dictionary_init(const char                *__fileName__,
                          ulong                     __lineNb__,
                          Dictionary                *dictionary,
+                         DictionaryCopyFunction    dictionaryCopyFunction,
+                         void                      *dictionaryCopyUserData,
                          DictionaryFreeFunction    dictionaryFreeFunction,
                          void                      *dictionaryFreeUserData,
                          DictionaryCompareFunction dictionaryCompareFunction,
@@ -244,25 +252,21 @@ void Dictionary_byteFree(void *data, ulong length, void *userData);
 /***********************************************************************\
 * Name   : Dictionary_add
 * Purpose: add entry to dictionary
-* Input  : dictionary             - dictionary
-*          keyData                - key data
-*          keyLength              - length of key data
-*          data                   - entry data
-*          length                 - length of entry data
-*          dictionaryCopyFunction - copy function or NULL
-*          dictionaryCopyUserData - copy function user data
+* Input  : dictionary - dictionary
+*          keyData    - key data
+*          keyLength  - length of key data
+*          data       - entry data
+*          length     - length of entry data
 * Output : -
 * Return : TRUE if entry added, FALSE otherwise
 * Notes  : key data and data will be copied!
 \***********************************************************************/
 
-bool Dictionary_add(Dictionary             *dictionary,
-                    const void             *keyData,
-                    ulong                  keyLength,
-                    const void             *data,
-                    ulong                  length,
-                    DictionaryCopyFunction dictionaryCopyFunction,
-                    void                   *dictionaryCopyUserData
+bool Dictionary_add(Dictionary *dictionary,
+                    const void *keyData,
+                    ulong      keyLength,
+                    const void *data,
+                    ulong      length
                    );
 
 /***********************************************************************\
