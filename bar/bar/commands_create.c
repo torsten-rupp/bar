@@ -2944,7 +2944,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                               appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                                                         ENTRY_TYPE_FILE,
                                                         &data.hardLinkInfo->nameList
-                                                        );
+                                                       );
 
                               // clear entry
                               Dictionary_remove(&hardLinksDictionary,
