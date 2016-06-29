@@ -871,6 +871,7 @@ extern "C" {
 *                                   spezification
 *          commandLineOptionCount - size of command line options array
 *          outputHandle           - error/warning output handle or NULL
+*          commandPrioritySet     - priority set
 *          errorPrefix            - error prefix or NULL
 *          warningPrefix          - warning prefix or NULL
 * Output : arguments
