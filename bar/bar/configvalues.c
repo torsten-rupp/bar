@@ -1676,7 +1676,9 @@ bool ConfigValue_parse(const char        *name,
   j = ConfigValue_lastValueIndex(configValues,sectionName);
   if (j < 0) return FALSE;
   while (   (i <= j)
-         && !stringEquals(configValues[i].name,name)
+         && (   (configValues[i].name == NULL)
+             || !stringEquals(configValues[i].name,name)
+            )
         )
   {
     i = ConfigValue_nextValueIndex(configValues,i);
