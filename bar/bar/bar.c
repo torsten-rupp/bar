@@ -177,11 +177,18 @@ typedef enum
 } Commands;
 
 /***************************** Variables *******************************/
-
 GlobalOptions         globalOptions;
 String                tmpDirectory;
 Semaphore             consoleLock;
 locale_t              POSIXLocale;
+
+// Note: initialized once only here
+LOCAL bool            daemonFlag       = FALSE;
+LOCAL bool            noDetachFlag     = FALSE;
+LOCAL bool            versionFlag      = FALSE;
+LOCAL bool            helpFlag         = FALSE;
+LOCAL bool            xhelpFlag        = FALSE;
+LOCAL bool            helpInternalFlag = FALSE;
 
 LOCAL Commands        command;
 LOCAL String          jobName;
@@ -202,8 +209,6 @@ LOCAL Server          defaultFTPServer;
 LOCAL Server          defaultSSHServer;
 LOCAL Server          defaultWebDAVServer;
 LOCAL Device          defaultDevice;
-LOCAL bool            daemonFlag;
-LOCAL bool            noDetachFlag;
 LOCAL uint            serverPort;
 LOCAL uint            serverTLSPort;
 LOCAL const char      *serverCAFileName;
@@ -221,8 +226,6 @@ LOCAL const char      *logFormat;
 LOCAL const char      *logPostCommand;
 
 LOCAL bool            batchFlag;
-LOCAL bool            versionFlag;
-LOCAL bool            helpFlag,xhelpFlag,helpInternalFlag;
 
 LOCAL const char      *pidFileName;
 
@@ -3169,8 +3172,6 @@ LOCAL Errors initAll(void)
   initServer(&defaultSSHServer,NULL,SERVER_TYPE_SSH);
   initServer(&defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
   initDevice(&defaultDevice);
-  daemonFlag                             = FALSE;
-  noDetachFlag                           = FALSE;
   serverPort                             = DEFAULT_SERVER_PORT;
   serverTLSPort                          = DEFAULT_TLS_SERVER_PORT;
   serverCAFileName                       = DEFAULT_TLS_SERVER_CA_FILE;
@@ -3188,10 +3189,6 @@ LOCAL Errors initAll(void)
   logPostCommand                         = NULL;
 
   batchFlag                              = FALSE;
-  versionFlag                            = FALSE;
-  helpFlag                               = FALSE;
-  xhelpFlag                              = FALSE;
-  helpInternalFlag                       = FALSE;
 
   keyFileName                            = NULL;
   keyBits                                = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
@@ -7706,7 +7703,6 @@ exit(1);
   // read all configuration files
   STRINGLIST_ITERATE(&configFileNameList,stringNode,fileName)
   {
-    printInfo(1,"Reading configuration file '%s'...",String_cString(fileName));
     if (!readConfigFile(fileName,printInfoFlag))
     {
       doneAll();
@@ -7719,7 +7715,6 @@ exit(1);
       #endif /* not NDEBUG */
       return ERROR_CONFIG;
     }
-    printInfo(1,"ok\n");
   }
 
   // read options from job file
