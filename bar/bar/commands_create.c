@@ -4309,7 +4309,7 @@ fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
         // append storage to existing entity with same directory
         if (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
         {
-  //TODO
+//TODO
 
 fprintf(stderr,"%s, %d: APPPPPPPPPPPPPPPPPPPPP %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
             printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
