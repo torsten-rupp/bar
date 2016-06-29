@@ -3105,8 +3105,6 @@ LOCAL void jobThreadCode(void)
   while (!quitFlag)
   {
     // lock
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//Semaphore_debugPrintInfo();
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
 
     // wait for and get next job to execute
