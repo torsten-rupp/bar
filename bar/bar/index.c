@@ -304,7 +304,7 @@ LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
 LOCAL void verify(IndexHandle *indexHandle,
                   const char  *tableName,
                   const char  *columnName,
-                  uint64      value,
+                  int64       value,
                   const char  *condition,
                   ...
                  )
@@ -3453,9 +3453,9 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Upgraded from version %d to %d\n",
-                  indexVersion,
-                  INDEX_VERSION
+                  "Imported index database '%s' (version %d)\n",
+                  String_cString(oldDatabaseFileName),
+                  indexVersion
                  );
     }
     else
@@ -3463,9 +3463,9 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Upgrade version from %d to %d fail: %s\n",
+                  "Import index database '%s' (version %d) fail: %s\n",
+                  String_cString(oldDatabaseFileName),
                   indexVersion,
-                  INDEX_VERSION,
                   Error_getText(error)
                  );
     }
@@ -4458,6 +4458,7 @@ LOCAL void cleanupIndexThreadCode(void)
   String              pathName;
   Errors              error;
   DirectoryListHandle directoryListHandle;
+  uint                i;
   String              oldDatabaseFileName;
   uint                oldDatabaseCount;
   uint                sleepTime;
@@ -4491,7 +4492,7 @@ LOCAL void cleanupIndexThreadCode(void)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
-                "Upgrade index database '%s' fail: %s\n",
+                "Import index database '%s' fail: %s\n",
                 __databaseFileName,
                 Error_getText(error)
                );
@@ -4500,6 +4501,7 @@ LOCAL void cleanupIndexThreadCode(void)
   String_delete(pathName);
 
   // process all *.oldNNN files
+  i                   = 0;
   oldDatabaseFileName = String_new();
   oldDatabaseCount    = 0;
   while (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
@@ -4508,55 +4510,34 @@ LOCAL void cleanupIndexThreadCode(void)
         && String_matchCString(oldDatabaseFileName,STRING_BEGIN,".*\\.old\\d\\d\\d$",NULL,NULL)
        )
     {
-      if (oldDatabaseCount == 0)
+      if (i == 0)
       {
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Started upgrade index database\n"
+                    "Started import old index databases\n"
                    );
       }
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Started import index database '%s'\n",
-                  String_cString(oldDatabaseFileName)
-                 );
-
       error = importIndex(&indexHandle,oldDatabaseFileName);
       if (error == ERROR_NONE)
       {
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_ERROR,
-                    "INDEX",
-                    "Imported index database '%s'\n",
-                    String_cString(oldDatabaseFileName)
-                   );
-        (void)File_delete(oldDatabaseFileName,FALSE);
+        oldDatabaseCount++;
       }
       else
       {
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_ERROR,
-                    "INDEX",
-                    "Import index database '%s' fail\n",
-                    String_cString(oldDatabaseFileName)
-                   );
-      }
-      if (&indexHandle.upgradeError == ERROR_NONE)
-      {
-        indexHandle.upgradeError = error;
+        if (&indexHandle.upgradeError == ERROR_NONE) indexHandle.upgradeError = error;
       }
 
-      oldDatabaseCount++;
+      i++;
     }
   }
-  if (oldDatabaseCount > 0)
+  if (i > 0)
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Upgrade index database done\n"
+                "Done import old index databases (%d)\n",
+                oldDatabaseCount
                );
   }
   String_delete(oldDatabaseFileName);
@@ -5539,58 +5520,66 @@ Errors Index_init(const char *fileName)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // check if index exists
   createFlag = FALSE;
+
+  // check if index exists and check version
   if (File_existsCString(__databaseFileName))
   {
-    // get index version
-    error = getIndexVersion(__databaseFileName,&indexVersion);
+    error = ERROR_NONE;
+
+    // check index version
     if (error == ERROR_NONE)
     {
-      if (indexVersion < INDEX_VERSION)
+      error = getIndexVersion(__databaseFileName,&indexVersion);
+      if (error == ERROR_NONE)
       {
-        // rename existing index for upgrade
-        oldDatabaseFileName = String_new();
-        n = 0;
-        do
+        if (indexVersion < INDEX_VERSION)
         {
-          oldDatabaseFileName = String_newCString(__databaseFileName);
-          String_appendCString(oldDatabaseFileName,".old");
-          String_format(oldDatabaseFileName,"%03d",n);
-          n++;
-        }
-        while (File_exists(oldDatabaseFileName));
-        (void)File_renameCString(__databaseFileName,
-                                 String_cString(oldDatabaseFileName),
-                                 NULL
-                                );
-        String_delete(oldDatabaseFileName);
+          // rename existing index for upgrade
+          oldDatabaseFileName = String_new();
+          n = 0;
+          do
+          {
+            oldDatabaseFileName = String_newCString(__databaseFileName);
+            String_appendCString(oldDatabaseFileName,".old");
+            String_format(oldDatabaseFileName,"%03d",n);
+            n++;
+          }
+          while (File_exists(oldDatabaseFileName));
+          (void)File_renameCString(__databaseFileName,
+                                   String_cString(oldDatabaseFileName),
+                                   NULL
+                                  );
+          String_delete(oldDatabaseFileName);
 
-        // upgrade version -> create new
-        createFlag = TRUE;
+          // upgrade version -> create new
+          createFlag = TRUE;
+        }
       }
     }
-    else
+
+    // check if database corrupt
+    if (error == ERROR_NONE)
     {
-      // corrupt -> create new
+//TODO
+    }
+
+    if (error != ERROR_NONE)
+    {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
                   "Index database '%s' is corrupt - create new\n",
                   __databaseFileName
                  );
+
+      // corrupt -> create new
       createFlag = TRUE;
     }
   }
   else
   {
     // does not exists -> create new
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_ERROR,
-                "INDEX",
-                "Create index database '%s'\n",
-                __databaseFileName
-               );
     createFlag = TRUE;
   }
 
@@ -5609,6 +5598,37 @@ Errors Index_init(const char *fileName)
                  );
       return error;
     }
+
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Created new index data base '%s' (version %d)\n",
+                __databaseFileName,
+                INDEX_VERSION
+               );
+  }
+  else
+  {
+    error = getIndexVersion(__databaseFileName,&indexVersion);
+    if (error != ERROR_NONE)
+    {
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_ERROR,
+                  "INDEX",
+                  "Cannot get index database version from '%s': %s\n",
+                  __databaseFileName,
+                  Error_getText(error)
+                 );
+      return error;
+    }
+
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Opened index data base '%s' (version %d)\n",
+                __databaseFileName,
+                indexVersion
+               );
   }
 
   // start clean-up thread
