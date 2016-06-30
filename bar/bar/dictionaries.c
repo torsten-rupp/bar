@@ -199,7 +199,9 @@ LOCAL_INLINE bool equalsEntry(const DictionaryEntry     *entry,
   assert(entry != NULL);
   assert(keyData != NULL);
 
-  if ((hash == entry->hash) && (entry->keyLength == keyLength))
+  if (   (hash == entry->hash)
+      && (entry->keyData != NULL)
+      && (entry->keyLength == keyLength))
   {
     if (dictionaryCompareFunction != NULL)
     {
@@ -671,6 +673,7 @@ void Dictionary_clear(Dictionary *dictionary)
 
           free(dictionary->entryTables[z].entries[index].keyData);
 
+          dictionary->entryTables[z].entries[index].hash    = 0;
           dictionary->entryTables[z].entries[index].keyData = NULL;
         }
       }
@@ -1077,6 +1080,7 @@ void Dictionary_remove(Dictionary *dictionary,
   uint                 entryIndex;
 
   assert(dictionary != NULL);
+  assert(keyData != NULL);
 
   hash = calculateHash(keyData,keyLength);
 
@@ -1103,6 +1107,8 @@ void Dictionary_remove(Dictionary *dictionary,
       }
 
       free(dictionaryEntryTable->entries[entryIndex].keyData);
+
+      dictionaryEntryTable->entries[entryIndex].hash    = 0;
       dictionaryEntryTable->entries[entryIndex].keyData = NULL;
 
       dictionaryEntryTable->entryCount--;
@@ -1124,6 +1130,7 @@ bool Dictionary_find(Dictionary *dictionary,
   uint                 index;
 
   assert(dictionary != NULL);
+  assert(keyData != NULL);
 
   hash = calculateHash(keyData,keyLength);
 
