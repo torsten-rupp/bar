@@ -49,6 +49,7 @@ class BusyDialog
   public final static int PROGRESS_BAR0 = 1 <<  2;
   public final static int PROGRESS_BAR1 = 1 <<  3;
   public final static int LIST          = 1 <<  4;
+  public final static int ABORT_CLOSE   = 1 <<  5;
 
   public final static int AUTO_ANIMATE  = 1 << 24;
 
@@ -113,7 +114,7 @@ class BusyDialog
    * @param flags busy dialog flags
    * @param maxListLength max. list length
    */
-  public BusyDialog(Shell parentShell, String title, int width, int height, String message, int flags, int maxListLength)
+  public BusyDialog(Shell parentShell, String title, int width, int height, String message, final int flags, int maxListLength)
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
@@ -261,6 +262,7 @@ class BusyDialog
     {
       widgetAbortCloseButton = new Button(composite,SWT.CENTER|SWT.BORDER);
       widgetAbortCloseButton.setText(BusyDialog.tr("Abort"));
+      widgetAbortCloseButton.setEnabled((flags & ABORT_CLOSE) != 0);
       widgetAbortCloseButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
       widgetAbortCloseButton.addSelectionListener(new SelectionListener()
       {
@@ -320,7 +322,10 @@ class BusyDialog
       {
         Shell widget = (Shell)event.widget;
 
-        abort();
+        if ((flags & ABORT_CLOSE) != 0)
+        {
+          abort();
+        }
         event.doit = false;
       }
     });
@@ -416,7 +421,7 @@ class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, int width, int height, String message)
   {
-    this(parentShell,title,width,height,message,NONE);
+    this(parentShell,title,width,height,message,ABORT_CLOSE);
   }
 
   /** create busy dialog
@@ -459,7 +464,7 @@ class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, int width, int height)
   {
-    this(parentShell,title,width,height,NONE);
+    this(parentShell,title,width,height,ABORT_CLOSE);
   }
 
   /** create busy dialog
@@ -521,7 +526,7 @@ class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title)
   {
-    this(parentShell,title,NONE);
+    this(parentShell,title,ABORT_CLOSE);
   }
 
   /** add listener to dialog

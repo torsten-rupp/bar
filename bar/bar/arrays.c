@@ -749,14 +749,19 @@ void Array_debugDone(void)
   pthread_mutex_unlock(&debugArrayLock);
 }
 
-void Array_debugDumpInfo(FILE *handle)
+void Array_debugDumpInfo(FILE *handle,
+                         ArrayDumpInfoFunction arrayDumpInfoFunction,
+                         void                  *arrayDumpInfoUserData
+                        )
 {
+  ulong          n;
   DebugArrayNode *debugArrayNode;
 
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
   pthread_mutex_lock(&debugArrayLock);
   {
+    n = 0L;
     LIST_ITERATE(&debugArrayList,debugArrayNode)
     {
       fprintf(handle,"DEBUG: array %p[%ld] allocated at %s, line %ld\n",
@@ -765,14 +770,33 @@ void Array_debugDumpInfo(FILE *handle)
               debugArrayNode->fileName,
               debugArrayNode->lineNb
              );
+
+      if (arrayDumpInfoFunction != NULL)
+      {
+        if (!arrayDumpInfoFunction(debugArrayNode->array,
+                                   debugArrayNode->fileName,
+                                   debugArrayNode->lineNb,
+                                   n,
+                                   List_count(&debugArrayList),
+                                   arrayDumpInfoUserData
+                                  )
+           )
+        {
+          break;
+        }
+      }
+
+      n++;
     }
   }
   pthread_mutex_unlock(&debugArrayLock);
 }
 
-void Array_debugPrintInfo(void)
+void Array_debugPrintInfo(ArrayDumpInfoFunction srrayDumpInfoFunction,
+                          void                  *arrayDumpInfoUserData
+                         )
 {
-  Array_debugDumpInfo(stderr);
+  Array_debugDumpInfo(stderr,srrayDumpInfoFunction,arrayDumpInfoUserData);
 }
 
 void Array_debugPrintStatistics(void)
@@ -793,7 +817,7 @@ void Array_debugCheck(void)
 {
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
-  Array_debugPrintInfo();
+  Array_debugPrintInfo(CALLBACK_NULL);
   Array_debugPrintStatistics();
 
   pthread_mutex_lock(&debugArrayLock);

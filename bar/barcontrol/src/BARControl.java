@@ -1990,7 +1990,49 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),0);
+
+            final BusyDialog busyDialog = new BusyDialog(shell,"Print debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+            new BackgroundTask(busyDialog)
+            {
+              @Override
+              public void run(final BusyDialog busyDialog, Object userData)
+              {
+                // dump memory info
+                BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),
+                                         0,  // debugLevel
+                                         null,  // errorMessage
+                                         new CommandResultHandler()
+                                         {
+                                           public int handleResult(int i, ValueMap valueMap)
+                                           {
+                                             String type  = valueMap.getString("type");
+                                             long   n     = valueMap.getLong("n");
+                                             long   count = valueMap.getLong("count");
+
+                                             busyDialog.setMaximum(count);
+                                             busyDialog.updateText(String.format("Printing '%s' info...",type));
+                                             busyDialog.updateProgressBar(n);
+
+                                             if (busyDialog.isAborted())
+                                             {
+                                               abort();
+                                             }
+
+                                             return Errors.NONE;
+                                           }
+                                         }
+                                        );
+                // close busy dialog
+                display.syncExec(new Runnable()
+                {
+                  @Override
+                  public void run()
+                  {
+                    busyDialog.close();
+                  }
+                });
+              }
+            };
           }
         });
 
@@ -2003,7 +2045,49 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),0);
+
+            final BusyDialog busyDialog = new BusyDialog(shell,"Store debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+            new BackgroundTask(busyDialog)
+            {
+              @Override
+              public void run(final BusyDialog busyDialog, Object userData)
+              {
+                // dump memory info
+                BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),
+                                         0,  // debugLevel
+                                         null,  // errorMessage
+                                         new CommandResultHandler()
+                                         {
+                                           public int handleResult(int i, ValueMap valueMap)
+                                           {
+                                             String type  = valueMap.getString("type");
+                                             long   n     = valueMap.getLong("n");
+                                             long   count = valueMap.getLong("count");
+
+                                             busyDialog.setMaximum(count);
+                                             busyDialog.updateText(String.format("Dumping '%s' info...",type));
+                                             busyDialog.updateProgressBar(n);
+
+                                             if (busyDialog.isAborted())
+                                             {
+                                               abort();
+                                             }
+
+                                             return Errors.NONE;
+                                           }
+                                         }
+                                        );
+                // close busy dialog
+                display.syncExec(new Runnable()
+                {
+                  @Override
+                  public void run()
+                  {
+                    busyDialog.close();
+                  }
+                });
+              }
+            };
           }
         });
       }

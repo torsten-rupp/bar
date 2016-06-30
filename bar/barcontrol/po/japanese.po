@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-06-26 08:26+0200\n"
+"POT-Creation-Date: 2016-06-30 12:06+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -52,7 +52,7 @@ msgstr "ログインBARサーバ"
 msgid "Server"
 msgstr "サーバ"
 
-#: src/BARControl.java:1501 src/BARControl.java:2751 src/BARControl.java:2775
+#: src/BARControl.java:1501 src/BARControl.java:2835 src/BARControl.java:2859
 #: src/Dialogs.java:2638 src/Dialogs.java:2863 src/ServerSettings.java:579
 #: src/ServerSettings.java:2394 src/TabJobs.java:6014 src/TabRestore.java:8392
 #: src/TabRestore.java:8419
@@ -64,8 +64,8 @@ msgstr "パスワード"
 msgid "Login"
 msgstr "ログイン"
 
-#: src/BARControl.java:1531 src/BARControl.java:2049 src/BARControl.java:2069
-#: src/BARControl.java:2939 src/Dialogs.java:2007 src/Dialogs.java:2077
+#: src/BARControl.java:1531 src/BARControl.java:2133 src/BARControl.java:2153
+#: src/BARControl.java:3023 src/Dialogs.java:2007 src/Dialogs.java:2077
 #: src/Dialogs.java:2578 src/Dialogs.java:2761 src/Dialogs.java:2998
 #: src/Dialogs.java:3598 src/Dialogs.java:4440 src/Dialogs.java:4606
 #: src/Dialogs.java:4792 src/Dialogs.java:5130 src/Dialogs.java:5230
@@ -97,7 +97,7 @@ msgstr "接続ミス"
 msgid "Start"
 msgstr "スタート"
 
-#: src/BARControl.java:1782 src/BARControl.java:2090 src/BusyDialog.java:263
+#: src/BARControl.java:1782 src/BARControl.java:2174 src/BusyDialog.java:264
 #: src/Dialogs.java:163 src/TabRestore.java:7456 src/TabRestore.java:8465
 #: src/TabStatus.java:758 src/TabStatus.java:1410 src/TabStatus.java:2011
 msgid "Abort"
@@ -172,35 +172,35 @@ msgstr "インフォメーション"
 msgid "Written by Torsten Rupp"
 msgstr "作成者　トルステン・ルップ"
 
-#: src/BARControl.java:2049
+#: src/BARControl.java:2133
 #, fuzzy
 msgid "Connection lost"
 msgstr "接続ミス"
 
-#: src/BARControl.java:2049 src/BARControl.java:2069 src/BARControl.java:2090
-#: src/BARControl.java:2939
+#: src/BARControl.java:2133 src/BARControl.java:2153 src/BARControl.java:2174
+#: src/BARControl.java:3023
 msgid "Error: "
 msgstr "エラー："
 
-#: src/BARControl.java:2049 src/BARControl.java:2069 src/BARControl.java:2939
+#: src/BARControl.java:2133 src/BARControl.java:2153 src/BARControl.java:3023
 msgid "Try again"
 msgstr "再試行"
 
-#: src/BARControl.java:2069 src/BARControl.java:2939
+#: src/BARControl.java:2153 src/BARControl.java:3023
 msgid "Connection fail"
 msgstr "接続ミス"
 
-#: src/BARControl.java:2090
+#: src/BARControl.java:2174
 #, fuzzy
 msgid "Internal error"
 msgstr "拡張エラー:"
 
-#: src/BARControl.java:2749 src/TabRestore.java:8390
+#: src/BARControl.java:2833 src/TabRestore.java:8390
 #, fuzzy, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/BARControl.java:2750 src/Dialogs.java:2626 src/Dialogs.java:2854
+#: src/BARControl.java:2834 src/Dialogs.java:2626 src/Dialogs.java:2854
 #: src/Dialogs.java:3508 src/Dialogs.java:3561 src/ServerSettings.java:597
 #: src/ServerSettings.java:2329 src/TabJobs.java:1842 src/TabJobs.java:3641
 #: src/TabJobs.java:8388 src/TabJobs.java:8505 src/TabJobs.java:10233
@@ -210,12 +210,12 @@ msgstr "次の項目のFTPログインパスワードを入力してください
 msgid "Name"
 msgstr "名前"
 
-#: src/BARControl.java:2774 src/TabRestore.java:8418
+#: src/BARControl.java:2858 src/TabRestore.java:8418
 #, fuzzy, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/BARControl.java:2801
+#: src/BARControl.java:2885
 #, fuzzy, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""
@@ -260,7 +260,7 @@ msgstr ""
 msgid "Select file"
 msgstr "ソースファイル選択"
 
-#: src/BusyDialog.java:572 src/Dialogs.java:1433 src/Dialogs.java:1598
+#: src/BusyDialog.java:577 src/Dialogs.java:1433 src/Dialogs.java:1598
 #: src/Dialogs.java:1779
 msgid "Close"
 msgstr "閉じる"

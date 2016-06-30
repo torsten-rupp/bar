@@ -4463,14 +4463,19 @@ void File_debugDone(void)
   pthread_mutex_unlock(&debugFileLock);
 }
 
-void File_debugDumpInfo(FILE *handle)
+void File_debugDumpInfo(FILE                 *handle,
+                        FileDumpInfoFunction fileDumpInfoFunction,
+                        void                 *fileDumpInfoUserData
+                       )
 {
+  ulong          n;
   DebugFileNode *debugFileNode;
 
   pthread_once(&debugFileInitFlag,debugFileInit);
 
   pthread_mutex_lock(&debugFileLock);
   {
+    n = 0L;
     LIST_ITERATE(&debugOpenFileList,debugFileNode)
     {
       assert(debugFileNode->fileHandle != NULL);
@@ -4491,14 +4496,33 @@ void File_debugDumpInfo(FILE *handle)
                 debugFileNode->lineNb
                );
       }
+
+      if (fileDumpInfoFunction != NULL)
+      {
+        if (!fileDumpInfoFunction(debugFileNode->fileHandle,
+                                  debugFileNode->fileName,
+                                  debugFileNode->lineNb,
+                                  n,
+                                  List_count(&debugOpenFileList),
+                                  fileDumpInfoUserData
+                                 )
+           )
+        {
+          break;
+        }
+      }
+
+      n++;
     }
   }
   pthread_mutex_unlock(&debugFileLock);
 }
 
-void File_debugPrintInfo()
+void File_debugPrintInfo(FileDumpInfoFunction fileDumpInfoFunction,
+                         void                 *fileDumpInfoUserData
+                        )
 {
-  File_debugDumpInfo(stderr);
+  File_debugDumpInfo(stderr,fileDumpInfoFunction,fileDumpInfoUserData);
 }
 
 void File_debugPrintStatistics(void)
@@ -4521,7 +4545,7 @@ void File_debugCheck(void)
 {
   pthread_once(&debugFileInitFlag,debugFileInit);
 
-  File_debugPrintInfo();
+  File_debugPrintInfo(CALLBACK_NULL);
   File_debugPrintStatistics();
 
   pthread_mutex_lock(&debugFileLock);

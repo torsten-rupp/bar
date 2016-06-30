@@ -92,6 +92,32 @@ typedef struct
   uint64     factor;
 } StringUnit;
 
+// debug info function
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : StringDumpInfoFunction
+* Purpose: string dump info call-back function
+* Input  : string        - string
+*          allocFileName - allocation file name
+*          allocLineNb   - allocation line number
+*          n             - string number [0..count-1]
+*          count         - total string count
+*          userData      - user data
+* Output : -
+* Return : TRUE for continue, FALSE for abort
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*StringDumpInfoFunction)(ConstString string,
+                                      const char  *allocFileName,
+                                      ulong       allocLineNb,
+                                      ulong       n,
+                                      ulong       count,
+                                      void        *userData
+                                     );
+#endif /* not NDEBUG */
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -1064,14 +1090,21 @@ void String_debugDone(void);
 /***********************************************************************\
 * Name   : String_debugDumpInfo, String_debugPrintInfo
 * Purpose: string debug function: output allocated strings
-* Input  : handle - output channel
+* Input  : handle                 - output channel
+*          stringDumpInfoFunction - string dump info call-back or NULL
+*          stringDumpInfoUserData - string dump info user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void String_debugDumpInfo(FILE *handle);
-void String_debugPrintInfo(void);
+void String_debugDumpInfo(FILE                   *handle,
+                          StringDumpInfoFunction stringDumpInfoFunction,
+                          void                   *stringDumpInfoUserData
+                         );
+void String_debugPrintInfo(StringDumpInfoFunction stringDumpInfoFunction,
+                           void                   *stringDumpInfoUserData
+                          );
 
 /***********************************************************************\
 * Name   : String_debugPrintStatistics

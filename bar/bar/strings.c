@@ -5294,14 +5294,19 @@ void String_debugDone(void)
   pthread_mutex_unlock(&debugStringLock);
 }
 
-void String_debugDumpInfo(FILE *handle)
+void String_debugDumpInfo(FILE                   *handle,
+                          StringDumpInfoFunction stringDumpInfoFunction,
+                          void                   *stringDumpInfoUserData
+                         )
 {
+  ulong           n;
   DebugStringNode *debugStringNode;
 
   pthread_once(&debugStringInitFlag,debugStringInit);
 
   pthread_mutex_lock(&debugStringLock);
   {
+    n = 0L;
     LIST_ITERATE(&debugStringAllocList,debugStringNode)
     {
       fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
@@ -5314,14 +5319,33 @@ void String_debugDumpInfo(FILE *handle)
         fprintf(handle,"  allocated at\n");
         debugDumpStackTrace(handle,4,debugStringNode->stackTrace,debugStringNode->stackTraceSize,0);
       #endif /* HAVE_BACKTRACE */
+
+      if (stringDumpInfoFunction != NULL)
+      {
+        if (!stringDumpInfoFunction(debugStringNode->string,
+                                    debugStringNode->allocFileName,
+                                    debugStringNode->allocLineNb,
+                                    n,
+                                    List_count(&debugStringAllocList),
+                                    stringDumpInfoUserData
+                                   )
+           )
+        {
+          break;
+        }
+      }
+
+      n++;
     }
   }
   pthread_mutex_unlock(&debugStringLock);
 }
 
-void String_debugPrintInfo()
+void String_debugPrintInfo(StringDumpInfoFunction stringDumpInfoFunction,
+                           void                   *stringDumpInfoUserData
+                          )
 {
-  String_debugDumpInfo(stderr);
+  String_debugDumpInfo(stderr,stringDumpInfoFunction,stringDumpInfoUserData);
 }
 
 void String_debugPrintStatistics(void)
@@ -5346,7 +5370,7 @@ void String_debugCheck()
 {
   pthread_once(&debugStringInitFlag,debugStringInit);
 
-  String_debugPrintInfo();
+  String_debugPrintInfo(CALLBACK_NULL);
   String_debugPrintStatistics();
 
   pthread_mutex_lock(&debugStringLock);

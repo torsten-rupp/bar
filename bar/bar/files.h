@@ -316,6 +316,30 @@ typedef struct
   uint   maxFileNameLength;
 } FileSystemInfo;
 
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : FileDumpInfoFunction
+* Purpose: string dump info call-back function
+* Input  : fileHandle - file handle
+*          fileName   - file name
+*          lineNb     - line number
+*          n          - string number [0..count-1]
+*          count      - total string count
+*          userData   - user data
+* Output : -
+* Return : TRUE for continue, FALSE for abort
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*FileDumpInfoFunction)(const FileHandle *fileHandle,
+                                    const char       *fileName,
+                                    ulong            lineNb,
+                                    ulong            n,
+                                    ulong            count,
+                                    void             *userData
+                                   );
+#endif /* not NDEBUG */
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -1599,14 +1623,21 @@ void File_debugDone(void);
 /***********************************************************************\
 * Name   : File_debugDumpInfo, File_debugPrintInfo
 * Purpose: string file function: output open files
-* Input  : handle - output channel
+* Input  : handle               - output channel
+*          fileDumpInfoFunction - file dump info call-back or NULL
+*          fileDumpInfoUserData - file dump info user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void File_debugDumpInfo(FILE *handle);
-void File_debugPrintInfo(void);
+void File_debugDumpInfo(FILE                 *handle,
+                        FileDumpInfoFunction fileDumpInfoFunction,
+                        void                 *fileDumpInfoUserData
+                       );
+void File_debugPrintInfo(FileDumpInfoFunction fileDumpInfoFunction,
+                         void                 *fileDumpInfoUserData
+                        );
 
 /***********************************************************************\
 * Name   : File_debugPrintStatistics

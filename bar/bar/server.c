@@ -339,6 +339,7 @@ typedef struct
   } action;
 
   uint                  abortCommandId;                    // command id to abort
+//TODO:
 bool abortFlag;
 
   union
@@ -15912,6 +15913,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   if (!String_isEmpty(jobUUID))
   {
     // delete job index
+//TODO: uuid
     error = Index_deleteUUID(indexHandle,jobUUID);
     if (error != ERROR_NONE)
     {
@@ -16432,9 +16434,48 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  Array_debugPrintInfo();
-  String_debugPrintInfo();
-  File_debugPrintInfo();
+  Array_debugPrintInfo(CALLBACK_INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                                       {
+                                         UNUSED_VARIABLE(array);
+                                         UNUSED_VARIABLE(fileName);
+                                         UNUSED_VARIABLE(lineNb);
+                                         UNUSED_VARIABLE(userData);
+
+                                         sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=ARRAY n=%lu count=%lu",n,count);
+
+                                         return TRUE;
+                                       },
+                                       NULL
+                                      )
+                      );
+  String_debugPrintInfo(CALLBACK_INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                                        {
+                                          UNUSED_VARIABLE(string);
+                                          UNUSED_VARIABLE(fileName);
+                                          UNUSED_VARIABLE(lineNb);
+                                          UNUSED_VARIABLE(userData);
+
+                                          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=STRING n=%lu count=%lu",n,count);
+
+                                          return TRUE;
+                                        },
+                                        NULL
+                                       )
+                       );
+  File_debugPrintInfo(CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                                      {
+                                        UNUSED_VARIABLE(fileHandle);
+                                        UNUSED_VARIABLE(fileName);
+                                        UNUSED_VARIABLE(lineNb);
+                                        UNUSED_VARIABLE(userData);
+
+                                        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=FILE n=%lu count=%lu",n,count);
+
+                                        return TRUE;
+                                      },
+                                      NULL
+                                     )
+                     );
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -16470,10 +16511,52 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
     return;
   }
 
-  Array_debugDumpInfo(handle);
-  String_debugDumpInfo(handle);
-  File_debugDumpInfo(handle);
+  // Note: no abort because debug functions may hold a lock while dumping information
+  Array_debugDumpInfo(handle,
+                      CALLBACK_INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                                      {
+                                        UNUSED_VARIABLE(array);
+                                        UNUSED_VARIABLE(fileName);
+                                        UNUSED_VARIABLE(lineNb);
+                                        UNUSED_VARIABLE(userData);
 
+                                        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=ARRAY n=%lu count=%lu",n,count);
+
+                                        return TRUE;
+                                      },
+                                      NULL
+                                     )
+                     );
+  String_debugDumpInfo(handle,
+                       CALLBACK_INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                                       {
+                                         UNUSED_VARIABLE(string);
+                                         UNUSED_VARIABLE(fileName);
+                                         UNUSED_VARIABLE(lineNb);
+                                         UNUSED_VARIABLE(userData);
+
+                                         sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=STRING n=%lu count=%lu",n,count);
+
+                                         return TRUE;
+                                       },
+                                       NULL
+                                      )
+                     );
+  File_debugDumpInfo(handle,
+                     CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                                     {
+                                       UNUSED_VARIABLE(fileHandle);
+                                       UNUSED_VARIABLE(fileName);
+                                       UNUSED_VARIABLE(lineNb);
+                                       UNUSED_VARIABLE(userData);
+
+                                       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=FILE n=%lu count=%lu",n,count);
+
+                                       return TRUE;
+                                     },
+                                     NULL
+                                    )
+                    );
   fclose(handle);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
