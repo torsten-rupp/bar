@@ -3086,7 +3086,7 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
   return ERROR_NONE;
 }
 
-Errors Storage_forAll(ConstString     storagePattern,
+Errors Storage_forAll(ConstString     storagePatternString,
                       StorageFunction storageFunction,
                       void            *storageUserData
                      )
@@ -3099,7 +3099,7 @@ Errors Storage_forAll(ConstString     storagePattern,
   StorageDirectoryListHandle storageDirectoryListHandle;
   FileInfo                   fileInfo;
 
-  assert(storagePattern != NULL);
+  assert(storagePatternString != NULL);
   assert(storageFunction != NULL);
 
   Storage_initSpecifier(&storageSpecifier);
@@ -3107,7 +3107,7 @@ Errors Storage_forAll(ConstString     storagePattern,
   StringList_init(&directoryList);
   fileName = String_new();
 
-  error = Storage_parseName(&storageSpecifier,storagePattern);
+  error = Storage_parseName(&storageSpecifier,storagePatternString);
   if (error == ERROR_NONE)
   {
     // read directory and scan all sub-directories
@@ -3145,7 +3145,9 @@ Errors Storage_forAll(ConstString     storagePattern,
           }
 
           // match pattern and call callback
-          if (Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
+          if (   ((storageSpecifier.archivePatternString == NULL) && String_equals(storageSpecifier.archiveName,fileName))
+              || ((storageSpecifier.archivePatternString != NULL) && Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
+             )
           {
             // callback
             error = storageFunction(Storage_getName(&storageSpecifier,fileName),&fileInfo,storageUserData);
