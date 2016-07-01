@@ -3165,8 +3165,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // get start date/time
     startDateTime = Misc_getCurrentDateTime();
 
-    logMessage(&logHandle,LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
-
     // parse storage name
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
