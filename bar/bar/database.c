@@ -836,7 +836,10 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   assert(databaseHandle != NULL);
 
   #ifndef NDEBUG
-//    fprintf(stderr,"Warning: database busy handler called %s: %d\n",Thread_getCurrentIdString(),n);
+    if ((n > 60) && ((n % 60) == 0))
+    {
+      fprintf(stderr,"Warning: database busy handler called %s: %d\n",Thread_getCurrentIdString(),n);
+    }
   #endif /* not NDEBUG */
 
   delay(SLEEP_TIME);
