@@ -1178,7 +1178,7 @@ extern "C" {
 \***********************************************************************/
 
 void __dprintf__(const char *__fileName__,
-                 uint       __lineNb__,
+                 ulong      __lineNb__,
                  const char *format,
                  ...
                 );
@@ -1624,7 +1624,7 @@ void __halt(int        exitcode,
              __attribute__((format(printf,2,3)));
 #else /* not NDEBUG */
 void __halt(const char *__fileName__,
-            uint       __lineNb__,
+            ulong      __lineNb__,
             int        exitcode,
             const char *format,
             ...
@@ -1654,7 +1654,7 @@ void __abort(const char *prefix,
 
 #else /* not NDEBUG */
 void __abort(const char *__fileName__,
-             uint       __lineNb__,
+             ulong      __lineNb__,
              const char *prefix,
              const char *format,
              ...
@@ -1662,7 +1662,7 @@ void __abort(const char *__fileName__,
               __attribute__((format(printf,4,5)));
 #endif /* NDEBUG */
 void __abortAt(const char *fileName,
-             uint         lineNb,
+             ulong        lineNb,
              const char   *prefix,
              const char   *format,
              ...
@@ -1684,7 +1684,7 @@ void __abortAt(const char *fileName,
 \***********************************************************************/
 
 bool debugIsTestCodeEnabled(const char *__fileName__,
-                            uint       __lineNb__,
+                            ulong      __lineNb__,
                             const char *functionName,
                             uint       counter
                            );
@@ -1699,7 +1699,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 \***********************************************************************/
 
 Errors debugTestCodeError(const char *__fileName__,
-                          uint       __lineNb__
+                          ulong      __lineNb__
                          );
 
 /***********************************************************************\
@@ -1715,7 +1715,7 @@ Errors debugTestCodeError(const char *__fileName__,
 \***********************************************************************/
 
 void debugLocalResource(const char *__fileName__,
-                        uint       __lineNb__,
+                        ulong      __lineNb__,
                         const void *resource
                        ) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
 #endif /* not NDEBUG */
@@ -1734,7 +1734,7 @@ void debugLocalResource(const char *__fileName__,
 \***********************************************************************/
 
 void debugAddResourceTrace(const char *__fileName__,
-                           uint       __lineNb__,
+                           ulong      __lineNb__,
                            const char *typeName,
                            const void *resource,
                            uint       size
@@ -1752,7 +1752,7 @@ void debugAddResourceTrace(const char *__fileName__,
 \***********************************************************************/
 
 void debugRemoveResourceTrace(const char *__fileName__,
-                              uint       __lineNb__,
+                              ulong      __lineNb__,
                               const void *resource,
                               uint       size
                              );
@@ -1769,7 +1769,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
 \***********************************************************************/
 
 void debugCheckResourceTrace(const char *__fileName__,
-                             uint       __lineNb__,
+                             ulong      __lineNb__,
                              const void *resource
                             );
 
