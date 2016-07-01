@@ -14089,8 +14089,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       }
       break;
     case ENTRIES:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
       error = Index_initListEntries(&indexQueryHandle,
                                     indexHandle,
                                     NULL, // indexIds
