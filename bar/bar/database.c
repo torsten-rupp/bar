@@ -1699,7 +1699,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
   // compare tables
   STRINGLIST_ITERATEX(&tableListReference,tableNameNodeReference,tableNameReference,error == ERROR_NONE)
   {
-    if (StringList_contain(&tableList,tableName))
+    if (StringList_contain(&tableList,tableNameReference))
     {
       // get column lists
       error = getTableColumnList(&columnListReference,databaseHandleReference,String_cString(tableNameReference));
@@ -1745,7 +1745,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
     }
     else
     {
-      error = ERRORX_(DATABASE_MISSING_TABLE,0,String_cString(tableName));
+      error = ERRORX_(DATABASE_MISSING_TABLE,0,String_cString(tableNameReference));
     }
   }
 
