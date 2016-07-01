@@ -51,7 +51,7 @@
 typedef void(*SymbolFunction)(const void *address,
                               const char *fileName,
                               const char *symbolName,
-                              uint       lineNb,
+                              ulong      lineNb,
                               void       *userData
                              );
 
