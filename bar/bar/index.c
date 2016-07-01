@@ -3933,6 +3933,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
 
 LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
 {
+//TODO
 #if 0
   Errors              error;
   String              name1,name2;
@@ -4158,12 +4159,14 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          entityId;
 
-  // try to set entityId in storage entries
+  // try to set entityId in storage entries (Note: keep default entity with id 0!)
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id \
                             FROM entities \
-                           "
+                            WHERE id!=%lld \
+                           ",
+                           DATABASE_ID_NONE
                           );
   if (error == ERROR_NONE)
   {
