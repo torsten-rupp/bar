@@ -1136,6 +1136,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("log-format",                   &logFormat,-1                                                  ),
   CONFIG_VALUE_CSTRING           ("log-post-command",             &logPostCommand,-1                                             ),
 
+  CONFIG_VALUE_COMMENT           ("process id file"),
   CONFIG_VALUE_CSTRING           ("pid-file",                     &pidFileName,-1                                                ),
 
   // deprecated
