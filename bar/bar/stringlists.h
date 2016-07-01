@@ -124,7 +124,7 @@ typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *
       )
 
 /***********************************************************************\
-* Name   : LIST_FIND_FIRST, LIST_FIND_LAST, LIST_FIND
+* Name   : STRINGLIST_FIND_FIRST, STRINGLIST_FIND_LAST, STRINGLIST_FIND
 * Purpose: find first/last entry in list
 * Input  : list      - list
 *          variable  - string variable name
