@@ -81,11 +81,9 @@ LOCAL const struct
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
 
 /***************************** Datatypes *******************************/
-typedef enum
-{
-  INDEX_OPEN_MODE_READ,
-  INDEX_OPEN_MODE_READ_WRITE,
-} IndexOpenModes;
+#define INDEX_OPEN_MODE_READ       0x00
+#define INDEX_OPEN_MODE_READ_WRITE 0x01
+#define INDEX_OPEN_MODE_CREATE     0x02
 
 /***************************** Variables *******************************/
 const char *__databaseFileName = NULL;
@@ -119,9 +117,9 @@ LOCAL bool   quitFlag;
 \***********************************************************************/
 
 #ifdef NDEBUG
-  LOCAL Errors createIndex(const char  *databaseFileName)
+  LOCAL Errors XcreateIndex(const char  *databaseFileName)
 #else /* not NDEBUG */
-  LOCAL Errors __createIndex(const char  *__fileName__,
+  LOCAL Errors __XcreateIndex(const char  *__fileName__,
                              uint        __lineNb__,
                              const char  *databaseFileName
                             )
@@ -176,50 +174,91 @@ LOCAL bool   quitFlag;
 * Name   : openIndex
 * Purpose: open index database
 * Input  : databaseFileName - database file name
-*          indexOpenMode    - open mode; see IndexOpenModes
+*          indexOpenModes   - open modes; see INDEX_OPEN_MODE_...
 * Output : indexHandle - index handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  LOCAL Errors openIndex(IndexHandle    *indexHandle,
-                         const char     *databaseFileName,
-                         IndexOpenModes indexOpenMode,
-                         long           timeout
+  LOCAL Errors openIndex(IndexHandle *indexHandle,
+                         const char  *databaseFileName,
+                         uint        indexOpenModes,
+                         long        timeout
                         )
 #else /* not NDEBUG */
-  LOCAL Errors __openIndex(const char     *__fileName__,
-                           uint           __lineNb__,
-                           IndexHandle    *indexHandle,
-                           const char     *databaseFileName,
-                           IndexOpenModes indexOpenMode,
-                           long           timeout
+  LOCAL Errors __openIndex(const char  *__fileName__,
+                           uint        __lineNb__,
+                           IndexHandle *indexHandle,
+                           const char  *databaseFileName,
+                           uint        indexOpenModes,
+                           long        timeout
                           )
 #endif /* NDEBUG */
 {
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(databaseFileName != NULL);
 
-  // open index database
-  #ifdef NDEBUG
-    error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
-  #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
-  #endif /* NDEBUG */
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+  // init variables
   indexHandle->databaseFileName = databaseFileName;
   indexHandle->upgradeError     = ERROR_NONE;
   #ifndef NDEBUG
     indexHandle->threadId = pthread_self();
   #endif /* NDEBUG */
 
-  if (indexOpenMode == INDEX_OPEN_MODE_READ)
+  // open index database
+  if ((indexOpenModes & INDEX_OPEN_MODE_CREATE) == INDEX_OPEN_MODE_CREATE)
+  {
+    // delete old file
+    if (databaseFileName != NULL)
+    {
+      (void)File_deleteCString(databaseFileName,FALSE);
+    }
+
+    // open database
+    #ifdef NDEBUG
+      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+    #else /* not NDEBUG */
+      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+    #endif /* NDEBUG */
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // create tables
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             INDEX_DEFINITION
+                            );
+    if (error != ERROR_NONE)
+    {
+      #ifdef NDEBUG
+        Database_close(&indexHandle->databaseHandle);
+      #else /* not NDEBUG */
+        __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
+      #endif /* NDEBUG */
+      return error;
+    }
+  }
+  else
+  {
+    // open database
+    #ifdef NDEBUG
+      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
+    #else /* not NDEBUG */
+      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
+    #endif /* NDEBUG */
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  // disable sync, enable foreign keys
+//TODO: read/write?
+  if ((indexOpenModes & INDEX_OPEN_MODE_READ) == INDEX_OPEN_MODE_READ)
   {
     // disable synchronous mode and journal to increase transaction speed
     (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
@@ -3390,7 +3429,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 * Input  : indexHandle         - index handle
 *          oldDatabaseFileName - old database file name
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -4521,6 +4560,7 @@ LOCAL void cleanupIndexThreadCode(void)
       error = importIndex(&indexHandle,oldDatabaseFileName);
       if (error == ERROR_NONE)
       {
+        (void)File_delete(oldDatabaseFileName,FALSE);
         oldDatabaseCount++;
       }
       else
@@ -5505,11 +5545,12 @@ bool Index_parseType(const char *name, IndexTypes *indexType)
 
 Errors Index_init(const char *fileName)
 {
-  bool   createFlag;
-  Errors error;
-  int64  indexVersion;
-  String oldDatabaseFileName;
-  uint   n;
+  bool        createFlag;
+  Errors      error;
+  int64       indexVersion;
+  String      oldDatabaseFileName;
+  uint        n;
+  IndexHandle indexHandleReference,indexHandle;
 
   assert(fileName != NULL);
 
@@ -5522,14 +5563,12 @@ Errors Index_init(const char *fileName)
 
   createFlag = FALSE;
 
-  // check if index exists and check version
-  if (File_existsCString(__databaseFileName))
+  // check if index exists, check version
+  if (!createFlag)
   {
-    error = ERROR_NONE;
-
-    // check index version
-    if (error == ERROR_NONE)
+    if (File_existsCString(__databaseFileName))
     {
+      // check index version
       error = getIndexVersion(__databaseFileName,&indexVersion);
       if (error == ERROR_NONE)
       {
@@ -5554,39 +5593,85 @@ Errors Index_init(const char *fileName)
 
           // upgrade version -> create new
           createFlag = TRUE;
+          plogMessage(NULL,  // logHandle
+                      LOG_TYPE_ERROR,
+                      "INDEX",
+                      "Old index database version in '%s' - create new\n",
+                      __databaseFileName
+                     );
         }
       }
+      else
+      {
+        // unknown version -> create new
+        createFlag = TRUE;
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Unknown index database version in '%s' - create new\n",
+                    __databaseFileName
+                   );
+      }
     }
-
-    // check if database corrupt
-    if (error == ERROR_NONE)
+    else
     {
-//TODO
-    }
-
-    if (error != ERROR_NONE)
-    {
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_ERROR,
-                  "INDEX",
-                  "Index database '%s' is corrupt - create new\n",
-                  __databaseFileName
-                 );
-
-      // corrupt -> create new
+      // does not exists -> create new
       createFlag = TRUE;
     }
   }
-  else
+
+  if (!createFlag)
   {
-    // does not exists -> create new
-    createFlag = TRUE;
+    // check if database is corrupt
+    if (File_existsCString(__databaseFileName))
+    {
+      error = openIndex(&indexHandleReference,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
+      if (error == ERROR_NONE)
+      {
+        error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ,NO_WAIT);
+        if (error == ERROR_NONE)
+        {
+          error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
+          closeIndex(&indexHandle);
+        }
+        closeIndex(&indexHandleReference);
+      }
+      if (error != ERROR_NONE)
+      {
+        // rename existing index for upgrade
+        oldDatabaseFileName = String_new();
+        n = 0;
+        do
+        {
+          oldDatabaseFileName = String_newCString(__databaseFileName);
+          String_appendCString(oldDatabaseFileName,".old");
+          String_format(oldDatabaseFileName,"%03d",n);
+          n++;
+        }
+        while (File_exists(oldDatabaseFileName));
+        (void)File_renameCString(__databaseFileName,
+                                 String_cString(oldDatabaseFileName),
+                                 NULL
+                                );
+        String_delete(oldDatabaseFileName);
+
+        // corrupt -> create new
+        createFlag = TRUE;
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Invalid or corrupt index database '%s' (error: %s) - create new\n",
+                    __databaseFileName,
+                    Error_getText(error)
+                   );
+      }
+    }
   }
 
   if (createFlag)
   {
     // create new index
-    error = createIndex(__databaseFileName);
+    error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
@@ -5598,11 +5683,12 @@ Errors Index_init(const char *fileName)
                  );
       return error;
     }
+    closeIndex(&indexHandle);
 
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Created new index data base '%s' (version %d)\n",
+                "Created new index database '%s' (version %d)\n",
                 __databaseFileName,
                 INDEX_VERSION
                );
@@ -5625,7 +5711,7 @@ Errors Index_init(const char *fileName)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Opened index data base '%s' (version %d)\n",
+                "Index database '%s' (version %d)\n",
                 __databaseFileName,
                 indexVersion
                );
@@ -5675,7 +5761,7 @@ IndexHandle *__Index_open(const char *__fileName__,
 
     error = openIndex(indexHandle,
                       __databaseFileName,
-                      DATABASE_OPENMODE_READWRITE,
+                      INDEX_OPEN_MODE_READ_WRITE,
                       timeout
                      );
     if (error != ERROR_NONE)
@@ -8806,10 +8892,10 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
 {
   IndexTypes indexType;
   DatabaseId uuidId_,entityId_,entryId_,storageId_;
-  uint64     fileSize_,imageSize_,hardlinkSize_;
-  uint64     fragmentOffset_,fragmentSize_;
-  uint64     blockOffset_,blockCount_;
-  uint64     directorySize_;
+  int64      fileSize_,imageSize_,hardlinkSize_;
+  int64      fragmentOffset_,fragmentSize_;
+  int64      blockOffset_,blockCount_;
+  int64      directorySize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -9349,7 +9435,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                        )
 {
   DatabaseId databaseId;
-  uint64     blockOffset_,blockCount_;
+  int64      blockOffset_,blockCount_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -9976,7 +10062,7 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
                           )
 {
   DatabaseId databaseId;
-  uint64     fragmentOffset_,fragmentSize_;
+  int64      fragmentOffset_,fragmentSize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
