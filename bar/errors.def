@@ -612,15 +612,48 @@ ERROR JOB                              "job error"
 ERROR DATABASE
   if (ERROR_TEXT != NULL)
   {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
     strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
-  }
-  else
-  {
-    strncpy(errorText,"database error",sizeof(errorText)-1);
   }
   errorText[sizeof(errorText)-1] = '\0';
 
 ERROR DATABASE_VERSION_UNKNOWN         "unknown version on index"
+ERROR DATABASE_MISSING_TABLE
+  strncpy(errorText,"missing table",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR DATABASE_MISSING_COLUMN
+  strncpy(errorText,"missing column",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR DATABASE_OBSOLETE_TABLE
+  strncpy(errorText,"obsolete table",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR DATABASE_OBSOLETE_COLUMN
+  strncpy(errorText,"obsolete column",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR DATABASE_CREATE_INDEX            "error creating index"
 ERROR DATABASE_INDEX_NOT_FOUND         "index not found"
 ERROR DATABASE_INDEX_NOT_READY         "index still not initialized"
