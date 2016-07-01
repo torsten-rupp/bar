@@ -38,10 +38,6 @@ typedef struct
 // delete ring bufferelement function
 typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
 
-// comparison, iteration functions
-typedef int(*RingBufferElementCompareFunction)(void *userData, void *data1, void *data2);
-typedef char(*RingBufferElementIterateFunction)(void *userData, void *data);
-
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
