@@ -34,13 +34,12 @@ ERROR INVALID_PASSWORD                 "invalid password"
 // --- patterns ---------------------------------------------------------
 // patterns
 ERROR INVALID_PATTERN
-  strncpy(errorText,"invalid pattern",sizeof(errorText));
+  stringCopy(errorText,"invalid pattern",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 // --- network ----------------------------------------------------------
 ERROR NO_HOST_NAME                     "no host name given"
@@ -51,18 +50,16 @@ ERROR HOST_NOT_FOUND
   }
   else
   {
-    strncpy(errorText,"host not found",sizeof(errorText)-1);
+    stringCopy(errorText,"host not found",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR CONNECT_FAIL
-  strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
+  stringCopy(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR TOO_MANY_CONNECTIONS             "too many concurrent connections"
 ERROR NO_LOGIN_NAME                    "no login name given"
@@ -82,65 +79,59 @@ ERROR NO_TLS_KEY                       "no or unreadable TLS (SSL) key file 'bar
 ERROR INVALID_TLS_CA                   "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE          "invalid TLS (SSL) certificate"
 ERROR TLS_CERTIFICATE_EXPIRED
-  strncpy(errorText,"TLS (SSL) certificate expired",sizeof(errorText));
+  stringCopy(errorText,"TLS (SSL) certificate expired",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR TLS_CERTIFICATE_NOT_ACTIVE
-  strncpy(errorText,"TLS (SSL) certificate is still not active",sizeof(errorText));
+  stringCopy(errorText,"TLS (SSL) certificate is still not active",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR TLS_HANDSHAKE                    "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPECIFIER            "invalid SSH specifier"
 ERROR NO_SSH_PUBLIC_KEY                "no SSh public key"
 ERROR NO_SSH_PRIVATE_KEY               "no SSh private key"
 ERROR NO_SSH_PASSWORD
-  strncpy(errorText,"no SSH password given",sizeof(errorText));
+  stringCopy(errorText,"no SSH password given",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INVALID_SSH_PASSWORD
-  strncpy(errorText,"invalid SSH password",sizeof(errorText));
+  stringCopy(errorText,"invalid SSH password",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR SSH_SESSION_FAIL                 "initialize SSH session fail"
 ERROR SSH_AUTHENTICATION
-  strncpy(errorText,"SSH authentication fail",sizeof(errorText));
+  stringCopy(errorText,"SSH authentication fail",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR SSH
   if (ERROR_TEXT != NULL)
   {
-    strncpy(errorText,ERROR_TEXT,sizeof(errorText));
+    stringCopy(errorText,ERROR_TEXT,sizeof(errorText));
   }
   else
   {
-    strncpy(errorText,"ssh protocol error",sizeof(errorText));
+    stringCopy(errorText,"ssh protocol error",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 // --- storage ----------------------------------------------------------
 ERROR INIT_STORAGE                     "init storage fail"
@@ -168,48 +159,44 @@ ERROR WEBDAV_GET_SIZE                  "get Webdav file size fail"
 
 // --- compress ---------------------------------------------------------
 ERROR INIT_COMPRESS
-  strncpy(errorText,"init compress fail",sizeof(errorText)-1);
-  strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+  stringCopy(errorText,"init compress fail",sizeof(errorText));
+  stringConcat(errorText,": ",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
   else
   {
-    strncat(errorText,ERROR_ERRNO_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,ERROR_ERRNO_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INIT_DECOMPRESS
-  strncpy(errorText,"init decompress fail",sizeof(errorText)-1);
-  strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+  stringCopy(errorText,"init decompress fail",sizeof(errorText));
+  stringConcat(errorText,": ",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
   else
   {
-    strncat(errorText,ERROR_ERRNO_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,ERROR_ERRNO_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR DEFLATE_FAIL
-  strncpy(errorText,"compress fail",sizeof(errorText)-1);
+  stringCopy(errorText,"compress fail",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INFLATE_FAIL
-  strncpy(errorText,"decompress fail",sizeof(errorText)-1);
+  stringCopy(errorText,"decompress fail",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR COMPRESS_EOF                     "end of compressed file"
 ERROR DELTA_SOURCE_NOT_FOUND
@@ -219,9 +206,8 @@ ERROR DELTA_SOURCE_NOT_FOUND
   }
   else
   {
-    strncpy(errorText,"delta source not found",sizeof(errorText)-1);
+    stringCopy(errorText,"delta source not found",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INVALID_COMPRESS_ALGORITHM       "invalid compress algorithm"
 ERROR UNKNOWN_COMPRESS_ALGORITHM       "unknown compress algorithm"
@@ -236,9 +222,8 @@ ERROR INIT_CRYPT
   }
   else
   {
-    strncpy(errorText,"init crypt fail",sizeof(errorText)-1);
+    stringCopy(errorText,"init crypt fail",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR NO_CRYPT_PASSWORD                "no password given for cipher"
 ERROR INVALID_CRYPT_PASSWORD           "invalid encryption password"
@@ -246,13 +231,12 @@ ERROR CRYPT_PASSWORDS_MISMATCH         "encryption passwords mismatch"
 ERROR INIT_CIPHER                      "init cipher fail"
 ERROR ENCRYPT_FAIL                     "encrypt fail"
 ERROR DECRYPT_FAIL
-  strncpy(errorText,"decrypt fail",sizeof(errorText)-1);
+  stringCopy(errorText,"decrypt fail",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR CREATE_KEY_FAIL
   if (ERROR_TEXT != NULL)
@@ -261,9 +245,8 @@ ERROR CREATE_KEY_FAIL
   }
   else
   {
-    strncpy(errorText,"create public/private key fail",sizeof(errorText)-1);
+    stringCopy(errorText,"create public/private key fail",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR KEY_NOT_FOUND
   if (ERROR_TEXT != NULL)
@@ -272,9 +255,8 @@ ERROR KEY_NOT_FOUND
   }
   else
   {
-    strncpy(errorText,"public/private key not found",sizeof(errorText)-1);
+    stringCopy(errorText,"public/private key not found",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR READ_KEY_FAIL
   if (ERROR_TEXT != NULL)
@@ -283,9 +265,8 @@ ERROR READ_KEY_FAIL
   }
   else
   {
-    strncpy(errorText,"read public/private key fail",sizeof(errorText)-1);
+    stringCopy(errorText,"read public/private key fail",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INVALID_KEY                      "invalid key"
 ERROR INVALID_KEY_LENGTH               "invalid key length"
@@ -311,21 +292,20 @@ ERROR CREATE_DIRECTORY
   // Note: do not add error text to error message if error number is set; file name should be part of error text
   if (ERROR_ERRNO != 0)
   {
-    strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
+    stringCopy(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
   }
   else
   {
-    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringCopy(errorText,ERROR_TEXT,sizeof(errorText));
   }
 
 ERROR IO_ERROR
-  strncpy(errorText,(ERROR_ERRNO != 0) ? strerror(ERROR_ERRNO) : "i/o error",sizeof(errorText)-1);
+  stringCopy(errorText,(ERROR_ERRNO != 0) ? strerror(ERROR_ERRNO) : "i/o error",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR READ_FILE                        "read file fail"
 ERROR END_OF_FILE                      "end of file"
@@ -336,7 +316,7 @@ ERROR OPEN_DIRECTORY
   // Note: do not add error text to error message if error number is set; file name should be part of error text
   if (ERROR_ERRNO != 0)
   {
-    strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
+    stringCopy(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
   }
   else
   {
@@ -344,21 +324,20 @@ ERROR OPEN_DIRECTORY
     switch (ERROR_CODE)
     {
       case ERROR_CREATE_FILE:
-        strncat(errorText,"create file: ",sizeof(errorText)-1-strlen(errorText));
+        stringConcat(errorText,"create file: ",sizeof(errorText));
         break;
       case ERROR_OPEN_FILE:
-        strncat(errorText,"open file: ",sizeof(errorText)-1-strlen(errorText));
+        stringConcat(errorText,"open file: ",sizeof(errorText));
         break;
       case ERROR_CREATE_DIRECTORY:
-        strncat(errorText,"create directory: ",sizeof(errorText)-1-strlen(errorText));
+        stringConcat(errorText,"create directory: ",sizeof(errorText));
         break;
       case ERROR_OPEN_DIRECTORY:
-        strncat(errorText,"open directory: ",sizeof(errorText)-1-strlen(errorText));
+        stringConcat(errorText,"open directory: ",sizeof(errorText));
         break;
     }
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR READ_DIRECTORY                   "read directory fail"
 
@@ -370,9 +349,8 @@ ERROR FILE_EXISTS_
   }
   else
   {
-    strncpy(errorText,"file already exists",sizeof(errorText)-1);
+    stringCopy(errorText,"file already exists",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 // Note: because of name collisions with Windows include use FILE_NOT_FOUND_ instead of FILE_NOT_FOUND
 ERROR FILE_NOT_FOUND_
@@ -382,18 +360,16 @@ ERROR FILE_NOT_FOUND_
   }
   else
   {
-    strncpy(errorText,"file not found",sizeof(errorText)-1);
+    stringCopy(errorText,"file not found",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR NOT_A_DIRECTORY
-  strncpy(errorText,"not a directory",sizeof(errorText)-1);
+  stringCopy(errorText,"not a directory",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR END_OF_DIRECTORY                 "end of directory list"
 
@@ -401,49 +377,45 @@ ERROR INSUFFICIENT_FILE_NOTIFY         "insufficient file notify entries"
 
 // --- optical disk i/o -------------------------------------------------
 ERROR OPTICAL_DISK_NOT_FOUND
-  strncpy(errorText,"CD/DVD/BD device",sizeof(errorText)-1);
+  stringCopy(errorText,"CD/DVD/BD device",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  strncat(errorText," not found",sizeof(errorText)-1-strlen(errorText));
-  errorText[sizeof(errorText)-1] = '\0';
+  stringConcat(errorText," not found",sizeof(errorText));
 
 ERROR OPEN_OPTICAL_DISK
-  strncpy(errorText,"open CD/DVD/BD disk",sizeof(errorText)-1);
+  stringCopy(errorText,"open CD/DVD/BD disk",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  strncat(errorText," fail",sizeof(errorText)-1-strlen(errorText));
-  errorText[sizeof(errorText)-1] = '\0';
+  stringConcat(errorText," fail",sizeof(errorText));
 
 ERROR OPEN_ISO9660_FILE
-  strncpy(errorText,"open ISO 9660 image",sizeof(errorText)-1);
+  stringCopy(errorText,"open ISO 9660 image",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  strncat(errorText," fail",sizeof(errorText)-1-strlen(errorText));
-  errorText[sizeof(errorText)-1] = '\0';
+  stringConcat(errorText," fail",sizeof(errorText));
 
 // --- device i/o -------------------------------------------------------
 ERROR NO_DEVICE_NAME                   "no device name given"
 
 ERROR OPEN_DEVICE
-  strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
+  stringCopy(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INVALID_DEVICE_BLOCK_SIZE        "invalid device block size"
 ERROR READ_DEVICE                      "read device fail"
@@ -457,9 +429,8 @@ ERROR MOUNT
   }
   else
   {
-    strncpy(errorText,"mount fail",sizeof(errorText)-1);
+    stringCopy(errorText,"mount fail",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR UMOUNT
   if (ERROR_TEXT != NULL)
@@ -468,9 +439,8 @@ ERROR UMOUNT
   }
   else
   {
-    strncpy(errorText,"unmount fail",sizeof(errorText)-1);
+    stringCopy(errorText,"unmount fail",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 // --- archive ----------------------------------------------------------
 ERROR NO_ARCHIVE_FILE_NAME             "no archive file name given"
@@ -479,14 +449,13 @@ ERROR ARCHIVE_NOT_FOUND                "archive not found"
 ERROR END_OF_ARCHIVE                   "end of archive"
 ERROR NO_FILE_ENTRY                    "no file entry"
 ERROR NO_FILE_DATA
-  strncpy(errorText,"no file data entry",sizeof(errorText)-1);
+  stringCopy(errorText,"no file data entry",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," for '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText," for '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INCOMPLETE_ARCHIVE               "incomplete archive"
 
@@ -501,63 +470,57 @@ ERROR INSUFFICIENT_SPLIT_NUMBERS       "insufficient split number digits in name
 
 // Note: because of name collisions with Windows include use CRC_ instead of CRC
 ERROR CRC_
-  strncpy(errorText,"wrong CRC",sizeof(errorText)-1);
+  stringCopy(errorText,"wrong CRC",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," at offset ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText," at offset ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR ENTRY_NOT_FOUND
-  strncpy(errorText,"entry not found",sizeof(errorText)-1);
+  stringCopy(errorText,"entry not found",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR ENTRY_INCOMPLETE
-  strncpy(errorText,"entry is incomplete",sizeof(errorText)-1);
+  stringCopy(errorText,"entry is incomplete",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR WRONG_ENTRY_TYPE
-  strncpy(errorText,"wrong entry type",sizeof(errorText)-1);
+  stringCopy(errorText,"wrong entry type",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR ENTRIES_DIFFER
-  strncpy(errorText,"entries differ",sizeof(errorText)-1);
+  stringCopy(errorText,"entries differ",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR CORRUPT_DATA
-  strncpy(errorText,"corrupt data or invalid password",sizeof(errorText)-1);
+  stringCopy(errorText,"corrupt data or invalid password",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,"; '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,"; '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR INVALID_CHUNK_SIZE               "invalid chunk size"
 ERROR UNKNOWN_CHUNK                    "unknown chunk"
@@ -576,29 +539,27 @@ ERROR PARSE_COMMAND                    "parse command fail"
 ERROR EXPAND_TEMPLATE                  "expand command fail"
 ERROR FORK_FAIL                        "fork for execute external program fail"
 ERROR IO_REDIRECT_FAIL
-  strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
+  stringCopy(errorText,strerror(ERROR_ERRNO),sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR EXEC_FAIL
-  strncpy(errorText,"execute external program fail",sizeof(errorText)-1);
+  stringCopy(errorText,"execute external program fail",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
     char s[64];
     \
     snprintf(s,sizeof(s),"%d",ERROR_ERRNO);
     \
-    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,"' (exitcode: ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,s,sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,")",sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"' (exitcode: ",sizeof(errorText));
+    stringConcat(errorText,s,sizeof(errorText));
+    stringConcat(errorText,")",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 // --- BARControl protocol ----------------------------------------------
 ERROR PARSING                          "error parsing data"
@@ -612,47 +573,55 @@ ERROR JOB                              "job error"
 ERROR DATABASE
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR DATABASE_VERSION_UNKNOWN         "unknown version on index"
 ERROR DATABASE_MISSING_TABLE
-  strncpy(errorText,"missing table",sizeof(errorText)-1);
+  stringCopy(errorText,"missing table",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR DATABASE_MISSING_COLUMN
-  strncpy(errorText,"missing column",sizeof(errorText)-1);
+  stringCopy(errorText,"missing column",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR DATABASE_OBSOLETE_TABLE
-  strncpy(errorText,"obsolete table",sizeof(errorText)-1);
+  stringCopy(errorText,"obsolete table",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
 
 ERROR DATABASE_OBSOLETE_COLUMN
-  strncpy(errorText,"obsolete column",sizeof(errorText)-1);
+  stringCopy(errorText,"obsolete column",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
   }
-  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR DATABASE_TYPE_MISMATCH
+  stringCopy(errorText,"type mismatch",sizeof(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    stringConcat(errorText," '",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+    stringConcat(errorText,"'",sizeof(errorText));
+  }
 
 ERROR DATABASE_CREATE_INDEX            "error creating index"
 ERROR DATABASE_INDEX_NOT_FOUND         "index not found"
@@ -661,10 +630,10 @@ ERROR DATABASE_INVALID_INDEX           "invalid index"
 
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE
-  strncpy(errorText,"test code",sizeof(errorText)-1);
+  stringCopy(errorText,"test code",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText," ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    stringConcat(errorText," ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
 // end of file
