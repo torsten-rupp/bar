@@ -1140,6 +1140,50 @@ LOCAL void freeColumnNode(DatabaseColumnNode *columnNode, void *userData)
 }
 
 /***********************************************************************\
+* Name   : getTableList
+* Purpose: get table list
+* Input  : tableList      - table list variable
+*          databaseHandle - database handle
+* Output : tableList - table list
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getTableList(StringList     *tableList,
+                          DatabaseHandle *databaseHandle
+                         )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle1;
+  const char          *name;
+
+  assert(tableList != NULL);
+  assert(databaseHandle != NULL);
+
+  StringList_init(tableList);
+
+  error = Database_prepare(&databaseQueryHandle1,
+                           databaseHandle,
+                           "SELECT name FROM sqlite_master where type='table'"
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (Database_getNextRow(&databaseQueryHandle1,
+                             "%p",
+                             &name
+                            )
+        )
+  {
+    StringList_appendCString(tableList,name);
+  }
+  Database_finalize(&databaseQueryHandle1);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : getTableColumnList
 * Purpose: get table column list
 * Input  : columnList     - column list variable
@@ -1162,6 +1206,7 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
   DatabaseColumnNode  *columnNode;
 
   assert(columnList != NULL);
+  assert(databaseHandle != NULL);
 
   List_init(columnList);
 
@@ -1613,6 +1658,53 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
                           "PRAGMA foreign_keys=%s;",
                           enabled ? "ON" : "OFF"
                          );
+}
+
+Errors Database_compare(DatabaseHandle            *databaseHandle0,
+                        DatabaseHandle            *databaseHandle1
+                       )
+{
+  Errors             error;
+  StringList         tableList0,tableList1;
+  DatabaseColumnList columnList0,columnList1;
+  StringNode         *tableNameIterator;
+  String             tableName;
+  DatabaseColumnNode *columnNode;
+
+  assert(databaseHandle0 != NULL);
+  assert(databaseHandle0->handle != NULL);
+  assert(databaseHandle1 != NULL);
+  assert(databaseHandle1->handle != NULL);
+
+  error = getTableList(&tableList0,databaseHandle0);
+  error = getTableList(&tableList1,databaseHandle1);
+
+  STRINGLIST_ITERATEX(&tableList0,tableNameIterator,tableName,error == ERROR_NONE)
+  {
+    if (StringList_contain(&tableList1,tableName))
+    {
+      error = getTableColumnList(&columnList0,databaseHandle0,String_cString(tableName));
+      error = getTableColumnList(&columnList1,databaseHandle1,String_cString(tableName));
+
+      LIST_ITERATEX(&columnList0,columnNode,error == ERROR_NONE)
+      {
+fprintf(stderr,"%s, %d: %s: %s\n",__FILE__,__LINE__,String_cString(tableName),columnNode->name);
+
+      }
+
+      freeTableColumnList(&columnList1);
+      freeTableColumnList(&columnList0);
+    }
+    else
+    {
+      error = ERRORX_(DATABASE_MISSING_TABLE,0,String_cString(tableName));
+    }
+  }
+
+  StringList_done(&tableList1);
+  StringList_done(&tableList0);
+
+  return ERROR_NONE;
 }
 
 Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
