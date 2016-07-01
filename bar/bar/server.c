@@ -4845,7 +4845,7 @@ LOCAL void indexThreadCode(void)
     plogMessage(NULL,  // logHandle,
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Open index fail - disabled index update\n"
+                "Open index database fail - disabled index update\n"
                );
     return;
   }
@@ -5112,7 +5112,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     plogMessage(NULL,  // logHandle,
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Open index fail - disabled auto-index\n"
+                "Open index database fail - disabled auto-index\n"
                );
     return;
   }
@@ -17423,6 +17423,11 @@ Errors Server_run(uint             port,
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
 
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Started BAR server\n"
+            );
+
   // create jobs directory if necessary
   if (!File_existsCString(serverJobsDirectory))
   {
@@ -17923,7 +17928,7 @@ Errors Server_run(uint             port,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Server quit\n"
+             "Terminated BAR server\n"
             );
 
   return ERROR_NONE;
