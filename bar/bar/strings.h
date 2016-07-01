@@ -82,8 +82,8 @@ typedef struct
 } StringTokenizer;
 
 // comparison, iteration functions
-typedef int(*StringCompareFunction)(void *userData, char ch1, char ch2);
-typedef const char*(*StringIterateFunction)(void *userData, char ch);
+typedef int(*StringCompareFunction)(char ch1, char ch2, void *userData);
+typedef const char*(*StringIterateFunction)(char ch, void *userData);
 
 // number unit
 typedef struct

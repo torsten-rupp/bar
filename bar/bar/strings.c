@@ -3352,7 +3352,7 @@ int String_compare(ConstString           string1,
   {
     while ((result == 0) && (i < n))
     {
-      result = stringCompareFunction(stringCompareUserData,string1->data[i],string2->data[i]);
+      result = stringCompareFunction(string1->data[i],string2->data[i],stringCompareUserData);
       i++;
     }
   }
@@ -4153,7 +4153,7 @@ String String_iterate(                      String string,
     j = 0L;
     while (j < string->length)
     {
-      s = stringIterateFunction(stringIterateUserData,string->data[j]);
+      s = stringIterateFunction(string->data[j],stringIterateUserData);
       if (s != NULL)
       {
         n = strlen(s);
