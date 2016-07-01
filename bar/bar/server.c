@@ -13497,7 +13497,6 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                               )
         )
   {
-fprintf(stderr,"%s, %d: %lld\n",__FILE__,__LINE__,entryId);
     type = "";
     switch (Index_getType(entryId))
     {
@@ -15204,7 +15203,6 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
-fprintf(stderr,"%s, %d: assign toEntityId=%lld archiveType=%d storageId=%lld\n",__FILE__,__LINE__,toEntityId,archiveType,storageId);
 
   // check if index database is available
   if (indexHandle == NULL)
