@@ -247,7 +247,7 @@ LOCAL Errors execute(const char        *command,
       execvp(command,(char**)arguments);
 
       // in case exec() fail, return a default exitcode
-      exit(EXITCODE_FAIL);
+      exit(1);
     }
     else if (pid < 0)
     {
