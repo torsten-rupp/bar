@@ -1127,8 +1127,12 @@ LOCAL void freeColumnNode(DatabaseColumnNode *columnNode, void *userData)
       String_delete(columnNode->value.text);
       break;
     case DATABASE_TYPE_BLOB:
-//TODO: blob
-      HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      if (columnNode->value.blob.data != NULL)
+      {
+        free(columnNode->value.blob.data);
+      }
+      break;
+    case DATABASE_TYPE_UNKNOWN:
       break;
     default:
       #ifndef NDEBUG
@@ -1272,7 +1276,7 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
     }
     else
     {
-      HALT_INTERNAL_ERROR("Unknown database data type '%s' for '%s'",type,name);
+      columnNode->type = DATABASE_TYPE_UNKNOWN;
     }
     columnNode->usedFlag = FALSE;
 
@@ -1354,6 +1358,9 @@ LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
       break;
     case DATABASE_TYPE_BLOB:
       string = "BLOB";
+      break;
+    case DATABASE_TYPE_UNKNOWN:
+      string = "unknown";
       break;
     default:
       #ifndef NDEBUG
@@ -1660,40 +1667,81 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
                          );
 }
 
-Errors Database_compare(DatabaseHandle            *databaseHandle0,
-                        DatabaseHandle            *databaseHandle1
+Errors Database_compare(DatabaseHandle *databaseHandleReference,
+                        DatabaseHandle *databaseHandle
                        )
 {
   Errors             error;
-  StringList         tableList0,tableList1;
-  DatabaseColumnList columnList0,columnList1;
-  StringNode         *tableNameIterator;
-  String             tableName;
-  DatabaseColumnNode *columnNode;
+  StringList         tableListReference,tableList;
+  DatabaseColumnList columnListReference,columnList;
+  StringNode         *tableNameNodeReference,*tableNameNode;
+  String             tableNameReference,tableName;
+  DatabaseColumnNode *columnNodeReference,*columnNode;
 
-  assert(databaseHandle0 != NULL);
-  assert(databaseHandle0->handle != NULL);
-  assert(databaseHandle1 != NULL);
-  assert(databaseHandle1->handle != NULL);
+  assert(databaseHandleReference != NULL);
+  assert(databaseHandleReference->handle != NULL);
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
 
-  error = getTableList(&tableList0,databaseHandle0);
-  error = getTableList(&tableList1,databaseHandle1);
-
-  STRINGLIST_ITERATEX(&tableList0,tableNameIterator,tableName,error == ERROR_NONE)
+  // get table lists
+  error = getTableList(&tableListReference,databaseHandleReference);
+  if (error != ERROR_NONE)
   {
-    if (StringList_contain(&tableList1,tableName))
+    return error;
+  }
+  error = getTableList(&tableList,databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&tableListReference);
+    return error;
+  }
+
+  // compare tables
+  STRINGLIST_ITERATEX(&tableListReference,tableNameNodeReference,tableNameReference,error == ERROR_NONE)
+  {
+    if (StringList_contain(&tableList,tableName))
     {
-      error = getTableColumnList(&columnList0,databaseHandle0,String_cString(tableName));
-      error = getTableColumnList(&columnList1,databaseHandle1,String_cString(tableName));
-
-      LIST_ITERATEX(&columnList0,columnNode,error == ERROR_NONE)
+      // get column lists
+      error = getTableColumnList(&columnListReference,databaseHandleReference,String_cString(tableNameReference));
+      if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s: %s\n",__FILE__,__LINE__,String_cString(tableName),columnNode->name);
-
+        break;
+      }
+      error = getTableColumnList(&columnList,databaseHandle,String_cString(tableNameReference));
+      if (error != ERROR_NONE)
+      {
+        freeTableColumnList(&columnListReference);
+        break;
       }
 
-      freeTableColumnList(&columnList1);
-      freeTableColumnList(&columnList0);
+      // compare columns
+      LIST_ITERATEX(&columnListReference,columnNodeReference,error == ERROR_NONE)
+      {
+        columnNode = LIST_FIND(&columnListReference,columnNode,stringEquals(columnNodeReference->name,columnNode->name));
+        if (columnNode != NULL)
+        {
+          if (columnNodeReference->type != columnNode->type)
+          {
+            error = ERRORX_(DATABASE_TYPE_MISMATCH,0,columnNodeReference->name);
+          }
+        }
+        else
+        {
+          error = ERRORX_(DATABASE_MISSING_COLUMN,0,columnNodeReference->name);
+        }
+      }
+
+      // check for obsolete columns
+      LIST_ITERATEX(&columnList,columnNode,error == ERROR_NONE)
+      {
+        if (LIST_FIND(&columnListReference,columnNodeReference,stringEquals(columnNodeReference->name,columnNode->name)) == NULL)
+        {
+          error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,columnNode->name);
+        }
+      }
+
+      freeTableColumnList(&columnList);
+      freeTableColumnList(&columnListReference);
     }
     else
     {
@@ -1701,10 +1749,19 @@ fprintf(stderr,"%s, %d: %s: %s\n",__FILE__,__LINE__,String_cString(tableName),co
     }
   }
 
-  StringList_done(&tableList1);
-  StringList_done(&tableList0);
+  // check for obsolete tables
+  STRINGLIST_ITERATEX(&tableList,tableNameNode,tableName,error == ERROR_NONE)
+  {
+    if (!StringList_contain(&tableListReference,tableName))
+    {
+      error = ERRORX_(DATABASE_OBSOLETE_TABLE,0,String_cString(tableName));
+    }
+  }
 
-  return ERROR_NONE;
+  StringList_done(&tableList);
+  StringList_done(&tableListReference);
+
+  return error;
 }
 
 Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
@@ -2057,6 +2114,7 @@ fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHa
           case DATABASE_TYPE_DATETIME:
           case DATABASE_TYPE_TEXT:
           case DATABASE_TYPE_BLOB:
+          case DATABASE_TYPE_UNKNOWN:
             break;
           default:
             #ifndef NDEBUG

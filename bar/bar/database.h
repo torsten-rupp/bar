@@ -338,15 +338,15 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
 /***********************************************************************\
 * Name   : Database_compare
 * Purpose: compare database structure
-* Input  : databaseHandle0    - database handle 0
-*          databaseHandle1    - database handle 1
+* Input  : databaseHandleReference - reference database handle
+*          databaseHandle          - database handle 1
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_compare(DatabaseHandle            *databaseHandle0,
-                        DatabaseHandle            *databaseHandle1
+Errors Database_compare(DatabaseHandle *databaseHandleReference,
+                        DatabaseHandle *databaseHandle
                        );
 
 /***********************************************************************\
