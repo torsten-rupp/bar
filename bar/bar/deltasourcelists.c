@@ -99,6 +99,7 @@ LOCAL DeltaSourceNode *duplicateDeltaSourceNode(DeltaSourceNode *deltaSourceNode
   newDeltaSourceNode->id          = getNewId();
   newDeltaSourceNode->storageName = String_duplicate(deltaSourceNode->storageName);
   newDeltaSourceNode->patternType = deltaSourceNode->patternType;
+  newDeltaSourceNode->locked      = FALSE;
 
   return newDeltaSourceNode;
 }
@@ -226,6 +227,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     deltaSourceNode->id          = getNewId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
+    deltaSourceNode->locked      = FALSE;
 
     // add to list
     List_append(deltaSourceList,deltaSourceNode);
@@ -276,6 +278,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           deltaSourceNode->id          = getNewId();
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
+          deltaSourceNode->locked      = FALSE;
 
           List_append(deltaSourceList,deltaSourceNode);
         }
@@ -302,6 +305,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     deltaSourceNode->id          = getNewId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
+    deltaSourceNode->locked      = FALSE;
 
     List_append(deltaSourceList,deltaSourceNode);
   }
@@ -360,6 +364,7 @@ UNUSED_VARIABLE(id);
     deltaSourceNode->id          = getNewId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
+    deltaSourceNode->locked      = FALSE;
 
     // add to list
     List_append(deltaSourceList,deltaSourceNode);
@@ -410,6 +415,7 @@ UNUSED_VARIABLE(id);
           deltaSourceNode->id          = getNewId();
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
+          deltaSourceNode->locked      = FALSE;
 
           List_append(deltaSourceList,deltaSourceNode);
         }
@@ -436,6 +442,7 @@ UNUSED_VARIABLE(id);
     deltaSourceNode->id          = getNewId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
+    deltaSourceNode->locked      = FALSE;
 
     List_append(deltaSourceList,deltaSourceNode);
   }
