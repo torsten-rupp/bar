@@ -2150,8 +2150,6 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
     // add to mount list
     mountNode = newMountNode(mountName,alwaysUnmount);
     assert(mountNode != NULL);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
     List_append((MountList*)variable,mountNode);
   }
 
