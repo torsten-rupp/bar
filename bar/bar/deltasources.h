@@ -112,6 +112,7 @@ Errors DeltaSource_add(ConstString sourcePattern, PatternTypes patternType);
 * Name   : DeltaSource_openEntry
 * Purpose: open source entry
 * Input  : sourceHandle      - source handle variable
+*          deltaSourceList   - delta sources list
 *          sourceStorageName - storage name
 *          name              - entry name to open (file, image,
 *                              hard link)
@@ -124,7 +125,7 @@ Errors DeltaSource_add(ConstString sourcePattern, PatternTypes patternType);
 
 Errors DeltaSource_openEntry(DeltaSourceHandle *sourceHandle,
                              DeltaSourceList   *deltaSourceList,
-                             ConstString       deltaSourceStorageName,
+                             ConstString       sourceStorageName,
                              ConstString       name,
                              int64             size,
                              const JobOptions  *jobOptions

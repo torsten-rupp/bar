@@ -1108,9 +1108,13 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   {
     return ERROR_NONE;
   }
+  else if (error != ERROR_NONE)
+  {
+    return error;
+  }
   else
   {
-    return (error != ERROR_NONE) ? error : ERRORX_(DELTA_SOURCE_NOT_FOUND,0,"%s",String_cString(sourceStorageName));
+    return (sourceStorageName != NULL) ? ERRORX_(DELTA_SOURCE_NOT_FOUND,0,"%s",sourceStorageName) : ERROR_DELTA_SOURCE_NOT_FOUND;
   }
 }
 
