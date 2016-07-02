@@ -1489,7 +1489,7 @@ static inline bool stringStartsWithIgnoreCase(const char *s, const char *prefix)
 
 static inline bool stringIsEmpty(const char *s)
 {
-  return (s == NULL) || (s[0] =='\0');
+  return (s == NULL) || (s[0] == '\0');
 }
 
 /***********************************************************************\
