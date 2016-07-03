@@ -380,6 +380,7 @@ LOCAL Errors StorageDevice_init(StorageHandle          *storageHandle,
   assert(storageHandle != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_DEVICE);
   assert(storageSpecifier != NULL);
+  assert(globalOptions.device != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
 
