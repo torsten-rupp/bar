@@ -500,6 +500,7 @@ LOCAL Errors StorageDevice_preProcess(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(globalOptions.device != NULL);
 
   UNUSED_VARIABLE(initialFlag);
 
@@ -571,6 +572,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_DEVICE);
+  assert(globalOptions.device != NULL);
 
   error = ERROR_NONE;
 
