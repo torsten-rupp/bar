@@ -422,8 +422,8 @@ typedef struct
   OpticalDisk            dvd;                                 // DVD settings
   OpticalDisk            bd;                                  // BD settings
 
-  Device                 *device;                             // current selected device
   Device                 *defaultDevice;                      // default device
+  Device                 *device;                             // current selected device
 
   uint64                 continuousMaxSize;                   // max. entry size for continuous backup
 

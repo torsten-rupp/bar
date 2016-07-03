@@ -2860,8 +2860,8 @@ LOCAL void initGlobalOptions(void)
   globalOptions.bd.writeCommand                                 = String_newCString(BD_WRITE_COMMAND);
   globalOptions.bd.writeImageCommand                            = String_newCString(BD_WRITE_IMAGE_COMMAND);
 
-  globalOptions.device                                          = globalOptions.defaultDevice;
   globalOptions.defaultDevice                                   = &defaultDevice;
+  globalOptions.device                                          = globalOptions.defaultDevice;
 
   globalOptions.continuousMaxSize                               = 0LL;
 
