@@ -3085,6 +3085,7 @@ LOCAL void jobThreadCode(void)
   TextMacro        textMacros[4];
   StaticString     (s,64);
   uint             n;
+  Errors           error;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
@@ -3348,22 +3349,31 @@ NULL,//                                                        scheduleTitle,
               // create history entry
               if (indexHandle != NULL)
               {
-                Index_newHistory(indexHandle,
-                                 jobUUID,
-                                 scheduleUUID,
-                                 hostName,
-                                 archiveType,
-                                 Misc_getTimestamp(),
-                                 "aborted",
-                                 endDateTime-startDateTime,
-                                 jobNode->runningInfo.totalEntryCount,
-                                 jobNode->runningInfo.totalEntrySize,
-                                 jobNode->runningInfo.skippedEntryCount,
-                                 jobNode->runningInfo.skippedEntrySize,
-                                 jobNode->runningInfo.errorEntryCount,
-                                 jobNode->runningInfo.errorEntrySize,
-                                 NULL  // historyId
-                                );
+                error = Index_newHistory(indexHandle,
+                                         jobUUID,
+                                         scheduleUUID,
+                                         hostName,
+                                         archiveType,
+                                         Misc_getTimestamp(),
+                                         "aborted",
+                                         endDateTime-startDateTime,
+                                         jobNode->runningInfo.totalEntryCount,
+                                         jobNode->runningInfo.totalEntrySize,
+                                         jobNode->runningInfo.skippedEntryCount,
+                                         jobNode->runningInfo.skippedEntrySize,
+                                         jobNode->runningInfo.errorEntryCount,
+                                         jobNode->runningInfo.errorEntrySize,
+                                         NULL  // historyId
+                                        );
+                if (error != ERROR_NONE)
+                {
+                  logMessage(&logHandle,
+                             LOG_TYPE_ALWAYS,
+                             "Cannot insert history information for '%s' (error: %s)\n",
+                             String_cString(jobNode->name),
+                             Error_getText(error)
+                            );
+                }
               }
             }
             else if (jobNode->runningInfo.error != ERROR_NONE)
@@ -3379,22 +3389,31 @@ NULL,//                                                        scheduleTitle,
               // create history entry
               if (indexHandle != NULL)
               {
-                Index_newHistory(indexHandle,
-                                 jobUUID,
-                                 scheduleUUID,
-                                 hostName,
-                                 archiveType,
-                                 Misc_getTimestamp(),
-                                 Error_getText(jobNode->runningInfo.error),
-                                 endDateTime-startDateTime,
-                                 jobNode->runningInfo.totalEntryCount,
-                                 jobNode->runningInfo.totalEntrySize,
-                                 jobNode->runningInfo.skippedEntryCount,
-                                 jobNode->runningInfo.skippedEntrySize,
-                                 jobNode->runningInfo.errorEntryCount,
-                                 jobNode->runningInfo.errorEntrySize,
-                                 NULL  // historyId
-                                );
+                error = Index_newHistory(indexHandle,
+                                         jobUUID,
+                                         scheduleUUID,
+                                         hostName,
+                                         archiveType,
+                                         Misc_getTimestamp(),
+                                         Error_getText(jobNode->runningInfo.error),
+                                         endDateTime-startDateTime,
+                                         jobNode->runningInfo.totalEntryCount,
+                                         jobNode->runningInfo.totalEntrySize,
+                                         jobNode->runningInfo.skippedEntryCount,
+                                         jobNode->runningInfo.skippedEntrySize,
+                                         jobNode->runningInfo.errorEntryCount,
+                                         jobNode->runningInfo.errorEntrySize,
+                                         NULL  // historyId
+                                        );
+                if (error != ERROR_NONE)
+                {
+                  logMessage(&logHandle,
+                             LOG_TYPE_ALWAYS,
+                             "Cannot insert history information for '%s' (error: %s)\n",
+                             String_cString(jobNode->name),
+                             Error_getText(error)
+                            );
+                }
               }
             }
             else
@@ -3410,22 +3429,31 @@ NULL,//                                                        scheduleTitle,
               // create history entry
               if (indexHandle != NULL)
               {
-                Index_newHistory(indexHandle,
-                                 jobUUID,
-                                 scheduleUUID,
-                                 hostName,
-                                 archiveType,
-                                 Misc_getTimestamp(),
-                                 NULL,
-                                 endDateTime-startDateTime,
-                                 jobNode->runningInfo.totalEntryCount,
-                                 jobNode->runningInfo.totalEntrySize,
-                                 jobNode->runningInfo.skippedEntryCount,
-                                 jobNode->runningInfo.skippedEntrySize,
-                                 jobNode->runningInfo.errorEntryCount,
-                                 jobNode->runningInfo.errorEntrySize,
-                                 NULL  // historyId
-                                );
+                error = Index_newHistory(indexHandle,
+                                         jobUUID,
+                                         scheduleUUID,
+                                         hostName,
+                                         archiveType,
+                                         Misc_getTimestamp(),
+                                         NULL,
+                                         endDateTime-startDateTime,
+                                         jobNode->runningInfo.totalEntryCount,
+                                         jobNode->runningInfo.totalEntrySize,
+                                         jobNode->runningInfo.skippedEntryCount,
+                                         jobNode->runningInfo.skippedEntrySize,
+                                         jobNode->runningInfo.errorEntryCount,
+                                         jobNode->runningInfo.errorEntrySize,
+                                         NULL  // historyId
+                                        );
+                if (error != ERROR_NONE)
+                {
+                  logMessage(&logHandle,
+                             LOG_TYPE_ALWAYS,
+                             "Cannot insert history information for '%s' (error: %s)\n",
+                             String_cString(jobNode->name),
+                             Error_getText(error)
+                            );
+                }
               }
             }
             break;
