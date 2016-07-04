@@ -3700,7 +3700,6 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
                  "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
                  BYTES_SHORT(totalStorageSize),
                  BYTES_UNIT(totalStorageSize),
-                 totalStorageSize,
                  String_cString(oldestStorageName),
                  String_cString(dateTime),
                  oldestSize
