@@ -5653,7 +5653,7 @@ Errors Index_init(const char *fileName)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Index database '%s' (version %d)\n",
+                "Opened index database '%s' (version %d)\n",
                 __databaseFileName,
                 indexVersion
                );
