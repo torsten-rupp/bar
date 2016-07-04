@@ -112,7 +112,7 @@
         \
         pthread_once(&debugSemaphoreInitFlag,debugInit); \
         \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         \
         pthread_mutex_lock(&debugSemaphoreLock); \
         { \
@@ -127,7 +127,7 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         \
         if (!__locked) pthread_mutex_lock(&semaphore->lock); \
         \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
@@ -140,7 +140,7 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         \
         pthread_once(&debugSemaphoreInitFlag,debugInit); \
         \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text,timeout); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text,timeout); \
         \
         pthread_mutex_lock(&debugSemaphoreLock); \
         { \
@@ -152,7 +152,7 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
         __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
         \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (pthread_mutex_timedlock(&semaphore->lock,&__tp) != 0) \
         { \
           lockedFlag = FALSE; \
@@ -161,14 +161,14 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         { \
           debugCheckForDeadLock(NULL,0/*fileName,lineNb*/,semaphore,lockType); \
         } \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
     #define __SEMAPHORE_TRYLOCK(semaphore,lockType,debugFlag,text,lockedFlag) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (pthread_mutex_trylock(&semaphore->lock) != 0) \
         { \
           lockedFlag = FALSE; \
@@ -177,14 +177,14 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         { \
           debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         } \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
     #define __SEMAPHORE_UNLOCK(semaphore,debugFlag,text,n) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) unlock %s n=%d\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text,n); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock %s n=%d\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text,n); \
         pthread_mutex_unlock(&semaphore->lock); \
       } \
       while (0)
@@ -192,9 +192,9 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
     #define __SEMAPHORE_WAIT(debugFlag,text,condition,mutex) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         pthread_cond_wait(condition,mutex); \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s (0x%lx) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s (%s) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
@@ -209,19 +209,19 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
         __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
         \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (pthread_cond_timedwait(condition,mutex,&__tp) != 0) \
         { \
           lockedFlag = FALSE; \
         } \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
     #define __SEMAPHORE_SIGNAL(debugFlag,text,condition) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         pthread_cond_signal(condition); \
       } \
       while (0)
@@ -229,9 +229,9 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
     #define __SEMAPHORE_LOCK(semaphore,lockType,debugFlag,text) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         WaitForSingleObject(semaphore,INFINITE); \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
@@ -244,7 +244,7 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
         __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
         \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (WaitForSingleObject(semaphore,&__tp) != WAIT_OBJECT_0) \
         { \
           lockedFlag = FALSE; \
@@ -253,14 +253,14 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         { \
           debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         } \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
     #define __SEMAPHORE_TRYLOCK(semaphore,lockType,debugFlag,text,lockedFlag) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (WaitForSingleObject(semaphore,0) != WAIT_OBJECT_0) \
         { \
           lockedFlag = FALSE; \
@@ -269,14 +269,14 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         { \
           debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         } \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
     #define __SEMAPHORE_UNLOCK(semaphore,debugFlag,text,n) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) unlock %s n=%d\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text,n); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock %s n=%d\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text,n); \
         ReleaseMutext(semaphore); \
       } \
       while (0)
@@ -284,9 +284,9 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
     #define __SEMAPHORE_WAIT(debugFlag,text,condition,mutex) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         pthread_cond_wait(condition,mutex); \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
@@ -299,7 +299,7 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
         __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
         \
-        if (debugFlag) fprintf(stderr,"%s, %4d: 0x%x unlock+wait %s\n",__FILE__,__LINE__,(unsigned int)Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         if (pthread_cond_timedwait(condition,mutex,&__tp) != 0) \
         { \
           lockedFlag = FALSE; \
@@ -308,14 +308,14 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         { \
           debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         } \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
 
     #define __SEMAPHORE_SIGNAL(debugFlag,text,condition) \
       do \
       { \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (0x%lx) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentId(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         pthread_cond_signal(condition); \
       } \
       while (0)
@@ -664,9 +664,9 @@ LOCAL_INLINE void debugRemoveLockedThreadInfo(Semaphore  *semaphore,
   if (!debugRemoveThreadInfo(semaphore->lockedBy,&semaphore->lockedByCount))
   {
     Semaphore_debugPrintInfo();
-    HALT_INTERNAL_ERROR("Thread '%s' (0x%lx) try to unlock not locked semaphore '%s' at %s, line %lu!",
+    HALT_INTERNAL_ERROR("Thread '%s' (%s) try to unlock not locked semaphore '%s' at %s, line %lu!",
                         Thread_getCurrentName(),
-                        Thread_getCurrentId(),
+                        Thread_getCurrentIdString(),
                         semaphore->name,
                         fileName,
                         lineNb
@@ -695,9 +695,9 @@ LOCAL_INLINE void debugRemovePendingThreadInfo(Semaphore  *semaphore,
   if (!debugRemoveThreadInfo(semaphore->pendingBy,&semaphore->pendingByCount))
   {
     Semaphore_debugPrintInfo();
-    HALT_INTERNAL_ERROR("Thread '%s' (0x%lx) try to remove not pending semaphore '%s' at %s, line %lu!",
+    HALT_INTERNAL_ERROR("Thread '%s' (%s) try to remove not pending semaphore '%s' at %s, line %lu!",
                         Thread_getCurrentName(),
-                        Thread_getCurrentId(),
+                        Thread_getCurrentIdString(),
                         semaphore->name,
                         fileName,
                         lineNb
@@ -793,9 +793,9 @@ LOCAL void debugCheckForDeadLock(const char         *fileName,
            )
         {
           fprintf(stderr,"Warning: DEAD LOCK at %s, line %lu\n",fileName,lineNb);
-          fprintf(stderr,"  Thread '%s' (0x%lx)\n    locked '%s' %s (%s, line %lu) at %s, line %lu and\n    wait for '%s' %s (%s, line %lu) at %s, line %lu\n",
+          fprintf(stderr,"  Thread '%s' (%s)\n    locked '%s' %s (%s, line %lu) at %s, line %lu and\n    wait for '%s' %s (%s, line %lu) at %s, line %lu\n",
                   Thread_getCurrentName(),
-                  Thread_getCurrentId(),
+                  Thread_getCurrentIdString(),
                   otherSemaphore->name,
                   SEMAPHORE_LOCK_TYPE_NAMES[lockedInfo->lockType],
                   otherSemaphore->fileName,
@@ -811,9 +811,9 @@ LOCAL void debugCheckForDeadLock(const char         *fileName,
                  );
           if (!Thread_isCurrentThread(semaphore->lockedBy[i].threadId))
           {
-            fprintf(stderr,"  Thread '%s' (0x%lx)\n    locked '%s' %s (%s, line %lu) at %s, line %lu and\n    wait for '%s' %s (%s, line %lu) at %s, line %lu\n",
+            fprintf(stderr,"  Thread '%s' (%s)\n    locked '%s' %s (%s, line %lu) at %s, line %lu and\n    wait for '%s' %s (%s, line %lu) at %s, line %lu\n",
                     Thread_getName(semaphore->lockedBy[i].threadId),
-                    semaphore->lockedBy[i].threadId,
+                    Thread_getIdString(semaphore->lockedBy[i].threadId),
                     semaphore->name,
                     SEMAPHORE_LOCK_TYPE_NAMES[semaphore->lockedBy[i].lockType],
                     semaphore->fileName,
@@ -858,9 +858,9 @@ LOCAL_INLINE void debugCheckUnlocked(Semaphore *semaphore)
 
   if (semaphore->lockedByCount > 0)
   {
-    HALT_INTERNAL_ERROR("Thread '%s' (0x%lx) did not unlock semaphore '%s' which was locked at %s, line %lu!",
+    HALT_INTERNAL_ERROR("Thread '%s' (%s) did not unlock semaphore '%s' which was locked at %s, line %lu!",
                         Thread_getName(semaphore->lockedBy[0].threadId),
-                        semaphore->lockedBy[0].threadId,
+                        Thread_getIdString(semaphore->lockedBy[0].threadId),
                         semaphore->name,
                         semaphore->lockedBy[0].fileName,
                         semaphore->lockedBy[0].lineNb
@@ -954,9 +954,9 @@ LOCAL bool lock(const char         *fileName,
           #ifndef NDEBUG
             assert(semaphore->lockedByCount > 0);
 
-            HALT_INTERNAL_ERROR("Thread '%s' (0x%lx) try to lock semaphore '%s' with weaker access 'read' at %s, line %lu which was previously locked 'read/write' at %s, line %lu !",
+            HALT_INTERNAL_ERROR("Thread '%s' (%s) try to lock semaphore '%s' with weaker access 'read' at %s, line %lu which was previously locked 'read/write' at %s, line %lu !",
                                 Thread_getCurrentName(),
-                                Thread_getCurrentId(),
+                                Thread_getCurrentIdString(),
                                 semaphore->name,
                                 fileName,
                                 lineNb,
@@ -964,9 +964,9 @@ LOCAL bool lock(const char         *fileName,
                                 semaphore->lockedBy[semaphore->lockedByCount-1].lineNb
                                );
           #else /* NDEBUG */
-            HALT_INTERNAL_ERROR("Thread '%s' (0x%lx) try to lock semaphore with weaker 'read' access!",
+            HALT_INTERNAL_ERROR("Thread '%s' (%s) try to lock semaphore with weaker 'read' access!",
                                 Thread_getCurrentName(),
-                                Thread_getCurrentId()
+                                Thread_getCurrentIdString()
                                );
           #endif /* not NDEBUG */
         }
@@ -1693,9 +1693,9 @@ void Semaphore_debugPrintInfo(void)
           for (i = 0; i < semaphore->lockedByCount; i++)
           {
             fprintf(stderr,
-                    "    by thread '%s' (0x%lx) at %s, line %lu\n",
+                    "    by thread '%s' (%s) at %s, line %lu\n",
                     Thread_getName(semaphore->lockedBy[i].threadId),
-                    semaphore->lockedBy[i].threadId,
+                    Thread_getIdString(semaphore->lockedBy[i].threadId),
                     semaphore->lockedBy[i].fileName,
                     semaphore->lockedBy[i].lineNb
                    );
@@ -1703,9 +1703,9 @@ void Semaphore_debugPrintInfo(void)
           for (i = 0; i < semaphore->pendingByCount; i++)
           {
             fprintf(stderr,
-                    "    pending thread '%s' (0x%lx) %s at %s, line %lu\n",
+                    "    pending thread '%s' (%s) %s at %s, line %lu\n",
                     Thread_getName(semaphore->lockedBy[i].threadId),
-                    semaphore->pendingBy[i].threadId,
+                    Thread_getIdString(semaphore->pendingBy[i].threadId),
                     SEMAPHORE_LOCK_TYPE_NAMES[semaphore->pendingBy[i].lockType],
                     semaphore->pendingBy[i].fileName,
                     semaphore->pendingBy[i].lineNb
@@ -1719,9 +1719,9 @@ void Semaphore_debugPrintInfo(void)
           for (i = 0; i < semaphore->lockedByCount; i++)
           {
             fprintf(stderr,
-                    "    by thread '%s' (0x%lx) at %s, line %lu\n",
+                    "    by thread '%s' (%s) at %s, line %lu\n",
                     Thread_getName(semaphore->lockedBy[i].threadId),
-                    semaphore->lockedBy[i].threadId,
+                    Thread_getIdString(semaphore->lockedBy[i].threadId),
                     semaphore->lockedBy[i].fileName,
                     semaphore->lockedBy[i].lineNb
                    );
@@ -1729,9 +1729,9 @@ void Semaphore_debugPrintInfo(void)
           for (i = 0; i < semaphore->pendingByCount; i++)
           {
             fprintf(stderr,
-                    "    pending thread '%s' (0x%lx) %s at %s, line %lu\n",
+                    "    pending thread '%s' (%s) %s at %s, line %lu\n",
                     Thread_getName(semaphore->lockedBy[i].threadId),
-                    semaphore->pendingBy[i].threadId,
+                    Thread_getIdString(semaphore->pendingBy[i].threadId),
                     SEMAPHORE_LOCK_TYPE_NAMES[semaphore->pendingBy[i].lockType],
                     semaphore->pendingBy[i].fileName,
                     semaphore->pendingBy[i].lineNb
