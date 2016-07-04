@@ -3598,7 +3598,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
     {
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
-                 "Purged storage for job '%s' fail (error: %s)\n",
+                 "Purging storage for job '%s' fail (error: %s)\n",
                  String_cString(jobUUID),
                  Error_getText(error)
                 );
@@ -3667,7 +3667,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
         {
           logMessage(logHandle,
                      LOG_TYPE_STORAGE,
-                     "Purged storage file %s, %.1f%s (%llu bytes) fail (error: %s)\n",
+                     "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)\n",
                      String_cString(oldestStorageName),
                      BYTES_SHORT(oldestSize),
                      BYTES_UNIT(oldestSize),
@@ -3684,7 +3684,7 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
       {
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Purged storage index #%llu fail (error: %s)\n",
+                   "Purging storage index #%llu fail (error: %s)\n",
                    oldestStorageId,
                    Error_getText(error)
                   );
@@ -3697,7 +3697,10 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
       Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
-                 "Purged storage %s by job settings, created at %s, %llu bytes\n",
+                 "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
+                 BYTES_SHORT(totalStorageSize),
+                 BYTES_UNIT(totalStorageSize),
+                 totalStorageSize,
                  String_cString(oldestStorageName),
                  String_cString(dateTime),
                  oldestSize
@@ -3707,7 +3710,6 @@ fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorag
   while (   (totalStorageSize > maxStorageSize)
          && (oldestStorageId != INDEX_ID_NONE)
         );
-fprintf(stderr,"%s, %d: done purgeStorage\n",__FILE__,__LINE__);
 
   // free resources
   String_delete(dateTime);
@@ -3793,7 +3795,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer maxStorageSize=%llu\n",__FILE
     {
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
-                 "Purged storage for server '%s' fail (error: %s)\n",
+                 "Purging storage for server '%s' fail (error: %s)\n",
                  String_cString(server->name),
                  Error_getText(error)
                 );
@@ -3867,7 +3869,7 @@ fprintf(stderr,"%s, %d: purge storage id=%lld: %s\n",__FILE__,__LINE__,oldestSto
         {
           logMessage(logHandle,
                      LOG_TYPE_STORAGE,
-                     "Purged storage file %s, %.1f%s (%llu bytes) fail (error: %s)\n",
+                     "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)\n",
                      String_cString(oldestStorageName),
                      BYTES_SHORT(oldestSize),
                      BYTES_UNIT(oldestSize),
@@ -3884,7 +3886,7 @@ fprintf(stderr,"%s, %d: purge storage id=%lld: %s\n",__FILE__,__LINE__,oldestSto
       {
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Purged storage index #%llu fail (error: %s)\n",
+                   "Purging storage index #%llu fail (error: %s)\n",
                    oldestStorageId,
                    Error_getText(error)
                   );
@@ -3897,7 +3899,9 @@ fprintf(stderr,"%s, %d: purge storage id=%lld: %s\n",__FILE__,__LINE__,oldestSto
       Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
       logMessage(logHandle,
                  LOG_TYPE_STORAGE,
-                 "Purged storage %s by server settings, created at %s, %llu bytes\n",
+                 "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
+                 BYTES_SHORT(totalStorageSize),
+                 BYTES_UNIT(totalStorageSize),
                  String_cString(oldestStorageName),
                  String_cString(dateTime),
                  oldestSize
@@ -3907,7 +3911,6 @@ fprintf(stderr,"%s, %d: purge storage id=%lld: %s\n",__FILE__,__LINE__,oldestSto
   while (   (totalStorageSize > maxStorageSize)
          && (oldestStorageId != INDEX_ID_NONE)
         );
-fprintf(stderr,"%s, %d: done purgeStorageByServer\n",__FILE__,__LINE__);
 
   // free resources
   String_delete(dateTime);
