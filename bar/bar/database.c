@@ -1238,6 +1238,7 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
                             )
         )
   {
+if (stringEquals(tableName,"history")) fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,name);
     columnNode = LIST_NEW_NODE(DatabaseColumnNode);
     if (columnNode == NULL)
     {
@@ -1437,10 +1438,18 @@ void Database_doneAll(void)
   #endif /* not NDEBUG */
 
   // create lock
-  if (!Semaphore_init(&databaseHandle->lock))
-  {
-    return ERRORX_(DATABASE,0,"create lock fail");
-  }
+  #ifdef NDEBUG
+    if (!Semaphore_init(&databaseHandle->lock))
+    {
+      return ERRORX_(DATABASE,0,"create lock fail");
+    }
+  #else /* not NDEBUG */
+    if (!__Semaphore_init(__fileName__,__lineNb__,_SEMAPHORE_NAME(&databaseHandle->lock),&databaseHandle->lock))
+    {
+      return ERRORX_(DATABASE,0,"create lock fail");
+    }
+  #endif /* NDEBUG */
+
   // create directory if needed
   if (fileName != NULL)
   {
@@ -1720,7 +1729,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
       // compare columns
       LIST_ITERATEX(&columnListReference,columnNodeReference,error == ERROR_NONE)
       {
-        columnNode = LIST_FIND(&columnListReference,columnNode,stringEquals(columnNodeReference->name,columnNode->name));
+        columnNode = LIST_FIND(&columnList,columnNode,stringEquals(columnNodeReference->name,columnNode->name));
         if (columnNode != NULL)
         {
           if (columnNodeReference->type != columnNode->type)

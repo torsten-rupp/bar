@@ -145,8 +145,8 @@ typedef struct DatabaseColumnNode
     String text;    // text
     struct
     {
-      const void *data;
-      ulong      length;
+      void  *data;
+      ulong length;
     }      blob;
   } value;
   bool          usedFlag;
