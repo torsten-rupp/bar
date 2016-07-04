@@ -4220,9 +4220,8 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                         ConstString jobUUID
                        )
 {
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          uuidId;
+  Errors  error;
+  IndexId uuidId;
 
   assert(indexHandle != NULL);
 
@@ -15762,7 +15761,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
 * Return : -
 * Notes  : Arguments:
 *            <state>|*
-*            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
+*            uuidId=<id>|0 or entityId=<id>|0 or storageId=<id>|0
 *          Result:
 \***********************************************************************/
 
@@ -15770,7 +15769,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 {
   bool             stateAny;
   IndexStates      state;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  IndexId          uuidId;
   IndexId          entityId;
   IndexId          storageId;
   Errors           error;
@@ -15797,10 +15796,10 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  String_clear(jobUUID);
+  uuidId    = INDEX_ID_NONE;
   entityId  = INDEX_ID_NONE;
   storageId = INDEX_ID_NONE;
-  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+  if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
@@ -15816,7 +15815,10 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  if (String_isEmpty(jobUUID) && (storageId == INDEX_ID_NONE) && (entityId == INDEX_ID_NONE))
+  if (   (uuidId == INDEX_ID_NONE)
+      && (storageId == INDEX_ID_NONE)
+      && (entityId == INDEX_ID_NONE)
+     )
   {
     // initialize variables
     Storage_initSpecifier(&storageSpecifier);
@@ -15904,11 +15906,10 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     Storage_doneSpecifier(&storageSpecifier);
   }
 
-  if (!String_isEmpty(jobUUID))
+  if (uuidId != INDEX_ID_NONE)
   {
-    // delete job index
-//TODO: uuid
-    error = Index_deleteUUID(indexHandle,jobUUID);
+    // delete UUID index
+    error = Index_deleteUUID(indexHandle,uuidId);
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Error_getText(error));
