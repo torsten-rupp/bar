@@ -149,11 +149,27 @@ Errors Continuous_add(ConstString jobUUID,
 Errors Continuous_remove(DatabaseId databaseId);
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : -
+* Name   : Continuous_removeNext
+* Purpose: remove and return next continuous entry
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
+* Output : name - name of entry
+* Return : TRUE if entry removed
+* Notes  : -
+\***********************************************************************/
+
+bool Continuous_removeNext(ConstString jobUUID,
+                           ConstString scheduleUUID,
+                           String      name
+                          );
+
+/***********************************************************************\
+* Name   : Continuous_isAvailable
+* Purpose: check if continuous entries available
+* Input  : jobUUID      - job UUID
+*          scheduleUUID - schedule UUID
 * Output : -
-* Return : -
+* Return : TRUE if continuous entries available
 * Notes  : -
 \***********************************************************************/
 

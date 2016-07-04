@@ -2090,7 +2090,71 @@ Errors Continuous_add(ConstString jobUUID,
 
 Errors Continuous_remove(DatabaseId databaseId)
 {
-  return removeContinuousEntry(databaseId);
+  Errors error;
+
+  BLOCK_DOX(error,
+            Database_lock(&continuousDatabaseHandle),
+            Database_unlock(&continuousDatabaseHandle),
+  {
+    return removeContinuousEntry(databaseId);
+  });
+
+  return error;
+}
+
+bool Continuous_removeNext(ConstString jobUUID,
+                           ConstString scheduleUUID,
+                           String      name
+                          )
+{
+  DatabaseQueryHandle databaseQueryHandle;
+  bool                result;
+  DatabaseId          databaseId;
+
+  assert(jobUUID != NULL);
+  assert(name != NULL);
+
+  BLOCK_DOX(result,
+            Database_lock(&continuousDatabaseHandle),
+            Database_unlock(&continuousDatabaseHandle),
+  {
+    // prepare list
+    if (Database_prepare(&databaseQueryHandle,
+                         &continuousDatabaseHandle,
+                         "SELECT id,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S",
+                         jobUUID,
+                         scheduleUUID
+                        ) != ERROR_NONE
+       )
+    {
+      return FALSE;
+    }
+
+    // get next entry
+    if (!Database_getNextRow(&databaseQueryHandle,
+                             "%lld %S",
+                             &databaseId,
+                             name
+                            )
+       )
+    {
+      Database_finalize(&databaseQueryHandle);
+      return FALSE;
+    }
+
+    // done list
+    Database_finalize(&databaseQueryHandle);
+
+    // delete entry
+    if (removeContinuousEntry(databaseId) != ERROR_NONE)
+    {
+      return FALSE;
+    }
+
+    return TRUE;
+  });
+
+  return result;
 }
 
 bool Continuous_isAvailable(ConstString jobUUID, ConstString scheduleUUID)
