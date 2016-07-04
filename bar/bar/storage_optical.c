@@ -838,6 +838,7 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
     TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageHandle->requestedVolumeNumber,      NULL);
 
     // write pre-processing
+    template = NULL;
     switch (storageHandle->storageSpecifier.type)
     {
       case STORAGE_TYPE_CD:  template = globalOptions.cd.writePreProcessCommand;  break;
