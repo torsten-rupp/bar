@@ -2758,11 +2758,11 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
      */
     private void updateUUIDMenus()
     {
-      final HashSet<Menu>          removeUUIDMenuSet       = new HashSet<Menu>();
-      final HashSet<MenuItem>      removeEntityMenuItemSet = new HashSet<MenuItem>();
+      final HashSet<MenuItem> removeUUIDMenuItemSet   = new HashSet<MenuItem>();
+      final HashSet<MenuItem> removeEntityMenuItemSet = new HashSet<MenuItem>();
 
       // get all existing UUID menus
-      removeUUIDMenuSet.clear();
+      removeUUIDMenuItemSet.clear();
       display.syncExec(new Runnable()
       {
         public void run()
@@ -2771,11 +2771,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           {
             assert menuItem.getData() instanceof UUIDIndexData;
 
-            Menu menu = menuItem.getMenu();
-            if (menu != null)
-            {
-              removeUUIDMenuSet.add(menu);
-            }
+            removeUUIDMenuItemSet.add(menuItem);
           }
         }
       });
@@ -2922,13 +2918,17 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                          }
                                          else
                                          {
+                                           MenuItem menuItem;
+
                                            assert subMenu.getData() instanceof UUIDIndexData;
 
+                                           menuItem = subMenu.getParentItem();
+
                                            // update sub-menu text
-                                           subMenu.getParentItem().setText(uuidIndexData.name.replaceAll("&","&&"));
+                                           menuItem.setText(uuidIndexData.name.replaceAll("&","&&"));
 
                                            // keep sub-menu
-                                           removeUUIDMenuSet.remove(subMenu);
+                                           removeUUIDMenuItemSet.remove(menuItem);
                                          }
 
                                          // store create/updated uuid index
@@ -2963,12 +2963,9 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       {
         public void run()
         {
-          for (Menu subMenu : removeUUIDMenuSet)
+          for (MenuItem menuItem : removeUUIDMenuItemSet)
           {
-            subMenu.dispose();
-//TODO
-//            Widgets.removeMenu(widgetStorageTableAssignToMenu,menu);
-            subMenu.dispose();
+            menuItem.dispose();
           }
         }
       });
@@ -7100,8 +7097,8 @@ Dprintf.dprintf("remove");
                 final String[] errorMessage = new String[1];
                 if      (indexData instanceof UUIDIndexData)
                 {
-                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* jobUUID=%'S",
-                                                                       ((UUIDIndexData)indexData).jobUUID
+                  error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* uuidId=%lld",
+                                                                       indexData.id
                                                                       ),
                                                    0,  // debugLevel
                                                    errorMessage
@@ -7251,7 +7248,7 @@ Dprintf.dprintf("remove");
                 ValueMap       valueMap     = new ValueMap();
 
                 // remove indizes with error state
-                Command command = BARServer.runCommand("INDEX_REMOVE state=ERROR storageId=0",0);
+                Command command = BARServer.runCommand("INDEX_REMOVE state=ERROR",0);
 
                 long n = 0;
                 while (   !command.endOfData()
