@@ -5568,6 +5568,8 @@ Errors Index_init(const char *fileName)
       error = openIndex(&indexHandleReference,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
       if (error == ERROR_NONE)
       {
+
+
         error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ,NO_WAIT);
         if (error == ERROR_NONE)
         {
@@ -5699,11 +5701,21 @@ IndexHandle *__Index_open(const char *__fileName__,
       return NULL;
     }
 
-    error = openIndex(indexHandle,
-                      __databaseFileName,
-                      INDEX_OPEN_MODE_READ_WRITE,
-                      timeout
-                     );
+    #ifdef NDEBUG
+      error = openIndex(indexHandle,
+                        __databaseFileName,
+                        INDEX_OPEN_MODE_READ_WRITE,
+                        timeout
+                       );
+    #else /* not NDEBUG */
+      error = __openIndex(__fileName__,
+                          __lineNb__,
+                          indexHandle,
+                          __databaseFileName,
+                          INDEX_OPEN_MODE_READ_WRITE,
+                          timeout
+                         );
+    #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
       free(indexHandle);
