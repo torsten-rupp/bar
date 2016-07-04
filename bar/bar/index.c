@@ -108,69 +108,6 @@ LOCAL bool   quitFlag;
 #endif
 
 /***********************************************************************\
-* Name   : createIndex
-* Purpose: create new empty index database
-* Input  : databaseFileName - database file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-  LOCAL Errors XcreateIndex(const char  *databaseFileName)
-#else /* not NDEBUG */
-  LOCAL Errors __XcreateIndex(const char  *__fileName__,
-                             uint        __lineNb__,
-                             const char  *databaseFileName
-                            )
-#endif /* NDEBUG */
-{
-  Errors         error;
-  DatabaseHandle databaseHandle;
-
-  assert(databaseFileName != NULL);
-
-  // create index database
-  (void)File_deleteCString(databaseFileName,FALSE);
-  #ifdef NDEBUG
-    error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
-  #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
-  #endif /* NDEBUG */
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // disable synchronous mode and journal to increase transaction speed
-  (void)Database_setEnabledSync(&databaseHandle,FALSE);
-
-  // create tables
-  error = Database_execute(&databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           INDEX_DEFINITION
-                          );
-  if (error != ERROR_NONE)
-  {
-    #ifdef NDEBUG
-      Database_close(&databaseHandle);
-    #else /* not NDEBUG */
-      __Database_close(__fileName__,__lineNb__,&databaseHandle);
-    #endif /* NDEBUG */
-    return error;
-  }
-
-  // close database
-  #ifdef NDEBUG
-    Database_close(&databaseHandle);
-  #else /* not NDEBUG */
-    __Database_close(__fileName__,__lineNb__,&databaseHandle);
-  #endif /* NDEBUG */
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : openIndex
 * Purpose: open index database
 * Input  : databaseFileName - database file name
@@ -9225,7 +9162,7 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
                       )
 {
   DatabaseId databaseId;
-  uint64     fragmentOffset_,fragmentSize_;
+  int64      fragmentOffset_,fragmentSize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -10098,7 +10035,7 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   assert(fragmentOffset_ >= 0LL);
   assert(fragmentSize_ >= 0LL);
   if (fragmentOffset != NULL) (*fragmentOffset) = (fragmentOffset_ >= 0LL) ? fragmentOffset_ : 0LL;
-  if (fragmentSize != NULL) (*fragmentSize) = (fragmentSize >= 0LL) ? fragmentSize_ : 0LL;
+  if (fragmentSize != NULL) (*fragmentSize) = (fragmentSize_ >= 0LL) ? fragmentSize_ : 0LL;
 
   return TRUE;
 }
@@ -11432,6 +11369,17 @@ Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
                                   uint64           limit
                                  )
 {
+  UNUSED_VARIABLE(indexQueryHandle);
+  UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(indexIds);
+  UNUSED_VARIABLE(indexIdCount);
+  UNUSED_VARIABLE(entryIds);
+  UNUSED_VARIABLE(entryIdCount);
+  UNUSED_VARIABLE(indexTypeSet);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(ordering);
+  UNUSED_VARIABLE(offset);
+  UNUSED_VARIABLE(limit);
 
   return ERROR_STILL_NOT_IMPLEMENTED;
 }
@@ -11449,6 +11397,19 @@ bool Index_getNextSkippedEntry(IndexQueryHandle *indexQueryHandle,
                                String           entryName
                               )
 {
+//TODO
+  UNUSED_VARIABLE(indexQueryHandle);
+  UNUSED_VARIABLE(uuidId);
+  UNUSED_VARIABLE(jobUUID);
+  UNUSED_VARIABLE(entityId);
+  UNUSED_VARIABLE(scheduleUUID);
+  UNUSED_VARIABLE(archiveType);
+  UNUSED_VARIABLE(storageId);
+  UNUSED_VARIABLE(storageName);
+  UNUSED_VARIABLE(storageDateTime);
+  UNUSED_VARIABLE(entryId);
+  UNUSED_VARIABLE(entryName);
+
   return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
