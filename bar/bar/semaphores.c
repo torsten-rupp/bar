@@ -152,7 +152,7 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
         __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*10000000L; \
         \
-        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text,timeout); \
         if (pthread_mutex_timedlock(&semaphore->lock,&__tp) != 0) \
         { \
           lockedFlag = FALSE; \
@@ -1466,9 +1466,6 @@ bool __Semaphore_init(const char *fileName,
 void Semaphore_done(Semaphore *semaphore)
 {
   bool lockedFlag;
-  #ifndef NDEBUG
-    uint i;
-  #endif /* not NDEBUG */
 
   assert(semaphore != NULL);
 
