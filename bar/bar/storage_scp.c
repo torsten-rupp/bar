@@ -923,8 +923,6 @@ LOCAL void StorageSCP_close(StorageArchiveHandle *storageArchiveHandle)
           (void)libssh2_channel_free(storageArchiveHandle->scp.channel);
         }
         break;
-      case STORAGE_MODE_UNKNOWN:
-        break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();

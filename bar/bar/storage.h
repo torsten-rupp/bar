@@ -124,9 +124,7 @@ typedef enum
   STORAGE_MODE_READ,
   STORAGE_MODE_WRITE,
 //TODO
-//  STORAGE_MODE_APPEND,
-
-  STORAGE_MODE_UNKNOWN,
+//  STORAGE_MODE_APPEND
 } StorageModes;
 
 // storage types

@@ -1123,6 +1123,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
     }
 
     // write post-processing
+    template = NULL;
     switch (storageHandle->storageSpecifier.type)
     {
       case STORAGE_TYPE_CD:  template = globalOptions.cd.writePostProcessCommand;  break;
@@ -1369,8 +1370,6 @@ LOCAL void StorageOptical_close(StorageArchiveHandle *storageArchiveHandle)
       StringList_append(&storageArchiveHandle->storageHandle->opticalDisk.write.fileNameList,storageArchiveHandle->opticalDisk.write.fileName);
       String_delete(storageArchiveHandle->opticalDisk.write.fileName);
       break;
-    case STORAGE_MODE_UNKNOWN:
-      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1542,6 +1541,11 @@ LOCAL Errors StorageOptical_tell(StorageArchiveHandle *storageArchiveHandle,
         case STORAGE_MODE_WRITE:
           error = File_tell(&storageArchiveHandle->opticalDisk.write.fileHandle,offset);
           break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
       }
     }
   #else /* not HAVE_ISO9660 */
@@ -1577,6 +1581,11 @@ LOCAL Errors StorageOptical_seek(StorageArchiveHandle *storageArchiveHandle,
         case STORAGE_MODE_WRITE:
           error = File_seek(&storageArchiveHandle->opticalDisk.write.fileHandle,offset);
           break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
       }
     }
   #else /* not HAVE_ISO9660 */
@@ -1610,6 +1619,11 @@ LOCAL uint64 StorageOptical_getSize(StorageArchiveHandle *storageArchiveHandle)
         case STORAGE_MODE_WRITE:
           size = File_getSize(&storageArchiveHandle->opticalDisk.write.fileHandle);
           break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
       }
     }
   #else /* not HAVE_ISO9660 */

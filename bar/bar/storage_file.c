@@ -322,7 +322,6 @@ LOCAL Errors StorageFile_create(StorageArchiveHandle *storageArchiveHandle,
   UNUSED_VARIABLE(archiveSize);
 
   // check if archive file exists
-fprintf(stderr,"%s, %d: archiveFileMode=%d exot=%d archiveFileModeOverwriteFlag=%d\n",__FILE__,__LINE__,storageArchiveHandle->storageHandle->jobOptions->archiveFileMode,File_exists(archiveName),storageArchiveHandle->storageHandle->jobOptions->archiveFileModeOverwriteFlag);
   if (   (storageArchiveHandle->storageHandle->jobOptions != NULL)
       && (storageArchiveHandle->storageHandle->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
       && (storageArchiveHandle->storageHandle->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
@@ -418,8 +417,6 @@ LOCAL void StorageFile_close(StorageArchiveHandle *storageArchiveHandle)
 
   switch (storageArchiveHandle->mode)
   {
-    case STORAGE_MODE_UNKNOWN:
-      break;
     case STORAGE_MODE_WRITE:
       if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
       {
