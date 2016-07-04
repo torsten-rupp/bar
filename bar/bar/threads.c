@@ -795,10 +795,11 @@ const char *Thread_getIdString(const ThreadId threadId)
   uint8 *p;
   char  *s;
 
-  assert(sizeof(ThreadId)*2 < (sizeof(idString)-1));
+  assert((2+sizeof(ThreadId)*2) < (sizeof(idString)-1));
 
   p = (uint8*)(void*)(&threadId);
   s = idString;
+  strcpy(s,"0x"); s += 2;
   for (i = 0; i < sizeof(ThreadId); i++)
   {
     sprintf(s,"%02x",p[i]);
