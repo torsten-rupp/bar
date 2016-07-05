@@ -177,7 +177,7 @@ typedef struct
   bool          symbolFound;
   const char    *fileName;
   const char    *symbolName;
-  ulong         lineNb;
+  uint          lineNb;
 } AddressInfo;
 
 /***********************************************************************\

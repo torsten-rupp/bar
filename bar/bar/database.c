@@ -2465,8 +2465,12 @@ bool Database_setTableColumnListBlob(const DatabaseColumnList *columnList, const
   {
     assert(columnNode->type == DATABASE_TYPE_BLOB);
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-    columnNode->value.blob.data   = data;
-    columnNode->value.blob.length = length;
+UNUSED_VARIABLE(data);
+UNUSED_VARIABLE(length);
+//    columnNode->value.blob.data   = data;
+//    columnNode->value.blob.length = length;
+    columnNode->value.blob.data   = NULL;
+    columnNode->value.blob.length = 0;
     columnNode->usedFlag = TRUE;
     return TRUE;
   }
