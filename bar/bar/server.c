@@ -541,7 +541,7 @@ LOCAL Thread                remoteThread;
 LOCAL Thread                indexThread;
 LOCAL Thread                autoIndexUpdateThread;
 LOCAL Semaphore             serverStateLock;
-LOCAL ServerStates          serverState;
+LOCAL ServerStates          serverState;  // current server state
 LOCAL struct
       {
         bool create;
@@ -3608,6 +3608,27 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : delayRemoteConnectThread
+* Purpose: delay remote connect thread code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delayRemoteConnectThread(void)
+{
+  uint sleepTime;
+
+  sleepTime = 0;
+  while ((sleepTime < SLEEP_TIME_REMOTE_THREAD) && !quitFlag)
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    sleepTime += 10;
+  }
+}
+
+/***********************************************************************\
 * Name   : remoteConnectThreadCode
 * Purpose: remote connect thread entry
 * Input  : -
@@ -3648,7 +3669,6 @@ LOCAL void remoteConnectThreadCode(void)
 //  uint64            restBytes;
 //  uint64            restStorageBytes;
 //  ulong             estimatedRestTime;
-  uint              sleepTime;
 
   /***********************************************************************\
   * Name   : freeRemoteJobInfoNode
@@ -3776,13 +3796,8 @@ LOCAL void remoteConnectThreadCode(void)
       }
     }
 
-    // sleep, check quit flag
-    sleepTime = 0;
-    while ((sleepTime < SLEEP_TIME_REMOTE_THREAD) && !quitFlag)
-    {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
-      sleepTime += 10;
-    }
+    // sleep
+    delayRemoteConnectThread();
   }
 
   // free resources
@@ -3790,6 +3805,27 @@ LOCAL void remoteConnectThreadCode(void)
   List_done(&newRemoteJobInfoList,(ListNodeFreeFunction)freeRemoteJobInfoNode,NULL);
   List_done(&remoteJobInfoList,(ListNodeFreeFunction)freeRemoteJobInfoNode,NULL);
   StringList_done(&jobUUIDList);
+}
+
+/***********************************************************************\
+* Name   : delayRemoteThread
+* Purpose: delay remote thread code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delayRemoteThread(void)
+{
+  uint sleepTime;
+
+  sleepTime = 0;
+  while ((sleepTime < SLEEP_TIME_REMOTE_THREAD) && !quitFlag)
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    sleepTime += 10;
+  }
 }
 
 /***********************************************************************\
@@ -3830,7 +3866,6 @@ LOCAL void remoteThreadCode(void)
 //  uint64            restBytes;
 //  uint64            restStorageBytes;
 //  ulong             estimatedRestTime;
-  uint              sleepTime;
 
   /***********************************************************************\
   * Name   : parseJobState
@@ -4012,13 +4047,8 @@ LOCAL void remoteThreadCode(void)
       }
     }
 
-    // sleep, check quit flag
-    sleepTime = 0;
-    while ((sleepTime < SLEEP_TIME_REMOTE_THREAD) && !quitFlag)
-    {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
-      sleepTime += 10;
-    }
+    // sleep
+    delayRemoteThread();
   }
 
   // free resources
@@ -4497,6 +4527,27 @@ LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
 }
 
 /***********************************************************************\
+* Name   : delayScheduleThread
+* Purpose: delay remote connect code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delayScheduleThread(void)
+{
+  uint sleepTime;
+
+  sleepTime = 0;
+  while ((sleepTime < SLEEP_TIME_SCHEDULER_THREAD) && !quitFlag)
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    sleepTime += 10;
+  }
+}
+
+/***********************************************************************\
 * Name   : schedulerThreadCode
 * Purpose: schedule thread entry
 * Input  : -
@@ -4516,7 +4567,6 @@ LOCAL void schedulerThreadCode(void)
   ScheduleNode *executeScheduleNode;
   ScheduleNode *scheduleNode;
   bool         pendingFlag;
-  uint         sleepTime;
 
   // init index
   indexHandle = Index_open(INDEX_TIMEOUT);
@@ -4666,16 +4716,12 @@ LOCAL void schedulerThreadCode(void)
 
     if (!pendingFlag)
     {
-      // sleep, check quit flag
-      sleepTime = 0;
-      while ((sleepTime < SLEEP_TIME_SCHEDULER_THREAD) && !quitFlag)
-      {
-        Misc_udelay(10LL*MISC_US_PER_SECOND);
-        sleepTime += 10;
-      }
+      // sleep
+      delayScheduleThread();
     }
     else
     {
+      // short sleep
       Misc_udelay(1LL*MISC_US_PER_SECOND);
     }
   }
@@ -4811,7 +4857,7 @@ LOCAL bool indexAbortCallback(void *userData)
 
 /***********************************************************************\
 * Name   : pauseIndexUpdate
-* Purpose: pause index update or quit is signaled
+* Purpose: pause index update
 * Input  : -
 * Output : -
 * Return : -
@@ -4820,9 +4866,33 @@ LOCAL bool indexAbortCallback(void *userData)
 
 LOCAL void pauseIndexUpdate(void)
 {
-  while (pauseFlags.indexUpdate && !quitFlag)
+  while (   pauseFlags.indexUpdate
+         && (serverState != SERVER_STATE_RUNNING)
+         && !quitFlag
+        )
   {
     Misc_udelay(500L*1000L);
+  }
+}
+
+/***********************************************************************\
+* Name   : delayIndexThread
+* Purpose: delay index thread code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delayIndexThread(void)
+{
+  uint sleepTime;
+
+  sleepTime = 0;
+  while ((sleepTime < SLEEP_TIME_INDEX_THREAD) && !quitFlag)
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    sleepTime += 10;
   }
 }
 
@@ -4850,7 +4920,6 @@ LOCAL void indexThreadCode(void)
   IndexCryptPasswordNode *indexCryptPasswordNode;
   uint64                 totalTimeLastChanged;
   uint64                 totalEntryCount,totalEntrySize;
-  uint                   sleepTime;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
@@ -5031,12 +5100,7 @@ LOCAL void indexThreadCode(void)
     List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
 
     // sleep, check quit flag
-    sleepTime = 0;
-    while ((sleepTime < SLEEP_TIME_INDEX_THREAD) && !quitFlag)
-    {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
-      sleepTime += 10;
-    }
+    delayIndexThread();
   }
 
   // done index
@@ -5084,6 +5148,27 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 }
 
 /***********************************************************************\
+* Name   : delayAutoIndexThread
+* Purpose: delay auto index thread code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delayAutoIndexThread(void)
+{
+  uint sleepTime;
+
+  sleepTime = 0;
+  while ((sleepTime < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD) && !quitFlag)
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    sleepTime += 10;
+  }
+}
+
+/***********************************************************************\
 * Name   : autoIndexUpdateThreadCode
 * Purpose: auto index update thread entry
 * Input  : -
@@ -5113,7 +5198,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
   String                     string;
   IndexQueryHandle           indexQueryHandle;
   IndexModes                 indexMode;
-  uint                       sleepTime;
 
   // initialize variables
   StringList_init(&storageDirectoryList);
@@ -5369,13 +5453,8 @@ globalOptions.indexDatabaseKeepTime
       String_delete(string);
     }
 
-    // sleep, check quit flag
-    sleepTime = 0;
-    while ((sleepTime < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD) && !quitFlag)
-    {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
-      sleepTime += 10;
-    }
+    // sleep
+    delayAutoIndexThread();
   }
 
   // free resources
