@@ -4836,7 +4836,8 @@ LOCAL bool indexPauseCallback(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return pauseFlags.indexUpdate;
+  return    pauseFlags.indexUpdate
+         || (serverState == SERVER_STATE_RUNNING);
 }
 
 /***********************************************************************\
@@ -4867,7 +4868,6 @@ LOCAL bool indexAbortCallback(void *userData)
 LOCAL void pauseIndexUpdate(void)
 {
   while (   pauseFlags.indexUpdate
-         && (serverState != SERVER_STATE_RUNNING)
          && !quitFlag
         )
   {
