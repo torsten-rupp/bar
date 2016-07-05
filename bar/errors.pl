@@ -46,7 +46,7 @@ my $ERROR_TEXTINDEX_SHIFT     = 10;
 my $ERROR_ERRNO_MASK          = "0xFFFF0000";
 my $ERROR_ERRNO_SHIFT         = 16;
 
-my $ERROR_MAX_TEXT_LENGTH     = 512;
+my $ERROR_MAX_TEXT_LENGTH     = 2048;
 my $ERROR_TEXTINDEX_MAX_COUNT = 63;
 
 my $PREFIX                    = "ERROR_";
