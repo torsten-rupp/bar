@@ -1439,6 +1439,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
   assert(fileName != NULL);
 
+  // init print info
+  printInfoFlag = isPrintInfo(2) || printInfoFlag;
+
   // check file permissions
   error = File_getFileInfo(fileName,&fileInfo);
   if (error == ERROR_NONE)
@@ -1471,7 +1474,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   }
 
   // parse file
-  if (isPrintInfo(2) || printInfoFlag) { printf("Reading configuration file '%s'...",String_cString(fileName)); fflush(stdout); }
+  if (printInfoFlag) { printf("Reading configuration file '%s'...",String_cString(fileName)); fflush(stdout); }
   failFlag   = FALSE;
   line       = String_new();
   lineNb     = 0;
@@ -1822,7 +1825,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                             )
          )
       {
-        if (isPrintInfo(2) || printInfoFlag) printf("FAIL!\n");
+        if (printInfoFlag) printf("FAIL!\n");
         printError("Unknown or invalid config entry '%s' with value '%s' in %s, line %ld\n",
                    String_cString(name),
                    String_cString(value),
@@ -1835,7 +1838,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
     }
     else
     {
-      if (isPrintInfo(2) || printInfoFlag) printf("FAIL!\n");
+      if (printInfoFlag) printf("FAIL!\n");
       printError("Unknown config entry '%s' in %s, line %ld\n",
                  String_cString(line),
                  String_cString(fileName),
@@ -1847,7 +1850,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   }
   if (!failFlag)
   {
-    if (isPrintInfo(2) || printInfoFlag) printf("ok\n");
+    if (printInfoFlag) printf("ok\n");
   }
 
   // free resources
