@@ -1634,7 +1634,9 @@ test_misc: \
 	@$(ECHO_NO_LF) "Test miscellaneous..."
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	#
-	$(call functionTestCheckExitcode,134,134,($(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null)))
+	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
+	  $(call functionTestCheckExitcode,134,134,($(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null))); \
+        fi
 
 test_misc-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_misc
