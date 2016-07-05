@@ -4041,7 +4041,7 @@ return ERROR_NONE;
 
 /***********************************************************************\
 * Name   : pruneStorages
-* Purpose: prune all storages which are empty
+* Purpose: prune all storages which are OK, but empty
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -4054,12 +4054,13 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          storageId;
 
-  // try to set entityId in storage entries
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id \
                             FROM storage \
-                           "
+                            WHERE state=%d \
+                           ",
+                           INDEX_STATE_OK
                           );
   if (error == ERROR_NONE)
   {
@@ -4093,7 +4094,7 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          entityId;
 
-  // try to set entityId in storage entries (Note: keep default entity with id 0!)
+  // Note: keep default entity with id 0!
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id \
@@ -4134,7 +4135,6 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          uuidId;
 
-  // try to set entityId in storage entries
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id \
