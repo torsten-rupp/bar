@@ -955,7 +955,6 @@ bool Dictionary_add(Dictionary *dictionary,
       {
         // allocate data memory
         newData = malloc(length);
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,newData);
         if (newData == NULL)
         {
           free(dictionaryEntryTable->entries[entryIndex].keyData);
