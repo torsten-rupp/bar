@@ -6285,7 +6285,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   if (globalOptions.serverDebugFlag)
   {
     quitFlag = TRUE;
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"ok");
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
@@ -6341,7 +6341,7 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"ok");
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
