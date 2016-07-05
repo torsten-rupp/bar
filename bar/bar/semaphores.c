@@ -831,7 +831,7 @@ LOCAL void debugCheckForDeadLock(const char         *fileName,
           fprintf(stderr,"  Stack trace:\n");
           debugDumpCurrentStackTrace(stderr,2,1);
           Semaphore_debugPrintInfo();
-HALT_INTERNAL_ERROR("DEAD LOCK!");
+HALT_INTERNAL_ERROR_AT(fileName,lineNb,"DEAD LOCK!");
           break;
         }
       }

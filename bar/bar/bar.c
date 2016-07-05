@@ -1490,7 +1490,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
       // find/allocate server node
       serverNode = NULL;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1542,7 +1542,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         List_append(&globalOptions.serverList,serverNode);
       }
@@ -1554,7 +1554,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
       // find/allocate server node
       serverNode = NULL;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1606,7 +1606,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         List_append(&globalOptions.serverList,serverNode);
       }
@@ -1618,7 +1618,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
       // find/allocate server node
       serverNode = NULL;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1670,7 +1670,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         List_append(&globalOptions.serverList,serverNode);
       }
@@ -1682,7 +1682,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
       // find/allocate server node
       serverNode = NULL;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
         if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1734,7 +1734,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to server list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         List_append(&globalOptions.serverList,serverNode);
       }
@@ -1746,7 +1746,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
       // find/allocate device node
       deviceNode = NULL;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->device.name,name));
         if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
@@ -1798,7 +1798,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       File_ungetLine(&fileHandle,line,&lineNb);
 
       // add to device list
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         List_append(&globalOptions.deviceList,deviceNode);
       }
@@ -3354,7 +3354,7 @@ LOCAL void openLog(void)
 {
   SemaphoreLock semaphoreLock;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (logFileName != NULL)
     {
@@ -3377,7 +3377,7 @@ LOCAL void closeLog(void)
 {
   SemaphoreLock semaphoreLock;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (logFile != NULL)
     {
@@ -3462,7 +3462,7 @@ Errors updateConfig(void)
 
   // update storage servers
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"file-server");
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
@@ -3492,7 +3492,7 @@ Errors updateConfig(void)
     }
   }
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"ftp-server");
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
@@ -3522,7 +3522,7 @@ Errors updateConfig(void)
     }
   }
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"ssh-server");
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
@@ -3552,7 +3552,7 @@ Errors updateConfig(void)
     }
   }
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"webdav-server");
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
@@ -3690,7 +3690,7 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
     String_vformat(line,format,arguments);
 
     // output
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       outputConsole(stdout,line);
     }
@@ -3800,7 +3800,7 @@ void printConsole(FILE *file, const char *format, ...)
   va_end(arguments);
 
   // output
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     outputConsole(file,line);
   }
@@ -3829,7 +3829,7 @@ void printWarning(const char *text, ...)
   String_vformat(line,text,arguments);
   va_end(arguments);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     saveConsole(stderr,&saveLine);
     (void)fwrite(String_cString(line),1,String_length(line),stderr);
@@ -3858,7 +3858,7 @@ void printError(const char *text, ...)
   String_appendCString(line,"ERROR: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     saveConsole(stderr,&saveLine);
     (void)fwrite(String_cString(line),1,String_length(line),stderr);
@@ -3925,7 +3925,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 
   assert(text != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if ((logHandle != NULL) || (logFile != NULL))
     {
@@ -4926,7 +4926,7 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find file server
         serverNode = LIST_FIND(&globalOptions.serverList,
@@ -4946,7 +4946,7 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
       }
       break;
     case STORAGE_TYPE_FTP:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find file server
         serverNode = LIST_FIND(&globalOptions.serverList,
@@ -4969,7 +4969,7 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
       break;
     case STORAGE_TYPE_SSH:
     case STORAGE_TYPE_SCP:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find SSH server
         serverNode = LIST_FIND(&globalOptions.serverList,
@@ -4994,7 +4994,7 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
       }
       break;
     case STORAGE_TYPE_SFTP:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find SSH server
         serverNode = LIST_FIND(&globalOptions.serverList,
@@ -5019,7 +5019,7 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
       }
       break;
     case STORAGE_TYPE_WEBDAV:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find file server
         serverNode = LIST_FIND(&globalOptions.serverList,
@@ -5079,7 +5079,7 @@ uint getFileServerSettings(ConstString      directory,
   UNUSED_VARIABLE(fileServer);
 
   serverNode = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find file server
     serverNode = LIST_FIND(&globalOptions.serverList,
@@ -5106,7 +5106,7 @@ uint getFTPServerSettings(ConstString      hostName,
   assert(ftpServer != NULL);
 
   serverNode = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find FTP server
     serverNode = LIST_FIND(&globalOptions.serverList,
@@ -5135,7 +5135,7 @@ uint getSSHServerSettings(ConstString      hostName,
   assert(sshServer != NULL);
 
   serverNode = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find SSH server
     serverNode = LIST_FIND(&globalOptions.serverList,
@@ -5167,7 +5167,7 @@ uint getWebDAVServerSettings(ConstString      hostName,
   assert(webDAVServer != NULL);
 
   serverNode = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find WebDAV server
     serverNode = LIST_FIND(&globalOptions.serverList,
@@ -5267,7 +5267,7 @@ void getDeviceSettings(ConstString      name,
   assert(name != NULL);
   assert(device != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find device
     deviceNode = LIST_FIND(&globalOptions.deviceList,
@@ -5301,7 +5301,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
 
   if (serverId != 0)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // find server
       serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
@@ -5412,7 +5412,7 @@ void freeServer(uint serverId)
 
   if (serverId != 0)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // find server
       serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
@@ -5437,7 +5437,7 @@ bool isServerAllocationPending(uint serverId)
 
   if (serverId != 0)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // find server
       serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
@@ -5540,7 +5540,7 @@ Errors getPasswordConsole(String        name,
         String title;
         String saveLine;
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           saveConsole(stdout,&saveLine);
 

@@ -1778,7 +1778,6 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
   error = ERROR_NONE;
 
-fprintf(stderr,"%s, %d: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n",__FILE__,__LINE__);
   // fix possible broken ids
   fixBrokenIds(oldIndexHandle,"storage");
   fixBrokenIds(oldIndexHandle,"directories");
@@ -1813,7 +1812,6 @@ fprintf(stderr,"%s, %d: vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
                                IndexId fromEntityId;
                                IndexId toEntityId;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                UNUSED_VARIABLE(userData);
 
                                fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
@@ -1831,7 +1829,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                             UNUSED_VARIABLE(fromColumnList);
                                                             UNUSED_VARIABLE(userData);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                             (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
@@ -5536,7 +5533,8 @@ Errors Index_init(const char *fileName)
           plogMessage(NULL,  // logHandle
                       LOG_TYPE_ERROR,
                       "INDEX",
-                      "Old index database version in '%s' - create new\n",
+                      "Old index database version %d in '%s' - create new\n",
+                      indexVersion,
                       __databaseFileName
                      );
         }

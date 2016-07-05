@@ -159,7 +159,7 @@ LOCAL void printNotifies(void)
   UUIDNode           *uuidNode;
 
   printf("Notifies:\n");
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
     while (Dictionary_getNext(&dictionaryIterator,
@@ -1001,7 +1001,7 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
   assert(Semaphore_isLocked(&notifyLock));
 
   // remove from notify dictionary
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     Dictionary_remove(&notifyDirectories,
                       String_cString(notifyInfo->directory),
@@ -1067,7 +1067,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
       }
 
       // update/add notify
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get/add notify
         notifyInfo = addNotify(name);
@@ -1235,7 +1235,7 @@ LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // mark notifies
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
@@ -1289,7 +1289,7 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     do
     {
@@ -1369,7 +1369,7 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     do
     {
@@ -1721,7 +1721,7 @@ fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LI
 fprintf(stderr,"\n");
 #endif
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           notifyInfo = getNotifyInfo(inotifyEvent->wd);
           if (notifyInfo != NULL)

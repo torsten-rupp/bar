@@ -435,7 +435,7 @@ bool Remote_isConnected(const RemoteHost *remoteHost)
   assert(remoteHost != NULL);
 
   isConnected = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&remoteServerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&remoteServerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     isConnected = (findRemoteServer(remoteHost) != NULL);
   }
@@ -467,7 +467,7 @@ LOCAL Errors Remote_vexecuteCommand(const RemoteHost *remoteHost,
   // init variables
   line = String_new();
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&remoteServerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&remoteServerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find remote server
     remoteServerNode = findRemoteServer(remoteHost);

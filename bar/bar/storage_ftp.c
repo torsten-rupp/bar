@@ -106,7 +106,7 @@ LOCAL bool initFTPLogin(ConstString         hostName,
 
   if (jobOptions != NULL)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       if (jobOptions->ftpServer.password == NULL)
       {

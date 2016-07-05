@@ -838,7 +838,7 @@ LOCAL int busyHandlerCallback(void *userData, int n)
   #ifndef NDEBUG
     if ((n > 60) && ((n % 60) == 0))
     {
-      fprintf(stderr,"Warning: database busy handler called %s: %d\n",Thread_getCurrentIdString(),n);
+      fprintf(stderr,"Warning: database busy handler called '%s' (%s): %d\n",Thread_getCurrentName(),Thread_getCurrentIdString(),n);
     }
   #endif /* not NDEBUG */
 
@@ -1238,7 +1238,6 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
                             )
         )
   {
-if (stringEquals(tableName,"history")) fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,name);
     columnNode = LIST_NEW_NODE(DatabaseColumnNode);
     if (columnNode == NULL)
     {
