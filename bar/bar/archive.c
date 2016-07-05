@@ -325,9 +325,10 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
   Errors         error;
 
   assert(passwordHandle != NULL);
+  assert(passwordHandle->archiveInfo != NULL);
 
   password = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     while ((password == NULL) && (passwordHandle->passwordMode != PASSWORD_MODE_NONE))
     {
@@ -453,7 +454,7 @@ LOCAL Errors initCryptPassword(ArchiveInfo *archiveInfo)
 
   assert(archiveInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (Crypt_isEncrypted(archiveInfo->jobOptions->cryptAlgorithm) && (archiveInfo->cryptPassword == NULL))
     {
@@ -916,7 +917,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo, IndexHandle *indexHandl
     // init variables
     AutoFree_init(&autoFreeList);
 
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_unlock(&archiveInfo->chunkIOLock); });
 
@@ -1049,7 +1050,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo, IndexHandle *indexHandle
 //  assert(archiveInfo->file.openFlag);
 if (!archiveInfo->file.openFlag) return ERROR_NONE;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // close file
     (void)File_close(&archiveInfo->file.fileHandle);
@@ -3104,7 +3105,7 @@ void Archive_clearDecryptPasswords(void)
 {
   SemaphoreLock semaphoreLock;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     List_clear(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
   }
@@ -3118,7 +3119,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   assert(password != NULL);
 
   passwordNode = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find password
     passwordNode = decryptPasswordList.head;
@@ -3155,7 +3156,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   Password_clear(password);
 
   modified = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     modified = Semaphore_waitModified(&decryptPasswordList.lock,timeout);
     if (decryptPasswordList.newPasswordNode != NULL)
@@ -3598,7 +3599,7 @@ Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo)
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         archiveInfo->interrupt.openFlag = archiveInfo->file.openFlag;
         if (archiveInfo->file.openFlag)
@@ -3641,7 +3642,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         if (archiveInfo->interrupt.openFlag)
         {
@@ -8859,7 +8860,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               }
 
               // transfer to archive
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file
                 tmpError = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
@@ -9010,7 +9011,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               }
 
               // transfer to archive
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file if needed
                 tmpError = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
@@ -9245,7 +9246,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               }
 
               // transfer to archive
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file if needed
                 tmpError = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
@@ -10361,7 +10362,7 @@ uint64 Archive_tell(ArchiveInfo *archiveInfo)
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           if (archiveInfo->file.openFlag)
           {
@@ -10406,7 +10407,7 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           if (archiveInfo->file.openFlag)
           {
@@ -10444,7 +10445,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           size = (archiveInfo->file.openFlag)
                    ? archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData)
@@ -10483,7 +10484,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
   assert(indexHandle != NULL);
   assert(storageName != NULL);
 
-  // create new index
+  // create new storage index
   error = Index_newStorage(indexHandle,
                            DATABASE_ID_NONE, // entityId
                            storageName,
@@ -10511,7 +10512,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                              );
   if (error != ERROR_NONE)
   {
-    Archive_remIndex(indexHandle,storageId);
+    (void)Index_deleteStorage(indexHandle,storageId);
     return error;
   }
 
@@ -10656,6 +10657,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
+#if 0
   error = Index_beginTransaction(indexHandle);
   if (error != ERROR_NONE)
   {
@@ -10672,6 +10674,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
+#endif
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
@@ -11061,11 +11064,15 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String_delete(fileName);
   if (error == ERROR_NONE)
   {
+#if 0
     error = Index_endTransaction(indexHandle);
+#endif
   }
   else
   {
+#if 0
     (void)Index_rollbackTransaction(indexHandle);
+#endif
   }
   if      (error != ERROR_NONE)
   {
