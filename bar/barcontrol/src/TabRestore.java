@@ -7025,22 +7025,68 @@ Dprintf.dprintf("remove");
     // run dialog
     String storagePath = (String)Dialogs.run(dialog,null);
 
-    // add storage file
+    // add storage files
     if (storagePath != null)
     {
-      String[] errorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",new File(storagePath,"*").getPath()),
-                                           0,  // debugLevel
-                                           errorMessage
-                                          );
-      if (error == Errors.NONE)
+      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Add indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+
+      new BackgroundTask(busyDialog,new Object[]{storagePath})
       {
-        updateStorageTreeTableThread.triggerUpdate();
-      }
-      else
-      {
-        Dialogs.error(shell,BARControl.tr("Cannot add index database for storage path!\n\n''{0}''\n\n(error: {1})",storagePath,errorMessage[0]));
-      }
+        @Override
+        public void run(final BusyDialog busyDialog, Object userData)
+        {
+          String storagePath = (String)((Object[])userData)[0];
+
+          final int[] n = new int[]{0};
+          busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
+
+          String[] errorMessage = new String[1];
+          int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",new File(storagePath,"*").getPath()),
+                                               0,  // debugLevel
+                                               errorMessage,
+                                               new CommandResultHandler()
+                                               {
+                                                 public int handleResult(int i, ValueMap valueMap)
+                                                 {
+                                                   try
+                                                   {
+                                                     final long   storageId = valueMap.getLong  ("storageId");
+                                                     final String name      = valueMap.getString("name"     );
+
+                                                     n[0]++;
+                                                     busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
+                                                     busyDialog.updateList(name);
+                                                   }
+                                                   catch (IllegalArgumentException exception)
+                                                   {
+                                                     if (Settings.debugLevel > 0)
+                                                     {
+                                                       System.err.println("ERROR: "+exception.getMessage());
+                                                       System.exit(1);
+                                                     }
+                                                   }
+
+                                                   // check if aborted
+                                                   if (busyDialog.isAborted())
+                                                   {
+                                                     abort();
+                                                   }
+
+                                                   return Errors.NONE;
+                                                 }
+                                               }
+                                              );
+          busyDialog.close();
+          if (error == Errors.NONE)
+          {
+            updateStorageTreeTableThread.triggerUpdate();
+          }
+          else
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path!\n\n''{0}''\n\n(error: {1})",storagePath,errorMessage[0]));
+          }
+        }
+      };
     }
   }
 
