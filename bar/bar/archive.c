@@ -10537,6 +10537,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   StorageSpecifier  storageSpecifier;
   String            printableStorageName;
   Errors            error;
+  ulong             n;
   uint64            timeLastChanged;
   bool              abortedFlag,serverAllocationPendingFlag;
   ArchiveInfo       archiveInfo;
@@ -10547,6 +10548,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String            directoryName;
   String            linkName;
   String            destinationName;
+uint64 t0,t1;
+#define TR 1
 
   assert(indexHandle != NULL);
   assert(storageName != NULL);
@@ -10625,6 +10628,29 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     return error;
   }
 
+t0 = Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: update %llu\n",__FILE__,__LINE__,t0);
+  // index archive contents
+  printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
+#ifdef TR
+  error = Index_beginTransaction(indexHandle);
+  if (error != ERROR_NONE)
+  {
+    Archive_close(&archiveInfo);
+    Index_setState(indexHandle,
+                   storageId,
+                   INDEX_STATE_ERROR,
+                   0LL,
+                   "%s (error code: %d)",
+                   Error_getText(error),
+                   Error_getCode(error)
+                  );
+    String_delete(printableStorageName);
+    Storage_doneSpecifier(&storageSpecifier);
+    return error;
+  }
+#endif
+
   // clear index
   error = Index_clearStorage(indexHandle,
                              storageId
@@ -10633,6 +10659,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
+#ifdef TR
+    (void)Index_rollbackTransaction(indexHandle);
+#endif
     Archive_close(&archiveInfo);
     Index_setState(indexHandle,
                    storageId,
@@ -10655,26 +10684,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                  NULL
                 );
 
-  // index archive contents
-  printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-#if 0
-  error = Index_beginTransaction(indexHandle);
-  if (error != ERROR_NONE)
-  {
-    Archive_close(&archiveInfo);
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_ERROR,
-                   0LL,
-                   "%s (error code: %d)",
-                   Error_getText(error),
-                   Error_getCode(error)
-                  );
-    String_delete(printableStorageName);
-    Storage_doneSpecifier(&storageSpecifier);
-    return error;
-  }
-#endif
+  // read archive content
+  n                           = 0L;
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
@@ -10692,8 +10703,14 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     // pause
     if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
     {
+fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
 #if 0
       // temporarly close storage
+      error = Index_endTransaction(indexHandle);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
       error = Archive_storageInterrupt(&archiveInfo);
       if (error != ERROR_NONE)
       {
@@ -10702,10 +10719,11 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 #endif /* 0 */
 
       // wait
-      while ((pauseCallback != NULL) && pauseCallback(pauseUserData))
+      do
       {
         Misc_udelay(10LL*MISC_US_PER_SECOND);
       }
+      while (pauseCallback(pauseUserData));
 
       // reopen storage
 #if 0
@@ -10715,6 +10733,11 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
         break;
       }
 #endif /* 0 */
+      error = Index_beginTransaction(indexHandle);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
     }
 
     // get next file type
@@ -10722,335 +10745,365 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                                             &archiveEntryType,
                                             FALSE
                                            );
-    if (error == ERROR_NONE)
+    if (error != ERROR_NONE)
     {
-      // read entry
-      switch (archiveEntryType)
-      {
-        case ARCHIVE_ENTRY_TYPE_FILE:
-          {
-            ArchiveEntryInfo archiveEntryInfo;
-            FileInfo         fileInfo;
-            uint64           fragmentOffset,fragmentSize;
+      break;
+    }
 
-            // open archive file
-            error = Archive_readFileEntry(&archiveEntryInfo,
-                                          &archiveInfo,
-                                          NULL,  // deltaCompressAlgorithm
-                                          NULL,  // byteCompressAlgorithm
-                                          NULL,  // cryptAlgorithm
-                                          NULL,  // cryptType
-                                          fileName,
-                                          &fileInfo,
-                                          NULL,  // fileExtendedAttributeList
-                                          NULL,  // deltaSourceName
-                                          NULL,  // deltaSourceSize
-                                          &fragmentOffset,
-                                          &fragmentSize
-                                         );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
+    // read entry
+    switch (archiveEntryType)
+    {
+      case ARCHIVE_ENTRY_TYPE_FILE:
+        {
+          ArchiveEntryInfo archiveEntryInfo;
+          FileInfo         fileInfo;
+          uint64           fragmentOffset,fragmentSize;
 
-            // add to index database
-            error = Index_addFile(indexHandle,
-                                  storageId,
-                                  fileName,
-                                  fileInfo.size,
-                                  fileInfo.timeLastAccess,
-                                  fileInfo.timeModified,
-                                  fileInfo.timeLastChanged,
-                                  fileInfo.userId,
-                                  fileInfo.groupId,
-                                  fileInfo.permission,
-                                  fragmentOffset,
-                                  fragmentSize
-                                 );
-            if (error != ERROR_NONE)
-            {
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(fileName),fileInfo.size,String_cString(printableStorageName));
-
-            // close archive file, free resources
-            (void)Archive_closeEntry(&archiveEntryInfo);
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_IMAGE:
-          {
-            ArchiveEntryInfo archiveEntryInfo;
-            DeviceInfo       deviceInfo;
-            FileSystemTypes  fileSystemType;
-            uint64           blockOffset,blockCount;
-
-            // open archive file
-            error = Archive_readImageEntry(&archiveEntryInfo,
-                                           &archiveInfo,
-                                           NULL,  // deltaCompressAlgorithm
-                                           NULL,  // byteCompressAlgorithm
-                                           NULL,  // cryptAlgorithm
-                                           NULL,  // cryptType
-                                           imageName,
-                                           &deviceInfo,
-                                           &fileSystemType,
-                                           NULL,  // deltaSourceName
-                                           NULL,  // deltaSourceSize
-                                           &blockOffset,
-                                           &blockCount
-                                          );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // add to index database
-            error = Index_addImage(indexHandle,
-                                   storageId,
-                                   imageName,
-                                   fileSystemType,
-                                   deviceInfo.size,
-                                   deviceInfo.blockSize,
-                                   blockOffset,
-                                   blockCount
-                                  );
-            if (error != ERROR_NONE)
-            {
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              break;
-            }
-            pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(imageName),deviceInfo.size,String_cString(printableStorageName));
-
-            // close archive file, free resources
-            (void)Archive_closeEntry(&archiveEntryInfo);
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-          {
-            FileInfo fileInfo;
-
-            // open archive directory
-            error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                               &archiveInfo,
-                                               NULL,  // cryptAlgorithm
-                                               NULL,  // cryptType
-                                               directoryName,
-                                               &fileInfo,
-                                               NULL  // fileExtendedAttributeList
-                                              );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // add to index database
-            error = Index_addDirectory(indexHandle,
-                                       storageId,
-                                       directoryName,
-                                       fileInfo.timeLastAccess,
-                                       fileInfo.timeModified,
-                                       fileInfo.timeLastChanged,
-                                       fileInfo.userId,
-                                       fileInfo.groupId,
-                                       fileInfo.permission
-                                      );
-            if (error != ERROR_NONE)
-            {
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
-
-            // close archive file, free resources
-            (void)Archive_closeEntry(&archiveEntryInfo);
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_LINK:
-          {
-            FileInfo fileInfo;
-
-            // open archive link
-            error = Archive_readLinkEntry(&archiveEntryInfo,
-                                          &archiveInfo,
-                                          NULL,  // cryptAlgorithm
-                                          NULL,  // cryptType
-                                          linkName,
-                                          destinationName,
-                                          &fileInfo,
-                                          NULL   // fileExtendedAttributeList
-                                         );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // add to index database
-            error = Index_addLink(indexHandle,
-                                  storageId,
-                                  linkName,
-                                  destinationName,
-                                  fileInfo.timeLastAccess,
-                                  fileInfo.timeModified,
-                                  fileInfo.timeLastChanged,
-                                  fileInfo.userId,
-                                  fileInfo.groupId,
-                                  fileInfo.permission
-                                 );
-            if (error != ERROR_NONE)
-            {
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
-
-            // close archive file, free resources
-            (void)Archive_closeEntry(&archiveEntryInfo);
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          {
-            StringList       fileNameList;
-            String           fileName;
-            ArchiveEntryInfo archiveEntryInfo;
-            FileInfo         fileInfo;
-            uint64           fragmentOffset,fragmentSize;
-            const StringNode *stringNode;
-
-            // open archive file
-            StringList_init(&fileNameList);
-            error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                              &archiveInfo,
-                                              NULL,  // deltaCompressAlgorithm
-                                              NULL,  // byteCompressAlgorithm
-                                              NULL,  // cryptAlgorithm
-                                              NULL,  // cryptType
-                                              &fileNameList,
-                                              &fileInfo,
-                                              NULL,  // fileExtendedAttributeList
-                                              NULL,  // deltaSourceName
-                                              NULL,  // deltaSourceSize
-                                              &fragmentOffset,
-                                              &fragmentSize
-                                             );
-            if (error != ERROR_NONE)
-            {
-              StringList_done(&fileNameList);
-              break;
-            }
-
-            // add to index database
-            STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
-            {
-              error = Index_addHardlink(indexHandle,
-                                        storageId,
+          // open archive file
+          error = Archive_readFileEntry(&archiveEntryInfo,
+                                        &archiveInfo,
+                                        NULL,  // deltaCompressAlgorithm
+                                        NULL,  // byteCompressAlgorithm
+                                        NULL,  // cryptAlgorithm
+                                        NULL,  // cryptType
                                         fileName,
-                                        fileInfo.size,
-                                        fileInfo.timeLastAccess,
-                                        fileInfo.timeModified,
-                                        fileInfo.timeLastChanged,
-                                        fileInfo.userId,
-                                        fileInfo.groupId,
-                                        fileInfo.permission,
-                                        fragmentOffset,
-                                        fragmentSize
+                                        &fileInfo,
+                                        NULL,  // fileExtendedAttributeList
+                                        NULL,  // deltaSourceName
+                                        NULL,  // deltaSourceSize
+                                        &fragmentOffset,
+                                        &fragmentSize
                                        );
-              if (error != ERROR_NONE)
-              {
-                break;
-              }
-            }
-            if (error != ERROR_NONE)
-            {
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              StringList_done(&fileNameList);
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added hardlink '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),fileInfo.size,String_cString(printableStorageName));
-
-            // close archive file, free resources
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            StringList_done(&fileNameList);
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_SPECIAL:
+          if (error != ERROR_NONE)
           {
-            FileInfo fileInfo;
+            break;
+          }
 
-            // open archive link
-            error = Archive_readSpecialEntry(&archiveEntryInfo,
+          // add to index database
+          error = Index_addFile(indexHandle,
+                                storageId,
+                                fileName,
+                                fileInfo.size,
+                                fileInfo.timeLastAccess,
+                                fileInfo.timeModified,
+                                fileInfo.timeLastChanged,
+                                fileInfo.userId,
+                                fileInfo.groupId,
+                                fileInfo.permission,
+                                fragmentOffset,
+                                fragmentSize
+                               );
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
+
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(fileName),fileInfo.size,String_cString(printableStorageName));
+
+          // close archive file, free resources
+          (void)Archive_closeEntry(&archiveEntryInfo);
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+        {
+          ArchiveEntryInfo archiveEntryInfo;
+          DeviceInfo       deviceInfo;
+          FileSystemTypes  fileSystemType;
+          uint64           blockOffset,blockCount;
+
+          // open archive file
+          error = Archive_readImageEntry(&archiveEntryInfo,
+                                         &archiveInfo,
+                                         NULL,  // deltaCompressAlgorithm
+                                         NULL,  // byteCompressAlgorithm
+                                         NULL,  // cryptAlgorithm
+                                         NULL,  // cryptType
+                                         imageName,
+                                         &deviceInfo,
+                                         &fileSystemType,
+                                         NULL,  // deltaSourceName
+                                         NULL,  // deltaSourceSize
+                                         &blockOffset,
+                                         &blockCount
+                                        );
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+
+          // add to index database
+          error = Index_addImage(indexHandle,
+                                 storageId,
+                                 imageName,
+                                 fileSystemType,
+                                 deviceInfo.size,
+                                 deviceInfo.blockSize,
+                                 blockOffset,
+                                 blockCount
+                                );
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
+          pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(imageName),deviceInfo.size,String_cString(printableStorageName));
+
+          // close archive file, free resources
+          (void)Archive_closeEntry(&archiveEntryInfo);
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        {
+          FileInfo fileInfo;
+
+          // open archive directory
+          error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                              &archiveInfo,
                                              NULL,  // cryptAlgorithm
                                              NULL,  // cryptType
-                                             fileName,
+                                             directoryName,
                                              &fileInfo,
-                                             NULL   // fileExtendedAttributeList
+                                             NULL  // fileExtendedAttributeList
                                             );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
 
-            // add to index database
-            error = Index_addSpecial(indexHandle,
+          // add to index database
+          error = Index_addDirectory(indexHandle,
                                      storageId,
-                                     fileName,
-                                     fileInfo.type,
+                                     directoryName,
                                      fileInfo.timeLastAccess,
                                      fileInfo.timeModified,
                                      fileInfo.timeLastChanged,
                                      fileInfo.userId,
                                      fileInfo.groupId,
-                                     fileInfo.permission,
-                                     fileInfo.major,
-                                     fileInfo.minor
+                                     fileInfo.permission
                                     );
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
+
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
+
+          // close archive file, free resources
+          (void)Archive_closeEntry(&archiveEntryInfo);
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_LINK:
+        {
+          FileInfo fileInfo;
+
+          // open archive link
+          error = Archive_readLinkEntry(&archiveEntryInfo,
+                                        &archiveInfo,
+                                        NULL,  // cryptAlgorithm
+                                        NULL,  // cryptType
+                                        linkName,
+                                        destinationName,
+                                        &fileInfo,
+                                        NULL   // fileExtendedAttributeList
+                                       );
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+
+          // add to index database
+          error = Index_addLink(indexHandle,
+                                storageId,
+                                linkName,
+                                destinationName,
+                                fileInfo.timeLastAccess,
+                                fileInfo.timeModified,
+                                fileInfo.timeLastChanged,
+                                fileInfo.userId,
+                                fileInfo.groupId,
+                                fileInfo.permission
+                               );
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
+
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
+
+          // close archive file, free resources
+          (void)Archive_closeEntry(&archiveEntryInfo);
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        {
+          StringList       fileNameList;
+          String           fileName;
+          ArchiveEntryInfo archiveEntryInfo;
+          FileInfo         fileInfo;
+          uint64           fragmentOffset,fragmentSize;
+          const StringNode *stringNode;
+
+          // open archive file
+          StringList_init(&fileNameList);
+          error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                            &archiveInfo,
+                                            NULL,  // deltaCompressAlgorithm
+                                            NULL,  // byteCompressAlgorithm
+                                            NULL,  // cryptAlgorithm
+                                            NULL,  // cryptType
+                                            &fileNameList,
+                                            &fileInfo,
+                                            NULL,  // fileExtendedAttributeList
+                                            NULL,  // deltaSourceName
+                                            NULL,  // deltaSourceSize
+                                            &fragmentOffset,
+                                            &fragmentSize
+                                           );
+          if (error != ERROR_NONE)
+          {
+            StringList_done(&fileNameList);
+            break;
+          }
+
+          // add to index database
+          STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+          {
+            error = Index_addHardlink(indexHandle,
+                                      storageId,
+                                      fileName,
+                                      fileInfo.size,
+                                      fileInfo.timeLastAccess,
+                                      fileInfo.timeModified,
+                                      fileInfo.timeLastChanged,
+                                      fileInfo.userId,
+                                      fileInfo.groupId,
+                                      fileInfo.permission,
+                                      fragmentOffset,
+                                      fragmentSize
+                                     );
             if (error != ERROR_NONE)
             {
-              (void)Archive_closeEntry(&archiveEntryInfo);
               break;
             }
-
-            // save max. time last changed
-            if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
-
-            // close archive file, free resources
-            (void)Archive_closeEntry(&archiveEntryInfo);
           }
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break; /* not reached */
-      }
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            StringList_done(&fileNameList);
+            break;
+          }
+
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added hardlink '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),fileInfo.size,String_cString(printableStorageName));
+
+          // close archive file, free resources
+          (void)Archive_closeEntry(&archiveEntryInfo);
+          StringList_done(&fileNameList);
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        {
+          FileInfo fileInfo;
+
+          // open archive link
+          error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                           &archiveInfo,
+                                           NULL,  // cryptAlgorithm
+                                           NULL,  // cryptType
+                                           fileName,
+                                           &fileInfo,
+                                           NULL   // fileExtendedAttributeList
+                                          );
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+
+          // add to index database
+          error = Index_addSpecial(indexHandle,
+                                   storageId,
+                                   fileName,
+                                   fileInfo.type,
+                                   fileInfo.timeLastAccess,
+                                   fileInfo.timeModified,
+                                   fileInfo.timeLastChanged,
+                                   fileInfo.userId,
+                                   fileInfo.groupId,
+                                   fileInfo.permission,
+                                   fileInfo.major,
+                                   fileInfo.minor
+                                  );
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
+
+          // save max. time last changed
+          if (timeLastChanged < fileInfo.timeLastChanged) timeLastChanged = fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
+
+          // close archive file, free resources
+          (void)Archive_closeEntry(&archiveEntryInfo);
+        }
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break; /* not reached */
+    }
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
 
 #if 0
-      // update temporary entries, size (ignore error)
-      Index_storageUpdate(indexHandle,
-                          storageId,
-                          NULL,  // storageName
-                          Archive_getSize(&archiveInfo)
-                         );
+    // update temporary entries, size (ignore error)
+    Index_storageUpdate(indexHandle,
+                        storageId,
+                        NULL,  // storageName
+                        Archive_getSize(&archiveInfo)
+                       );
 #endif
+
+    // flush index data
+//    if ((n > 0L) && ((n % 1000L) == 0L))
+    if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
+    {
+fprintf(stderr,"%s, %d: flush and paus!!!!\n",__FILE__,__LINE__);
+      error = Index_endTransaction(indexHandle);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+
+      do
+      {
+        Misc_udelay(10LL*MISC_US_PER_SECOND);
+      }
+      while (pauseCallback(pauseUserData));
+
+      error = Index_beginTransaction(indexHandle);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
     }
 
     // check if aborted, check if server allocation pending
@@ -11064,16 +11117,18 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String_delete(fileName);
   if (error == ERROR_NONE)
   {
-#if 0
+#ifdef TR
     error = Index_endTransaction(indexHandle);
 #endif
   }
   else
   {
-#if 0
+#ifdef TR
     (void)Index_rollbackTransaction(indexHandle);
 #endif
   }
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: update end %llu -> %llu\n",__FILE__,__LINE__,t1,t1-t0);
   if      (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
