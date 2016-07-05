@@ -10790,9 +10790,6 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 {
   Errors     error;
   DatabaseId entryId;
-  #ifndef NDEBUG
-    int64 n;
-  #endif /* not NDEBUG */
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);

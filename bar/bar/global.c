@@ -134,7 +134,7 @@ void __dprintf__(const char *__fileName__,
 {
   va_list arguments;
 
-  fprintf(stdout,"DEBUG %s, %u: ",__fileName__,__lineNb__);
+  fprintf(stdout,"DEBUG %s, %lu: ",__fileName__,__lineNb__);
   va_start(arguments,format);
   vfprintf(stdout,format,arguments);
   va_end(arguments);
@@ -167,7 +167,7 @@ void __halt(const char *__fileName__,
   vfprintf(stderr,format,arguments);
   va_end(arguments);
   #ifndef NDEBUG
-    fprintf(stderr," - halt in file %s, line %u\n",__fileName__,__lineNb__);
+    fprintf(stderr," - halt in file %s, line %lu\n",__fileName__,__lineNb__);
   #else /* NDEBUG */
     fprintf(stderr," - halt\n");
   #endif /* not NDEBUG */
@@ -663,7 +663,7 @@ void debugCheckResourceTrace(const char *__fileName__,
       }
       if (debugResourceNode != NULL)
       {
-        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIuPTR" (%d bytes) invalid at %s, %u which was allocated at %s, %lu and freed at %s, %lu!\n",
+        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIuPTR" (%d bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
                 debugResourceNode->typeName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,
