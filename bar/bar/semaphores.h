@@ -305,6 +305,25 @@ void __Semaphore_unlock(const char *fileName, ulong lineNb, Semaphore *semaphore
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Semaphore_lockCount
+* Purpose: get number locks (READ or READ/WRITE)
+* Input  : semaphore - semaphore
+* Output : -
+* Return : number of locks
+* Notes  : -
+\***********************************************************************/
+
+INLINE uint Semaphore_lockCount(Semaphore *semaphore);
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+INLINE uint Semaphore_lockCount(Semaphore *semaphore)
+{
+  assert(semaphore != NULL);
+
+  return semaphore->readLockCount+semaphore->readWriteLockCount;
+}
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : Semaphore_isLocked
 * Purpose: check if semaphore is currently locked
 * Input  : semaphore - semaphore
