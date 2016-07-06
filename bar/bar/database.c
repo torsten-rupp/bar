@@ -42,6 +42,7 @@
 #include "database.h"
 
 /****************** Conditional compilation switches *******************/
+#define _DATABASE_SUPPORT_TRANSACTIONS
 
 /***************************** Constants *******************************/
 #if 1
@@ -2759,144 +2760,169 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                     )
 #endif /* NDEBUG */
 {
-  String sqlString;
-  Errors error;
+  #ifdef DATABASE_SUPPORT_TRANSACTIONS
+    String sqlString;
+    Errors error;
+  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-  #ifndef NDEBUG
-    if (databaseHandle->transaction.fileName != NULL)
+  #ifdef DATABASE_SUPPORT_TRANSACTIONS
+    #ifndef NDEBUG
+      if (databaseHandle->transaction.fileName != NULL)
+      {
+        const char *name1,*name2;
+
+        name1 = Thread_getCurrentName();
+        name2 = Thread_getName(databaseHandle->transaction.threadId);
+        fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread '%s' (%s) at %s, %u and previously thread '%s' (%s) at %s, %u!\n",
+                (name1 != NULL) ? name1 : "none",
+                Thread_getCurrentIdString(),
+                __fileName__,
+                __lineNb__,
+                (name2 != NULL) ? name2 : "none",
+                Thread_getIdString(databaseHandle->transaction.threadId),
+                databaseHandle->transaction.fileName,
+                databaseHandle->transaction.lineNb
+               );
+        #ifdef HAVE_BACKTRACE
+          debugDumpStackTrace(stderr,0,databaseHandle->transaction.stackTrace,databaseHandle->transaction.stackTraceSize,0);
+        #endif /* HAVE_BACKTRACE */
+        HALT_INTERNAL_ERROR("begin transactions fail");
+      }
+    #endif /* NDEBUG */
+
+    // format SQL command string
+    sqlString = String_format(String_new(),"BEGIN TRANSACTION;");
+
+    DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+    error = sqliteExecute(databaseHandle,
+                          String_cString(sqlString),
+                          CALLBACK(NULL,NULL),
+                          databaseHandle->timeout
+                         );
+    if (error != ERROR_NONE)
     {
-      const char *name1,*name2;
-
-      name1 = Thread_getCurrentName();
-      name2 = Thread_getName(databaseHandle->transaction.threadId);
-      fprintf(stderr,"DEBUG ERROR: multiple transactions requested thread '%s' (%s) at %s, %u and previously thread '%s' (%s) at %s, %u!\n",
-              (name1 != NULL) ? name1 : "none",
-              Thread_getCurrentIdString(),
-              __fileName__,
-              __lineNb__,
-              (name2 != NULL) ? name2 : "none",
-              Thread_getIdString(databaseHandle->transaction.threadId),
-              databaseHandle->transaction.fileName,
-              databaseHandle->transaction.lineNb
-             );
-      #ifdef HAVE_BACKTRACE
-        debugDumpStackTrace(stderr,0,databaseHandle->transaction.stackTrace,databaseHandle->transaction.stackTraceSize,0);
-      #endif /* HAVE_BACKTRACE */
-      HALT_INTERNAL_ERROR("begin transactions fail");
+      String_delete(sqlString);
+      return error;
     }
-  #endif /* NDEBUG */
 
-  // format SQL command string
-  sqlString = String_format(String_new(),"BEGIN TRANSACTION;");
-
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-  error = sqliteExecute(databaseHandle,
-                        String_cString(sqlString),
-                        CALLBACK(NULL,NULL),
-                        databaseHandle->timeout
-                       );
-  if (error != ERROR_NONE)
-  {
+    // free resources
     String_delete(sqlString);
-    return error;
-  }
 
-  // free resources
-  String_delete(sqlString);
-
-  #ifndef NDEBUG
-    databaseHandle->transaction.threadId = Thread_getCurrentId();
-    databaseHandle->transaction.fileName = __fileName__;
-    databaseHandle->transaction.lineNb   = __lineNb__;
-    #ifdef HAVE_BACKTRACE
-      databaseHandle->transaction.stackTraceSize = backtrace((void*)databaseHandle->transaction.stackTrace,SIZE_OF_ARRAY(databaseHandle->transaction.stackTrace));
-    #endif /* HAVE_BACKTRACE */
-  #endif /* NDEBUG */
+    #ifndef NDEBUG
+      databaseHandle->transaction.threadId = Thread_getCurrentId();
+      databaseHandle->transaction.fileName = __fileName__;
+      databaseHandle->transaction.lineNb   = __lineNb__;
+      #ifdef HAVE_BACKTRACE
+        databaseHandle->transaction.stackTraceSize = backtrace((void*)databaseHandle->transaction.stackTrace,SIZE_OF_ARRAY(databaseHandle->transaction.stackTrace));
+      #endif /* HAVE_BACKTRACE */
+    #endif /* NDEBUG */
+  #else /* not DATABASE_SUPPORT_TRANSACTIONS */
+    #ifndef NDEBUG
+      UNUSED_VARIABLE(__fileName__);
+      UNUSED_VARIABLE(__lineNb__);
+    #endif
+    UNUSED_VARIABLE(databaseHandle);
+  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
   return ERROR_NONE;
 }
 
 Errors Database_endTransaction(DatabaseHandle *databaseHandle)
 {
-  String sqlString;
-  Errors error;
+  #ifdef DATABASE_SUPPORT_TRANSACTIONS
+    String sqlString;
+    Errors error;
+  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
-  assert(databaseHandle->transaction.fileName != NULL);
 
-  #ifndef NDEBUG
-    databaseHandle->transaction.fileName = NULL;
-    databaseHandle->transaction.lineNb   = 0;
-    #ifdef HAVE_BACKTRACE
-      databaseHandle->transaction.stackTraceSize = 0;
-    #endif /* HAVE_BACKTRACE */
-  #endif /* NDEBUG */
+  #ifdef DATABASE_SUPPORT_TRANSACTIONS
+    assert(databaseHandle->transaction.fileName != NULL);
 
-  // format SQL command string
-  sqlString = String_format(String_new(),"END TRANSACTION;");
+    #ifndef NDEBUG
+      databaseHandle->transaction.fileName = NULL;
+      databaseHandle->transaction.lineNb   = 0;
+      #ifdef HAVE_BACKTRACE
+        databaseHandle->transaction.stackTraceSize = 0;
+      #endif /* HAVE_BACKTRACE */
+    #endif /* NDEBUG */
 
-  // end transaction
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-  error = sqliteExecute(databaseHandle,
-                        String_cString(sqlString),
-                        CALLBACK(NULL,NULL),
-                        databaseHandle->timeout
-                       );
-  if (error != ERROR_NONE)
-  {
+    // format SQL command string
+    sqlString = String_format(String_new(),"END TRANSACTION;");
+
+    // end transaction
+    DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+    error = sqliteExecute(databaseHandle,
+                          String_cString(sqlString),
+                          CALLBACK(NULL,NULL),
+                          databaseHandle->timeout
+                         );
+    if (error != ERROR_NONE)
+    {
+      String_delete(sqlString);
+      return error;
+    }
+
+    // free resources
     String_delete(sqlString);
-    return error;
-  }
 
-  // free resources
-  String_delete(sqlString);
-
-  // try to execute checkpoint
-  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
+    // try to execute checkpoint
+//TODO
+//    sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
+  #else /* not DATABASE_SUPPORT_TRANSACTIONS */
+    UNUSED_VARIABLE(databaseHandle);
+  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
   return ERROR_NONE;
 }
 
 Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle)
 {
-  String sqlString;
-  Errors error;
+  #ifdef DATABASE_SUPPORT_TRANSACTIONS
+    String sqlString;
+    Errors error;
+  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
-  assert(databaseHandle->transaction.fileName != NULL);
 
+  #ifdef DATABASE_SUPPORT_TRANSACTIONS
+    assert(databaseHandle->transaction.fileName != NULL);
 fprintf(stderr,"%s, %d: Database_rollbackTransaction\n",__FILE__,__LINE__);
-  #ifndef NDEBUG
-    databaseHandle->transaction.fileName = NULL;
-    databaseHandle->transaction.lineNb   = 0;
-    #ifdef HAVE_BACKTRACE
-      databaseHandle->transaction.stackTraceSize = 0;
-    #endif /* HAVE_BACKTRACE */
-  #endif /* NDEBUG */
 
-  // format SQL command string
-  sqlString = String_format(String_new(),"ROLLBACK TRANSACTION;");
+    #ifndef NDEBUG
+      databaseHandle->transaction.fileName = NULL;
+      databaseHandle->transaction.lineNb   = 0;
+      #ifdef HAVE_BACKTRACE
+        databaseHandle->transaction.stackTraceSize = 0;
+      #endif /* HAVE_BACKTRACE */
+    #endif /* NDEBUG */
 
-  // rollback transaction
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-  error = sqliteExecute(databaseHandle,
-                        String_cString(sqlString),
-                        CALLBACK(NULL,NULL),
-                        databaseHandle->timeout
-                       );
-  if (error != ERROR_NONE)
-  {
+    // format SQL command string
+    sqlString = String_format(String_new(),"ROLLBACK TRANSACTION;");
+
+    // rollback transaction
+    DATABASE_DEBUG_SQL(databaseHandle,sqlString);
+    error = sqliteExecute(databaseHandle,
+                          String_cString(sqlString),
+                          CALLBACK(NULL,NULL),
+                          databaseHandle->timeout
+                         );
+    if (error != ERROR_NONE)
+    {
+      String_delete(sqlString);
+      return error;
+    }
+
+    // free resources
     String_delete(sqlString);
-    return error;
-  }
-
-  // free resources
-  String_delete(sqlString);
+  #else /* not DATABASE_SUPPORT_TRANSACTIONS */
+    UNUSED_VARIABLE(databaseHandle);
+  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
   return ERROR_NONE;
 }
