@@ -554,27 +554,6 @@ LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
 
-//TODO: create inlines
-#define IS_JOB_LOCAL(jobNode) (String_isEmpty(jobNode->remoteHost.name))
-#define IS_JOB_REMOTE(jobNode) (!String_isEmpty(jobNode->remoteHost.name))
-
-#define IS_JOB_ACTIVE(jobNode) (   (jobNode->state == JOB_STATE_WAITING) \
-                                || (jobNode->state == JOB_STATE_RUNNING) \
-                                || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD) \
-                                || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD) \
-                                || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD) \
-                                || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
-                                || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
-                               )
-
-#define IS_JOB_RUNNING(jobNode) (   (jobNode->state == JOB_STATE_RUNNING) \
-                                 || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD) \
-                                 || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD) \
-                                 || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD) \
-                                 || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
-                                 || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
-                                )
-
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -1511,6 +1490,20 @@ LOCAL ScheduleNode *parseScheduleDateTime(ConstString date,
 }
 
 /***********************************************************************\
+* Name   : isServerRunning
+* Purpose: check if server is runnging
+* Input  : -
+* Output : -
+* Return : TRUE iff server is running
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isServerRunning(void)
+{
+  return serverState == SERVER_STATE_RUNNING;
+}
+
+/***********************************************************************\
 * Name   : storageRequestVolume
 * Purpose: request volume call-back
 * Input  : volumeNumber - volume number
@@ -1874,6 +1867,145 @@ LOCAL void deleteJob(JobNode *jobNode)
 #endif
 
 /***********************************************************************\
+* Name   : isJobLocal
+* Purpose: check if local job
+* Input  : jobNode - job node
+* Output : -
+* Return : TRUE iff local job
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isJobLocal(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return String_isEmpty(jobNode->remoteHost.name);
+}
+
+/***********************************************************************\
+* Name   : isJobRemote
+* Purpose: check if a remote job
+* Input  : jobNode - job node
+* Output : -
+* Return : TRUE iff remote job
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isJobRemote(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return !String_isEmpty(jobNode->remoteHost.name);
+}
+
+/***********************************************************************\
+* Name   : isJobActive
+* Purpose: check if job is active (waiting/running)
+* Input  : jobNode - job node
+* Output : -
+* Return : TRUE iff job is active
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isJobActive(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return (   (jobNode->state == JOB_STATE_WAITING) \
+          || (jobNode->state == JOB_STATE_RUNNING) \
+          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD) \
+          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD) \
+          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD) \
+          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
+          || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
+         );
+}
+
+/***********************************************************************\
+* Name   : isSomeJobActive
+* Purpose: check if some job is active
+* Input  : -
+* Output : -
+* Return : TRUE iff some job is active
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isSomeJobActive(void)
+{
+  SemaphoreLock semaphoreLock;
+  const JobNode *jobNode;
+  bool          activeFlag;
+
+  activeFlag = FALSE;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  {
+    LIST_ITERATE(&jobList,jobNode)
+    {
+      if (isJobActive(jobNode))
+      {
+        activeFlag = TRUE;
+        break;
+      }
+    }
+  }
+
+  return activeFlag;
+}
+
+/***********************************************************************\
+* Name   : isJobRunning
+* Purpose: check if job is running
+* Input  : jobNode - job node
+* Output : -
+* Return : TRUE iff job is running
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isJobRunning(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return (   (jobNode->state == JOB_STATE_RUNNING) \
+          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD) \
+          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD) \
+          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD) \
+          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
+          || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
+         );
+}
+
+/***********************************************************************\
+* Name   : isSomeJobRunning
+* Purpose: check if some job is runnging
+* Input  : -
+* Output : -
+* Return : TRUE iff some job is running
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isSomeJobRunning(void)
+{
+  SemaphoreLock semaphoreLock;
+  const JobNode *jobNode;
+  bool          runningFlag;
+
+  runningFlag = FALSE;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  {
+    LIST_ITERATE(&jobList,jobNode)
+    {
+      if (isJobRunning(jobNode))
+      {
+        runningFlag = TRUE;
+        break;
+      }
+    }
+  }
+
+  return runningFlag;
+}
+
+/***********************************************************************\
 * Name   : triggerJob
 * Purpose: trogger job run
 * Input  : jobNode - job node
@@ -1910,8 +2042,8 @@ LOCAL void triggerJob(JobNode      *jobNode,
   resetJobRunningInfo(jobNode);
 
 //TODO
-fprintf(stderr,"%s, %d: IS_JOB_REMOTE=%d\n",__FILE__,__LINE__,IS_JOB_REMOTE(jobNode));
-  if (IS_JOB_REMOTE(jobNode))
+fprintf(stderr,"%s, %d: isJobRemote=%d\n",__FILE__,__LINE__,isJobRemote(jobNode));
+  if (isJobRemote(jobNode))
   {
      // start remote create job
      jobNode->runningInfo.error = Remote_jobStart(&jobNode->remoteHost,
@@ -2110,6 +2242,7 @@ LOCAL JobNode *findJobByName(ConstString name)
 {
   JobNode *jobNode;
 
+//TODO: LIST_FIND
   jobNode = jobList.head;
   while ((jobNode != NULL) && !String_equals(jobNode->name,name))
   {
@@ -2137,6 +2270,7 @@ LOCAL JobNode *findJobByUUID(ConstString uuid)
 {
   JobNode *jobNode;
 
+// TODO: list find
   jobNode = jobList.head;
   while ((jobNode != NULL) && !String_equals(jobNode->uuid,uuid))
   {
@@ -2746,7 +2880,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
           List_append(&jobList,jobNode);
         }
 
-        if (   !IS_JOB_ACTIVE(jobNode)
+        if (   !isJobActive(jobNode)
             && (File_getFileTimeModified(fileName) > jobNode->fileModified)
            )
         {
@@ -3113,7 +3247,7 @@ LOCAL void jobThreadCode(void)
     do
     {
       jobNode = jobList.head;
-      while ((jobNode != NULL) && (IS_JOB_REMOTE(jobNode) || (jobNode->state != JOB_STATE_WAITING)))
+      while ((jobNode != NULL) && (isJobRemote(jobNode) || (jobNode->state != JOB_STATE_WAITING)))
       {
         jobNode = jobNode->next;
       }
@@ -3157,7 +3291,6 @@ LOCAL void jobThreadCode(void)
     }
 
     // unlock (Note: job is now protected by running state)
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Semaphore_unlock(&jobList.lock);
 
     // init log
@@ -3563,7 +3696,6 @@ NULL,//                                                        scheduleTitle,
     doneLog(&logHandle);
 
     // lock
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
     // free resources
@@ -3584,7 +3716,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
 
     // unlock
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Semaphore_unlock(&jobList.lock);
   }
 
@@ -3738,7 +3869,7 @@ LOCAL void remoteConnectThreadCode(void)
         if (jobNode != NULL)
         {
 //fprintf(stderr,"%s, %d: id=%s %s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->remoteHost.name));
-          if (IS_JOB_REMOTE(jobNode) && !Remote_isConnected(&jobNode->remoteHost))
+          if (isJobRemote(jobNode) && !Remote_isConnected(&jobNode->remoteHost))
           {
             Remote_copyHost(&remoteHost,&jobNode->remoteHost);
             tryConnectFlag = TRUE;
@@ -3758,7 +3889,7 @@ LOCAL void remoteConnectThreadCode(void)
     {
       LIST_ITERATE(&jobList,jobNode)
       {
-        if (IS_JOB_REMOTE(jobNode) && String_isEmpty(jobNode->master) && IS_JOB_ACTIVE(jobNode))
+        if (isJobRemote(jobNode) && String_isEmpty(jobNode->master) && isJobActive(jobNode))
         {
           remoteJobInfoNode = findRemoteJobInfoByUUID(jobNode->uuid);
           if (remoteJobInfoNode != NULL)
@@ -3977,7 +4108,7 @@ LOCAL void remoteThreadCode(void)
     {
       LIST_ITERATE(&jobList,jobNode)
       {
-        if (IS_JOB_REMOTE(jobNode) && String_isEmpty(jobNode->master) && IS_JOB_ACTIVE(jobNode))
+        if (isJobRemote(jobNode) && String_isEmpty(jobNode->master) && isJobActive(jobNode))
         {
           remoteJobInfoNode = findRemoteJobInfoByUUID(jobNode->uuid);
           if (remoteJobInfoNode != NULL)
@@ -4593,7 +4724,7 @@ LOCAL void schedulerThreadCode(void)
       jobNode         = jobList.head;
       while ((jobNode != NULL) && !pendingFlag && !quitFlag)
       {
-        if (!IS_JOB_ACTIVE(jobNode))
+        if (!isJobActive(jobNode))
         {
           executeScheduleNode = NULL;
 
@@ -4755,7 +4886,7 @@ LOCAL void pauseThreadCode(void)
       {
         if (Misc_getCurrentDateTime() > pauseEndDateTime)
         {
-          serverState = SERVER_STATE_RUNNING;
+          serverState            = SERVER_STATE_RUNNING;
           pauseFlags.create      = FALSE;
           pauseFlags.storage     = FALSE;
           pauseFlags.restore     = FALSE;
@@ -4837,7 +4968,7 @@ LOCAL bool indexPauseCallback(void *userData)
   UNUSED_VARIABLE(userData);
 
   return    pauseFlags.indexUpdate
-         || (serverState == SERVER_STATE_RUNNING);
+         || isSomeJobActive();
 }
 
 /***********************************************************************\
@@ -9372,7 +9503,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // remove job in list if not running or requested volume
-    if (IS_JOB_RUNNING(jobNode))
+    if (isJobRunning(jobNode))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job %S running",jobUUID);
       Semaphore_unlock(&jobList.lock);
@@ -9467,7 +9598,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // run job
-    if  (!IS_JOB_ACTIVE(jobNode))
+    if  (!isJobActive(jobNode))
     {
       // trigger job
       triggerJob(jobNode,
@@ -9528,12 +9659,12 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // abort job
-    if      (IS_JOB_RUNNING(jobNode))
+    if      (isJobRunning(jobNode))
     {
       jobNode->requestedAbortFlag = TRUE;
-      if (IS_JOB_LOCAL(jobNode))
+      if (isJobLocal(jobNode))
       {
-        while (IS_JOB_RUNNING(jobNode))
+        while (isJobRunning(jobNode))
         {
           Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
         }
@@ -9546,7 +9677,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
          doneJob(jobNode);
       }
     }
-    else if (IS_JOB_ACTIVE(jobNode))
+    else if (isJobActive(jobNode))
     {
       jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
       jobNode->state                = JOB_STATE_NONE;
@@ -12263,7 +12394,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // check if active
-    if (IS_JOB_ACTIVE(jobNode))
+    if (isJobActive(jobNode))
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job already scheduled");
       Semaphore_unlock(&jobList.lock);
