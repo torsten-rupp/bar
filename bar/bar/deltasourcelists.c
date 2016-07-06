@@ -136,30 +136,68 @@ void DeltaSourceList_doneAll(void)
 {
 }
 
-void DeltaSourceList_init(DeltaSourceList *deltaSourceList)
+#ifdef NDEBUG
+  void DeltaSourceList_init(DeltaSourceList *deltaSourceList)
+#else /* not NDEBUG */
+  void __DeltaSourceList_init(const char      *__fileName__,
+                              uint            __lineNb__,
+                              DeltaSourceList *deltaSourceList
+                             )
+#endif /* NDEBUG */
 {
   assert(deltaSourceList != NULL);
 
   List_init(deltaSourceList);
   Semaphore_init(&deltaSourceList->lock);
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,sizeof(DeltaSourceList));
+  #endif /* NDEBUG */
 }
 
-void DeltaSourceList_initDuplicate(DeltaSourceList       *deltaSourceList,
-                                   const DeltaSourceList *fromDeltaSourceList,
-                                   const DeltaSourceNode *fromDeltaSourceListFromNode,
-                                   const DeltaSourceNode *fromDeltaSourceListToNode
-                                  )
+#ifdef NDEBUG
+  void DeltaSourceList_initDuplicate(DeltaSourceList       *deltaSourceList,
+                                     const DeltaSourceList *fromDeltaSourceList,
+                                     const DeltaSourceNode *fromDeltaSourceListFromNode,
+                                     const DeltaSourceNode *fromDeltaSourceListToNode
+                                    )
+#else /* not NDEBUG */
+  void __DeltaSourceList_initDuplicate(const char        *__fileName__,
+                                       uint              __lineNb__,
+                                       DeltaSourceList       *deltaSourceList,
+                                       const DeltaSourceList *fromDeltaSourceList,
+                                       const DeltaSourceNode *fromDeltaSourceListFromNode,
+                                       const DeltaSourceNode *fromDeltaSourceListToNode
+                                      )
+#endif /* NDEBUG */
 {
   assert(deltaSourceList != NULL);
   assert(fromDeltaSourceList != NULL);
 
   DeltaSourceList_init(deltaSourceList);
   DeltaSourceList_copy(fromDeltaSourceList,deltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode);
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,sizeof(DeltaSourceList));
+  #endif /* NDEBUG */
 }
 
-void DeltaSourceList_done(DeltaSourceList *deltaSourceList)
+#ifdef NDEBUG
+  void DeltaSourceList_done(DeltaSourceList *deltaSourceList)
+#else /* not NDEBUG */
+  void __DeltaSourceList_done(const char      *__fileName__,
+                              uint            __lineNb__,
+                              DeltaSourceList *deltaSourceList
+                             )
+#endif /* NDEBUG */
 {
   assert(deltaSourceList != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));
 
   Semaphore_done(&deltaSourceList->lock);
   List_done(deltaSourceList,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);

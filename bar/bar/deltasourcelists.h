@@ -60,6 +60,12 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define DeltaSourceList_init(...)          __DeltaSourceList_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define DeltaSourceList_initDuplicate(...) __DeltaSourceList_initDuplicate(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define DeltaSourceList_done(...)          __DeltaSourceList_done(__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -93,13 +99,20 @@ void DeltaSourceList_doneAll(void);
 /***********************************************************************\
 * Name   : DeltaSourceList_init
 * Purpose: init delta source list
-* Input  : entryList - delta source list
+* Input  : deltaSourceList - delta source list
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void DeltaSourceList_init(DeltaSourceList *deltaSourceList);
+#ifdef NDEBUG
+  void DeltaSourceList_init(DeltaSourceList *deltaSourceList);
+#else /* not NDEBUG */
+  void __DeltaSourceList_init(const char      *__fileName__,
+                              uint            __lineNb__,
+                              DeltaSourceList *deltaSourceList
+                             );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : DeltaSourceList_initDuplicate
@@ -113,11 +126,21 @@ void DeltaSourceList_init(DeltaSourceList *deltaSourceList);
 * Notes  : -
 \***********************************************************************/
 
-void DeltaSourceList_initDuplicate(DeltaSourceList       *deltaSourceList,
-                                   const DeltaSourceList *fromDeltaSourceList,
-                                   const DeltaSourceNode *fromDeltaSourceListFromNode,
-                                   const DeltaSourceNode *fromDeltaSourceListToNode
-                                  );
+#ifdef NDEBUG
+  void DeltaSourceList_initDuplicate(DeltaSourceList       *deltaSourceList,
+                                     const DeltaSourceList *fromDeltaSourceList,
+                                     const DeltaSourceNode *fromDeltaSourceListFromNode,
+                                     const DeltaSourceNode *fromDeltaSourceListToNode
+                                    );
+#else /* not NDEBUG */
+  void __DeltaSourceList_initDuplicate(const char        *__fileName__,
+                                       uint              __lineNb__,
+                                       DeltaSourceList       *deltaSourceList,
+                                       const DeltaSourceList *fromDeltaSourceList,
+                                       const DeltaSourceNode *fromDeltaSourceListFromNode,
+                                       const DeltaSourceNode *fromDeltaSourceListToNode
+                                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : DeltaSourceList_done
@@ -128,7 +151,14 @@ void DeltaSourceList_initDuplicate(DeltaSourceList       *deltaSourceList,
 * Notes  : -
 \***********************************************************************/
 
-void DeltaSourceList_done(DeltaSourceList *deltaSourceList);
+#ifdef NDEBUG
+  void DeltaSourceList_done(DeltaSourceList *deltaSourceList);
+#else /* not NDEBUG */
+  void __DeltaSourceList_done(const char      *__fileName__,
+                              uint            __lineNb__,
+                              DeltaSourceList *deltaSourceList
+                             );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : DeltaSourceList_clear
