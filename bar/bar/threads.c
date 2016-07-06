@@ -791,16 +791,17 @@ const char *Thread_getIdString(const ThreadId threadId)
 {
   static char idString[64+1];
 
-  uint  i;
+  int   i;
   uint8 *p;
   char  *s;
 
   assert((2+sizeof(ThreadId)*2) < (sizeof(idString)-1));
 
+  // Note: reverse to be compatible with gdb output
   p = (uint8*)(void*)(&threadId);
   s = idString;
   strcpy(s,"0x"); s += 2;
-  for (i = 0; i < sizeof(ThreadId); i++)
+  for (i = (int)sizeof(ThreadId)-1; i >= 0; i--)
   {
     sprintf(s,"%02x",p[i]);
     s += 2;
