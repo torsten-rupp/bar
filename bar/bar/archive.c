@@ -10537,7 +10537,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   StorageSpecifier  storageSpecifier;
   String            printableStorageName;
   Errors            error;
-  ulong             n;
   uint64            timeLastChanged;
   bool              abortedFlag,serverAllocationPendingFlag;
   ArchiveInfo       archiveInfo;
@@ -10685,7 +10684,6 @@ fprintf(stderr,"%s, %d: update %llu\n",__FILE__,__LINE__,t0);
                 );
 
   // read archive content
-  n                           = 0L;
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
@@ -10704,13 +10702,15 @@ fprintf(stderr,"%s, %d: update %llu\n",__FILE__,__LINE__,t0);
     if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
     {
 fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
-#if 0
-      // temporarly close storage
+      // end transaction
       error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
       {
         break;
       }
+
+#if 0
+      // temporarly close storage
       error = Archive_storageInterrupt(&archiveInfo);
       if (error != ERROR_NONE)
       {
@@ -10724,15 +10724,18 @@ fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
         Misc_udelay(10LL*MISC_US_PER_SECOND);
       }
       while (pauseCallback(pauseUserData));
+fprintf(stderr,"%s, %d: conitnu\n",__FILE__,__LINE__);
 
-      // reopen storage
 #if 0
+      // reopen temporary closed storage
       error = Archive_storageContinue(&archiveInfo);
       if (error != ERROR_NONE)
       {
         break;
       }
 #endif /* 0 */
+
+      // start transaction
       error = Index_beginTransaction(indexHandle);
       if (error != ERROR_NONE)
       {
@@ -11087,18 +11090,46 @@ fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
     if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
     {
 fprintf(stderr,"%s, %d: flush and paus!!!!\n",__FILE__,__LINE__);
+      // end transaction
       error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
       {
         break;
       }
 
+#if 0
+      // temporarly close storage
+      error = Index_endTransaction(indexHandle);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Archive_storageInterrupt(&archiveInfo);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+#endif /* 0 */
+
+      // wait
       do
       {
         Misc_udelay(10LL*MISC_US_PER_SECOND);
       }
       while (pauseCallback(pauseUserData));
 
+fprintf(stderr,"%s, %d: conitnu\n",__FILE__,__LINE__);
+
+#if 0
+      // reopen temporary closed storage
+      error = Archive_storageContinue(&archiveInfo);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+#endif /* 0 */
+
+      // start transacation
       error = Index_beginTransaction(indexHandle);
       if (error != ERROR_NONE)
       {
