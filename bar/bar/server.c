@@ -539,7 +539,7 @@ LOCAL Thread                pauseThread;
 LOCAL Thread                remoteConnectThread;
 LOCAL Thread                remoteThread;
 LOCAL Thread                indexThread;
-LOCAL Thread                autoIndexUpdateThread;
+LOCAL Thread                autoIndexThread;
 LOCAL Semaphore             serverStateLock;
 LOCAL ServerStates          serverState;  // current server state
 LOCAL struct
@@ -5169,15 +5169,15 @@ LOCAL void delayAutoIndexThread(void)
 }
 
 /***********************************************************************\
-* Name   : autoIndexUpdateThreadCode
-* Purpose: auto index update thread entry
+* Name   : autoIndexThreadCode
+* Purpose: auto index thread entry
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void autoIndexUpdateThreadCode(void)
+LOCAL void autoIndexThreadCode(void)
 {
   IndexHandle                *indexHandle;
   StringList                 storageDirectoryList;
@@ -5207,8 +5207,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
   printableStorageName = String_new();
   storageName          = String_new();
 
-  // init index
-  indexHandle = Index_open(INDEX_TIMEOUT);
+  // init index (Note: timeout not important; auto-index should not block)
+  indexHandle = Index_open(5L*1000L);
   if (indexHandle == NULL)
   {
     String_delete(storageName);
@@ -5226,7 +5226,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
     return;
   }
 
-  // run continous check for index updates
+  // run continous check for auto index
   while (!quitFlag)
   {
     // pause
@@ -5275,104 +5275,104 @@ LOCAL void autoIndexUpdateThreadCode(void)
 
           if (!String_isEmpty(baseName))
           {
-            // read directory and scan all sub-directories for .bar files
+            // read directory and scan all sub-directories for .bar files if possible
             pprintInfo(4,
                        "INDEX",
                        "Auto-index scan '%s'\n",
                        String_cString(Storage_getPrintableName(&storageSpecifier,baseName))
                       );
             File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
-            error = Storage_forAll(pattern,
-                                   CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+            (void)Storage_forAll(pattern,
+                                 CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                                 {
+                                   Errors error;
+
+                                   assert(fileInfo != NULL);
+
+                                   UNUSED_VARIABLE(userData);
+
+                                   error = Storage_parseName(&storageSpecifier,storageName);
+                                   if (error == ERROR_NONE)
                                    {
-                                     Errors error;
-
-                                     assert(fileInfo != NULL);
-
-                                     UNUSED_VARIABLE(userData);
-
-                                     error = Storage_parseName(&storageSpecifier,storageName);
-                                     if (error == ERROR_NONE)
+                                     // check entry type and file name
+                                     switch (fileInfo->type)
                                      {
-                                       // check entry type and file name
-                                       switch (fileInfo->type)
-                                       {
-                                         case FILE_TYPE_FILE:
-                                         case FILE_TYPE_LINK:
-                                         case FILE_TYPE_HARDLINK:
-                                           // get index id, request index update
-                                           if (Index_findStorageByName(indexHandle,
-                                                                       &storageSpecifier,
-                                                                       NULL,  // archiveName
-                                                                       NULL,  // uuidId
-                                                                       NULL,  // entityId
-                                                                       NULL,  // jobUUID
-                                                                       NULL,  // scheduleUUID
-                                                                       &storageId,
-                                                                       &indexState,
-                                                                       &lastCheckedDateTime
-                                                                      )
-                                              )
+                                       case FILE_TYPE_FILE:
+                                       case FILE_TYPE_LINK:
+                                       case FILE_TYPE_HARDLINK:
+                                         // get index id, request index update
+                                         if (Index_findStorageByName(indexHandle,
+                                                                     &storageSpecifier,
+                                                                     NULL,  // archiveName
+                                                                     NULL,  // uuidId
+                                                                     NULL,  // entityId
+                                                                     NULL,  // jobUUID
+                                                                     NULL,  // scheduleUUID
+                                                                     &storageId,
+                                                                     &indexState,
+                                                                     &lastCheckedDateTime
+                                                                    )
+                                            )
+                                         {
+                                           if      (fileInfo->timeModified > lastCheckedDateTime)
                                            {
-                                             if      (fileInfo->timeModified > lastCheckedDateTime)
-                                             {
-                                               // request update index
-                                               error = Index_setState(indexHandle,
-                                                                      storageId,
-                                                                      INDEX_STATE_UPDATE_REQUESTED,
-                                                                      Misc_getCurrentDateTime(),
-                                                                      NULL
-                                                                     );
-                                               if (error == ERROR_NONE)
-                                               {
-                                                 plogMessage(NULL,  // logHandle,
-                                                             LOG_TYPE_INDEX,
-                                                             "INDEX",
-                                                             "Requested update index for '%s'\n",
-                                                             String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
-                                                            );
-                                               }
-                                             }
-                                             else if (indexState == INDEX_STATE_OK)
-                                             {
-                                               // set last checked date/time
-                                               error = Index_setState(indexHandle,
-                                                                      storageId,
-                                                                      INDEX_STATE_OK,
-                                                                      Misc_getCurrentDateTime(),
-                                                                      NULL
-                                                                     );
-                                             }
-                                           }
-                                           else
-                                           {
-                                             // add to index
-                                             error = Index_newStorage(indexHandle,
-                                                                      INDEX_ID_NONE, // entityId
-                                                                      storageName,
-                                                                      INDEX_STATE_UPDATE_REQUESTED,
-                                                                      INDEX_MODE_AUTO,
-                                                                      &storageId
-                                                                     );
+                                             // request update index
+                                             error = Index_setState(indexHandle,
+                                                                    storageId,
+                                                                    INDEX_STATE_UPDATE_REQUESTED,
+                                                                    Misc_getCurrentDateTime(),
+                                                                    NULL
+                                                                   );
                                              if (error == ERROR_NONE)
                                              {
                                                plogMessage(NULL,  // logHandle,
                                                            LOG_TYPE_INDEX,
                                                            "INDEX",
-                                                           "Requested add index for '%s'\n",
+                                                           "Requested update index for '%s'\n",
                                                            String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
                                                           );
                                              }
                                            }
-                                           break;
-                                         default:
-                                           break;
-                                       }
+                                           else if (indexState == INDEX_STATE_OK)
+                                           {
+                                             // set last checked date/time
+                                             error = Index_setState(indexHandle,
+                                                                    storageId,
+                                                                    INDEX_STATE_OK,
+                                                                    Misc_getCurrentDateTime(),
+                                                                    NULL
+                                                                   );
+                                           }
+                                         }
+                                         else
+                                         {
+                                           // add to index
+                                           error = Index_newStorage(indexHandle,
+                                                                    INDEX_ID_NONE, // entityId
+                                                                    storageName,
+                                                                    INDEX_STATE_UPDATE_REQUESTED,
+                                                                    INDEX_MODE_AUTO,
+                                                                    &storageId
+                                                                   );
+                                           if (error == ERROR_NONE)
+                                           {
+                                             plogMessage(NULL,  // logHandle,
+                                                         LOG_TYPE_INDEX,
+                                                         "INDEX",
+                                                         "Requested add index for '%s'\n",
+                                                         String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                                                        );
+                                           }
+                                         }
+                                         break;
+                                       default:
+                                         break;
                                      }
+                                   }
 
-                                     return error;
-                                   },NULL)
-                                  );
+                                   return error;
+                                 },NULL)
+                                );
           }
         }
       }
@@ -17675,7 +17675,7 @@ Errors Server_run(uint             port,
     }
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
-      if (!Thread_init(&autoIndexUpdateThread,"BAR auto index",globalOptions.niceLevel,autoIndexUpdateThreadCode,NULL))
+      if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
       {
         HALT_FATAL_ERROR("Cannot initialize index update thread!");
       }
@@ -17995,7 +17995,7 @@ Errors Server_run(uint             port,
   {
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
-      Thread_join(&autoIndexUpdateThread);
+      Thread_join(&autoIndexThread);
     }
     Thread_join(&indexThread);
   }
@@ -18014,7 +18014,7 @@ Errors Server_run(uint             port,
   {
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
-      Thread_done(&autoIndexUpdateThread);
+      Thread_done(&autoIndexThread);
     }
     Thread_done(&indexThread);
   }
