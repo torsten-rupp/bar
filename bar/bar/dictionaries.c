@@ -257,13 +257,14 @@ LOCAL int findEntryIndex(DictionaryEntryTable      *entryTable,
       for (i = 0; i < LINEAR_PROBING_COUNT; i++)
       {
         entryIndex = addModulo(hash,i,TABLE_SIZES[z]);
-        if (equalsEntry(&entryTable->entries[entryIndex],
-                        hash,
-                        keyData,
-                        keyLength,
-                        dictionaryCompareFunction,
-                        dictionaryCompareUserData
-                       )
+        if (   !entryTable->entries[entryIndex].removeFlag
+            && equalsEntry(&entryTable->entries[entryIndex],
+                           hash,
+                           keyData,
+                           keyLength,
+                           dictionaryCompareFunction,
+                           dictionaryCompareUserData
+                          )
            )
         {
           return entryIndex;
@@ -272,13 +273,14 @@ LOCAL int findEntryIndex(DictionaryEntryTable      *entryTable,
     #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING */
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING
       entryIndex = modulo(hash,TABLE_SIZES[z]);
-      if (equalsEntry(&entryTable->entries[entryIndex],
-                      hash,
-                      keyData,
-                      keyLength,
-                      dictionaryCompareFunction,
-                      dictionaryCompareUserData
-                     )
+      if (   !entryTable->entries[entryIndex].removeFlag
+          && equalsEntry(&entryTable->entries[entryIndex],
+                         hash,
+                         keyData,
+                         keyLength,
+                         dictionaryCompareFunction,
+                         dictionaryCompareUserData
+                        )
          )
       {
         return entryIndex;
@@ -286,25 +288,27 @@ LOCAL int findEntryIndex(DictionaryEntryTable      *entryTable,
       for (i = 1; i < QUADRATIC_PROBING_COUNT; i++)
       {
         entryIndex = addModulo(hash,i*i,TABLE_SIZES[z]);
-        if (equalsEntry(&entryTable->entries[entryIndex],
-                        hash,
-                        keyData,
-                        keyLength,
-                        dictionaryCompareFunction,
-                        dictionaryCompareUserData
-                       )
+        if (   !entryTable->entries[entryIndex].removeFlag
+            && equalsEntry(&entryTable->entries[entryIndex],
+                           hash,
+                           keyData,
+                           keyLength,
+                           dictionaryCompareFunction,
+                           dictionaryCompareUserData
+                          )
            )
         {
           return entryIndex;
         }
         entryIndex = subModulo(hash,i*i,TABLE_SIZES[z]);
-        if (equalsEntry(&entryTable->entries[entryIndex],
-                        hash,
-                        keyData,
-                        keyLength,
-                        dictionaryCompareFunction,
-                        dictionaryCompareUserData
-                       )
+        if (   !entryTable->entries[entryIndex].removeFlag
+            && equalsEntry(&entryTable->entries[entryIndex],
+                           hash,
+                           keyData,
+                           keyLength,
+                           dictionaryCompareFunction,
+                           dictionaryCompareUserData
+                          )
            )
         {
           return entryIndex;
@@ -315,13 +319,14 @@ LOCAL int findEntryIndex(DictionaryEntryTable      *entryTable,
       for (i = 0; i < REHASHING_COUNT; i++)
       {
         entryIndex = rotHash(hash,i)%TABLE_SIZES[z];
-        if (equalsEntry(&entryTable->entries[entryIndex],
-                        hash,
-                        keyData,
-                        keyLength,
-                        dictionaryCompareFunction,
-                        dictionaryCompareUserData
-                       )
+        if (   !entryTable->entries[entryIndex].removeFlag
+            && equalsEntry(&entryTable->entries[entryIndex],
+                           hash,
+                           keyData,
+                           keyLength,
+                           dictionaryCompareFunction,
+                           dictionaryCompareUserData
+                          )
            )
         {
           return entryIndex;
@@ -523,6 +528,22 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   return entries;
 }
 
+/***********************************************************************\
+* Name   : removeEntry
+* Purpose: remove entry
+* Input  : dictionary      - dictionary
+*          dictionaryEntry - directory entry to remove
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void removeEntry(Dictionary      *dictionary,
+                       DictionaryEntry *dictionaryEntry
+                      )
+{
+}
+
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
@@ -569,7 +590,6 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   }
   dictionary->entryTables[0].sizeIndex  = 0;
   dictionary->entryTables[0].entryCount = 0;
-//fprintf(stderr,"%s,%d: init entries %p\n",__FILE__,__LINE__,dictionary->entryTables[0].entries);
 
   dictionary->dictionaryCopyFunction    = dictionaryCopyFunction;
   dictionary->dictionaryCopyUserData    = dictionaryCopyUserData;
@@ -602,11 +622,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   assert(dictionary != NULL);
   assert(dictionary->entryTables != NULL);
 
-  #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(dictionary,sizeof(Dictionary));
-  #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,sizeof(Dictionary));
-  #endif /* NDEBUG */
+  DEBUG_REMOVE_RESOURCE_TRACE(dictionary,sizeof(Dictionary));
 
   // free resources
   for (z = 0; z < dictionary->entryTableCount; z++)
@@ -1084,7 +1100,6 @@ void Dictionary_remove(Dictionary *dictionary,
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    // remove entry
     if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&entryIndex))
     {
       assert(dictionaryEntryTable->entries != NULL);
@@ -1108,7 +1123,6 @@ void Dictionary_remove(Dictionary *dictionary,
 
       dictionaryEntryTable->entries[entryIndex].hash    = 0;
       dictionaryEntryTable->entries[entryIndex].keyData = NULL;
-
       dictionaryEntryTable->entryCount--;
     }
   }
@@ -1161,7 +1175,7 @@ void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
 
   DEBUG_ADD_RESOURCE_TRACE(dictionaryIterator,sizeof(DictionaryIterator));
 
-  Semaphore_forceLock(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ);
+  Semaphore_forceLock(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 }
 
 void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator)
@@ -1274,7 +1288,7 @@ void Dictionary_printStatistic(Dictionary *dictionary)
 {
   SemaphoreLock semaphoreLock;
   ulong         totalEntryCount,totalIndexCount;
-  uint          z;
+  uint          i;
 
   assert(dictionary != NULL);
 
@@ -1285,11 +1299,11 @@ void Dictionary_printStatistic(Dictionary *dictionary)
 
     totalEntryCount = 0;
     totalIndexCount = 0;
-    for (z = 0; z < dictionary->entryTableCount; z++)
+    for (i = 0; i < dictionary->entryTableCount; i++)
     {
-      fprintf(stderr,"    table #%02d: %u entries/%u size\n",z,dictionary->entryTables[z].entryCount,TABLE_SIZES[dictionary->entryTables[z].sizeIndex]);
-      totalEntryCount += dictionary->entryTables[z].entryCount;
-      totalIndexCount += TABLE_SIZES[dictionary->entryTables[z].sizeIndex];
+      fprintf(stderr,"    table #%02d: %u entries/%u size\n",i,dictionary->entryTables[i].entryCount,TABLE_SIZES[dictionary->entryTables[i].sizeIndex]);
+      totalEntryCount += dictionary->entryTables[i].entryCount;
+      totalIndexCount += TABLE_SIZES[dictionary->entryTables[i].sizeIndex];
     }
 
     fprintf(stderr,"  total entries: %lu\n",totalEntryCount);

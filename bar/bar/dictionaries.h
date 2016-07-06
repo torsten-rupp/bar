@@ -74,6 +74,7 @@ typedef struct
   void  *data;                                           // data of entry
   ulong length;                                          // length of data in entry
   bool  allocatedFlag;                                   // TRUE iff data was allocated
+  bool  removeFlag;                                      // TRUE iff entry should be removed
 } DictionaryEntry;
 
 // table with dictionary entries
@@ -88,6 +89,7 @@ typedef struct
 typedef struct
 {
   Semaphore                 lock;
+  uint                      lockCount;
   DictionaryEntryTable      *entryTables;                // tables array
   uint                      entryTableCount;             // number of tables
   DictionaryCopyFunction    dictionaryCopyFunction;      // copy entry function call back or NULL
@@ -360,10 +362,10 @@ void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator);
 * Name   : Dictionary_getNext
 * Purpose: get next entry from dictionary
 * Input  : dictionary - dictionary
-* Output : keyData   - internal key data (can be NULL)
-*          keyLength - length of key data (can be NULL)
-*          data      - internal entry data (can be NULL)
-*          length    - length of data (can be NULL)
+* Output : keyData    - internal key data (can be NULL)
+*          keyLength  - length of key data (can be NULL)
+*          data       - internal entry data (can be NULL)
+*          length     - length of data (can be NULL)
 * Return : TRUE if got entry, FALSE if no more entries
 * Notes  : -
 \***********************************************************************/
@@ -382,7 +384,7 @@ bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
 *          dictionaryIterateFunction - iterator function
 *          dictionaryIterateUserData - iterator function user data
 * Output : -
-* Return : -
+* Return : TRUE if iteration done, FALSE if aborted
 * Notes  : -
 \***********************************************************************/
 
