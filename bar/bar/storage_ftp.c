@@ -1360,7 +1360,7 @@ LOCAL Errors StorageFTP_preProcess(StorageHandle *storageHandle,
         // write pre-processing
         if (globalOptions.ftp.writePreProcessCommand != NULL)
         {
-          printInfo(0,"Write pre-processing...");
+          printInfo(1,"Write pre-processing...");
 
           // get script
           script = expandTemplate(String_cString(globalOptions.ftp.writePreProcessCommand),
@@ -1384,7 +1384,7 @@ LOCAL Errors StorageFTP_preProcess(StorageHandle *storageHandle,
             error = ERROR_EXPAND_TEMPLATE;
           }
 
-          printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+          printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
         }
       }
     }
@@ -1430,7 +1430,7 @@ LOCAL Errors StorageFTP_postProcess(StorageHandle *storageHandle,
         // write post-process
         if (globalOptions.ftp.writePostProcessCommand != NULL)
         {
-          printInfo(0,"Write post-processing...");
+          printInfo(1,"Write post-processing...");
 
           // get script
           script = expandTemplate(String_cString(globalOptions.ftp.writePostProcessCommand),
@@ -1454,7 +1454,7 @@ LOCAL Errors StorageFTP_postProcess(StorageHandle *storageHandle,
             error = ERROR_EXPAND_TEMPLATE;
           }
 
-          printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+          printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
         }
       }
     }

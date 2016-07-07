@@ -206,7 +206,7 @@ LOCAL Errors StorageFile_preProcess(StorageHandle *storageHandle,
       if (globalOptions.file.writePreProcessCommand != NULL)
       {
         // write pre-processing
-        printInfo(0,"Write pre-processing...");
+        printInfo(1,"Write pre-processing...");
 
         // get script
         script = expandTemplate(String_cString(globalOptions.file.writePreProcessCommand),
@@ -230,7 +230,7 @@ LOCAL Errors StorageFile_preProcess(StorageHandle *storageHandle,
           error = ERROR_EXPAND_TEMPLATE;
         }
 
-        printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
       }
     }
   }
@@ -264,7 +264,7 @@ LOCAL Errors StorageFile_postProcess(StorageHandle *storageHandle,
       if (globalOptions.file.writePostProcessCommand != NULL)
       {
         // write post-process
-        printInfo(0,"Write post-processing...");
+        printInfo(1,"Write post-processing...");
 
         // get script
         script = expandTemplate(String_cString(globalOptions.file.writePostProcessCommand),
@@ -288,7 +288,7 @@ LOCAL Errors StorageFile_postProcess(StorageHandle *storageHandle,
           error = ERROR_EXPAND_TEMPLATE;
         }
 
-        printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
       }
     }
   }

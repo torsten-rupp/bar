@@ -131,14 +131,14 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
      )
   {
     // sleep a short time to give hardware time for finishing volume, then unload current volume
-    printInfo(0,"Unload medium #%d...",storageHandle->volumeNumber);
+    printInfo(1,"Unload medium #%d...",storageHandle->volumeNumber);
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
                         CALLBACK(executeIOOutput,NULL),
                         CALLBACK(executeIOOutput,NULL)
                        );
-    printInfo(0,"ok\n");
+    printInfo(1,"ok\n");
 
     storageHandle->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
   }
@@ -159,13 +159,13 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
       if (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
-        printInfo(0,"Unload medium...");
+        printInfo(1,"Unload medium...");
         Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
                            );
-        printInfo(0,"ok\n");
+        printInfo(1,"ok\n");
       }
     }
     while (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD);
@@ -177,7 +177,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
     mediumRequestedFlag = TRUE;
 
     // request new volume via external command
-    printInfo(0,"Request new medium #%d...",storageHandle->requestedVolumeNumber);
+    printInfo(1,"Request new medium #%d...",storageHandle->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.requestVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
@@ -185,12 +185,12 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
                            ) == ERROR_NONE
        )
     {
-      printInfo(0,"ok\n");
+      printInfo(1,"ok\n");
       storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
     }
     else
     {
-      printInfo(0,"FAIL\n");
+      printInfo(1,"FAIL\n");
       storageRequestResult = STORAGE_REQUEST_VOLUME_FAIL;
     }
 
@@ -236,14 +236,14 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
     {
       case STORAGE_REQUEST_VOLUME_OK:
         // load medium, then sleep a short time to give hardware time for reading medium information
-        printInfo(0,"Load medium #%d...",storageHandle->requestedVolumeNumber);
+        printInfo(1,"Load medium #%d...",storageHandle->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
-        printInfo(0,"ok\n");
+        printInfo(1,"ok\n");
 
         // store new medium number
         storageHandle->volumeNumber = storageHandle->requestedVolumeNumber;
@@ -936,7 +936,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       if ((storageHandle->jobOptions != NULL) && (storageHandle->jobOptions->alwaysCreateImageFlag || storageHandle->jobOptions->errorCorrectionCodesFlag))
       {
         // create medium image
-        printInfo(0,"Make medium image #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
+        printInfo(1,"Make medium image #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
         storageHandle->opticalDisk.write.step = 0;
         StringList_clear(&stderrList);
         error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.imageCommand),
@@ -946,19 +946,19 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
                                    );
         if (error != ERROR_NONE)
         {
-          printInfo(0,"FAIL\n");
+          printInfo(1,"FAIL\n");
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
           StringList_done(&stderrList);
           return error;
         }
         File_getFileInfo(imageFileName,&fileInfo);
-        printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
+        printInfo(1,"ok (%llu bytes)\n",fileInfo.size);
 
         if (storageHandle->jobOptions->errorCorrectionCodesFlag)
         {
           // add error-correction codes to medium image
-          printInfo(0,"Add ECC to image #%d...",storageHandle->opticalDisk.write.number);
+          printInfo(1,"Add ECC to image #%d...",storageHandle->opticalDisk.write.number);
           storageHandle->opticalDisk.write.step = 1;
           StringList_clear(&stderrList);
           error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.eccCommand),
@@ -968,14 +968,14 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
                                      );
           if (error != ERROR_NONE)
           {
-            printInfo(0,"FAIL\n");
+            printInfo(1,"FAIL\n");
             File_delete(imageFileName,FALSE);
             String_delete(imageFileName);
             StringList_done(&stderrList);
             return error;
           }
           File_getFileInfo(imageFileName,&fileInfo);
-          printInfo(0,"ok (%llu bytes)\n",fileInfo.size);
+          printInfo(1,"ok (%llu bytes)\n",fileInfo.size);
         }
 
         // get number of image sectors
@@ -1005,7 +1005,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           retryFlag = FALSE;
 
           // write image to medium
-          printInfo(0,"Write image to medium #%d...",storageHandle->opticalDisk.write.number);
+          printInfo(1,"Write image to medium #%d...",storageHandle->opticalDisk.write.number);
           storageHandle->opticalDisk.write.step = 3;
           StringList_clear(&stderrList);
           error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.writeImageCommand),
@@ -1015,12 +1015,12 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
                                      );
           if (error == ERROR_NONE)
           {
-            printInfo(0,"ok\n");
+            printInfo(1,"ok\n");
             retryFlag = FALSE;
           }
           else
           {
-            printInfo(0,"FAIL\n");
+            printInfo(1,"FAIL\n");
             if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
             {
               retryFlag = Misc_getYesNo("Retry write image to medium?");
@@ -1059,7 +1059,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           retryFlag = FALSE;
 
           // write to medium
-          printInfo(0,"Write medium #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
+          printInfo(1,"Write medium #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
           storageHandle->opticalDisk.write.step = 0;
           StringList_clear(&stderrList);
           error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.writeCommand),
@@ -1069,11 +1069,11 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
                                      );
           if (error == ERROR_NONE)
           {
-            printInfo(0,"ok\n");
+            printInfo(1,"ok\n");
           }
           else
           {
-            printInfo(0,"FAIL (error: %s)\n",Error_getText(error));
+            printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
             if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
             {
               retryFlag = Misc_getYesNo("Retry write image to medium?");

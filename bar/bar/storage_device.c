@@ -94,14 +94,14 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
      )
   {
     // sleep a short time to give hardware time for finishing volume; unload current volume
-    printInfo(0,"Unload volume #%d...",storageHandle->volumeNumber);
+    printInfo(1,"Unload volume #%d...",storageHandle->volumeNumber);
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageHandle->device.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
                         CALLBACK(executeIOOutput,NULL),
                         CALLBACK(executeIOOutput,NULL)
                        );
-    printInfo(0,"ok\n");
+    printInfo(1,"ok\n");
 
     storageHandle->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
   }
@@ -122,14 +122,14 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
       if (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
-        printInfo(0,"Unload volume...");
+        printInfo(1,"Unload volume...");
         Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
         Misc_executeCommand(String_cString(storageHandle->device.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
                            );
-        printInfo(0,"ok\n");
+        printInfo(1,"ok\n");
       }
     }
     while (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD);
@@ -141,7 +141,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
     volumeRequestedFlag = TRUE;
 
     // request new volume via external command
-    printInfo(0,"Request new volume #%d...",storageHandle->requestedVolumeNumber);
+    printInfo(1,"Request new volume #%d...",storageHandle->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageHandle->device.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
@@ -149,12 +149,12 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
                            ) == ERROR_NONE
        )
     {
-      printInfo(0,"ok\n");
+      printInfo(1,"ok\n");
       storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
     }
     else
     {
-      printInfo(0,"FAIL\n");
+      printInfo(1,"FAIL\n");
       storageRequestResult = STORAGE_REQUEST_VOLUME_FAIL;
     }
 
@@ -200,14 +200,14 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
     {
       case STORAGE_REQUEST_VOLUME_OK:
         // load volume; sleep a short time to give hardware time for reading volume information
-        printInfo(0,"Load volume #%d...",storageHandle->requestedVolumeNumber);
+        printInfo(1,"Load volume #%d...",storageHandle->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageHandle->device.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
-        printInfo(0,"ok\n");
+        printInfo(1,"ok\n");
 
         // store new volume number
         storageHandle->volumeNumber = storageHandle->requestedVolumeNumber;
@@ -618,71 +618,71 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
       // create image
       if (error == ERROR_NONE)
       {
-        printInfo(0,"Make image pre-processing of volume #%d...",storageHandle->volumeNumber);
+        printInfo(1,"Make image pre-processing of volume #%d...",storageHandle->volumeNumber);
         error = Misc_executeCommand(String_cString(storageHandle->device.imagePreProcessCommand ),
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros),
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
       }
       if (error == ERROR_NONE)
       {
-        printInfo(0,"Make image volume #%d...",storageHandle->volumeNumber);
+        printInfo(1,"Make image volume #%d...",storageHandle->volumeNumber);
         error = Misc_executeCommand(String_cString(storageHandle->device.imageCommand),
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros),
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
       }
       if (error == ERROR_NONE)
       {
-        printInfo(0,"Make image post-processing of volume #%d...",storageHandle->volumeNumber);
+        printInfo(1,"Make image post-processing of volume #%d...",storageHandle->volumeNumber);
         error = Misc_executeCommand(String_cString(storageHandle->device.imagePostProcessCommand),
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros),
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
       }
 
       // write to device
       if (error == ERROR_NONE)
       {
-        printInfo(0,"Write device pre-processing of volume #%d...",storageHandle->volumeNumber);
+        printInfo(1,"Write device pre-processing of volume #%d...",storageHandle->volumeNumber);
         error = Misc_executeCommand(String_cString(storageHandle->device.writePreProcessCommand),
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros),
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
       }
       if (error == ERROR_NONE)
       {
-        printInfo(0,"Write device volume #%d...",storageHandle->volumeNumber);
+        printInfo(1,"Write device volume #%d...",storageHandle->volumeNumber);
         error = Misc_executeCommand(String_cString(storageHandle->device.writeCommand),
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros),
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
       }
       if (error == ERROR_NONE)
       {
-        printInfo(0,"Write device post-processing of volume #%d...",storageHandle->volumeNumber);
+        printInfo(1,"Write device post-processing of volume #%d...",storageHandle->volumeNumber);
         error = Misc_executeCommand(String_cString(storageHandle->device.writePostProcessCommand),
                                     textMacros,
                                     SIZE_OF_ARRAY(textMacros),
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
       }
 
       if (error != ERROR_NONE)
