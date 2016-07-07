@@ -252,7 +252,7 @@ typedef struct
   LIST_HEADER(JobNode);
 
   Semaphore lock;
-  uint      lastJobId;
+  uint      activeCount;
 } JobList;
 
 // directory info node
@@ -1932,6 +1932,8 @@ LOCAL_INLINE bool isJobActive(const JobNode *jobNode)
 
 LOCAL bool isSomeJobActive(void)
 {
+#if 0
+//TODO: old implemenetation, remove
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   bool          activeFlag;
@@ -1950,6 +1952,9 @@ LOCAL bool isSomeJobActive(void)
   }
 
   return activeFlag;
+#else
+  return jobList.activeCount > 0;
+#endif
 }
 
 /***********************************************************************\
@@ -2079,9 +2084,13 @@ fprintf(stderr,"%s, %d: isJobRemote=%d\n",__FILE__,__LINE__,isJobRemote(jobNode)
 LOCAL void startJob(JobNode *jobNode)
 {
   assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
 
   jobNode->state             = JOB_STATE_RUNNING;
   jobNode->runningInfo.error = ERROR_NONE;
+
+  // increment active counter
+  jobList.activeCount++;
 }
 
 /***********************************************************************\
@@ -2096,6 +2105,11 @@ LOCAL void startJob(JobNode *jobNode)
 LOCAL void doneJob(JobNode *jobNode)
 {
   assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  // decrement active counter
+  assert(jobList.activeCount > 0);
+  jobList.activeCount--;
 
   // set executed time, state
   jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
@@ -3198,6 +3212,7 @@ LOCAL void jobThreadCode(void)
   StorageSpecifier storageSpecifier;
   String           storageName;
   String           directory;
+  SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -3240,58 +3255,56 @@ LOCAL void jobThreadCode(void)
 
   while (!quitFlag)
   {
-    // lock
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
-
-    // wait for and get next job to execute
-    do
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      jobNode = jobList.head;
-      while ((jobNode != NULL) && (isJobRemote(jobNode) || (jobNode->state != JOB_STATE_WAITING)))
+      // wait for and get next job to execute
+      do
       {
-        jobNode = jobNode->next;
+        jobNode = jobList.head;
+        while ((jobNode != NULL) && (isJobRemote(jobNode) || (jobNode->state != JOB_STATE_WAITING)))
+        {
+          jobNode = jobNode->next;
+        }
+        if (jobNode == NULL) Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
       }
-      if (jobNode == NULL) Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
-    }
-    while (!quitFlag && (jobNode == NULL));
-    if (quitFlag)
-    {
-      Semaphore_unlock(&jobList.lock);
-      break;
-    }
-    assert(jobNode != NULL);
+      while (!quitFlag && (jobNode == NULL));
+      if (quitFlag)
+      {
+        Semaphore_unlock(&jobList.lock);
+        break;
+      }
+      assert(jobNode != NULL);
 
-    // start job
-    startJob(jobNode);
+      // start job
+      startJob(jobNode);
 
-    // get copy of mandatory job data
-    String_set(storageName,jobNode->archiveName);
-    String_set(jobUUID,jobNode->uuid);
-    Network_getHostName(hostName);
-    Remote_copyHost(&remoteHost,&jobNode->remoteHost);
-    EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
-    PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
-    List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
-    PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
-    DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
-    initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
-    archiveType = jobNode->archiveType;
-    jobOptions.dryRunFlag = jobNode->dryRun;
-    if (!String_isEmpty(jobNode->schedule.uuid))
-    {
-      String_set(scheduleUUID,      jobNode->schedule.uuid);
-      String_set(scheduleCustomText,jobNode->schedule.customText);
-      jobOptions.noStorageFlag = jobNode->schedule.noStorage;
+      // get copy of mandatory job data
+      String_set(storageName,jobNode->archiveName);
+      String_set(jobUUID,jobNode->uuid);
+      Network_getHostName(hostName);
+      Remote_copyHost(&remoteHost,&jobNode->remoteHost);
+      EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
+      PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
+      List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
+      PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
+      DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
+      initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
+      archiveType = jobNode->archiveType;
+      jobOptions.dryRunFlag = jobNode->dryRun;
+      if (!String_isEmpty(jobNode->schedule.uuid))
+      {
+        String_set(scheduleUUID,      jobNode->schedule.uuid);
+        String_set(scheduleCustomText,jobNode->schedule.customText);
+        jobOptions.noStorageFlag = jobNode->schedule.noStorage;
+      }
+      else
+      {
+        String_clear(scheduleUUID);
+        String_clear(scheduleCustomText);
+        jobOptions.noStorageFlag = FALSE;
+      }
     }
-    else
-    {
-      String_clear(scheduleUUID);
-      String_clear(scheduleCustomText);
-      jobOptions.noStorageFlag = FALSE;
-    }
-
-    // unlock (Note: job is now protected by running state)
-    Semaphore_unlock(&jobList.lock);
+    // Note: job is now protected by running state)
 
     // init log
     initLog(&logHandle);
@@ -3695,28 +3708,25 @@ NULL,//                                                        scheduleTitle,
     // done log
     doneLog(&logHandle);
 
-    // lock
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-
-    // free resources
-    doneJobOptions(&jobOptions);
-    DeltaSourceList_clear(&deltaSourceList);
-    PatternList_clear(&compressExcludePatternList);
-    List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
-    PatternList_clear(&excludePatternList);
-    EntryList_clear(&includeEntryList);
-
-    // done job
-    doneJob(jobNode);
-
-    if (!jobNode->jobOptions.dryRunFlag)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      // store schedule info
-      writeJobScheduleInfo(jobNode);
-    }
+      // free resources
+      doneJobOptions(&jobOptions);
+      DeltaSourceList_clear(&deltaSourceList);
+      PatternList_clear(&compressExcludePatternList);
+      List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+      PatternList_clear(&excludePatternList);
+      EntryList_clear(&includeEntryList);
 
-    // unlock
-    Semaphore_unlock(&jobList.lock);
+      // done job
+      doneJob(jobNode);
+
+      if (!jobNode->jobOptions.dryRunFlag)
+      {
+        // store schedule info
+        writeJobScheduleInfo(jobNode);
+      }
+    }
   }
 
   // close index
@@ -5046,6 +5056,7 @@ LOCAL void indexThreadCode(void)
   IndexCryptPasswordList indexCryptPasswordList;
   SemaphoreLock          semaphoreLock;
   JobOptions             jobOptions;
+  uint64                 startTimestamp,endTimestamp;
   Errors                 error;
   JobNode                *jobNode;
   IndexCryptPasswordNode *indexCryptPasswordNode;
@@ -5144,6 +5155,7 @@ LOCAL void indexThreadCode(void)
 #ifndef WERROR
 #warning todo init?
 #endif
+          startTimestamp = Misc_getTimestamp();
           jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
           jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
           error = Archive_updateIndex(indexHandle,
@@ -5158,6 +5170,7 @@ LOCAL void indexThreadCode(void)
                                       CALLBACK(indexAbortCallback,NULL),
                                       NULL  // logHandle
                                      );
+          endTimestamp = Misc_getTimestamp();
 
           // stop if done, interrupted, or quit
           if (   (error == ERROR_NONE)
@@ -5191,12 +5204,13 @@ LOCAL void indexThreadCode(void)
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Created index for '%s', %llu entries/%.1f%s (%llu bytes)\n",
+                      "Created index for '%s', %llu entries/%.1f%s (%llu bytes), %lus\n",
                       String_cString(printableStorageName),
                       totalEntryCount,
                       BYTES_SHORT(totalEntrySize),
                       BYTES_UNIT(totalEntrySize),
-                      totalEntrySize
+                      totalEntrySize,
+                      (endTimestamp-startTimestamp)/MISC_US_PER_SECOND
                      );
         }
         else if (Error_getCode(error) == ERROR_INTERRUPTED)
@@ -17642,6 +17656,7 @@ Errors Server_run(uint             port,
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
   Semaphore_init(&jobList.lock);
+  jobList.activeCount     = 0;
   List_init(&jobList);
   Semaphore_init(&serverStateLock);
   List_init(&clientList);
