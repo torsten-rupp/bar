@@ -10547,8 +10547,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String            directoryName;
   String            linkName;
   String            destinationName;
-uint64 t0,t1;
-#define TR 1
 
   assert(indexHandle != NULL);
   assert(storageName != NULL);
@@ -10627,11 +10625,8 @@ uint64 t0,t1;
     return error;
   }
 
-t0 = Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: update %llu\n",__FILE__,__LINE__,t0);
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-#ifdef TR
   error = Index_beginTransaction(indexHandle);
   if (error != ERROR_NONE)
   {
@@ -10648,7 +10643,6 @@ fprintf(stderr,"%s, %d: update %llu\n",__FILE__,__LINE__,t0);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
-#endif
 
   // clear index
   error = Index_clearStorage(indexHandle,
@@ -10658,9 +10652,7 @@ fprintf(stderr,"%s, %d: update %llu\n",__FILE__,__LINE__,t0);
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
-#ifdef TR
     (void)Index_rollbackTransaction(indexHandle);
-#endif
     Archive_close(&archiveInfo);
     Index_setState(indexHandle,
                    storageId,
@@ -10701,7 +10693,6 @@ fprintf(stderr,"%s, %d: update %llu\n",__FILE__,__LINE__,t0);
     // pause
     if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
     {
-fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
       // end transaction
       error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
@@ -10724,7 +10715,6 @@ fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
         Misc_udelay(10LL*MISC_US_PER_SECOND);
       }
       while (pauseCallback(pauseUserData));
-fprintf(stderr,"%s, %d: conitnu\n",__FILE__,__LINE__);
 
 #if 0
       // reopen temporary closed storage
@@ -11086,10 +11076,8 @@ fprintf(stderr,"%s, %d: conitnu\n",__FILE__,__LINE__);
 #endif
 
     // flush index data
-//    if ((n > 0L) && ((n % 1000L) == 0L))
     if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
     {
-fprintf(stderr,"%s, %d: flush and paus!!!!\n",__FILE__,__LINE__);
       // end transaction
       error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
@@ -11099,11 +11087,6 @@ fprintf(stderr,"%s, %d: flush and paus!!!!\n",__FILE__,__LINE__);
 
 #if 0
       // temporarly close storage
-      error = Index_endTransaction(indexHandle);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
       error = Archive_storageInterrupt(&archiveInfo);
       if (error != ERROR_NONE)
       {
@@ -11117,8 +11100,6 @@ fprintf(stderr,"%s, %d: flush and paus!!!!\n",__FILE__,__LINE__);
         Misc_udelay(10LL*MISC_US_PER_SECOND);
       }
       while (pauseCallback(pauseUserData));
-
-fprintf(stderr,"%s, %d: conitnu\n",__FILE__,__LINE__);
 
 #if 0
       // reopen temporary closed storage
@@ -11148,18 +11129,12 @@ fprintf(stderr,"%s, %d: conitnu\n",__FILE__,__LINE__);
   String_delete(fileName);
   if (error == ERROR_NONE)
   {
-#ifdef TR
     error = Index_endTransaction(indexHandle);
-#endif
   }
   else
   {
-#ifdef TR
     (void)Index_rollbackTransaction(indexHandle);
-#endif
   }
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: update end %llu -> %llu\n",__FILE__,__LINE__,t1,t1-t0);
   if      (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
