@@ -1480,7 +1480,9 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   lineNb     = 0;
   name       = String_new();
   value      = String_new();
-  while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
+  while (   !failFlag
+         && File_getLine(&fileHandle,line,&lineNb,"#")
+        )
   {
     // parse line
     if      (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
@@ -1498,7 +1500,8 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FILE);
 
       // parse section
-      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+      while (   !failFlag
+             && File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
             )
       {
@@ -1522,21 +1525,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                 )
              )
           {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+            if (printInfoFlag) printf("FAIL!\n");
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n",
                        String_cString(name),
                        "ftp-server",
                        String_cString(fileName),
                        lineNb
                       );
+            failFlag = TRUE;
+            break;
           }
         }
         else
         {
-          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+          if (printInfoFlag) printf("FAIL!\n");
+          printError("Syntax error in %s, line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
                     );
+          failFlag = TRUE;
+          break;
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
@@ -1562,7 +1571,8 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FTP);
 
       // parse section
-      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+      while (   !failFlag
+             && File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
             )
       {
@@ -1586,21 +1596,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                 )
              )
           {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+            if (printInfoFlag) printf("FAIL!\n");
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n",
                        String_cString(name),
                        "ftp-server",
                        String_cString(fileName),
                        lineNb
                       );
+            failFlag = TRUE;
+            break;
           }
         }
         else
         {
-          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+          if (printInfoFlag) printf("FAIL!\n");
+          printError("Syntax error in %s, line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
                     );
+          failFlag = TRUE;
+          break;
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
@@ -1626,7 +1642,8 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_SSH);
 
       // parse section
-      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+      while (   !failFlag
+             && File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
             )
       {
@@ -1650,21 +1667,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                 )
              )
           {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+            if (printInfoFlag) printf("FAIL!\n");
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n",
                        String_cString(name),
                        "ssh-server",
                        String_cString(fileName),
                        lineNb
                       );
+            failFlag = TRUE;
+            break;
           }
         }
         else
         {
-          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+          if (printInfoFlag) printf("FAIL!\n");
+          printError("Syntax error in %s, line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
                     );
+          failFlag = TRUE;
+          break;
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
@@ -1690,7 +1713,8 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_WEBDAV);
 
       // parse section
-      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+      while (   !failFlag
+             && File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
             )
       {
@@ -1714,21 +1738,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                 )
              )
           {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+            if (printInfoFlag) printf("FAIL!\n");
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n",
                        String_cString(name),
                        "webdav-server",
                        String_cString(fileName),
                        lineNb
                       );
+            failFlag = TRUE;
+            break;
           }
         }
         else
         {
-          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+          if (printInfoFlag) printf("FAIL!\n");
+          printError("Syntax error in %s, line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
                     );
+          failFlag = TRUE;
+          break;
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
@@ -1778,21 +1808,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                 )
              )
           {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+            if (printInfoFlag) printf("FAIL!\n");
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n",
                        String_cString(name),
                        "device",
                        String_cString(fileName),
                        lineNb
                       );
+            failFlag = TRUE;
+            break;
           }
         }
         else
         {
-          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+          if (printInfoFlag) printf("FAIL!\n");
+          printError("Syntax error in %s, line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
                     );
+          failFlag = TRUE;
+          break;
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
