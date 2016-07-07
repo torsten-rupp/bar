@@ -845,7 +845,9 @@ LOCAL int busyHandlerCallback(void *userData, int n)
 
   delay(SLEEP_TIME);
 
-  return ((databaseHandle->timeout == WAIT_FOREVER) || ((n*SLEEP_TIME) < databaseHandle->timeout)) ? 1 : 0;
+  if      (databaseHandle->timeout == WAIT_FOREVER) return 1;
+  else if (databaseHandle->timeout == NO_WAIT     ) return 0;
+  else                                              return ((n*SLEEP_TIME) < databaseHandle->timeout) ? 1 : 0;
 
   #undef SLEEP_TIME
 }
