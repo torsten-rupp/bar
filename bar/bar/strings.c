@@ -47,10 +47,11 @@
 
 #ifndef NDEBUG
   #define DEBUG_LIST_HASH_SIZE   4093
-  // max. string check: print warning and delay if to many strings allocated
+  // max. string check: print warning if to many strings allocated/strings become to long
   #define MAX_STRINGS_CHECK
   #define WARN_MAX_STRINGS       2000
-  #define WARN_MAX_STRINGS_DELTA  500
+  #define WARN_MAX_STRINGS_DELTA 500
+  #define WARN_MAX_STRING_LENGTH (1024*1024)
 #endif /* not NDEBUG */
 
 /***************************** Constants *******************************/
@@ -167,6 +168,77 @@ typedef struct
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
+
+#ifndef NDEBUG
+  #define STRING_IS_ASSIGNABLE(string) \
+    (((string)->type == STRING_TYPE_DYNAMIC) || ((string)->type == STRING_TYPE_STATIC))
+  #define STRING_IS_DYNAMIC(string) \
+    ((string)->type == STRING_TYPE_DYNAMIC)
+
+  #define STRING_CHECK_ASSIGNABLE(string) \
+    do \
+    { \
+      if (string != NULL) \
+      { \
+        assert(STRING_IS_ASSIGNABLE(string)); \
+      } \
+    } \
+    while (0)
+  #define STRING_CHECK_DYNAMIC(string) \
+    do \
+    { \
+      if (string != NULL) \
+      { \
+        assert(STRING_IS_DYNAMIC(string)); \
+      } \
+    } \
+    while (0)
+
+  #ifdef MAX_STRINGS_CHECK
+    #define STRING_UPDATE_VALID(string) \
+      do \
+      { \
+        if (string != NULL) \
+        { \
+          (string)->checkSum = STRING_CHECKSUM((string)->length,(string)->maxLength,(string)->data); \
+          if ((string)->length > WARN_MAX_STRING_LENGTH) \
+          { \
+            fprintf(stderr,"DEBUG WARNING: extremly long string %p: %lu!\n",string,(string)->length); \
+            usleep((((string)->length-WARN_MAX_STRING_LENGTH)/100L)*10*1000); \
+          } \
+        } \
+      } \
+      while (0)
+  #else /* not MAX_STRINGS_CHECK */
+    #define STRING_UPDATE_VALID(string) \
+      do \
+      { \
+        if (string != NULL) \
+        { \
+          (string)->checkSum = STRING_CHECKSUM((string)->length,(string)->maxLength,(string)->data); \
+        } \
+      } \
+      while (0)
+  #endif /* MAX_STRINGS_CHECK */
+#else /* NDEBUG */
+  #define STRING_CHECK_ASSIGNABLE(string) \
+    do \
+    { \
+    } \
+    while (0)
+
+  #define STRING_CHECK_DYNAMIC(string) \
+    do \
+    { \
+    } \
+    while (0)
+
+  #define STRING_UPDATE_VALID(string) \
+    do \
+    { \
+    } \
+    while (0)
+#endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
 
@@ -318,7 +390,7 @@ LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *
 
 /***********************************************************************\
 * Name   : printErrorConstString
-* Purpose: print error for modify constant string
+* Purpose: print error for modified constant string
 * Input  : string - string
 * Output : -
 * Return : -

@@ -165,30 +165,6 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
   #define STRING_CHECKSUM(length,maxLength,data) \
     ((ulong)((length)^(ulong)(maxLength)^(ulong)(data)))
 
-  #define STRING_IS_ASSIGNABLE(string) \
-    (((string)->type == STRING_TYPE_DYNAMIC) || ((string)->type == STRING_TYPE_STATIC))
-  #define STRING_IS_DYNAMIC(string) \
-    ((string)->type == STRING_TYPE_DYNAMIC)
-
-  #define STRING_CHECK_ASSIGNABLE(string) \
-    do \
-    { \
-      if (string != NULL) \
-      { \
-        assert(STRING_IS_ASSIGNABLE(string)); \
-      } \
-    } \
-    while (0)
-  #define STRING_CHECK_DYNAMIC(string) \
-    do \
-    { \
-      if (string != NULL) \
-      { \
-        assert(STRING_IS_DYNAMIC(string)); \
-      } \
-    } \
-    while (0)
-
   void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string);
   #define STRING_CHECK_VALID(string) \
     do \
@@ -196,39 +172,15 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
       String_debugCheckValid(__FILE__,__LINE__,string); \
     } \
     while (0)
+
   #define STRING_CHECK_VALID_AT(fileName,lineNb,string) \
     do \
     { \
       String_debugCheckValid(fileName,lineNb,string); \
     } \
     while (0)
-  #define STRING_UPDATE_VALID(string) \
-    do \
-    { \
-      if (string != NULL) \
-      { \
-        (string)->checkSum = STRING_CHECKSUM((string)->length,(string)->maxLength,(string)->data); \
-      } \
-    } \
-    while (0)
 #else /* NDEBUG */
-  #define STRING_CHECK_ASSIGNABLE(string) \
-    do \
-    { \
-    } \
-    while (0)
-  #define STRING_CHECK_DYNAMIC(string) \
-    do \
-    { \
-    } \
-    while (0)
-
   #define STRING_CHECK_VALID(string) \
-    do \
-    { \
-    } \
-    while (0)
-  #define STRING_UPDATE_VALID(string) \
     do \
     { \
     } \
