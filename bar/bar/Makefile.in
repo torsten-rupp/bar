@@ -877,7 +877,7 @@ rundevddd: bar-debug@EXEEXT@
 rundevvalgrind: bar-valgrind
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
-	$(VALGRIND) $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --no-default-config --config=/tmp/bar.cfg --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --no-default-config --config=/tmp/bar.cfg --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days --server-jobs-directory=jobs --server-port=39909 --server-tls-port=39910 --log-file=/tmp/bar.log --log=all
 
 rundev_en: bar@EXEEXT@
 	$(INSTALL) -d jobs
@@ -1082,7 +1082,7 @@ test1-debug test_basic-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_basic
 
 test1-valgrind test_basic-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
 
 test2 test_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: compress..."
@@ -1124,7 +1124,7 @@ test2-debug test_compress-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_compress
 
 test2-valgrind test_compress-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
 
 test_delta_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: delta compress..."
@@ -1156,7 +1156,7 @@ test_delta_compress-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_delta_compress
 
 test_delta_compress-valgrind: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_delta_compress
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_delta_compress
 
 test3 test_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 3: crypt..."
@@ -1198,7 +1198,7 @@ test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_crypt
 
 test3-valgrind test_crypt-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_crypt
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_crypt
 
 test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
@@ -1241,7 +1241,7 @@ test4-debug test_asymmetric_crypt-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_asymmetric_crypt
 
 test4-valgrind test_asymmetric-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
 
 test5 test_split: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 5: split..."
@@ -1269,7 +1269,7 @@ test5-debug test_split-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_split
 
 test5-valgrind test_split-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
 
 test6 test_image: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 6: image..."
@@ -1301,7 +1301,7 @@ test6-debug test_image-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_image
 
 test6-valgrind test_image-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
 
 test7 test_storage: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 7: storage..."
@@ -1315,7 +1315,7 @@ test7-debug test_storage-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
 
 test7-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
 
 test_storage_file: $(TEST_BAR)
 	$(MAKE) \
@@ -1338,7 +1338,7 @@ test_storage_file-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_file
 
 test_storage_file-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
 
 test_storage_ftp: $(TEST_BAR)
 	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
@@ -1361,7 +1361,7 @@ test_storage_ftp-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_ftp
 
 test_storage_ftp-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
 
 test_storage_scp: $(TEST_BAR)
 	@$(call functionVerifyParameter,TEST_PASSWORD_SCP,parameter TEST_PASSWORD_SCP nor TEST_PASSWORD set)
@@ -1386,7 +1386,7 @@ test_storage_scp-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_scp
 
 test_storage_scp-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
 
 test_storage_sftp: $(TEST_BAR)
 	@$(call functionVerifyParameter,TEST_PASSWORD_SFTP,parameter TEST_PASSWORD_SFTP nor TEST_PASSWORD set)
@@ -1411,7 +1411,7 @@ test_storage_sftp-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_sftp
 
 test_storage_sftp-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
 
 test_storage_webdav: $(TEST_BAR)
 	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV,parameter TEST_PASSWORD_WEBDAV nor TEST_PASSWORD set)
@@ -1435,7 +1435,7 @@ test_storage_webdav-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_webdav
 
 test_storage_webdav-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
 
 test8 test_largefiles: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 8: large files..."
@@ -1457,7 +1457,7 @@ test8-debug test_largefiles-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_largefiles
 
 test8-valgrind test_largefiles-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_largefiles
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_largefiles
 
 test9 test_dvd: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 9: dvd..."
@@ -1473,7 +1473,7 @@ test9-debug test_dvd-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_dvd
 
 test9-valgrind test_dvd-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
 
 test10 test_server: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 10: server..."
@@ -1489,7 +1489,7 @@ test10-debug test_serverd-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
 
 test10-valgrind test_server-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
 
 test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
@@ -1625,7 +1625,7 @@ test_parameters-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_parameters
 
 test_parameters-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_parameters
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_parameters
 
 test_misc: \
   $(TEST_BAR) \
@@ -1642,7 +1642,7 @@ test_misc-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_misc
         
 test_misc-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
 
 show_debug_test_code test_code:
 	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
@@ -3504,7 +3504,7 @@ memcheck_extended: \
 memcheck1: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3520,7 +3520,7 @@ memcheck2: \
 memcheck2a: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3530,7 +3530,7 @@ memcheck2a: \
 memcheck2b: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3540,7 +3540,7 @@ memcheck2b: \
 memcheck2c: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3550,7 +3550,7 @@ memcheck2c: \
 memcheck2d: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3560,7 +3560,7 @@ memcheck2d: \
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3570,7 +3570,7 @@ memcheck2e: \
 memcheck2f: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3579,7 +3579,7 @@ memcheck2f: \
           $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --dry-run >/dev/null
 memcheck3: bar
 	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3590,7 +3590,7 @@ memcheck4: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3601,7 +3601,7 @@ memcheck5: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3612,7 +3612,7 @@ memcheck6: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3623,14 +3623,14 @@ memcheck7: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
 	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
-	-$(VALGRIND) $(VALGRIND_FLAGS) \
+	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           $(TEST_BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) >/dev/null
-	-$(VALGRIND) $(VALGRIND_FLAGS) \
+	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
@@ -3640,7 +3640,7 @@ memcheck7: \
 memcheck8: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
