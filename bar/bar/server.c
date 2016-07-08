@@ -16317,7 +16317,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
 *            blockOffset=<n [bytes]> blockCount=<n>
 *
 *            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=DIRECTORY name=<name> dateTime=<time stamp> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=DIRECTORY name=<name> size=<n [bztes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 *
 *            jobName=<name> archiveType=<type> \
@@ -16374,17 +16374,18 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                       ); \
     } \
     while (0)
-  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,dateTime,userId,groupId,permission) \
+  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission) \
     do \
     { \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
                        jobName, \
                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
                        storageName, \
                        storageDateTime, \
                        entryId, \
                        name, \
+                       size, \
                        dateTime, \
                        userId, \
                        groupId, \
@@ -16599,7 +16600,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
         break;
       case INDEX_TYPE_DIRECTORY:
-        SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
+        SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_LINK:
         SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,destinationName,timeModified,userId,groupId,permission);

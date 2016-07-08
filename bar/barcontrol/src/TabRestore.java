@@ -3234,9 +3234,9 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
     EntryTypes            entryType;
     String                name;
     long                  dateTime;
-    long                  size;
-    boolean               checked;
-    RestoreStates         restoreState;
+    long                  size;              // file/directory size
+    boolean               checked;           // true iff check mark set
+    RestoreStates         restoreState;      // current restore state
 
     /** create entry data
      * @param entryId entry id
@@ -3866,6 +3866,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                          {
                                            String directoryName = valueMap.getString("name"    );
                                            long   dateTime      = valueMap.getLong  ("dateTime");
+                                           long   size          = valueMap.getLong  ("size"    );
 
                                            // add entry data index
                                            final EntryIndexData entryIndexData = new EntryIndexData(entryId,
@@ -3875,7 +3876,8 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                                                     storageDateTime,
                                                                                                     EntryTypes.DIRECTORY,
                                                                                                     directoryName,
-                                                                                                    dateTime
+                                                                                                    dateTime,
+                                                                                                    size
                                                                                                    );
 
                                            // update/insert table item
