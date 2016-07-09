@@ -1124,8 +1124,10 @@ LOCAL void freeColumnNode(DatabaseColumnNode *columnNode, void *userData)
     case DATABASE_TYPE_FOREIGN_KEY:
       break;
     case DATABASE_TYPE_INT64:
+      String_delete(columnNode->value.i);
       break;
     case DATABASE_TYPE_DOUBLE:
+      String_delete(columnNode->value.d);
       break;
     case DATABASE_TYPE_DATETIME:
       break;
@@ -1754,6 +1756,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
         }
       }
 
+      // free resources
       freeTableColumnList(&columnList);
       freeTableColumnList(&columnListReference);
     }
@@ -1772,6 +1775,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
     }
   }
 
+  // free resources
   StringList_done(&tableList);
   StringList_done(&tableListReference);
 
