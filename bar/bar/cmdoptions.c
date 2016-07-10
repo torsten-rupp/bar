@@ -1654,7 +1654,9 @@ void CmdOption_printHelp(FILE                    *outputHandle,
   // output help
   for (i = 0; i < commandLineOptionCount; i++)
   {
-    if ((helpLevel == CMD_HELP_LEVEL_ALL) || (helpLevel >= (int)commandLineOptions[i].helpLevel))
+    if (   (commandLineOptions[i].type != CMD_OPTION_TYPE_DEPRECATED)
+        && ((helpLevel == CMD_HELP_LEVEL_ALL) || (helpLevel >= (int)commandLineOptions[i].helpLevel))
+       )
     {
       // output prefix
       if (i == 0)
