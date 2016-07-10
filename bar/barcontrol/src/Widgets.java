@@ -6102,6 +6102,23 @@ e composite widget
     return (T)data[0];
   }
 
+  /** clear selected table item
+   * @param table table
+   */
+  public static <T> void clearSelectedTableItem(final Table table)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          table.deselectAll();
+        }
+      });
+    }
+  }
+
   /** set selected table item
    * @param table table
    * @param data item data
@@ -7432,6 +7449,26 @@ private static void printTree(Tree tree)
     }
 
     return (T)data[0];
+  }
+
+  /** clearSelected tree item
+   * @param tree table
+   */
+  public static <T> void clearSelectedTreeItem(final Tree tree)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            tree.deselectAll();
+          }
+        }
+      });
+    }
   }
 
   /** set selected tree item
