@@ -478,7 +478,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("include-image-command",        0,  1,3,includeImageCommand,                                                                                    "include image pattern command","command"                                  ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,3,&excludePatternList,                             cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
   CMD_OPTION_CSTRING      ("exclude-command",              0,  1,3,excludeCommand,                                                                                         "exclude pattern command","command"                                        ),
-  CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      cmdOptionParseMount,NULL,                              "mount device","mount point"                                               ),
+  CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      cmdOptionParseMount,NULL,                              "mount device","name"                                                      ),
 
   CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                cmdOptionParseDeltaSource,NULL,                        "source pattern","pattern"                                                 ),
 
