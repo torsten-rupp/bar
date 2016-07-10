@@ -7923,6 +7923,7 @@ Dprintf.dprintf("");
      */
     class Data
     {
+      long    totalEntryCount;
       long    totalEntrySize,totalEntryContentSize;
       String  restoreToDirectory;
       boolean directoryContent;
@@ -7930,6 +7931,7 @@ Dprintf.dprintf("");
 
       Data()
       {
+        this.totalEntryCount       = 0;
         this.totalEntrySize        = 0L;
         this.totalEntryContentSize = 0L;
         this.restoreToDirectory    = null;
@@ -8089,6 +8091,27 @@ Dprintf.dprintf("");
       widgetDirectoryContent.setToolTipText(BARControl.tr("Restore content of selected directories, too."));
       widgetDirectoryContent.setEnabled(restoreType == RestoreTypes.ENTRIES);
       Widgets.layout(widgetDirectoryContent,4,0,TableLayoutData.W,0,2);
+      widgetDirectoryContent.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+
+          data.directoryContent = widget.getSelection();
+          widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
+                                            data.totalEntryCount,
+                                            Units.formatByteSize(data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize),
+                                            data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize
+                                           )
+                             );
+          widgetTotal.pack();
+        }
+      });
 
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
@@ -8170,7 +8193,7 @@ Dprintf.dprintf("");
 
               // get archives
               BARServer.executeCommand(StringParser.format("STORAGE_LIST"),
-                                       0,  // debugLevel
+                                       1,  // debugLevel
                                        errorMessage,
                                        new CommandResultHandler()
                                        {
@@ -8221,7 +8244,7 @@ Dprintf.dprintf("");
                                           ) == Errors.NONE
                  )
               {
-                final long totalEntryCount = valueMap.getLong("totalEntryCount"      );
+                data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
                 data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
                 data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
 
@@ -8232,7 +8255,7 @@ Dprintf.dprintf("");
                     if (!widgetTotal.isDisposed())
                     {
                       widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
-                                                        totalEntryCount,
+                                                        data.totalEntryCount,
                                                         Units.formatByteSize(data.totalEntrySize),
                                                         data.totalEntrySize
                                                        )
@@ -8249,7 +8272,7 @@ Dprintf.dprintf("");
 
               // get entries
               BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
-                                       0,  // debugLevel
+                                       1,  // debugLevel
                                        new CommandResultHandler()
                                        {
                                          public int handleResult(int i, ValueMap valueMap)
@@ -8299,10 +8322,10 @@ Dprintf.dprintf("");
                                           ) == Errors.NONE
                  )
               {
-                final long totalEntryCount = valueMap.getLong("totalEntryCount");
+                data.totalEntryCount       = valueMap.getLong("totalEntryCount");
                 data.totalEntrySize        = valueMap.getLong("totalEntrySize");
-//TODO
-//                data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+//Dprintf.dprintf("data.totalEntrySize=%d data.totalEntryContentSize=%d",data.totalEntrySize,data.totalEntryContentSize);
 
                 display.syncExec(new Runnable()
                 {
@@ -8311,9 +8334,9 @@ Dprintf.dprintf("");
                     if (!widgetTotal.isDisposed())
                     {
                       widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
-                                                        totalEntryCount,
-                                                        Units.formatByteSize(data.totalEntrySize),
-                                                        data.totalEntrySize
+                                                        data.totalEntryCount,
+                                                        Units.formatByteSize(data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize),
+                                                        data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize
                                                        )
                                          );
                       widgetTotal.pack();
