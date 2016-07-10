@@ -2898,7 +2898,6 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle)
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     assert(databaseHandle->transaction.fileName != NULL);
-fprintf(stderr,"%s, %d: Database_rollbackTransaction\n",__FILE__,__LINE__);
 
     #ifndef NDEBUG
       databaseHandle->transaction.fileName = NULL;
