@@ -13628,13 +13628,14 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
 *            storageCount=<n> \
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n [bytes]>
+*            totalEntryContentSize=<n [bytes]>
 \***********************************************************************/
 
 LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors error;
   ulong  storageCount,totalEntryCount;
-  uint64 totalEntrySize;
+  uint64 totalEntrySize,totalEntryContentSize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13659,7 +13660,8 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
                                 NULL,
                                 &storageCount,
                                 &totalEntryCount,
-                                &totalEntrySize
+                                &totalEntrySize,
+                                &totalEntryContentSize
                                );
   if (error != ERROR_NONE)
   {
@@ -13667,7 +13669,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu",storageCount,totalEntryCount,totalEntrySize);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
 }
 
 /***********************************************************************\
@@ -13902,13 +13904,14 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
 *          Result:
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n [bytes]>
+*            totalEntryContentSize=<n [bytes]>
 \***********************************************************************/
 
 LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors error;
   ulong  totalEntryCount;
-  uint64 totalEntrySize;
+  uint64 totalEntrySize,totalEntryContentSize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13931,7 +13934,8 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
                                NULL,  // pattern,
                                FALSE,  // newestOnly
                                &totalEntryCount,
-                               &totalEntrySize
+                               &totalEntrySize,
+                               &totalEntryContentSize
                               );
   if (error != ERROR_NONE)
   {
@@ -13939,7 +13943,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu",totalEntryCount,totalEntrySize);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
 }
 
 /***********************************************************************\
@@ -14844,7 +14848,8 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
 *          Result:
 *            storageCount=<n> \
 *            totalEntryCount=<n> \
-*            totalEntrySize=<n>
+*            totalEntrySize=<n> [bytes]
+*            totalEntryContentSize=<n> [bytes]
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -14858,7 +14863,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   IndexModeSet  indexModeSet;
   Errors        error;
   ulong         storageCount,totalEntryCount;
-  uint64        totalEntrySize;
+  uint64        totalEntrySize,totalEntryContentSize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14939,7 +14944,8 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
                                 name,
                                 &storageCount,
                                 &totalEntryCount,
-                                &totalEntrySize
+                                &totalEntrySize,
+                                &totalEntryContentSize
                               );
   if (error != ERROR_NONE)
   {
@@ -14949,7 +14955,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu",storageCount,totalEntryCount,totalEntrySize);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
 
   // free resources
   String_delete(name);
@@ -16223,7 +16229,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   bool       newestOnly;
   Errors     error;
   ulong      totalEntryCount;
-  uint64     totalEntrySize;
+  uint64     totalEntrySize,totalEntryContentSize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -16275,7 +16281,8 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
                                name,
                                newestOnly,
                                &totalEntryCount,
-                               &totalEntrySize
+                               &totalEntrySize,
+                               &totalEntryContentSize
                               );
   if (error != ERROR_NONE)
   {
@@ -16285,7 +16292,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu",totalEntryCount,totalEntrySize);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
 
   // free resources
   String_delete(name);
