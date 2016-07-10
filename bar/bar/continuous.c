@@ -998,8 +998,6 @@ LOCAL NotifyInfo *addNotify(ConstString directory)
 
 LOCAL void removeNotify(NotifyInfo *notifyInfo)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(notifyInfo != NULL);
 
 //fprintf(stderr,"%s, %d: rem %d: %s\n",__FILE__,__LINE__,notifyInfo->watchHandle,String_cString(notifyInfo->directory));
@@ -1173,7 +1171,7 @@ fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
 LOCAL void removeNotifySubDirectories(ConstString directory)
 {
   DictionaryIterator dictionaryIterator;
-  void               *keyData;
+  const void         *keyData;
   ulong              keyLength;
   void               *data;
   ulong              length;
