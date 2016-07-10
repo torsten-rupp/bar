@@ -599,20 +599,16 @@ CREATE TRIGGER AFTER UPDATE OF entryId ON entriesNewest
       WHERE storage.id=NEW.storageId;
 
     // update count/size in parent directories
-// insert into log values('  decrement '||DIRNAME(OLD.name)||': size='||OLD.size);
     UPDATE directoryEntries
       SET totalEntryCountNewest=totalEntryCountNewest-1,
           totalEntrySizeNewest =totalEntrySizeNewest -OLD.size
       WHERE     directoryEntries.storageId=OLD.storageId
             AND directoryEntries.name=DIRNAME(OLD.name);
-// insert into log values('  done');
- insert into log values('  increment '||DIRNAME(NEW.name)||': size='||NEW.size);
     UPDATE directoryEntries
       SET totalEntryCountNewest=totalEntryCountNewest+1,
           totalEntrySizeNewest =totalEntrySizeNewest +NEW.size
       WHERE     directoryEntries.storageId=NEW.storageId
             AND directoryEntries.name=DIRNAME(NEW.name);
-// insert into log values('  done');
   END;
 
 CREATE TRIGGER BEFORE DELETE ON entriesNewest
@@ -634,13 +630,11 @@ CREATE TRIGGER BEFORE DELETE ON entriesNewest
       WHERE storage.id=OLD.storageId;
 
     // update count/size in parent directories
-// insert into log values('  decrement '||DIRNAME(OLD.name)||': size='||OLD.size);
     UPDATE directoryEntries
       SET totalEntryCountNewest=totalEntryCountNewest-1,
           totalEntrySizeNewest =totalEntrySizeNewest -OLD.size
       WHERE     directoryEntries.storageId=OLD.storageId
             AND directoryEntries.name=DIRNAME(OLD.name);
-// insert into log values('  done');
   END;
 
 //TODO
