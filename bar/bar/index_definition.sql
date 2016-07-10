@@ -157,7 +157,7 @@ CREATE TRIGGER BEFORE DELETE ON entities
   END;
 CREATE TRIGGER AFTER UPDATE OF jobUUID,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize,totalFileCount,totalFileSize,totalImageCount,totalImageSize,totalDirectoryCount,totalLinkCount,totalHardlinkCount,totalHardlinkSize,totalSpecialCount ON entities
   BEGIN
- insert into log values('trigger entities: UPDATE OF jobUUID='||OLD.jobUUID||'->'||NEW.jobUUID||' totalStorageCount='||OLD.totalStorageCount||'->'||NEW.totalStorageCount||' totalStorageSize='||OLD.totalStorageSize||'->'||NEW.totalStorageSize);
+// insert into log values('trigger entities: UPDATE OF jobUUID='||OLD.jobUUID||'->'||NEW.jobUUID||' totalStorageCount='||OLD.totalStorageCount||'->'||NEW.totalStorageCount||' totalStorageSize='||OLD.totalStorageSize||'->'||NEW.totalStorageSize);
     UPDATE uuids
       SET totalEntityCount   =totalEntityCount   -1,
           lastCreated        =(SELECT entities.lastCreated      FROM entities WHERE entities.jobUUID=OLD.jobUUID ORDER BY entities.lastCreated DESC LIMIT 0,1),
@@ -349,7 +349,7 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
   END;
 
 //TODO: remove
-create table log(event TEXT);
+//create table log(event TEXT);
 
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
@@ -678,14 +678,14 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
       WHERE id=NEW.entryId;
 
     // update count/size in storage
- insert into log values('trigger fileEntries: before UPDATE storage totalEntryCount='||(select totalEntryCount from storage where id=NEW.storageId)||' totalEntrySize='||(select totalEntrySize from storage where id=NEW.storageId));
+// insert into log values('trigger fileEntries: before UPDATE storage totalEntryCount='||(select totalEntryCount from storage where id=NEW.storageId)||' totalEntrySize='||(select totalEntrySize from storage where id=NEW.storageId));
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalEntrySize =totalEntrySize +NEW.fragmentSize,
           totalFileCount =totalFileCount +1,
           totalFileSize  =totalFileSize  +NEW.fragmentSize
       WHERE id=NEW.storageId;
- insert into log values('trigger fileEntries: after UPDATE storage totalEntryCount='||(select totalEntryCount from storage where id=NEW.storageId)||' totalEntrySize='||(select totalEntrySize from storage where id=NEW.storageId));
+// insert into log values('trigger fileEntries: after UPDATE storage totalEntryCount='||(select totalEntryCount from storage where id=NEW.storageId)||' totalEntrySize='||(select totalEntrySize from storage where id=NEW.storageId));
 
     // update count/size in parent directories
     UPDATE directoryEntries
