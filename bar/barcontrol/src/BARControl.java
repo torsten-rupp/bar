@@ -1011,6 +1011,14 @@ public class BARControl
     {
       this("",port,tlsPort);
     }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "LoginData {"+serverName+", "+serverPort+", "+serverTLSPort+"}";
+    }
   }
 
   // --------------------------- constants --------------------------------
@@ -1062,6 +1070,12 @@ public class BARControl
     SOCKET;
   };
 
+  // user events
+  final static int USER_EVENT_NEW_SERVER = 0xFFFF+0;
+  final static int USER_EVENT_NEW_JOB    = 0xFFFF+1;
+
+
+  // string with "all files" extension
   public static final String ALL_FILE_EXTENSION;
 
   private static final HostSystems hostSystem;
@@ -1667,8 +1681,6 @@ public class BARControl
    */
   private void updateServerMenu()
   {
-    MenuItem menuItem;
-
     while (serverMenu.getItemCount() > 2)
     {
       serverMenu.getItem(2).dispose();
@@ -1676,7 +1688,9 @@ public class BARControl
 
     for (final Settings.Server server : Settings.servers)
     {
-      menuItem = Widgets.addMenuItem(serverMenu,server.name+":"+server.port);
+      MenuItem menuItem = Widgets.addMenuRadio(serverMenu,server.name+":"+server.port);
+      menuItem.setData(server);
+      menuItem.setSelection(server.name.equals(BARServer.getName()) && (server.port == BARServer.getPort()));
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1697,7 +1711,7 @@ public class BARControl
                               Settings.serverKeyFileName
                              );
             shell.setText("BAR control: "+BARServer.getInfo());
-            updateServerMenu();
+            Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
           }
           catch (ConnectionError error)
           {
@@ -1746,6 +1760,7 @@ public class BARControl
                                   Settings.serverKeyFileName
                                  );
                 shell.setText("BAR control: "+BARServer.getInfo());
+                Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
                 updateServerMenu();
               }
               catch (ConnectionError error)
@@ -2147,6 +2162,7 @@ public class BARControl
                                 Settings.serverKeyFileName
                                );
               connectOkFlag = true;
+              Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
             }
             catch (ConnectionError reconnectError)
             {
@@ -3031,6 +3047,7 @@ Dprintf.dprintf("still not supported");
         createWindow();
         createTabs(Settings.selectedJobName);
         createMenu();
+        Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
 
         // run
         run();

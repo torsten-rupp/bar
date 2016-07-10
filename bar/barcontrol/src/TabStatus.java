@@ -524,7 +524,10 @@ public class TabStatus
       }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        setSelectedJob((JobData)selectionEvent.item.getData());
+        JobData jobData = (JobData)selectionEvent.item.getData();
+
+        setSelectedJob(jobData);
+        Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
       }
     });
     SelectionListener jobListColumnSelectionListener = new SelectionListener()
@@ -1488,9 +1491,28 @@ public class TabStatus
       });
     }
 
+    // listeners
+    shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        updateJobList();
+        clearSelectedJob();
+      }
+    });
+    shell.addListener(BARControl.USER_EVENT_NEW_JOB,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        JobData jobData = (JobData)event.data;
+        setSelectedJob(jobData);
+      }
+    });
+
     // start status update thread
     tabStatusUpdateThread = new TabStatusUpdateThread(this);
     tabStatusUpdateThread.setDaemon(true);
+//TODO???
 //    tabStatusUpdateThread.start();
   }
 
@@ -1677,13 +1699,26 @@ public class TabStatus
    */
   public void selectJob(String uuid)
   {
-    setSelectedJob(jobDataMap.get(uuid));
+    JobData jobData = jobDataMap.get(uuid);
+
+    setSelectedJob(jobData);
+    Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** clear selected job
+   */
+  private void clearSelectedJob()
+  {
+    Widgets.clearSelectedTableItem(widgetJobTable);
+    widgetSelectedJob.setText(BARControl.tr("Selected")+" ''");
   }
 
   /** set selected job
    * @param jobData job data
    */
-  public void setSelectedJob(JobData jobData)
+  private void setSelectedJob(JobData jobData)
   {
     selectedJobData = jobData;
 
@@ -1693,11 +1728,7 @@ public class TabStatus
                                                                 : ""
                                                              )+"'"
                              );
-
-    if (tabJobs != null) tabJobs.setSelectedJob(selectedJobData);
   }
-
-  //-----------------------------------------------------------------------
 
   /** getProgress
    * @param n,m process current/max. value

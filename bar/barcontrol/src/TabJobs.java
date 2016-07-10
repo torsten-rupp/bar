@@ -1778,7 +1778,6 @@ public class TabJobs
    */
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
-
     TabFolder   tabFolder;
     Composite   tab,subTab;
     Menu        menu;
@@ -1859,7 +1858,7 @@ public class TabJobs
           if (index >= 0)
           {
             selectedJobData = Widgets.getSelectedOptionMenuItem(widgetJobList,null);
-            if (tabStatus != null) tabStatus.setSelectedJob(selectedJobData);
+            Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,selectedJobData);
             update();
 
             selectJobEvent.trigger();
@@ -8283,6 +8282,17 @@ widgetArchivePartSize.setListVisible(true);
       }
     });
 
+    // listeners
+    shell.addListener(BARControl.USER_EVENT_NEW_JOB,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        JobData jobData = (JobData)event.data;
+
+        setSelectedJob(jobData);
+      }
+    });
+
     // add root devices
     addDirectoryRootDevices();
     addDevicesList();
@@ -8354,17 +8364,6 @@ widgetArchivePartSize.setListVisible(true);
   public void selectJob(String uuid)
   {
     tabStatus.selectJob(uuid);
-  }
-
-  /** set selected job
-   * @param jobData job data
-   */
-  public void setSelectedJob(JobData jobData)
-  {
-    selectedJobData = jobData;
-    Widgets.setSelectedOptionMenuItem(widgetJobList,selectedJobData);
-    update();
-    selectJobEvent.trigger();
   }
 
   /** create new job
@@ -8828,6 +8827,17 @@ throw new Error("NYI");
   }
 
   //-----------------------------------------------------------------------
+
+  /** set selected job
+   * @param jobData job data
+   */
+  private void setSelectedJob(JobData jobData)
+  {
+    selectedJobData = jobData;
+    Widgets.setSelectedOptionMenuItem(widgetJobList,selectedJobData);
+    update();
+    selectJobEvent.trigger();
+  }
 
   /** clear job data
    */

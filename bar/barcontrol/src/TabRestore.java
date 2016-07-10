@@ -6274,6 +6274,18 @@ Dprintf.dprintf("remove");
       }
     }
 
+    // listeners
+    shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        updateStorageTreeTableThread.triggerUpdate();
+        setAllCheckedStorage(false);
+        updateEntryTableThread.triggerUpdate();
+        setAllCheckedEntries(false);
+      }
+    });
+
     // start storage/entry update threads
     updateStorageTreeTableThread.start();
     updateEntryTableThread.start();
@@ -7911,15 +7923,18 @@ Dprintf.dprintf("");
      */
     class Data
     {
+      long    totalEntrySize,totalEntryContentSize;
       String  restoreToDirectory;
       boolean directoryContent;
       boolean overwriteEntries;
 
       Data()
       {
-        this.restoreToDirectory = null;
-        this.directoryContent   = false;
-        this.overwriteEntries   = false;
+        this.totalEntrySize        = 0L;
+        this.totalEntryContentSize = 0L;
+        this.restoreToDirectory    = null;
+        this.directoryContent      = false;
+        this.overwriteEntries      = false;
       }
     };
 
@@ -8206,8 +8221,9 @@ Dprintf.dprintf("");
                                           ) == Errors.NONE
                  )
               {
-                final long totalEntryCount = valueMap.getLong("totalEntryCount");
-                final long totalEntrySize  = valueMap.getLong("totalEntrySize");
+                final long totalEntryCount = valueMap.getLong("totalEntryCount"      );
+                data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
+                data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
 
                 display.syncExec(new Runnable()
                 {
@@ -8215,7 +8231,12 @@ Dprintf.dprintf("");
                   {
                     if (!widgetTotal.isDisposed())
                     {
-                      widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                      widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
+                                                        totalEntryCount,
+                                                        Units.formatByteSize(data.totalEntrySize),
+                                                        data.totalEntrySize
+                                                       )
+                                         );
                       widgetTotal.pack();
                     }
                   }
@@ -8279,7 +8300,9 @@ Dprintf.dprintf("");
                  )
               {
                 final long totalEntryCount = valueMap.getLong("totalEntryCount");
-                final long totalEntrySize  = valueMap.getLong("totalEntrySize");
+                data.totalEntrySize        = valueMap.getLong("totalEntrySize");
+//TODO
+//                data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
 
                 display.syncExec(new Runnable()
                 {
@@ -8287,7 +8310,12 @@ Dprintf.dprintf("");
                   {
                     if (!widgetTotal.isDisposed())
                     {
-                      widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize));
+                      widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
+                                                        totalEntryCount,
+                                                        Units.formatByteSize(data.totalEntrySize),
+                                                        data.totalEntrySize
+                                                       )
+                                         );
                       widgetTotal.pack();
                     }
                   }
@@ -8306,6 +8334,14 @@ Dprintf.dprintf("");
               }
             }
           });
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+            System.exit(1);
+          }
         }
         finally
         {

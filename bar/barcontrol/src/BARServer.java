@@ -857,7 +857,7 @@ class ReadThread extends Thread
 
 /** BAR server
  */
-class BARServer
+public class BARServer
 {
   // --------------------------- constants --------------------------------
   private final static int   PROTOCOL_VERSION_MAJOR = 4;
@@ -1359,7 +1359,23 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     return true;
   }
 
-  /** Get server info
+  /** get server name
+   * @return server name
+   */
+  public static String getName()
+  {
+    return name;
+  }
+
+  /** get server port
+   * @return server port
+   */
+  public static int getPort()
+  {
+    return port;
+  }
+
+  /** get server info
    * @return server info
    */
   public static String getInfo()
