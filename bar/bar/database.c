@@ -582,9 +582,9 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
   const char *text,*format;
   uint64     timestamp;
   char       *s;
-  #ifdef HAVE_LOCALTIME_R
+  #ifdef HAVE_GETDATE_R
     struct tm tmBuffer;
-  #endif /* HAVE_LOCALTIME_R */
+  #endif /* HAVE_GETDATE_R */
   struct tm  *tm;
 
   assert(context != NULL);
