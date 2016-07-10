@@ -5566,8 +5566,6 @@ Errors Index_init(const char *fileName)
       error = openIndex(&indexHandleReference,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
       if (error == ERROR_NONE)
       {
-
-
         error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ,NO_WAIT);
         if (error == ERROR_NONE)
         {
@@ -7197,7 +7195,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              ConstString   name,
                              ulong         *storageCount,
                              ulong         *totalEntryCount,
-                             uint64        *totalEntrySize
+                             uint64        *totalEntrySize,
+                             uint64        *totalEntryContentSize
                             )
 {
   String              ftsName;
@@ -7210,7 +7209,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   String              indexModeSetString;
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
-  double              totalEntryCount_,totalEntrySize_;
+  double              totalEntryCount_,totalEntrySize_,totalEntryContentSize_;
 
   assert(indexHandle != NULL);
   assert((uuidId == INDEX_ID_ANY) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
@@ -7287,8 +7286,10 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 //TODO newest
                              "SELECT COUNT(storage.id),\
                                      TOTAL(storage.totalEntryCount), \
-                                     TOTAL(storage.totalEntrySize) \
+                                     TOTAL(storage.totalEntrySize), \
+                                     TOTAL(directoryEntries.totalEntrySize) \
                               FROM storage \
+                                LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                 LEFT JOIN entities ON entities.id=storage.entityId \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               WHERE %S \
@@ -7301,17 +7302,20 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
       return error;
     }
     if (Database_getNextRow(&databaseQueryHandle,
-                            "%lu %lf %lf",
+                            "%lu %lf %lf %lf",
                             storageCount,
                             &totalEntryCount_,
-                            &totalEntrySize_
+                            &totalEntrySize_,
+                            &totalEntryContentSize_
                            )
           )
     {
       assert(totalEntryCount_ >= 0.0);
       assert(totalEntrySize_ >= 0.0);
+      assert(totalEntryContentSize_ >= 0.0);
       if (totalEntryCount != NULL) (*totalEntryCount) = (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
       if (totalEntrySize != NULL) (*totalEntrySize) = (totalEntrySize_ >= 0LL) ? (uint64)totalEntrySize_ : 0LL;
+      if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0LL) ? (uint64)totalEntryContentSize_ : 0LL;
     }
     Database_finalize(&databaseQueryHandle);
 
@@ -8051,8 +8055,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             IndexTypeSet  indexTypeSet,
                             ConstString   name,
                             bool          newestOnly,
-                            ulong         *count,
-                            uint64        *size
+                            ulong         *totalEntryCount,
+                            uint64        *totalEntrySize,
+                            uint64        *totalEntryContentSize
                            )
 {
   DatabaseQueryHandle databaseQueryHandle;
@@ -8064,17 +8069,16 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   uint                i;
   String              filterString,filterIdsString;
   String              indexTypeSetString;
-  double              count_;
-  double              size_;
+  double              totalEntryCount_,totalEntrySize_,totalEntryContentSize_;
 
   assert(indexHandle != NULL);
   assert((indexIdCount == 0) || (indexIds != NULL));
   assert((entryIdCount == 0) || (entryIds != NULL));
-  assert(count != NULL);
 
   // init variables
-  if (count != NULL) (*count) = 0L;
-  if (size != NULL) (*size) = 0LL;
+  if (totalEntryCount != NULL) (*totalEntryCount) = 0L;
+  if (totalEntrySize != NULL) (*totalEntrySize) = 0LL;
+  if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -8146,11 +8150,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),TOTAL(%s) \
-                                    FROM storage \
-                                      LEFT JOIN entities ON entities.id=storage.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE %S \
+                                 "SELECT TOTAL(%s),\
+                                         TOTAL(%s) \
+                                  FROM storage \
+                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalFileCountNewest" : "storage.totalFileCount",
                                  newestOnly ? "storage.totalFileSizeNewest" : "storage.totalFileSize",
@@ -8162,15 +8168,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf %lf",
-                                &count_,
-                                &size_
+                                &totalEntryCount_,
+                                &totalEntrySize_
                                )
            )
         {
-          assert(count_ >= 0.0);
-          assert(size_ >= 0.0);
-          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
-          if (size != NULL) (*size) += (size_ >= 0.0) ? (uint64)size_ : 0LL;
+          assert(totalEntryCount_ >= 0.0);
+          assert(totalEntrySize_ >= 0.0);
+          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+          if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8178,11 +8184,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),TOTAL(%s) \
-                                    FROM storage \
-                                      LEFT JOIN entities ON entities.id=storage.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE %S \
+                                 "SELECT TOTAL(%s),\
+                                         TOTAL(%s) \
+                                  FROM storage \
+                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalImageCountNewest" : "storage.totalImageCount",
                                  newestOnly ? "storage.totalImageSizeNewest" : "storage.totalImageSize",
@@ -8194,15 +8202,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf %lf",
-                                &count_,
-                                &size_
+                                &totalEntryCount_,
+                                &totalEntrySize_
                                )
            )
         {
-          assert(count_ >= 0.0);
-          assert(size_ >= 0.0);
-          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
-          if (size != NULL) (*size) += (size_ >= 0.0) ? (uint64)size_ : 0LL;
+          assert(totalEntryCount_ >= 0.0);
+          assert(totalEntrySize_ >= 0.0);
+          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+          if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8210,13 +8218,16 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s) \
-                                    FROM storage \
-                                      LEFT JOIN entities ON entities.id=storage.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE %S \
+                                 "SELECT TOTAL(%s),\
+                                         TOTAL(%s) \
+                                  FROM storage \
+                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalDirectoryCountNewest" : "storage.totalDirectoryCount",
+                                 newestOnly ? "directoryEntries.totalEntrySizeNewest" : "directoryEntries.totalEntrySize",
                                  filterString
                                 );
         if (error != ERROR_NONE)
@@ -8225,12 +8236,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf",
-                                &count_
+                                &totalEntryCount_,
+                                &totalEntryContentSize_
                                )
            )
         {
-          assert(count_ >= 0.0);
-          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
+          assert(totalEntryCount_ >= 0.0);
+          assert(totalEntryContentSize_ >= 0.0);
+          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+          if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8239,10 +8253,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(%s) \
-                                    FROM storage \
-                                      LEFT JOIN entities ON entities.id=storage.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE %S \
+                                  FROM storage \
+                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalLinkCountNewest" : "storage.totalLinkCount",
                                  filterString
@@ -8253,12 +8268,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf",
-                                &count_
+                                &totalEntryCount_
                                )
            )
         {
-          assert(count_ >= 0.0);
-          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
+          assert(totalEntryCount_ >= 0.0);
+          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8266,11 +8281,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),TOTAL(%s) \
-                                    FROM storage \
-                                      LEFT JOIN entities ON entities.id=storage.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE %S \
+                                 "SELECT TOTAL(%s),\
+                                         TOTAL(%s) \
+                                  FROM storage \
+                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalHardlinkCountNewest" : "storage.totalHardlinkCount",
                                  newestOnly ? "storage.totalHardlinkSizeNewest" : "storage.totalHardlinkSize",
@@ -8282,15 +8299,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf %lf",
-                                &count_,
-                                &size_
+                                &totalEntryCount_,
+                                &totalEntrySize_
                                )
            )
         {
-          assert(count_ >= 0.0);
-          assert(size_ >= 0.0);
-          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
-          if (size != NULL) (*size) += (size_ >= 0.0) ? (uint64)size_ : 0LL;
+          assert(totalEntryCount_ >= 0.0);
+          assert(totalEntrySize_ >= 0.0);
+          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+          if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8299,10 +8316,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(%s) \
-                                    FROM storage \
-                                      LEFT JOIN entities ON entities.id=storage.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE %S \
+                                  FROM storage \
+                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalSpecialCountNewest" : "storage.totalSpecialCount",
                                  filterString
@@ -8313,12 +8331,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf",
-                                &count_
+                                &totalEntryCount_
                                )
            )
         {
-          assert(count_ >= 0.0);
-          if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
+          assert(totalEntryCount_ >= 0.0);
+          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
       }
@@ -8352,14 +8370,17 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT COUNT(entriesNewest.id),TOTAL(entriesNewest.size) \
-                                    FROM FTS_entries \
-                                      LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
-                                      LEFT JOIN entries ON entries.id=entriesNewest.entryId \
-                                      LEFT JOIN storage ON storage.id=entries.storageId \
-                                      LEFT JOIN entities ON entities.id=storage.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE %S \
+                                 "SELECT COUNT(entriesNewest.id),\
+                                         TOTAL(entriesNewest.size), \
+                                         TOTAL(directoryEntries.totalEntrySize) \
+                                  FROM FTS_entries \
+                                    LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
+                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                    LEFT JOIN entries ON entries.id=entriesNewest.entryId \
+                                    LEFT JOIN storage ON storage.id=entries.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
                                  ",
                                  filterString
                                 );
@@ -8368,13 +8389,16 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT COUNT(entries.id),TOTAL(entries.size) \
-                                    FROM FTS_entries \
-                                      LEFT JOIN entries ON entries.id=FTS_entries.entryId \
-                                      LEFT JOIN storage ON storage.id=entries.storageId \
-                                      LEFT JOIN entities ON entities.id=storage.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE %S \
+                                 "SELECT COUNT(entries.id), \
+                                         TOTAL(entries.size), \
+                                         TOTAL(directoryEntries.totalEntrySize) \
+                                  FROM FTS_entries \
+                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
+                                    LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                                    LEFT JOIN storage ON storage.id=entries.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
                                  ",
                                  filterString
                                 );
@@ -8385,16 +8409,19 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       }
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (Database_getNextRow(&databaseQueryHandle,
-                              "%lf %lf",
-                              &count_,
-                              &size_
+                              "%lf %lf %lf",
+                              &totalEntryCount_,
+                              &totalEntrySize_,
+                              &totalEntryContentSize_
                              )
          )
       {
-        assert(count_ >= 0.0);
-        assert(size_ >= 0.0);
-        if (count != NULL) (*count) += (count_ >= 0.0) ? (ulong)count_ : 0L;
-        if (size != NULL) (*size) += (size_ >= 0.0) ? (uint64)size_ : 0LL;
+        assert(totalEntryCount_ >= 0.0);
+        assert(totalEntrySize_ >= 0.0);
+        assert(totalEntryContentSize_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+        if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
+        if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
       }
       Database_finalize(&databaseQueryHandle);
 

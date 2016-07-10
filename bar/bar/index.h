@@ -953,9 +953,11 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          IndexModeSet     - index mode set
 *          name             - name pattern (glob, can be NULL)
-* Output : storageCount    - number of storages (can be NULL)
-*          totalEntryCount - total entry count (can be NULL)
-*          totalEntrySize  - total size [bytes] (can be NULL)
+* Output : storageCount          - number of storages (can be NULL)
+*          totalEntryCount       - total entry count (can be NULL)
+*          totalEntrySize        - total size [bytes] (can be NULL)
+*          totalEntryContentSize - total size including directory
+*                                  content [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -972,7 +974,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              ConstString   name,
                              ulong         *storageCount,
                              ulong         *totalEntryCount,
-                             uint64        *totalEntrySize
+                             uint64        *totalEntrySize,
+                             uint64        *totalEntryContentSize
                             );
 
 /***********************************************************************\
@@ -1172,8 +1175,10 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
-* Output : count - entry count (can be NULL)
-*          size  - size [bytes] (can be NULL)
+* Output : totalEntryCount       - total entry count (can be NULL)
+*          totalEntrySize        - total size [bytes] (can be NULL)
+*          totalEntryContentSize - total size including directory
+*                                  content [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1186,8 +1191,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             IndexTypeSet  indexTypeSet,
                             ConstString   name,
                             bool          newestOnly,
-                            ulong         *count,
-                            uint64        *size
+                            ulong         *totalEntryCount,
+                            uint64        *totalEntrySize,
+                            uint64        *totalEntryContentSize
                            );
 
 /***********************************************************************\
