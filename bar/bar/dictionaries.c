@@ -528,22 +528,6 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   return entries;
 }
 
-/***********************************************************************\
-* Name   : removeEntry
-* Purpose: remove entry
-* Input  : dictionary      - dictionary
-*          dictionaryEntry - directory entry to remove
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void removeEntry(Dictionary      *dictionary,
-                       DictionaryEntry *dictionaryEntry
-                      )
-{
-}
-
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
@@ -622,7 +606,11 @@ LOCAL void removeEntry(Dictionary      *dictionary,
   assert(dictionary != NULL);
   assert(dictionary->entryTables != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(dictionary,sizeof(Dictionary));
+  #ifndef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary,sizeof(Dictionary));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACE(dictionary,sizeof(Dictionary));
+  #endif /* NDEBUG */
 
   // free resources
   for (z = 0; z < dictionary->entryTableCount; z++)
