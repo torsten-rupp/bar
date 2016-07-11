@@ -348,9 +348,6 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
     INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
   END;
 
-//TODO: remove
-//create table log(event TEXT);
-
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
   id                    INTEGER PRIMARY KEY,
@@ -1060,6 +1057,11 @@ CREATE TABLE IF NOT EXISTS history(
 );
 CREATE INDEX ON history (jobUUID,created,type);
 CREATE INDEX ON history (created);
+
+// --- debug only ------------------------------------------------------
+CREATE TABLE IF NOT EXISTS log(
+  text TEXT
+);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
