@@ -389,7 +389,7 @@ typedef struct ArchiveEntryInfo
 
 /***********************************************************************\
 * Name   : ArchivePauseCallbackFunction
-* Purpose: call back to check if pause activate
+* Purpose: call back to check for pausing
 * Input  : userData - user data
 * Output : -
 * Return : TRUE iff pause
@@ -400,7 +400,7 @@ typedef bool(*ArchivePauseCallbackFunction)(void *userData);
 
 /***********************************************************************\
 * Name   : ArchiveAbortCallbackFunction
-* Purpose: call back to check if aborted
+* Purpose: call back to check for abort
 * Input  : userData - user data
 * Output : -
 * Return : TRUE if aborted
@@ -1399,10 +1399,10 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 *          storageHandle           - storage handle
 *          storageName             - storage name
 *          jobOptions              - job options
-*          pauseCallback           - pause check callback (can be NULL)
-*          pauseUserData           - pause user data
-*          abortCallback           - abort check callback (can be NULL)
-*          abortUserData           - abort user data
+*          pauseCallbackFunction   - pause check callback (can be NULL)
+*          pauseCallbackUserData   - pause user data
+*          abortCallbackFunction   - abort check callback (can be NULL)
+*          abortCallbackUserData   - abort user data
 * Output : totalTimeLastChanged - total last change time [s] (can be
 *                                 NULL)
 *          totalEntries         - total entries (can be NULL)
@@ -1419,10 +1419,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            uint64                       *totalTimeLastChanged,
                            uint64                       *totalEntries,
                            uint64                       *totalSize,
-                           ArchivePauseCallbackFunction pauseCallback,
-                           void                         *pauseUserData,
-                           ArchiveAbortCallbackFunction abortCallback,
-                           void                         *abortUserData,
+                           ArchivePauseCallbackFunction pauseCallbackFunction,
+                           void                         *pauseCallbackUserData,
+                           ArchiveAbortCallbackFunction abortCallbackFunction,
+                           void                         *abortCallbackUserData,
                            LogHandle                    *logHandle
                           );
 

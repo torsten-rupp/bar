@@ -157,8 +157,32 @@ typedef struct
   LIST_HEADER(DatabaseColumnNode);
 } DatabaseColumnList;
 
-// execute copy table row callback function
-typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData);
+/***********************************************************************\
+* Name   : DatabaseCopyTableFunction
+* Purpose: execute copy table row callback function
+* Input  : fromColumnList - from column list
+*          toColumnList   - to column list
+*          userData       - user data
+* Output : -
+* Return : TRUE iff pause
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnList,
+                                           const DatabaseColumnList *toColumnList,
+                                           void *userData
+                                          );
+
+/***********************************************************************\
+* Name   : DatabasePauseCallbackFunction
+* Purpose: call back to check for pausing
+* Input  : userData - user data
+* Output : -
+* Return : TRUE iff pause
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*DatabasePauseCallbackFunction)(void *userData);
 
 /***************************** Variables *******************************/
 
@@ -359,7 +383,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
 *          preCopyTableFunction  - pre-copy call-back function
 *          preCopyTableUserData  - user data for pre-copy call-back
 *          postCopyTableFunction - pre-copy call-back function
-*          postCopyTableUserData - user data for pre-copy call-back
+*          postCopyTableUserData - user data for post-copy call-back
 *          fromAdditional        - additional SQL condition
 *          ...                   - optional arguments for additional
 *                                  SQL condition
@@ -368,16 +392,18 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
-                          DatabaseHandle            *toDatabaseHandle,
-                          const char                *fromTableName,
-                          const char                *toTableName,
-                          bool                      transactionFlag,
-                          DatabaseCopyTableFunction preCopyTableFunction,
-                          void                      *preCopyTableUserData,
-                          DatabaseCopyTableFunction postCopyTableFunction,
-                          void                      *postCopyTableUserData,
-                          const char                *fromAdditional,
+Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
+                          DatabaseHandle                *toDatabaseHandle,
+                          const char                    *fromTableName,
+                          const char                    *toTableName,
+                          bool                          transactionFlag,
+                          DatabaseCopyTableFunction     preCopyTableFunction,
+                          void                          *preCopyTableUserData,
+                          DatabaseCopyTableFunction     postCopyTableFunction,
+                          void                          *postCopyTableUserData,
+                          DatabasePauseCallbackFunction pauseCallbackFunction,
+                          void                          *pauseCallbackUserData,
+                          const char                    *fromAdditional,
                           ...
                          );
 

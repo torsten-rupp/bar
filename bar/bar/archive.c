@@ -10527,10 +10527,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            uint64                       *totalTimeLastChanged,
                            uint64                       *totalEntries,
                            uint64                       *totalSize,
-                           ArchivePauseCallbackFunction pauseCallback,
-                           void                         *pauseUserData,
-                           ArchiveAbortCallbackFunction abortCallback,
-                           void                         *abortUserData,
+                           ArchivePauseCallbackFunction pauseCallbackFunction,
+                           void                         *pauseCallbackUserData,
+                           ArchiveAbortCallbackFunction abortCallbackFunction,
+                           void                         *abortCallbackUserData,
                            LogHandle                    *logHandle
                           )
 {
@@ -10677,7 +10677,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // read archive content
   timeLastChanged             = 0LL;
-  abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
+  abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
   fileName        = String_new();
   imageName       = String_new();
@@ -10691,7 +10691,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
         )
   {
     // pause
-    if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
+    if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
       // end transaction
       error = Index_endTransaction(indexHandle);
@@ -10714,7 +10714,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       {
         Misc_udelay(10LL*MISC_US_PER_SECOND);
       }
-      while (pauseCallback(pauseUserData));
+      while (pauseCallbackFunction(pauseCallbackUserData));
 
 #if 0
       // reopen temporary closed storage
@@ -11076,7 +11076,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 #endif
 
     // flush index data
-    if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
+    if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
       // end transaction
       error = Index_endTransaction(indexHandle);
@@ -11099,7 +11099,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       {
         Misc_udelay(10LL*MISC_US_PER_SECOND);
       }
-      while (pauseCallback(pauseUserData));
+      while (pauseCallbackFunction(pauseCallbackUserData));
 
 #if 0
       // reopen temporary closed storage
@@ -11119,7 +11119,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     }
 
     // check if aborted, check if server allocation pending
-    abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
+    abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
   }
   String_delete(destinationName);

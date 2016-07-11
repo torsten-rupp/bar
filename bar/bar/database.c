@@ -1782,16 +1782,18 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
   return error;
 }
 
-Errors Database_copyTable(DatabaseHandle            *fromDatabaseHandle,
-                          DatabaseHandle            *toDatabaseHandle,
-                          const char                *fromTableName,
-                          const char                *toTableName,
-                          bool                      transactionFlag,
-                          DatabaseCopyTableFunction preCopyTableFunction,
-                          void                      *preCopyTableUserData,
-                          DatabaseCopyTableFunction postCopyTableFunction,
-                          void                      *postCopyTableUserData,
-                          const char                *fromAdditional,
+Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
+                          DatabaseHandle                *toDatabaseHandle,
+                          const char                    *fromTableName,
+                          const char                    *toTableName,
+                          bool                          transactionFlag,
+                          DatabaseCopyTableFunction     preCopyTableFunction,
+                          void                          *preCopyTableUserData,
+                          DatabaseCopyTableFunction     postCopyTableFunction,
+                          void                          *postCopyTableUserData,
+                          DatabasePauseCallbackFunction pauseCallbackFunction,
+                          void                          *pauseCallbackUserData,
+                          const char                    *fromAdditional,
                           ...
                          )
 {
@@ -2165,6 +2167,12 @@ fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
           }
           return error;
         }
+      }
+
+      // pause
+      if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
+      {
+fprintf(stderr,"%s, %d: pauseCallbackFunction\n",__FILE__,__LINE__);
       }
     }
 

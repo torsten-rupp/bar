@@ -86,7 +86,9 @@ LOCAL const struct
 #define INDEX_OPEN_MODE_CREATE     0x02
 
 /***************************** Variables *******************************/
-const char *__databaseFileName = NULL;
+LOCAL const char                 *indexDatabaseFileName = NULL;
+LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
+LOCAL void                       *indexPauseCallbackUserData;
 
 LOCAL Thread cleanupIndexThread;    // clean-up thread
 LOCAL bool   quitFlag;
@@ -627,7 +629,9 @@ return ERROR_NONE;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIndexHandle)
+LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
+                                 IndexHandle *newIndexHandle
+                                )
 {
   Errors error;
 
@@ -646,7 +650,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              &newIndexHandle->databaseHandle,
                              "storage",
                              "storage",
-                             FALSE,
+                             FALSE,  // transaction flag
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -685,7 +689,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -720,6 +724,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -731,7 +736,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -770,6 +775,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -781,7 +787,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -826,6 +832,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       (uint64)Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -837,7 +844,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -869,6 +876,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -880,7 +888,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -919,6 +927,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       (uint)Database_getTableColumnListInt64(fromColumnList,"minor",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -926,6 +935,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return ERROR_NONE;
                              },NULL),
+                             CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                              NULL  // filter
                             );
 
@@ -961,7 +971,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              &newIndexHandle->databaseHandle,
                              "storage",
                              "storage",
-                             FALSE,
+                             FALSE,  // transaction flag
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -1000,7 +1010,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1035,6 +1045,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1046,7 +1057,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1057,7 +1068,8 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),
+                                                            CALLBACK(NULL,NULL),  // post-copy
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1069,7 +1081,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1110,6 +1122,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1121,7 +1134,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1156,6 +1169,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1167,7 +1181,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1208,6 +1222,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1219,7 +1234,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1260,6 +1275,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1267,6 +1283,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return ERROR_NONE;
                              },NULL),
+                             CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                              NULL  // filter
                             );
 
@@ -1310,7 +1327,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              &newIndexHandle->databaseHandle,
                              "storage",
                              "storage",
-                             FALSE,
+                             FALSE,  // transaction flag
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -1349,7 +1366,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1384,6 +1401,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1395,7 +1413,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1436,6 +1454,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1447,7 +1466,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1494,6 +1513,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1505,7 +1525,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1540,6 +1560,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1551,7 +1572,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1591,6 +1612,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1602,7 +1624,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -1643,6 +1665,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt(fromColumnList,"minor",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -1650,6 +1673,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return ERROR_NONE;
                              },NULL),
+                             CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                              NULL  // filter
                             );
 
@@ -1791,7 +1815,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              &newIndexHandle->databaseHandle,
                              "entities",
                              "entities",
-                             FALSE,
+                             FALSE,  // transaction flag
                              // pre: transfer entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -1822,7 +1846,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
                                                           "storage",
-                                                          FALSE,
+                                                          FALSE,  // transaction flag
                                                           // pre: transfer storage
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
@@ -1855,7 +1879,7 @@ fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "directories",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1890,6 +1914,7 @@ fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -1902,7 +1927,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "files",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -1943,6 +1968,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -1955,7 +1981,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Err
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "images",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2002,6 +2028,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Err
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2014,7 +2041,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Err
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "links",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2049,6 +2076,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Err
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2061,7 +2089,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Err
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "hardlinks",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2102,6 +2130,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Err
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2114,7 +2143,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Err
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "special",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2155,6 +2184,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Err
                                                                                                                    Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2163,12 +2193,14 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
 
                                                             return error;
                                                           },NULL),
+                                                          CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
 
                                return error;
                              },NULL),
+                             CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                              NULL  // filter
                             );
   if (error != ERROR_NONE)
@@ -2180,7 +2212,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                              &newIndexHandle->databaseHandle,
                              "storage",
                              "storage",
-                             FALSE,
+                             FALSE,  // transaction flag
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -2251,7 +2283,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -2286,6 +2318,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2297,7 +2330,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -2338,6 +2371,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2349,7 +2383,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -2396,6 +2430,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2407,7 +2442,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -2442,6 +2477,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2453,7 +2489,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -2494,6 +2530,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2505,7 +2542,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -2546,6 +2583,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
                                                                                       Database_getTableColumnListUInt(fromColumnList,"minor",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -2553,6 +2591,7 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
 
                                return error;
                              },NULL),
+                             CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)
@@ -2572,7 +2611,9 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Err
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIndexHandle)
+LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
+                                 IndexHandle *newIndexHandle
+                                )
 {
   Errors error;
 
@@ -2591,7 +2632,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              &newIndexHandle->databaseHandle,
                              "entities",
                              "entities",
-                             FALSE,
+                             FALSE,  // transaction flag
                              // pre: transfer entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -2623,7 +2664,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
                                                           "storage",
-                                                          FALSE,
+                                                          FALSE,  // transaction flag
                                                           // pre: transfer storage
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
@@ -2656,7 +2697,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "directories",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2691,6 +2732,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2702,7 +2744,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "files",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2743,6 +2785,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2754,7 +2797,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "images",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2801,6 +2844,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2812,7 +2856,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "links",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2847,6 +2891,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2858,7 +2903,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "hardlinks",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2899,6 +2944,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2910,7 +2956,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "special",
                                                                                          "entries",
-                                                                                         TRUE,
+                                                                                         TRUE,  // transaction flag
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
@@ -2951,6 +2997,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                                                    Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                                                   );
                                                                                          },NULL),
+                                                                                         CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -2958,12 +3005,14 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                                             return error;
                                                           },NULL),
+                                                          CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
 
                                return error;
                              },NULL),
+                             CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                              NULL  // filter
                             );
   if (error != ERROR_NONE)
@@ -2975,7 +3024,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              &newIndexHandle->databaseHandle,
                              "storage",
                              "storage",
-                             FALSE,
+                             FALSE,  // transaction flag
                              // pre: transfer storage and create entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
@@ -3045,7 +3094,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "directories",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -3080,6 +3129,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -3091,7 +3141,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "files",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -3132,6 +3182,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -3143,7 +3194,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "images",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -3190,6 +3241,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -3201,7 +3253,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "links",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -3236,6 +3288,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -3247,7 +3300,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "hardlinks",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -3288,6 +3341,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -3299,7 +3353,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             &newIndexHandle->databaseHandle,
                                                             "special",
                                                             "entries",
-                                                            TRUE,
+                                                            TRUE,  // transaction flag
                                                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
@@ -3340,6 +3394,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                      );
                                                             },NULL),
+                                                            CALLBACK(indexPauseCallbackFunction,indexPauseCallbackUserData),
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -3347,6 +3402,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return error;
                              },NULL),
+                             CALLBACK(NULL,NULL),
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)
@@ -4439,24 +4495,24 @@ LOCAL void cleanupIndexThreadCode(void)
   uint                oldDatabaseCount;
   uint                sleepTime;
 
-  assert(__databaseFileName != NULL);
+  assert(indexDatabaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
+  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
                 "Cannot open index database '$s' fail: %s\n",
-                __databaseFileName,
+                indexDatabaseFileName,
                 Error_getText(error)
                );
     return;
   }
 
   // get absolute database file name
-  absoluteFileName = File_getAbsoluteFileNameCString(String_new(),__databaseFileName);
+  absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexDatabaseFileName);
 
   // open directory where database is located
   pathName = File_getFilePathName(String_new(),absoluteFileName);
@@ -4469,7 +4525,7 @@ LOCAL void cleanupIndexThreadCode(void)
                 LOG_TYPE_ERROR,
                 "INDEX",
                 "Import index database '%s' fail: %s\n",
-                __databaseFileName,
+                indexDatabaseFileName,
                 Error_getText(error)
                );
     return;
@@ -5480,7 +5536,10 @@ bool Index_parseType(const char *name, IndexTypes *indexType)
   }
 }
 
-Errors Index_init(const char *fileName)
+Errors Index_init(const char                 *fileName,
+                  IndexPauseCallbackFunction pauseCallbackFunction,
+                  void                       *pauseCallbackUserData
+                 )
 {
   bool        createFlag;
   Errors      error;
@@ -5491,9 +5550,13 @@ Errors Index_init(const char *fileName)
 
   assert(fileName != NULL);
 
+  // init variables
+  indexPauseCallbackFunction = pauseCallbackFunction;
+  indexPauseCallbackUserData = pauseCallbackUserData;
+
   // get database file name
-  __databaseFileName = strdup(fileName);
-  if (__databaseFileName == NULL)
+  indexDatabaseFileName = strdup(fileName);
+  if (indexDatabaseFileName == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -5503,10 +5566,10 @@ Errors Index_init(const char *fileName)
   // check if index exists, check version
   if (!createFlag)
   {
-    if (File_existsCString(__databaseFileName))
+    if (File_existsCString(indexDatabaseFileName))
     {
       // check index version
-      error = getIndexVersion(__databaseFileName,&indexVersion);
+      error = getIndexVersion(indexDatabaseFileName,&indexVersion);
       if (error == ERROR_NONE)
       {
         if (indexVersion < INDEX_VERSION)
@@ -5516,13 +5579,13 @@ Errors Index_init(const char *fileName)
           n = 0;
           do
           {
-            oldDatabaseFileName = String_newCString(__databaseFileName);
+            oldDatabaseFileName = String_newCString(indexDatabaseFileName);
             String_appendCString(oldDatabaseFileName,".old");
             String_format(oldDatabaseFileName,"%03d",n);
             n++;
           }
           while (File_exists(oldDatabaseFileName));
-          (void)File_renameCString(__databaseFileName,
+          (void)File_renameCString(indexDatabaseFileName,
                                    String_cString(oldDatabaseFileName),
                                    NULL
                                   );
@@ -5535,7 +5598,7 @@ Errors Index_init(const char *fileName)
                       "INDEX",
                       "Old index database version %d in '%s' - create new\n",
                       indexVersion,
-                      __databaseFileName
+                      indexDatabaseFileName
                      );
         }
       }
@@ -5547,7 +5610,7 @@ Errors Index_init(const char *fileName)
                     LOG_TYPE_ERROR,
                     "INDEX",
                     "Unknown index database version in '%s' - create new\n",
-                    __databaseFileName
+                    indexDatabaseFileName
                    );
       }
     }
@@ -5561,12 +5624,12 @@ Errors Index_init(const char *fileName)
   if (!createFlag)
   {
     // check if database is corrupt
-    if (File_existsCString(__databaseFileName))
+    if (File_existsCString(indexDatabaseFileName))
     {
       error = openIndex(&indexHandleReference,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
       if (error == ERROR_NONE)
       {
-        error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ,NO_WAIT);
+        error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ,NO_WAIT);
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
@@ -5581,13 +5644,13 @@ Errors Index_init(const char *fileName)
         n = 0;
         do
         {
-          oldDatabaseFileName = String_newCString(__databaseFileName);
+          oldDatabaseFileName = String_newCString(indexDatabaseFileName);
           String_appendCString(oldDatabaseFileName,".old");
           String_format(oldDatabaseFileName,"%03d",n);
           n++;
         }
         while (File_exists(oldDatabaseFileName));
-        (void)File_renameCString(__databaseFileName,
+        (void)File_renameCString(indexDatabaseFileName,
                                  String_cString(oldDatabaseFileName),
                                  NULL
                                 );
@@ -5599,7 +5662,7 @@ Errors Index_init(const char *fileName)
                     LOG_TYPE_ERROR,
                     "INDEX",
                     "Invalid or corrupt index database '%s' (error: %s) - create new\n",
-                    __databaseFileName,
+                    indexDatabaseFileName,
                     Error_getText(error)
                    );
       }
@@ -5609,14 +5672,14 @@ Errors Index_init(const char *fileName)
   if (createFlag)
   {
     // create new index
-    error = openIndex(&indexHandle,__databaseFileName,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
+    error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
                   "Create new index database '%s' fail: %s\n",
-                  __databaseFileName,
+                  indexDatabaseFileName,
                   Error_getText(error)
                  );
       return error;
@@ -5627,20 +5690,20 @@ Errors Index_init(const char *fileName)
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Created new index database '%s' (version %d)\n",
-                __databaseFileName,
+                indexDatabaseFileName,
                 INDEX_VERSION
                );
   }
   else
   {
-    error = getIndexVersion(__databaseFileName,&indexVersion);
+    error = getIndexVersion(indexDatabaseFileName,&indexVersion);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
                   "Cannot get index database version from '%s': %s\n",
-                  __databaseFileName,
+                  indexDatabaseFileName,
                   Error_getText(error)
                  );
       return error;
@@ -5650,7 +5713,7 @@ Errors Index_init(const char *fileName)
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Opened index database '%s' (version %d)\n",
-                __databaseFileName,
+                indexDatabaseFileName,
                 indexVersion
                );
   }
@@ -5672,7 +5735,12 @@ void Index_done(void)
   Thread_join(&cleanupIndexThread);
 
   // free resources
-  free((char*)__databaseFileName);
+  free((char*)indexDatabaseFileName);
+}
+
+bool Index_isAvailable(void)
+{
+  return indexDatabaseFileName != NULL;
 }
 
 #ifdef NDEBUG
@@ -5699,7 +5767,7 @@ IndexHandle *__Index_open(const char *__fileName__,
 
     #ifdef NDEBUG
       error = openIndex(indexHandle,
-                        __databaseFileName,
+                        indexDatabaseFileName,
                         INDEX_OPEN_MODE_READ_WRITE,
                         timeout
                        );
@@ -5707,7 +5775,7 @@ IndexHandle *__Index_open(const char *__fileName__,
       error = __openIndex(__fileName__,
                           __lineNb__,
                           indexHandle,
-                          __databaseFileName,
+                          indexDatabaseFileName,
                           INDEX_OPEN_MODE_READ_WRITE,
                           timeout
                          );
@@ -7281,15 +7349,14 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    // get storage count, entry count, entry size
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
 //TODO newest
                              "SELECT COUNT(storage.id),\
                                      TOTAL(storage.totalEntryCount), \
-                                     TOTAL(storage.totalEntrySize), \
-                                     TOTAL(directoryEntries.totalEntrySize) \
+                                     TOTAL(storage.totalEntrySize) \
                               FROM storage \
-                                LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                 LEFT JOIN entities ON entities.id=storage.entityId \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               WHERE %S \
@@ -7302,19 +7369,43 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
       return error;
     }
     if (Database_getNextRow(&databaseQueryHandle,
-                            "%lu %lf %lf %lf",
+                            "%lu %lf %lf",
                             storageCount,
                             &totalEntryCount_,
-                            &totalEntrySize_,
-                            &totalEntryContentSize_
+                            &totalEntrySize_
                            )
           )
     {
       assert(totalEntryCount_ >= 0.0);
       assert(totalEntrySize_ >= 0.0);
-      assert(totalEntryContentSize_ >= 0.0);
       if (totalEntryCount != NULL) (*totalEntryCount) = (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
       if (totalEntrySize != NULL) (*totalEntrySize) = (totalEntrySize_ >= 0LL) ? (uint64)totalEntrySize_ : 0LL;
+    }
+    Database_finalize(&databaseQueryHandle);
+
+    // get entry content size
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+//TODO newest
+                             "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                              FROM storage \
+                                LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                              WHERE %S \
+                             ",
+                             filterString
+                            );
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    if (Database_getNextRow(&databaseQueryHandle,
+                            "%lf",
+                            &totalEntryContentSize_
+                           )
+          )
+    {
+      assert(totalEntryContentSize_ >= 0.0);
       if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0LL) ? (uint64)totalEntryContentSize_ : 0LL;
     }
     Database_finalize(&databaseQueryHandle);
@@ -8148,12 +8239,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     {
       if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
       {
+        // get file count, file size
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(%s),\
                                          TOTAL(%s) \
                                   FROM storage \
-                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE %S \
@@ -8179,15 +8270,16 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: file %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
       {
+        // get image count, image size
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(%s),\
                                          TOTAL(%s) \
                                   FROM storage \
-                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE %S \
@@ -8213,20 +8305,46 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: imnage %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
       {
+        // get directory count
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(%s),\
-                                         TOTAL(%s) \
+                                 "SELECT TOTAL(%s) \
                                   FROM storage \
-                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE %S \
                                  ",
                                  newestOnly ? "storage.totalDirectoryCountNewest" : "storage.totalDirectoryCount",
+                                 filterString
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        if (Database_getNextRow(&databaseQueryHandle,
+                                "%lf",
+                                &totalEntryCount_
+                               )
+           )
+        {
+          assert(totalEntryCount_ >= 0.0);
+          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+        }
+        Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: dir %lf\n",__FILE__,__LINE__,totalEntryCount_);
+
+        // get directory content size
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(%s) \
+                                  FROM storage \
+                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                  WHERE %S \
+                                 ",
                                  newestOnly ? "directoryEntries.totalEntrySizeNewest" : "directoryEntries.totalEntrySize",
                                  filterString
                                 );
@@ -8236,25 +8354,23 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         if (Database_getNextRow(&databaseQueryHandle,
                                 "%lf",
-                                &totalEntryCount_,
                                 &totalEntryContentSize_
                                )
            )
         {
-          assert(totalEntryCount_ >= 0.0);
           assert(totalEntryContentSize_ >= 0.0);
-          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
           if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: dire cont %lf\n",__FILE__,__LINE__,totalEntryContentSize_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
       {
+        // get link count
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(%s) \
                                   FROM storage \
-                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE %S \
@@ -8276,15 +8392,16 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: link %lf\n",__FILE__,__LINE__,totalEntryCount_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
       {
+        // get hardlink count, hardlink size
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(%s),\
                                          TOTAL(%s) \
                                   FROM storage \
-                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE %S \
@@ -8310,14 +8427,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: hardlink %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
       {
+        // get special count
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT TOTAL(%s) \
                                   FROM storage \
-                                    LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE %S \
@@ -8339,6 +8457,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
+fprintf(stderr,"%s, %d: sopec %lf\n",__FILE__,__LINE__,totalEntryCount_);
       }
 
       return ERROR_NONE;
@@ -8366,13 +8485,65 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               Database_lock(&indexHandle->databaseHandle),
               Database_unlock(&indexHandle->databaseHandle),
     {
+      // get entry count, entry size
       if (newestOnly)
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(entriesNewest.id),\
-                                         TOTAL(entriesNewest.size), \
-                                         TOTAL(directoryEntries.totalEntrySize) \
+                                         TOTAL(entriesNewest.size) \
+                                  FROM FTS_entries \
+                                    LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
+                                    LEFT JOIN entries ON entries.id=entriesNewest.entryId \
+                                    LEFT JOIN storage ON storage.id=entries.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
+                                 ",
+                                 filterString
+                                );
+      }
+      else
+      {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT COUNT(entries.id), \
+                                         TOTAL(entries.size) \
+                                  FROM FTS_entries \
+                                    LEFT JOIN entries ON entries.id=FTS_entries.entryId \
+                                    LEFT JOIN storage ON storage.id=entries.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
+                                 ",
+                                 filterString
+                                );
+      }
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (Database_getNextRow(&databaseQueryHandle,
+                              "%lf %lf",
+                              &totalEntryCount_,
+                              &totalEntrySize_
+                             )
+         )
+      {
+        assert(totalEntryCount_ >= 0.0);
+        assert(totalEntrySize_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+        if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
+      }
+      Database_finalize(&databaseQueryHandle);
+
+      // get entry content size
+      if (newestOnly)
+      {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
                                   FROM FTS_entries \
                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
                                     LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
@@ -8389,9 +8560,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
-                                 "SELECT COUNT(entries.id), \
-                                         TOTAL(entries.size), \
-                                         TOTAL(directoryEntries.totalEntrySize) \
+                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
                                   FROM FTS_entries \
                                     LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
                                     LEFT JOIN entries ON entries.id=FTS_entries.entryId \
@@ -8409,18 +8578,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       }
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (Database_getNextRow(&databaseQueryHandle,
-                              "%lf %lf %lf",
-                              &totalEntryCount_,
-                              &totalEntrySize_,
+                              "%%lf",
                               &totalEntryContentSize_
                              )
          )
       {
-        assert(totalEntryCount_ >= 0.0);
-        assert(totalEntrySize_ >= 0.0);
         assert(totalEntryContentSize_ >= 0.0);
-        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
-        if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
       }
       Database_finalize(&databaseQueryHandle);
