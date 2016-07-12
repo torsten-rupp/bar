@@ -1866,7 +1866,7 @@ ulong xxx=0;
   {
     Errors error;
 
-#if 1
+    // begin transaction
     if (transactionFlag)
     {
       error = Database_beginTransaction(toDatabaseHandle);
@@ -1875,7 +1875,6 @@ ulong xxx=0;
         return error;
       }
     }
-#endif
 
     // create select statement
     sqliteResult = sqlite3_prepare_v2(fromDatabaseHandle->handle,
@@ -1918,7 +1917,6 @@ xxx++;
       {
         columnNode->usedFlag = FALSE;
       }
-//      sqlite3_reset(toStatementHandle);
 
       // get from values, set in toColumnList
       n = 0;
@@ -1999,8 +1997,6 @@ xxx++;
         });
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
-//          sqlite3_finalize(toStatementHandle);
           sqlite3_finalize(fromStatementHandle);
           if (transactionFlag)
           {
@@ -2158,8 +2154,6 @@ fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHa
         });
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
-//          sqlite3_finalize(toStatementHandle);
           sqlite3_finalize(fromStatementHandle);
           if (transactionFlag)
           {
@@ -2173,24 +2167,49 @@ fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
       if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
       {
 fprintf(stderr,"%s, %d: pauseCallbackFunction\n",__FILE__,__LINE__);
+        // end transaction
+        if (transactionFlag)
+        {
+          error = Database_endTransaction(toDatabaseHandle);
+          if (error != ERROR_NONE)
+          {
+            sqlite3_finalize(fromStatementHandle);
+            return error;
+          }
+        }
+
+        // wait
+        do
+        {
+          Misc_udelay(10LL*MISC_US_PER_SECOND);
+        }
+        while (pauseCallbackFunction(pauseCallbackUserData));
+
+        // begin transaction
+        if (transactionFlag)
+        {
+          error = Database_beginTransaction(toDatabaseHandle);
+          if (error != ERROR_NONE)
+          {
+            sqlite3_finalize(fromStatementHandle);
+            return error;
+          }
+        }
       }
     }
 
-#if 1
+    // end transaction
     if (transactionFlag)
     {
       error = Database_endTransaction(toDatabaseHandle);
       if (error != ERROR_NONE)
       {
-//        sqlite3_finalize(toStatementHandle);
         sqlite3_finalize(fromStatementHandle);
         return error;
       }
     }
-#endif
 
     // free resources
-//    sqlite3_finalize(toStatementHandle);
     sqlite3_finalize(fromStatementHandle);
 
 if (xxx > 0)

@@ -17800,6 +17800,10 @@ Errors Server_run(uint             port,
   // read job list
   rereadAllJobs(serverJobsDirectory);
 
+//TODO
+  // init database pause callbacks
+  Index_setPauseCallback(CALLBACK(indexPauseCallback,NULL));
+
   // start threads
   if (!Thread_init(&jobThread,"BAR job",globalOptions.niceLevel,jobThreadCode,NULL))
   {
@@ -18158,6 +18162,10 @@ Errors Server_run(uint             port,
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
+
+//TODO
+  // done database pause callbacks
+  Index_setPauseCallback(CALLBACK(NULL,NULL));
 
   // done server
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);

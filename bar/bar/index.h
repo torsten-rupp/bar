@@ -308,18 +308,13 @@ bool Index_parseType(const char *name, IndexTypes *indexType);
 /***********************************************************************\
 * Name   : Index_init
 * Purpose: initialize index database
-* Input  : fileName              - database file name
-*          pauseCallbackFunction - pause check callback (can be NULL)
-*          pauseCallbackUserData - pause user data
+* Input  : fileName - database file name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_init(const char                 *fileName,
-                  IndexPauseCallbackFunction pauseCallbackFunction,
-                  void                       *pauseCallbackUserData
-                 );
+Errors Index_init(const char *fileName);
 
 /***********************************************************************\
 * Name   : Index_done
@@ -342,6 +337,20 @@ void Index_done(void);
 \***********************************************************************/
 
 bool Index_isAvailable(void);
+
+/***********************************************************************\
+* Name   : Index_setPauseCallback
+* Purpose: set/reset pause callback
+* Input  : pauseCallbackFunction - pause check callback (can be NULL)
+*          pauseCallbackUserData - pause user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
+                            void                       *pauseCallbackUserData
+                           );
 
 /***********************************************************************\
 * Name   : Index_open

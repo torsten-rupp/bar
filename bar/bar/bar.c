@@ -7176,7 +7176,7 @@ LOCAL Errors runDaemon(void)
   {
     // open index database
     printInfo(1,"Init index database '%s'...",indexDatabaseFileName);
-    error = Index_init(indexDatabaseFileName,CALLBACK(NULL,NULL));
+    error = Index_init(indexDatabaseFileName);
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
