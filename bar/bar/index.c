@@ -8314,7 +8314,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: file %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
       {
@@ -8349,7 +8348,6 @@ fprintf(stderr,"%s, %d: file %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,total
           if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: imnage %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
       {
@@ -8379,7 +8377,6 @@ fprintf(stderr,"%s, %d: imnage %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,tot
           if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: dir %lf\n",__FILE__,__LINE__,totalEntryCount_);
 
         // get directory content size
         error = Database_prepare(&databaseQueryHandle,
@@ -8387,6 +8384,8 @@ fprintf(stderr,"%s, %d: dir %lf\n",__FILE__,__LINE__,totalEntryCount_);
                                  "SELECT TOTAL(%s) \
                                   FROM storage \
                                     LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE %S \
                                  ",
                                  newestOnly ? "directoryEntries.totalEntrySizeNewest" : "directoryEntries.totalEntrySize",
@@ -8406,7 +8405,6 @@ fprintf(stderr,"%s, %d: dir %lf\n",__FILE__,__LINE__,totalEntryCount_);
           if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: dire cont %lf\n",__FILE__,__LINE__,totalEntryContentSize_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
       {
@@ -8436,7 +8434,6 @@ fprintf(stderr,"%s, %d: dire cont %lf\n",__FILE__,__LINE__,totalEntryContentSize
           if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: link %lf\n",__FILE__,__LINE__,totalEntryCount_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
       {
@@ -8471,7 +8468,6 @@ fprintf(stderr,"%s, %d: link %lf\n",__FILE__,__LINE__,totalEntryCount_);
           if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         }
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: hardlink %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
       {
@@ -8501,7 +8497,6 @@ fprintf(stderr,"%s, %d: hardlink %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,t
           if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: sopec %lf\n",__FILE__,__LINE__,totalEntryCount_);
       }
 
       return ERROR_NONE;
