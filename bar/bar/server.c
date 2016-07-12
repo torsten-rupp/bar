@@ -3581,7 +3581,7 @@ NULL,//                                                        scheduleTitle,
                                          hostName,
                                          archiveType,
                                          Misc_getTimestamp(),
-                                         NULL,
+                                         NULL,  // errorMessage
                                          endDateTime-startDateTime,
                                          jobNode->runningInfo.totalEntryCount,
                                          jobNode->runningInfo.totalEntrySize,
