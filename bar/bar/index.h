@@ -476,7 +476,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 *                                NULL)
 *          lastErrorMessage    - last error message (can be NULL)
 *          executionCount      - number job execution (can be NULL)
-*          averageDuration     - average execution time [s] (can be NULL)
+*          averageDuration     - average execution time [s] (entries
+*                                without error, can be NULL)
 *          totalEntityCount    - total number of entities (can be NULL)
 *          totalStorageCount   - total number of storage archives (can be
 *                                NULL)
@@ -747,7 +748,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 *          hostName          - hostname (can be NULL)
 *          archiveType       - archive type
 *          createdDateTime   - create date/time stamp [s]
-*          errorMessage      - last storage error message
+*          errorMessage      - last storage error message (can be NULL)
 *          duration          - duration [s]
 *          totalEntryCount   - total number of entries
 *          totalEntrySize    - total storage size [bytes]
