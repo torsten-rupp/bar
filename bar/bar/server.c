@@ -3567,9 +3567,9 @@ NULL,//                                                        scheduleTitle,
               // success
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
-                         "Done job '%s'\n",
+                         "Done job '%s' (duration: %llus)\n",
                          String_cString(jobNode->name),
-                         Error_getText(jobNode->runningInfo.error)
+                         endDateTime-startDateTime
                         );
 
               // create history entry
