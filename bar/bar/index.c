@@ -5930,7 +5930,7 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                                      UNIXTIMESTAMP(uuids.lastCreated), \
                                      uuids.lastErrorMessage, \
                                      (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
-                                     (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID), \
+                                     (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
                                      uuids.totalEntityCount, \
                                      uuids.totalStorageCount, \
                                      uuids.totalStorageSize, \
