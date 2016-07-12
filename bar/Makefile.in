@@ -400,9 +400,9 @@ install_scripts: \
               $(INSTALL) -m 755 scripts/barserver-SuSE "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
             elif test "$(SYSTEM)" = "Fedora" -o -f $(ETC_DIR)/fedora-release; then \
               $(INSTALL) -m 755 scripts/barserver-Fedora "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            elif test "$(SYSTEM)" = "RedHat" -o -f $(ETC_DIR)/redhat-release; then \
+            elif test "$(SYSTEM)" = "RedHat" -o \( -f $(ETC_DIR)/redhat-release -a -n "`grep 'Red Hat' $(ETC_DIR)/redhat-release 2>/dev/null`" \); then \
               $(INSTALL) -m 755 scripts/barserver-RedHat "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-            elif test "$(SYSTEM)" = "CentOS" -o -f $(ETC_DIR)/redhat-release; then \
+            elif test "$(SYSTEM)" = "CentOS" -o \( -f $(ETC_DIR)/redhat-release -a -n "`grep 'CentOS' $(ETC_DIR)/redhat-release 2>/dev/null`" \); then \
               $(INSTALL) -m 755 scripts/barserver-CentOS "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
             elif test "$(SYSTEM)" = "Mandrake" -o -f $(ETC_DIR)/mandrake-release; then \
               $(INSTALL) -m 755 scripts/barserver-Mandrake "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
