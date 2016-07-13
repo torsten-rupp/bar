@@ -3251,7 +3251,7 @@ LOCAL void jobThreadCode(void)
   script             = String_new();
 
   // open index
-  indexHandle = Index_open(INDEX_TIMEOUT);
+  indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
 
   while (!quitFlag)
   {
@@ -4710,7 +4710,7 @@ LOCAL void schedulerThreadCode(void)
   bool         pendingFlag;
 
   // init index
-  indexHandle = Index_open(INDEX_TIMEOUT);
+  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
 
   while (!quitFlag)
   {
@@ -5070,7 +5070,7 @@ LOCAL void indexThreadCode(void)
   List_init(&indexCryptPasswordList);
 
   // init index
-  indexHandle = Index_open(INDEX_TIMEOUT);
+  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
   if (indexHandle == NULL)
   {
     List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
@@ -5353,7 +5353,7 @@ LOCAL void autoIndexThreadCode(void)
   storageName          = String_new();
 
   // init index (Note: timeout not important; auto-index should not block)
-  indexHandle = Index_open(5L*1000L);
+  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,5L*1000L);
   if (indexHandle == NULL)
   {
     String_delete(storageName);
@@ -17075,7 +17075,8 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   result = String_new();
 
   // init index
-  indexHandle = Index_open(INDEX_TIMEOUT);
+//TODO high?
+  indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
 
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
