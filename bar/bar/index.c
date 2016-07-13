@@ -11585,8 +11585,8 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
                                "DELETE FROM storage \
-                                WHERE id=%lld \
-                                      state IN (%d,%d) \
+                                WHERE     id=%lld \
+                                      AND state IN (%d,%d) \
                                ",
                                Index_getDatabaseId(storageId),
                                INDEX_STATE_OK,
