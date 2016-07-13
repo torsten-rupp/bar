@@ -1389,7 +1389,7 @@ public class BARControl
 //        Settings.serverNames.add(args[z]);
 
     // check arguments
-    if (Settings.serverKeyFileName != null)
+    if ((Settings.serverKeyFileName != null) && !Settings.serverKeyFileName.isEmpty())
     {
       // check if JKS file is readable
       try
