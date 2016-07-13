@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-07-12 08:48+0200\n"
+"POT-Creation-Date: 2016-07-13 16:41+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -3848,7 +3848,7 @@ msgstr "エンティティ合計"
 #: src/TabStatus.java:2301 src/TabStatus.java:2317
 #, fuzzy
 msgid "%s (%d bytes)"
-msgstr "%d バイト (%s)"
+msgstr "%s (%d バイト)"
 
 #: src/TabStatus.java:2333
 #, fuzzy
