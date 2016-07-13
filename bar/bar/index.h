@@ -34,6 +34,11 @@
 // index version
 #define INDEX_VERSION INDEX_CONST_VERSION
 
+// index priorities
+#define INDEX_PRIORITY_HIGH   DATABASE_PRIORITY_HIGH
+#define INDEX_PRIORITY_MEDIUM DATABASE_PRIORITY_MEDIUM
+#define INDEX_PRIORITY_LOW    DATABASE_PRIORITY_LOW
+
 // max. limit value
 #define INDEX_UNLIMITED 9223372036854775807LL
 
@@ -357,6 +362,7 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 * Purpose: open index database
 * Input  : indexHandle      - index handle variable
 *          databaseFileName - database file name
+*          priority         - priority (0=highest)
 *          timeout          - timeout [ms]
 * Output : -
 * Return : ERROR_NONE or error code
@@ -364,10 +370,13 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 \***********************************************************************/
 
 #ifdef NDEBUG
-IndexHandle *Index_open(long timeout);
+IndexHandle *Index_open(uint priority,
+                        long timeout
+                       );
 #else /* not NDEBUG */
 IndexHandle *__Index_open(const char *__fileName__,
                           uint       __lineNb__,
+                          uint        priority,
                           long       timeout
                          );
 #endif /* NDEBUG */

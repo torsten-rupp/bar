@@ -124,6 +124,7 @@ LOCAL bool   quitFlag;
   LOCAL Errors openIndex(IndexHandle *indexHandle,
                          const char  *databaseFileName,
                          uint        indexOpenModes,
+                         uint        priority,
                          long        timeout
                         )
 #else /* not NDEBUG */
@@ -132,6 +133,7 @@ LOCAL bool   quitFlag;
                            IndexHandle *indexHandle,
                            const char  *databaseFileName,
                            uint        indexOpenModes,
+                           uint        priority,
                            long        timeout
                           )
 #endif /* NDEBUG */
@@ -158,9 +160,9 @@ LOCAL bool   quitFlag;
 
     // open database
     #ifdef NDEBUG
-      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,priority,NO_WAIT);
     #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,priority,NO_WAIT);
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
@@ -186,9 +188,9 @@ LOCAL bool   quitFlag;
   {
     // open database
     #ifdef NDEBUG
-      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
+      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,priority,timeout);
     #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
+      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,priority,timeout);
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
@@ -282,7 +284,7 @@ LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
   IndexHandle indexHandle;
 
   // open index database
-  error = openIndex(&indexHandle,databaseFileName,INDEX_OPEN_MODE_READ,NO_WAIT);
+  error = openIndex(&indexHandle,databaseFileName,INDEX_OPEN_MODE_READ,INDEX_PRIORITY_HIGH,NO_WAIT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -479,11 +481,11 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest-1, \
-                                        totalEntrySizeNewest =totalEntrySizeNewest -%llu, \
-                                        totalFileCountNewest =totalFileCountNewest -1, \
-                                        totalFileSizeNewest  =totalFileSizeNewest  -%llu \
-                                    WHERE id=%llu \
+                                  SET totalEntryCountNewest=totalEntryCountNewest-1, \
+                                      totalEntrySizeNewest =totalEntrySizeNewest -%llu, \
+                                      totalFileCountNewest =totalFileCountNewest -1, \
+                                      totalFileSizeNewest  =totalFileSizeNewest  -%llu \
+                                  WHERE id=%llu \
                                  ",
                                  newestSize,
                                  newestSize,
@@ -494,11 +496,11 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest-1, \
-                                        totalEntrySizeNewest =totalEntrySizeNewest -%llu, \
-                                        totalImageCountNewest=totalImageCountNewest-1, \
-                                        totalImageSizeNewest =totalImageSizeNewest -%llu \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest-1, \
+                                      totalEntrySizeNewest =totalEntrySizeNewest -%llu, \
+                                      totalImageCountNewest=totalImageCountNewest-1, \
+                                      totalImageSizeNewest =totalImageSizeNewest -%llu \
+                                  WHERE id=%lld \
                                  ",
                                  newestSize,
                                  newestSize,
@@ -509,8 +511,8 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest-1 \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest-1 \
+                                  WHERE id=%lld \
                                  ",
                                  newestStorageId
                                 );
@@ -519,8 +521,8 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest-1 \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest-1 \
+                                  WHERE id=%lld \
                                  ",
                                  newestStorageId
                                 );
@@ -529,11 +531,11 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest   =totalEntryCountNewest   -1, \
-                                        totalEntrySizeNewest    =totalEntrySizeNewest    -%llu, \
-                                        totalHardlinkCountNewest=totalHardlinkCountNewest-1, \
-                                        totalHardlinkSizeNewest =totalHardlinkSizeNewest -%llu \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest   =totalEntryCountNewest   -1, \
+                                      totalEntrySizeNewest    =totalEntrySizeNewest    -%llu, \
+                                      totalHardlinkCountNewest=totalHardlinkCountNewest-1, \
+                                      totalHardlinkSizeNewest =totalHardlinkSizeNewest -%llu \
+                                  WHERE id=%lld \
                                  ",
                                  newestSize,
                                  newestSize,
@@ -544,8 +546,8 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest-1 \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest-1 \
+                                  WHERE id=%lld \
                                  ",
                                  newestStorageId
                                 );
@@ -565,11 +567,11 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest+1, \
-                                        totalEntrySizeNewest =totalEntrySizeNewest +%llu, \
-                                        totalFileCountNewest =totalFileCountNewest +1, \
-                                        totalFileSizeNewest  =totalFileSizeNewest  +%llu \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest+1, \
+                                      totalEntrySizeNewest =totalEntrySizeNewest +%llu, \
+                                      totalFileCountNewest =totalFileCountNewest +1, \
+                                      totalFileSizeNewest  =totalFileSizeNewest  +%llu \
+                                  WHERE id=%lld \
                                  ",
                                  size,
                                  size,
@@ -580,11 +582,11 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest+1, \
-                                        totalEntrySizeNewest =totalEntrySizeNewest +%llu, \
-                                        totalImageCountNewest=totalImageCountNewest+1, \
-                                        totalImageSizeNewest =totalImageSizeNewest +%llu \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest+1, \
+                                      totalEntrySizeNewest =totalEntrySizeNewest +%llu, \
+                                      totalImageCountNewest=totalImageCountNewest+1, \
+                                      totalImageSizeNewest =totalImageSizeNewest +%llu \
+                                  WHERE id=%lld \
                                  ",
                                  size,
                                  size,
@@ -595,8 +597,8 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                  WHERE id=%lld \
                                  ",
                                  storageId
                                 );
@@ -605,8 +607,8 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                  WHERE id=%lld \
                                  ",
                                  storageId
                                 );
@@ -615,11 +617,11 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest   =totalEntryCountNewest   +1, \
-                                        totalEntrySizeNewest    =totalEntrySizeNewest    +%llu, \
-                                        totalHardlinkCountNewest=totalHardlinkCountNewest+1, \
-                                        totalHardlinkSizeNewest =totalHardlinkSizeNewest +%llu \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest   =totalEntryCountNewest   +1, \
+                                      totalEntrySizeNewest    =totalEntrySizeNewest    +%llu, \
+                                      totalHardlinkCountNewest=totalHardlinkCountNewest+1, \
+                                      totalHardlinkSizeNewest =totalHardlinkSizeNewest +%llu \
+                                  WHERE id=%lld \
                                  ",
                                  size,
                                  size,
@@ -630,8 +632,8 @@ return ERROR_NONE;
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK(NULL,NULL),
                                  "UPDATE storage \
-                                    SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                    WHERE id=%lld \
+                                  SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                  WHERE id=%lld \
                                  ",
                                  storageId
                                 );
@@ -3460,7 +3462,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   int64       indexVersion;
 
   // open old index
-  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ,NO_WAIT);
+  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ,2,NO_WAIT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -4528,7 +4530,7 @@ LOCAL void cleanupIndexThreadCode(void)
   assert(indexDatabaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
+  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE,2,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
@@ -5657,10 +5659,10 @@ Errors Index_init(const char *fileName)
     // check if database is corrupt
     if (File_existsCString(indexDatabaseFileName))
     {
-      error = openIndex(&indexHandleReference,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
+      error = openIndex(&indexHandleReference,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,INDEX_PRIORITY_HIGH,NO_WAIT);
       if (error == ERROR_NONE)
       {
-        error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ,NO_WAIT);
+        error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ,INDEX_PRIORITY_HIGH,NO_WAIT);
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
@@ -5703,7 +5705,7 @@ Errors Index_init(const char *fileName)
   if (createFlag)
   {
     // create new index
-    error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
+    error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,INDEX_PRIORITY_HIGH,NO_WAIT);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
@@ -5788,10 +5790,13 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 }
 
 #ifdef NDEBUG
-IndexHandle *Index_open(long timeout)
+IndexHandle *Index_open(uint priority,
+                        long timeout
+                       )
 #else /* not NDEBUG */
 IndexHandle *__Index_open(const char *__fileName__,
                           uint       __lineNb__,
+                          uint       priority,
                           long       timeout
                          )
 #endif /* NDEBUG */
@@ -5813,6 +5818,7 @@ IndexHandle *__Index_open(const char *__fileName__,
       error = openIndex(indexHandle,
                         indexDatabaseFileName,
                         INDEX_OPEN_MODE_READ_WRITE,
+                        priority,
                         timeout
                        );
     #else /* not NDEBUG */
@@ -5821,6 +5827,7 @@ IndexHandle *__Index_open(const char *__fileName__,
                           indexHandle,
                           indexDatabaseFileName,
                           INDEX_OPEN_MODE_READ_WRITE,
+                          priority,
                           timeout
                          );
     #endif /* NDEBUG */
@@ -11554,7 +11561,7 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
                          )
 {
   Errors  error;
-  bool    existsFlag;
+  bool    existsEntryFlag;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -11564,21 +11571,26 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    existsFlag = Database_exists(&indexHandle->databaseHandle,
-                                 "entries",
-                                 "id",
-                                 "WHERE storageId=%lld",
-                                 Index_getDatabaseId(storageId)
-                                );
+    existsEntryFlag = Database_exists(&indexHandle->databaseHandle,
+                                      "entries",
+                                      "id",
+                                      "WHERE storageId=%lld",
+                                      Index_getDatabaseId(storageId)
+                                     );
 
-    // prune storage if empty
-    if (!existsFlag)
+    // prune storage if empty and not in use
+    if (!existsEntryFlag)
     {
       // delete storage entry
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
-                               "DELETE FROM storage WHERE id=%lld;",
-                               Index_getDatabaseId(storageId)
+                               "DELETE FROM storage \
+                                WHERE id=%lld \
+                                      state IN (%d,%d) \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               INDEX_STATE_OK,
+                               INDEX_STATE_ERROR
                               );
       if (error != ERROR_NONE)
       {
