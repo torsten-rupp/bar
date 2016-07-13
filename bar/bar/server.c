@@ -3303,7 +3303,7 @@ LOCAL void jobThreadCode(void)
         jobOptions.noStorageFlag = FALSE;
       }
     }
-    if (quitFlag)
+    if (jobNode == NULL)
     {
       break;
     }
