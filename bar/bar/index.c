@@ -4568,7 +4568,9 @@ LOCAL void cleanupIndexThreadCode(void)
   i                   = 0;
   oldDatabaseFileName = String_new();
   oldDatabaseCount    = 0;
-  while (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
+  while (   !quitFlag
+         && (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
+        )
   {
     if (   String_startsWith(oldDatabaseFileName,absoluteFileName)\
         && String_matchCString(oldDatabaseFileName,STRING_BEGIN,".*\\.old\\d\\d\\d$",NULL,NULL)
