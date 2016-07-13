@@ -157,8 +157,8 @@ LOCAL void printNotifies(void)
   DictionaryIterator dictionaryIterator;
   void               *data;
   ulong              length;
-  NotifyInfo         *notifyInfo;
-  UUIDNode           *uuidNode;
+  const NotifyInfo   *notifyInfo;
+  const UUIDNode     *uuidNode;
 
   printf("Notifies:\n");
   SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -176,6 +176,7 @@ LOCAL void printNotifies(void)
       assert(length == sizeof(NotifyInfo*));
 
       notifyInfo = (NotifyInfo*)data;
+
       printf("%3d: %s\n",
              notifyInfo->watchHandle,
              String_cString(notifyInfo->directory)
@@ -1193,11 +1194,14 @@ LOCAL void removeNotifySubDirectories(ConstString directory)
     assert(length == sizeof(NotifyInfo*));
 
     notifyInfo = (NotifyInfo*)data;
+
     if (   String_length(notifyInfo->directory) >= String_length(directory)
         && String_startsWith(notifyInfo->directory,directory)
        )
     {
       Dictionary_remove(&notifyHandles,keyData,keyLength);
+      Dictionary_remove(&notifyDirectories,String_cString(notifyInfo->directory),String_length(notifyInfo->directory));
+
       removeNotify(notifyInfo);
     }
   }
@@ -1228,7 +1232,6 @@ LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    // mark notifies
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
     while (Dictionary_getNext(&dictionaryIterator,
                               NULL,  // keyData,
@@ -1273,6 +1276,8 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
   SemaphoreLock      semaphoreLock;
   DictionaryIterator dictionaryIterator;
   NotifyInfo         *notifyInfo;
+  const void         *keyData;
+  ulong              keyLength;
   void               *data;
   ulong              length;
   UUIDNode           *uuidNode;
@@ -1282,59 +1287,51 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    do
+    Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    while (Dictionary_getNext(&dictionaryIterator,
+                              &keyData,
+                              &keyLength,
+                              &data,
+                              &length
+                             )
+          )
     {
-      // find notify
-      notifyInfo = NULL;
-      Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
-      while (Dictionary_getNext(&dictionaryIterator,
-                                NULL,  // keyData,
-                                NULL,  // keyLength,
-                                &data,
-                                &length
-                               )
-            )
+      assert(data != NULL);
+      assert(length == sizeof(NotifyInfo*));
+
+      notifyInfo = (NotifyInfo*)data;
+
+      // remove uuids
+      uuidNode = notifyInfo->uuidList.head;
+      while (uuidNode != NULL)
       {
-        assert(data != NULL);
-        assert(length == sizeof(NotifyInfo*));
-
-        notifyInfo = (NotifyInfo*)data;
-
-        // remove uuids
-        uuidNode = notifyInfo->uuidList.head;
-        while (uuidNode != NULL)
+        if (   uuidNode->cleanFlag
+            && stringEquals(uuidNode->jobUUID,jobUUID)
+            && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+           )
         {
-          if (   uuidNode->cleanFlag
-              && stringEquals(uuidNode->jobUUID,jobUUID)
-              && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
-             )
-          {
-            uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
-          }
-          else
-          {
-            uuidNode = uuidNode->next;
-          }
-        }
-
-        if (!List_isEmpty(&notifyInfo->uuidList))
-        {
-          notifyInfo = NULL;
+          uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
         }
         else
         {
-          break;
+          uuidNode = uuidNode->next;
         }
       }
-      Dictionary_doneIterator(&dictionaryIterator);
 
-      // remove notify
-      if (notifyInfo != NULL)
+      // remove notify if no more uuids
+      if (List_isEmpty(&notifyInfo->uuidList))
       {
+        Dictionary_remove(&notifyHandles,keyData,keyLength);
+        Dictionary_remove(&notifyDirectories,String_cString(notifyInfo->directory),String_length(notifyInfo->directory));
+
         removeNotify(notifyInfo);
       }
+      else
+      {
+        break;
+      }
     }
-    while (notifyInfo != NULL);
+    Dictionary_doneIterator(&dictionaryIterator);
   }
 }
 
@@ -1353,6 +1350,8 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
   SemaphoreLock      semaphoreLock;
   DictionaryIterator dictionaryIterator;
   NotifyInfo         *notifyInfo;
+  const void         *keyData;
+  ulong              keyLength;
   void               *data;
   ulong              length;
   UUIDNode           *uuidNode;
@@ -1362,59 +1361,48 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    do
+    Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    while (Dictionary_getNext(&dictionaryIterator,
+                              &keyData,
+                              &keyLength,
+                              &data,
+                              &length
+                             )
+          )
     {
-      // find notify
-      notifyInfo = NULL;
-      Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
-      while (Dictionary_getNext(&dictionaryIterator,
-                                NULL,  // keyData,
-                                NULL,  // keyLength,
-                                &data,
-                                &length
-                               )
-            )
+      assert(data != NULL);
+      assert(length == sizeof(NotifyInfo*));
+
+      notifyInfo = (NotifyInfo*)data;
+
+      // remove uuids
+      uuidNode = notifyInfo->uuidList.head;
+      while (uuidNode != NULL)
       {
-        assert(data != NULL);
-        assert(length == sizeof(NotifyInfo*));
-
-        notifyInfo = (NotifyInfo*)data;
-
-        uuidNode = notifyInfo->uuidList.head;
-        while (uuidNode != NULL)
+        if (   stringEquals(uuidNode->jobUUID,jobUUID)
+            && (   (scheduleUUID == NULL)
+                || stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+               )
+           )
         {
-          if (   stringEquals(uuidNode->jobUUID,jobUUID)
-              && (   (scheduleUUID == NULL)
-                  || stringEquals(uuidNode->scheduleUUID,scheduleUUID)
-                 )
-             )
-          {
-            uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
-          }
-          else
-          {
-            uuidNode = uuidNode->next;
-          }
-        }
-
-        if (!List_isEmpty(&notifyInfo->uuidList))
-        {
-          notifyInfo = NULL;
+          uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
         }
         else
         {
-          break;
+          uuidNode = uuidNode->next;
         }
       }
-      Dictionary_doneIterator(&dictionaryIterator);
 
-      // remove notify if no more UUIDs
-      if (notifyInfo != NULL)
+      // remove notify if no more uuids
+      if (List_isEmpty(&notifyInfo->uuidList))
       {
+        Dictionary_remove(&notifyHandles,keyData,keyLength);
+        Dictionary_remove(&notifyDirectories,String_cString(notifyInfo->directory),String_length(notifyInfo->directory));
+
         removeNotify(notifyInfo);
       }
     }
-    while (notifyInfo != NULL);
+    Dictionary_doneIterator(&dictionaryIterator);
   }
 }
 
