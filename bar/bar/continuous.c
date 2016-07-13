@@ -1895,7 +1895,7 @@ fprintf(stderr,"\n");
       n -= sizeof(struct inotify_event)+inotifyEvent->len;
       inotifyEvent = (const struct inotify_event*)((byte*)inotifyEvent+sizeof(struct inotify_event)+inotifyEvent->len);
     }
-    assert(n == 0);
+    assert(quitFlag || (n == 0));
   }
 
   // free resources
@@ -1911,8 +1911,23 @@ Errors Continuous_initAll(void)
 
   // init variables
   Semaphore_init(&notifyLock);
-  Dictionary_init(&notifyHandles,CALLBACK_NULL,CALLBACK_NULL,CALLBACK_NULL);
-  Dictionary_init(&notifyDirectories,CALLBACK_NULL,CALLBACK_NULL,CALLBACK_NULL);
+  Dictionary_init(&notifyHandles,
+                  CALLBACK_NULL,  // dictionaryCopyFunction
+                  CALLBACK_INLINE(void,(const void *data, ulong length, void *userData),
+                  {
+                    NotifyInfo *notifyInfo = (NotifyInfo*)data;
+                    assert(notifyInfo != NULL);
+
+                    freeNotifyInfo(notifyInfo,NULL);
+                    free(notifyInfo);
+                  },NULL),
+                  CALLBACK_NULL  // dictionaryCompareFunction
+                 );
+  Dictionary_init(&notifyDirectories,
+                  CALLBACK_NULL,  // dictionaryCopyFunction
+                  CALLBACK_NULL,  // dictionaryFreeFunction (Note: free done in notifyHandles)
+                  CALLBACK_NULL  // dictionaryCompareFunction
+                 );
 
   // check number of possible notifies
   n = getMaxNotifies();
