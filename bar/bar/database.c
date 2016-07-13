@@ -59,6 +59,19 @@
 
 /***************************** Datatypes *******************************/
 
+typedef struct DatabaseHandleNode
+{
+  LIST_NODE_HEADER(struct DatabaseHandleNode);
+
+  DatabaseHandle *databaseHandle;
+  uint           priority;
+} DatabaseHandleNode;
+
+typedef struct
+{
+  LIST_HEADER(DatabaseHandleNode);
+} DatabaseHandleList;
+
 // callback function
 typedef struct
 {
@@ -98,6 +111,9 @@ typedef union
 #endif /* not NDEBUG */
 
 /***************************** Variables *******************************/
+
+LOCAL pthread_mutex_t    databaseHandleLock;
+LOCAL DatabaseHandleList databaseHandleList;
 
 #ifndef NDEBUG
   LOCAL uint databaseDebugCounter = 0;
@@ -1386,6 +1402,9 @@ Errors Database_initAll(void)
 {
   int sqliteResult;
 
+  pthread_mutex_init(&databaseHandleLock,NULL);
+  List_init(&databaseHandleList);
+
   sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
   if (sqliteResult != SQLITE_OK)
   {
@@ -1397,12 +1416,15 @@ Errors Database_initAll(void)
 
 void Database_doneAll(void)
 {
+  List_done(&databaseHandleList,CALLBACK(NULL,NULL));
+  pthread_mutex_destroy(&databaseHandleLock);
 }
 
 #ifdef NDEBUG
   Errors Database_open(DatabaseHandle    *databaseHandle,
                        const char        *fileName,
                        DatabaseOpenModes databaseOpenMode,
+                       uint              priority,
                        long              timeout
                       )
 #else /* not NDEBUG */
@@ -1411,6 +1433,7 @@ void Database_doneAll(void)
                          DatabaseHandle    *databaseHandle,
                          const char        *fileName,
                          DatabaseOpenModes databaseOpenMode,
+                         uint              priority,
                          long              timeout
                         )
 #endif /* NDEBUG */
@@ -2166,7 +2189,6 @@ fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHa
       // pause
       if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
       {
-fprintf(stderr,"%s, %d: pauseCallbackFunction\n",__FILE__,__LINE__);
         // end transaction
         if (transactionFlag)
         {
@@ -2195,6 +2217,7 @@ fprintf(stderr,"%s, %d: pauseCallbackFunction\n",__FILE__,__LINE__);
             return error;
           }
         }
+
       }
     }
 

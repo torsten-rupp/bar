@@ -40,6 +40,11 @@ typedef enum
   DATABASE_OPENMODE_READWRITE,
 } DatabaseOpenModes;
 
+// priorities
+#define DATABASE_PRIORITY_HIGH   0
+#define DATABASE_PRIORITY_MEDIUM 1
+#define DATABASE_PRIORITY_LOW    2
+
 // database types
 typedef enum
 {
@@ -238,6 +243,7 @@ void Database_doneAll(void);
 * Input  : databaseHandle   - database handle variable
 *          fileName         - file name or NULL for "in memory"
 *          databaseOpenMode - open mode; see DatabaseOpenModes
+*          priority         - priority (0=highest)
 *          timeout          - timeout [ms]
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
@@ -248,6 +254,7 @@ void Database_doneAll(void);
   Errors Database_open(DatabaseHandle    *databaseHandle,
                        const char        *fileName,
                        DatabaseOpenModes databaseOpenMode,
+                       uint              priority,
                        long              timeout
                       );
 #else /* not NDEBUG */
@@ -256,6 +263,7 @@ void Database_doneAll(void);
                          DatabaseHandle    *databaseHandle,
                          const char        *fileName,
                          DatabaseOpenModes databaseOpenMode,
+                         uint              priority,
                          long              timeout
                         );
 #endif /* NDEBUG */
