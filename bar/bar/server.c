@@ -3248,7 +3248,6 @@ LOCAL void jobThreadCode(void)
   PatternList_init(&compressExcludePatternList);
   DeltaSourceList_init(&deltaSourceList);
   scheduleCustomText = String_new();
-  script             = String_new();
 
   // open index
   indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
@@ -3304,6 +3303,11 @@ LOCAL void jobThreadCode(void)
         jobOptions.noStorageFlag = FALSE;
       }
     }
+    if (quitFlag)
+    {
+      break;
+    }
+
     // Note: job is now protected by running state)
 
     // init log
@@ -3733,7 +3737,6 @@ NULL,//                                                        scheduleTitle,
   Index_close(indexHandle);
 
   // free resources
-  String_delete(script);
   String_delete(scheduleCustomText);
   DeltaSourceList_done(&deltaSourceList);
   PatternList_done(&compressExcludePatternList);
@@ -3741,6 +3744,7 @@ NULL,//                                                        scheduleTitle,
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   Remote_doneHost(&remoteHost);
+  String_delete(hostName);
   String_delete(directory);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -5601,6 +5605,9 @@ globalOptions.indexDatabaseKeepTime
     // sleep
     delayAutoIndexThread();
   }
+
+  // done index
+  Index_close(indexHandle);
 
   // free resources
   String_delete(storageName);
@@ -17633,6 +17640,7 @@ Errors Server_run(uint             port,
                   const char       *keyFileName,
                   const Password   *password,
                   const char       *jobsDirectory,
+                  const char       *indexDatabaseFileName,
                   const JobOptions *defaultJobOptions
                  )
 {
@@ -17711,6 +17719,25 @@ Errors Server_run(uint             port,
     return ERROR_NOT_A_DIRECTORY;
   }
 
+  // open index database
+  if (!stringIsEmpty(indexDatabaseFileName))
+  {
+    printInfo(1,"Init index database '%s'...",indexDatabaseFileName);
+    error = Index_init(indexDatabaseFileName);
+    if (error != ERROR_NONE)
+    {
+      printInfo(1,"FAIL!\n");
+      printError("Cannot init index database '%s' (error: %s)!\n",
+                 indexDatabaseFileName,
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    printInfo(1,"ok\n");
+    AUTOFREE_ADD(&autoFreeList,indexDatabaseFileName,{ Index_done(); });
+  }
+
   // init server sockets
   serverFlag    = FALSE;
   serverTLSFlag = FALSE;
@@ -17732,7 +17759,7 @@ Errors Server_run(uint             port,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    printInfo(1,"Started server on port %d\n",port);
+    printInfo(1,"Started BAR server on port %d\n",port);
     serverFlag = TRUE;
     AUTOFREE_ADD(&autoFreeList,&serverSocketHandle,{ Network_doneServer(&serverSocketHandle); });
   }
@@ -17760,7 +17787,7 @@ Errors Server_run(uint             port,
            AutoFree_cleanup(&autoFreeList);
            return FALSE;
         }
-        printInfo(1,"Started TLS/SSL server on port %u\n",tlsPort);
+        printInfo(1,"Started BAR TLS/SSL server on port %u\n",tlsPort);
         serverTLSFlag = TRUE;
         AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
       #else /* not HAVE_GNU_TLS */
@@ -18187,6 +18214,7 @@ Errors Server_run(uint             port,
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);
   Semaphore_done(&serverStateLock);
+  if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&jobList.lock);

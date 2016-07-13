@@ -91,14 +91,15 @@ void Server_doneAll(void);
 /***********************************************************************\
 * Name   : Server_run
 * Purpose: run network server
-* Input  : serverPort          - server port (or 0 to disable)
-*          serverTLSPort       - server TLS (SSL) port (or 0 to disable)
-*          caFileName          - file with TLS CA or NULL
-*          certFileName        - file with TLS cerificate or NULL
-*          keyFileName         - file with TLS key or NULL
-*          serverPassword      - server authenfication password
-*          serverJobsDirectory - server jobs directory
-*          defaultJobOptions   - default job options
+* Input  : serverPort            - server port (or 0 to disable)
+*          serverTLSPort         - server TLS (SSL) port (or 0 to disable)
+*          caFileName            - file with TLS CA or NULL
+*          certFileName          - file with TLS cerificate or NULL
+*          keyFileName           - file with TLS key or NULL
+*          password              - server authenfication password
+*          jobsDirectory         - jobs directory
+*          defaultJobOptions     - default job options
+*          indexDatabaseFileName - index database file name or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -109,8 +110,9 @@ Errors Server_run(uint             serverPort,
                   const char       *caFileName,
                   const char       *certFileName,
                   const char       *keyFileName,
-                  const Password   *serverPassword,
-                  const char       *serverJobsDirectory,
+                  const Password   *password,
+                  const char       *jobsDirectory,
+                  const char       *indexDatabaseFileName,
                   const JobOptions *defaultJobOptions
                  );
 

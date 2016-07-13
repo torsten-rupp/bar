@@ -4430,6 +4430,8 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->noStorageFlag                   = FALSE;
   jobOptions->noBAROnMediumFlag               = FALSE;
   jobOptions->noStopOnErrorFlag               = FALSE;
+
+  DEBUG_ADD_RESOURCE_TRACE(jobOptions,sizeof(JobOptions));
 }
 
 void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
@@ -4485,11 +4487,15 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   jobOptions->device.writePreProcessCommand       = String_duplicate(fromJobOptions->device.writePreProcessCommand);
   jobOptions->device.writePostProcessCommand      = String_duplicate(fromJobOptions->device.writePostProcessCommand);
   jobOptions->device.writeCommand                 = String_duplicate(fromJobOptions->device.writeCommand);
+
+  DEBUG_ADD_RESOURCE_TRACE(jobOptions,sizeof(JobOptions));
 }
 
 void doneJobOptions(JobOptions *jobOptions)
 {
   assert(jobOptions != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(jobOptions,sizeof(JobOptions));
 
   String_delete(jobOptions->device.writeCommand);
   String_delete(jobOptions->device.writePostProcessCommand);
@@ -4538,8 +4544,6 @@ void doneJobOptions(JobOptions *jobOptions)
 
   String_delete(jobOptions->destination);
   String_delete(jobOptions->incrementalListFileName);
-
-  memset(jobOptions,0,sizeof(JobOptions));
 }
 
 ulong getBandWidth(BandWidthList *bandWidthList)
@@ -7151,10 +7155,14 @@ LOCAL Errors runDaemon(void)
 {
   Errors error;
 
+  // open log file
+  openLog();
+
   // create pid file
   error = createPIDFile();
   if (error != ERROR_NONE)
   {
+    closeLog();
     return error;
   }
 
@@ -7166,30 +7174,8 @@ LOCAL Errors runDaemon(void)
                Error_getText(error)
               );
     deletePIDFile();
+    closeLog();
     return error;
-  }
-
-  // open log file
-  openLog();
-
-  if (!stringIsEmpty(indexDatabaseFileName))
-  {
-    // open index database
-    printInfo(1,"Init index database '%s'...",indexDatabaseFileName);
-    error = Index_init(indexDatabaseFileName);
-    if (error != ERROR_NONE)
-    {
-      printInfo(1,"FAIL!\n");
-      printError("Cannot init index database '%s' (error: %s)!\n",
-                 indexDatabaseFileName,
-                 Error_getText(error)
-                );
-      closeLog();
-      Continuous_done();
-      deletePIDFile();
-      return error;
-    }
-    printInfo(1,"ok\n");
   }
 
   // daemon mode -> run server with network
@@ -7203,28 +7189,25 @@ LOCAL Errors runDaemon(void)
                      serverKeyFileName,
                      serverPassword,
                      serverJobsDirectory,
+                     indexDatabaseFileName,
                      &jobOptions
                     );
   if (error != ERROR_NONE)
   {
-    if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
-    closeLog();
     Continuous_done();
     deletePIDFile();
+    closeLog();
     return error;
   }
-
-  // done index database
-  if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
-
-  // close log file
-  closeLog();
 
   // done continouous
   Continuous_done();
 
   // delete pid file
   deletePIDFile();
+
+  // close log file
+  closeLog();
 
   return ERROR_NONE;
 }
