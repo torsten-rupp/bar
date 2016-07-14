@@ -865,7 +865,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
 * Purpose: delete job UUID index including all attached index entries
 *          (entities, entries)
 * Input  : indexQueryHandle - index query handle
-*          jobUUID          - unique job id
+*          uuidId           - uuid id
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -873,6 +873,19 @@ Errors Index_newUUID(IndexHandle *indexHandle,
 Errors Index_deleteUUID(IndexHandle *indexHandle,
                         IndexId     uuidId
                        );
+
+/***********************************************************************\
+* Name   : Index_isEmptyUUID
+* Purpose: check if UUID entry is empty (no entities)
+* Input  : indexQueryHandle - index query handle
+*          uuidId           - uuid id
+* Return : TRUE iff empty
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_isEmptyUUID(IndexHandle *indexHandle,
+                         IndexId     uuidId
+                        );
 
 /***********************************************************************\
 * Name   : Index_initListEntities
@@ -967,6 +980,19 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 Errors Index_deleteEntity(IndexHandle *indexHandle,
                           IndexId     entityId
                          );
+
+/***********************************************************************\
+* Name   : Index_isEmptyEntity
+* Purpose: check if entity entry is empty (no storages)
+* Input  : indexQueryHandle - index query handle
+*          entityId         - entity id
+* Return : TRUE iff empty
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_isEmptyEntity(IndexHandle *indexHandle,
+                           IndexId     entityId
+                          );
 
 /***********************************************************************\
 * Name   : Index_getStoragesInfo
@@ -1117,6 +1143,19 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 Errors Index_deleteStorage(IndexHandle *indexHandle,
                            IndexId     storageId
                           );
+
+/***********************************************************************\
+* Name   : Index_isEmptyStorage
+* Purpose: check if storage entry is empty (no entries)
+* Input  : indexQueryHandle - index query handle
+*          storageId        - storage id
+* Return : TRUE iff empty
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_isEmptyStorage(IndexHandle *indexHandle,
+                            IndexId     storageId
+                           );
 
 /***********************************************************************\
 * Name   : Index_clearStorage

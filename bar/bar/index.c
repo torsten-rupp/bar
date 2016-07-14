@@ -1900,7 +1900,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                                             fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
                                                             toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
-fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"name",NULL),toEntityId,fromStorageId,toStorageId);
+//fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"name",NULL),toEntityId,fromStorageId,toStorageId);
 
                                                             error = ERROR_NONE;
 
@@ -1951,7 +1951,6 @@ fprintf(stderr,"%s, %d: copy storage %s of entity %llu: %llu -> %llu\n",__FILE__
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit(12); }
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -2005,7 +2004,6 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: c\n",__FILE__,__LINE__); exit
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -2065,7 +2063,6 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: a %s\n",__FILE__,__LINE__,Err
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -2113,7 +2110,6 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: b %s\n",__FILE__,__LINE__,Err
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -2167,7 +2163,6 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: d %s\n",__FILE__,__LINE__,Err
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
 
                                                             if (error == ERROR_NONE)
                                                             {
@@ -2221,7 +2216,6 @@ if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: e %s\n",__FILE__,__LINE__,Err
                                                                                          fromStorageId
                                                                                         );
                                                             }
-if (error != ERROR_NONE) { fprintf(stderr,"%s, %d: f %s\n",__FILE__,__LINE__,Error_getText(error)); exit(12); }
 
                                                             return error;
                                                           },NULL),
@@ -7015,6 +7009,30 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
   return error;
 }
 
+Errors Index_isEmptyUUID(IndexHandle *indexHandle,
+                         IndexId     uuidId
+                        )
+{
+  bool emptyFlag;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(uuidId) == INDEX_TYPE_UUID);
+
+  BLOCK_DOX(emptyFlag,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    return !Database_exists(&indexHandle->databaseHandle,
+                            "entities",
+                            "entities.id",
+                            "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
+                            Index_getDatabaseId(uuidId)
+                           );
+  });
+
+  return emptyFlag;
+}
+
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
                               IndexId          uuidId,
@@ -7303,6 +7321,30 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   });
 
   return error;
+}
+
+Errors Index_isEmptyEntity(IndexHandle *indexHandle,
+                           IndexId     entityId
+                          )
+{
+  bool emptyFlag;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  BLOCK_DOX(emptyFlag,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    return !Database_exists(&indexHandle->databaseHandle,
+                            "storage",
+                            "id",
+                            "WHERE entityId=%lld",
+                            Index_getDatabaseId(entityId)
+                           );
+  });
+
+  return emptyFlag;
 }
 
 Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
@@ -7918,6 +7960,30 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   });
 
   return error;
+}
+
+Errors Index_isEmptyStorage(IndexHandle *indexHandle,
+                            IndexId     storageId
+                           )
+{
+  bool emptyFlag;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+  BLOCK_DOX(emptyFlag,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    return !Database_exists(&indexHandle->databaseHandle,
+                            "entries",
+                            "id",
+                            "WHERE storageId=%lld",
+                            Index_getDatabaseId(storageId)
+                           );
+  });
+
+  return emptyFlag;
 }
 
 Errors Index_clearStorage(IndexHandle *indexHandle,
@@ -11389,7 +11455,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          entityId;
-  bool             existsFlag;
+  bool             existsEntityFlag;
 
   assert(indexHandle != NULL);
   assert(Index_getType(uuidId) == INDEX_TYPE_UUID);
@@ -11439,15 +11505,15 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
     }
 
     // check if entity exists
-    existsFlag = Database_exists(&indexHandle->databaseHandle,
-                                 "entities",
-                                 "entities.id",
-                                 "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
-                                 Index_getDatabaseId(uuidId)
-                                );
+    existsEntityFlag = Database_exists(&indexHandle->databaseHandle,
+                                       "entities",
+                                       "entities.id",
+                                       "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
+                                       Index_getDatabaseId(uuidId)
+                                      );
 
     // prune uuid if empty
-    if (!existsFlag)
+    if (!existsEntityFlag)
     {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
@@ -11459,6 +11525,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
         return error;
       }
     }
+
     return ERROR_NONE;
   });
 
@@ -11472,12 +11539,12 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          storageId;
-  bool             existsFlag;
+  bool             existsStorageFlag;
 
   assert(indexHandle != NULL);
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
-  // prune storage of entity
+  // prune storages of entity
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
@@ -11531,15 +11598,15 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
     }
 
     // check if storage exists
-    existsFlag = Database_exists(&indexHandle->databaseHandle,
-                                 "storage",
-                                 "id",
-                                 "WHERE entityId=%lld",
-                                 Index_getDatabaseId(entityId)
-                                );
+    existsStorageFlag = Database_exists(&indexHandle->databaseHandle,
+                                        "storage",
+                                        "id",
+                                        "WHERE entityId=%lld",
+                                        Index_getDatabaseId(entityId)
+                                       );
 
     // prune entity if empty
-    if (!existsFlag)
+    if (!existsStorageFlag)
     {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),
