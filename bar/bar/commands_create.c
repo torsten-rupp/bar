@@ -3628,7 +3628,6 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
 //fprintf(stderr,"%s, %d: totalStorageSize=%llu\n",__FILE__,__LINE__,totalStorageSize);
     if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
     {
-fprintf(stderr,"%s, %d: purge sotrage %lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
       // delete oldest storage entry
       error = Storage_parseName(&storageSpecifier,oldestStorageName);
       if (error == ERROR_NONE)
@@ -3831,7 +3830,6 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer limit=%llu\n",__FILE__,__LINE
 
     if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
     {
-fprintf(stderr,"%s, %d: purge storage id=%lld: %s\n",__FILE__,__LINE__,oldestStorageId,String_cString(oldestStorageName));
       // delete oldest storage entry
       error = Storage_parseName(&storageSpecifier,oldestStorageName);
       if (error == ERROR_NONE)
@@ -4255,7 +4253,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
          )
       {
         // assign storage index entries to existing storage index
-fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
         error = Index_assignTo(createInfo->indexHandle,
                                NULL,  // jobUUID
                                INDEX_ID_NONE,  // entityId
@@ -4275,10 +4273,17 @@ fprintf(stderr,"%s, %d: --- append to storage \n",__FILE__,__LINE__);
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
+
+        // delete storage (is empty now)
+        assert(Index_isEmptyStorage(createInfo->indexHandle,storageMsg.storageId));
+        (void)Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+
+        // prune entity (maybe empty now)
+        (void)Index_pruneEntity(createInfo->indexHandle,storageMsg.entityId);
       }
       else
       {
-fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
         // keep new storage
         storageId = storageMsg.storageId;
 
@@ -4304,85 +4309,84 @@ fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
         // append storage to existing entity with same directory
         if (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
         {
-//TODO
+//fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
+          printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
 
-fprintf(stderr,"%s, %d: APPPPPPPPPPPPPPPPPPPPP %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
-            printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
+          // find matching entity and assign storage to entity
+          File_getFilePathName(pathName,storageMsg.archiveName);
+          error = Index_initListStorages(&indexQueryHandle,
+                                         createInfo->indexHandle,
+                                         storageMsg.uuidId,
+                                         INDEX_ID_ANY, // entityId
+                                         NULL, // jobUUID,
+                                         NULL,  // storageIds
+                                         0,  // storageIdCount
+                                         INDEX_STATE_SET_ALL,
+                                         INDEX_MODE_SET_ALL,
+                                         NULL,  // archiveName,
+                                         DATABASE_ORDERING_NONE,
+                                         0LL,  // offset
+                                         INDEX_UNLIMITED
+                                        );
+          if (error != ERROR_NONE)
+          {
+            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-            File_getFilePathName(pathName,storageMsg.archiveName);
-            error = Index_initListStorages(&indexQueryHandle,
-                                           createInfo->indexHandle,
-                                           storageMsg.uuidId,
-                                           INDEX_ID_ANY, // entityId
-                                           NULL, // jobUUID,
-                                           NULL,  // storageIds
-                                           0,  // storageIdCount
-                                           INDEX_STATE_SET_ALL,
-                                           INDEX_MODE_SET_ALL,
-                                           NULL,  // archiveName,
-                                           DATABASE_ORDERING_NONE,
-                                           0LL,  // offset
-                                           INDEX_UNLIMITED
-                                          );
-            if (error != ERROR_NONE)
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+            continue;
+          }
+          while (Index_getNextStorage(&indexQueryHandle,
+                                      NULL,  // uuidId
+                                      NULL,  // job UUID
+                                      &existingEntityId,  // entityId,
+                                      NULL,  // schedule UUID
+                                      NULL,  // archiveType
+                                      &existingStorageId,
+                                      existingStorageName,
+                                      NULL,  // createdDateTime
+                                      NULL,  // entries
+                                      NULL,  // size
+                                      NULL,  // indexState,
+                                      NULL,  // indexMode,
+                                      NULL,  // lastCheckedDateTime,
+                                      NULL  // errorMessage
+                                     )
+                )
+          {
+            File_getFilePathName(existingPathName,existingStorageName);
+            if (   (storageId != existingStorageId)
+                && (Storage_parseName(&existingStorageSpecifier,existingStorageName) == ERROR_NONE)
+                && Storage_equalSpecifiers(&existingStorageSpecifier,pathName,&existingStorageSpecifier,existingPathName)
+               )
             {
-              if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+//fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
+              error = Index_assignTo(createInfo->indexHandle,
+                                     NULL,  // jobUUID
+                                     INDEX_ID_NONE,  // entityId
+                                     storageId,
+                                     existingEntityId,
+                                     ARCHIVE_TYPE_NONE,
+                                     INDEX_ID_NONE  // toStorageId
+                                    );
+              break;
+            }
+          }
+          Index_doneList(&indexQueryHandle);
+          if (error != ERROR_NONE)
+          {
+            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-              continue;
-            }
-            while (Index_getNextStorage(&indexQueryHandle,
-                                        NULL,  // uuidId
-                                        NULL,  // job UUID
-                                        &existingEntityId,  // entityId,
-                                        NULL,  // schedule UUID
-                                        NULL,  // archiveType
-                                        &existingStorageId,
-                                        existingStorageName,
-                                        NULL,  // createdDateTime
-                                        NULL,  // entries
-                                        NULL,  // size
-                                        NULL,  // indexState,
-                                        NULL,  // indexMode,
-                                        NULL,  // lastCheckedDateTime,
-                                        NULL  // errorMessage
-                                       )
-                  )
-            {
-              File_getFilePathName(existingPathName,existingStorageName);
-              if (   (storageId != existingStorageId)
-                  && (Storage_parseName(&existingStorageSpecifier,existingStorageName) == ERROR_NONE)
-                  && Storage_equalSpecifiers(&existingStorageSpecifier,pathName,&existingStorageSpecifier,existingPathName)
-                 )
-              {
-  //TODO
-fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
-                error = Index_assignTo(createInfo->indexHandle,
-                                       NULL,  // jobUUID
-                                       INDEX_ID_NONE,  // entityId
-                                       storageId,
-                                       existingEntityId,
-                                       ARCHIVE_TYPE_NONE,
-                                       INDEX_ID_NONE  // toStorageId
-                                      );
-                break;
-              }
-            }
-            Index_doneList(&indexQueryHandle);
-            if (error != ERROR_NONE)
-            {
-              if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+            continue;
+          }
 
-              AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-              continue;
-            }
-  fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          // prune entity (maybe empty now)
+          (void)Index_pruneEntity(createInfo->indexHandle,storageMsg.entityId);
         }
 #endif
       }
 
       // update index database archive name and size
-fprintf(stderr,"%s, %d: --- update storage %lld %s: %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),String_cString(printableStorageName),archiveSize);
       error = Index_storageUpdate(createInfo->indexHandle,
                                   storageId,
                                   printableStorageName,
@@ -4717,9 +4721,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       return error;
     }
   }
-
-//fprintf(stderr,"%s, %d: ----------------\n",__FILE__,__LINE__);
-//FileExtendedAttributeNode *fileExtendedAttributeNode; LIST_ITERATE(&fileExtendedAttributeList,fileExtendedAttributeNode) { fprintf(stderr,"%s, %d: fileExtendedAttributeNode=%s\n",__FILE__,__LINE__,String_cString(fileExtendedAttributeNode->name)); }
 
   // open file
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
