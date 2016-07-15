@@ -123,7 +123,7 @@ LOCAL Dictionary     notifyHandles;
 LOCAL Dictionary     notifyDirectories;
 LOCAL DatabaseHandle continuousDatabaseHandle;
 LOCAL int            inotifyHandle;
-LOCAL MsgQueue       initNotifyMsgQueue;
+LOCAL MsgQueue       initDoneNotifyMsgQueue;
 LOCAL Thread         continuousInitThread;
 LOCAL Thread         continuousThread;
 //TODO
@@ -1447,13 +1447,19 @@ LOCAL void continuousInitThreadCode(void)
   basePath = String_new();
 
   while (   !quitFlag
-         && MsgQueue_get(&initNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
+         && MsgQueue_get(&initDoneNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
         )
   {
     switch (initNotifyMsg.type)
     {
       case INIT:
 //fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_CONTINUOUS,
+                    "CONTINUOUS","Start initialize watches for '%s'\n",
+                    initNotifyMsg.jobUUID
+                   );
+
         // mark notifies for update or clean
         markNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
 
@@ -1489,7 +1495,8 @@ LOCAL void continuousInitThreadCode(void)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
                     "CONTINUOUS","%lu watches (max. %lu)\n",
-                    Dictionary_count(&notifyHandles),getMaxNotifies()
+                    Dictionary_count(&notifyHandles),
+                    getMaxNotifies()
                    );
         break;
       case DONE:
@@ -1697,7 +1704,6 @@ fprintf(stderr,"\n");
           if (notifyInfo != NULL)
           {
             File_appendFileNameCString(String_set(absoluteName,notifyInfo->directory),inotifyEvent->name);
-//fprintf(stderr,"%s, %d: absoluteName=%s\n",__FILE__,__LINE__,String_cString(absoluteName));
 
             if (IS_INOTIFY(inotifyEvent->mask,IN_ISDIR))
             {
@@ -1920,7 +1926,7 @@ Errors Continuous_initAll(void)
   }
 
   // init command queue
-  if (!MsgQueue_init(&initNotifyMsgQueue,0))
+  if (!MsgQueue_init(&initDoneNotifyMsgQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize init notify message queue!");
   }
@@ -1930,7 +1936,7 @@ Errors Continuous_initAll(void)
 
 void Continuous_doneAll(void)
 {
-  MsgQueue_done(&initNotifyMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
+  MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
   close(inotifyHandle);
   Dictionary_done(&notifyDirectories);
   Dictionary_done(&notifyHandles);
@@ -2008,7 +2014,7 @@ Errors Continuous_init(const char *databaseFileName)
 void Continuous_done(void)
 {
   quitFlag = TRUE;
-  MsgQueue_setEndOfMsg(&initNotifyMsgQueue);
+  MsgQueue_setEndOfMsg(&initDoneNotifyMsgQueue);
 //  Thread_join(&cleanupContinuousThread);
   Thread_join(&continuousThread);
   Thread_join(&continuousInitThread);
@@ -2030,13 +2036,13 @@ Errors Continuous_initNotify(ConstString     jobUUID,
   assert(!String_isEmpty(scheduleUUID));
   assert(entryList != NULL);
 
-//fprintf(stderr,"%s, %d: Continuous_initNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
+//fprintf(stderr,"%s, %d: Continuous_initNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = INIT;
   strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
   strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
   EntryList_init(&initNotifyMsg.entryList); EntryList_copy(entryList,&initNotifyMsg.entryList,NULL,NULL);
 
-  (void)MsgQueue_put(&initNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+  (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
 
   return ERROR_NONE;
 }
@@ -2050,7 +2056,7 @@ Errors Continuous_doneNotify(ConstString jobUUID,
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
-//fprintf(stderr,"%s, %d: Continuous_doneNotify job=%s scheudle=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
+//fprintf(stderr,"%s, %d: Continuous_doneNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = DONE;
   strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
   if (scheduleUUID != NULL)
@@ -2062,7 +2068,7 @@ Errors Continuous_doneNotify(ConstString jobUUID,
     initNotifyMsg.scheduleUUID[0] = '\0';
   }
 
-  (void)MsgQueue_put(&initNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+  (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
 
   return ERROR_NONE;
 }
