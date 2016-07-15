@@ -507,6 +507,11 @@ struct JobOptions
   Device                       device;                        // job specific device settings
 
   uint64                       maxStorageSize;                // max. number of storage bytes for jobs
+//TODO
+#if 0
+  uint                         minKeep,maxKeep;               // min./max keep count
+  uint                         maxAge;                        // max. age [days]
+#endif
   uint64                       volumeSize;                    // volume size or 0LL for default [bytes]
 
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files

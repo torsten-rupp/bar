@@ -488,6 +488,12 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL   ("mount",                   JobNode,mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64 ("max-storage-size",        JobNode,jobOptions.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+//TODO
+#if 0
+  CONFIG_STRUCT_VALUE_INTEGER   ("min-keep",                JobNode,jobOptions.minKeep,                     0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("max-keep",                JobNode,jobOptions.maxKeep,                     0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER   ("max-age",                 JobNode,jobOptions.maxAge,                      0,MAX_INT,NULL),
+#endif
   CONFIG_STRUCT_VALUE_INTEGER64 ("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
 

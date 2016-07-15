@@ -653,6 +653,12 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("device-write-command",         0,  1,1,defaultDevice.writeCommand,                                                                             "write device command","command"                                           ),
 
   CMD_OPTION_INTEGER64    ("max-storage-size",             0,  1,2,jobOptions.maxStorageSize,                       0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "max. storage size","unlimited"                                            ),
+//TODO
+#if 0
+  CMD_OPTION_INTEGER      ("min-keep",                     0,  1,2,jobOptions.minKeep,                              0,MAX_INT,NULL,                                        "min. keep","unlimited"                                                    ),
+  CMD_OPTION_INTEGER      ("max-keep",                     0,  1,2,jobOptions.maxKeep,                              0,MAX_INT,NULL,                                        "max. keep","unlimited"                                                    ),
+  CMD_OPTION_INTEGER      ("max-age",                      0,  1,2,jobOptions.maxAge,                               0,MAX_INT,NULL,                                        "max. age [days]","unlimited"                                              ),
+#endif
   CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,2,jobOptions.volumeSize,                           0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "volume size","unlimited"                                                  ),
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,2,jobOptions.errorCorrectionCodesFlag,                                                                    "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                                                                       "always create image for CD/DVD/BD/device"                                 ),
@@ -936,6 +942,12 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("delta-source",                 &deltaSourceList,-1,                                           configValueParseDeltaSource,NULL,NULL,NULL,&jobOptions.patternType),
 
   CONFIG_VALUE_INTEGER64         ("max-storage-size",             &jobOptions.maxStorageSize,-1,                                 0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
+//TODO
+#if 0
+  CONFIG_VALUE_INTEGER           ("min-keep",                     &jobOptions.minKeep,-1,                                        0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER           ("max-keep",                     &jobOptions.maxKeep,-1,                                        0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER           ("max-age",                      &jobOptions.maxAge,-1,                                         0,MAX_INT,NULL),
+#endif
   CONFIG_VALUE_INTEGER64         ("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_BOOLEAN           ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
   CONFIG_VALUE_BOOLEAN           ("always-create-image",          &jobOptions.alwaysCreateImageFlag,-1                           ),
