@@ -1199,9 +1199,6 @@ LOCAL void removeNotifySubDirectories(ConstString directory)
         && String_startsWith(notifyInfo->directory,directory)
        )
     {
-      Dictionary_remove(&notifyHandles,keyData,keyLength);
-      Dictionary_remove(&notifyDirectories,String_cString(notifyInfo->directory),String_length(notifyInfo->directory));
-
       removeNotify(notifyInfo);
     }
   }
@@ -1321,9 +1318,6 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
       // remove notify if no more uuids
       if (List_isEmpty(&notifyInfo->uuidList))
       {
-        Dictionary_remove(&notifyHandles,keyData,keyLength);
-        Dictionary_remove(&notifyDirectories,String_cString(notifyInfo->directory),String_length(notifyInfo->directory));
-
         removeNotify(notifyInfo);
       }
       else
@@ -1396,9 +1390,6 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
       // remove notify if no more uuids
       if (List_isEmpty(&notifyInfo->uuidList))
       {
-        Dictionary_remove(&notifyHandles,keyData,keyLength);
-        Dictionary_remove(&notifyDirectories,String_cString(notifyInfo->directory),String_length(notifyInfo->directory));
-
         removeNotify(notifyInfo);
       }
     }
