@@ -10637,7 +10637,7 @@ throw new Error("NYI");
           if ((selectionEvent.stateMask & SWT.CTRL) == 0)
           {
             pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.OPEN,
+                                    Dialogs.FileDialogTypes.ENTRY,
                                     BARControl.tr("Select entry"),
                                     widgetPattern.getText(),
                                     new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
