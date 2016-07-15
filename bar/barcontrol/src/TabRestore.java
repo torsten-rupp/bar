@@ -967,6 +967,8 @@ public class TabRestore
    */
   class EntityIndexData extends IndexData implements Serializable
   {
+    public String                jobUUID;
+    public String                scheduleUUID;
     public Settings.ArchiveTypes archiveType;
     public long                  lastCreatedDateTime;  // last date/time when some storage was created
     public String                lastErrorMessage;     // last error message
@@ -1009,6 +1011,8 @@ Dprintf.dprintf("");
      * @param totalEntrySize total size of storage [byte]
      */
     EntityIndexData(long                  entityId,
+                    String                jobUUID,
+                    String                scheduleUUID,
                     Settings.ArchiveTypes archiveType,
                     long                  lastCreatedDateTime,
                     String                lastErrorMessage,
@@ -1017,6 +1021,8 @@ Dprintf.dprintf("");
                    )
     {
       super(entityId);
+      this.jobUUID             = jobUUID;
+      this.scheduleUUID        = scheduleUUID;
       this.archiveType         = archiveType;
       this.lastCreatedDateTime = lastCreatedDateTime;
       this.lastErrorMessage    = lastErrorMessage;
@@ -1094,6 +1100,8 @@ Dprintf.dprintf("");
       throws IOException
     {
       super.writeObject(out);
+      out.writeObject(jobUUID);
+      out.writeObject(scheduleUUID);
       out.writeObject(archiveType);
       out.writeObject(lastCreatedDateTime);
       out.writeObject(lastErrorMessage);
@@ -1111,6 +1119,8 @@ Dprintf.dprintf("");
       throws IOException, ClassNotFoundException
     {
       super.readObject(in);
+      jobUUID             = (String)in.readObject();
+      scheduleUUID        = (String)in.readObject();
       archiveType         = (Settings.ArchiveTypes)in.readObject();
       lastCreatedDateTime = (Long)in.readObject();
       lastErrorMessage    = (String)in.readObject();
@@ -2195,6 +2205,8 @@ Dprintf.dprintf("cirrect?");
 
                                      // add entity data index
                                      entityIndexDataList.add(new EntityIndexData(entityId,
+                                                                                 jobUUID,
+                                                                                 scheduleUUID,
                                                                                  archiveType,
                                                                                  lastCreatedDateTime,
                                                                                  lastErrorMessage,
@@ -3019,6 +3031,8 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                      {
                                        // add entity data index
                                        final EntityIndexData entityIndexData = new EntityIndexData(entityId,
+                                                                                                   jobUUID,
+                                                                                                   scheduleUUID,
                                                                                                    archiveType,
                                                                                                    lastCreatedDateTime,
                                                                                                    lastErrorMessage,
@@ -4179,6 +4193,29 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
+      if (Settings.debugLevel > 0)
+      {
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Id")+":");
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(uuidIndexData.id));
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Job UUID")+":");
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetStorageTreeToolTip,uuidIndexData.jobUUID);
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+      }
+
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
@@ -4281,6 +4318,39 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
 
       row = 0;
+
+      if (Settings.debugLevel > 0)
+      {
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Id")+":");
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(entityIndexData.id));
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Job UUID")+":");
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.jobUUID);
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Schedule UUID")+":");
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.scheduleUUID);
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+      }
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
       label.setForeground(COLOR_INFO_FORGROUND);
@@ -4404,6 +4474,19 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
+
+      if (Settings.debugLevel > 0)
+      {
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Id")+":");
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(storageIndexData.id));
+        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+      }
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
       label.setForeground(COLOR_INFO_FORGROUND);
