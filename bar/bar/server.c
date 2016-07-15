@@ -2053,7 +2053,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
   resetJobRunningInfo(jobNode);
 
 //TODO
-fprintf(stderr,"%s, %d: isJobRemote=%d\n",__FILE__,__LINE__,isJobRemote(jobNode));
+//fprintf(stderr,"%s, %d: isJobRemote=%d\n",__FILE__,__LINE__,isJobRemote(jobNode));
   if (isJobRemote(jobNode))
   {
      // start remote create job
