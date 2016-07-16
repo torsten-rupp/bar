@@ -954,11 +954,11 @@ LOCAL NotifyInfo *addNotify(ConstString directory)
     watchHandle = inotify_add_watch(inotifyHandle,String_cString(directory),NOTIFY_FLAGS|NOTIFY_EVENTS);
     if (watchHandle == -1)
     {
-      logMessage(NULL,  // logHandle
-                 LOG_TYPE_CONTINUOUS,
-                 "Add notify watch for '%s' fail (error: %s)\n",
-                 String_cString(directory),strerror(errno)
-                );
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_CONTINUOUS,
+                  "CONTINUOUS","Add notify watch for '%s' fail (error: %s)\n",
+                  String_cString(directory),strerror(errno)
+                 );
       return NULL;
     }
 
@@ -1075,11 +1075,8 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
         notifyInfo = addNotify(name);
         if (notifyInfo == NULL)
         {
-//TODO
-       //      logMessage(NULL,  // logHandleLOG_TYPE_CONTINUOUS,"Add notify watch for '%s' fail (error: %s)\n",String_cString(name),strerror(errno));
-fprintf(stderr,"%s, %d: addNotify fail! \n",__FILE__,__LINE__);
           Semaphore_unlock(&notifyLock);
-          continue;
+          break;
         }
 
         // update/add uuid
