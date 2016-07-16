@@ -1467,7 +1467,6 @@ public class TabStatus
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           volume();
         }
       });
@@ -1877,7 +1876,7 @@ public class TabStatus
       {
         public void run()
         {
-          String state = resultMap.getString("state");
+          JobData.States state = resultMap.getEnum("state",JobData.States.class);
 
           doneCount.set            (resultMap.getLong("doneCount"              ));
           doneSize.set             (resultMap.getLong("doneSize"               ));
@@ -1905,6 +1904,17 @@ public class TabStatus
           requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
           message.set              (resultMap.getString("message"));
 
+          widgetButtonStart.setEnabled(   (state != JobData.States.RUNNING)
+                                       && (state != JobData.States.DRY_RUNNING)
+                                       && (state != JobData.States.WAITING)
+                                      );
+          widgetButtonAbort.setEnabled(   (state == JobData.States.WAITING)
+                                       || (state == JobData.States.RUNNING)
+                                       || (state == JobData.States.DRY_RUNNING)
+                                       || (state == JobData.States.REQUEST_VOLUME)
+                                      );
+          widgetButtonVolume.setEnabled(state == JobData.States.REQUEST_VOLUME);
+/*
           widgetButtonStart.setEnabled(   !state.equals("running")
                                        && !state.equals("incremental")
                                        && !state.equals("differential")
@@ -1919,7 +1929,7 @@ public class TabStatus
                                        || state.equals("dry-run")
                                        || state.equals("request volume")
                                       );
-          widgetButtonVolume.setEnabled(state.equals("request volume"));
+          widgetButtonVolume.setEnabled(state.equals("request volume"));*/
         }
       });
     }
