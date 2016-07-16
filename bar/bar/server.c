@@ -3258,6 +3258,8 @@ LOCAL void jobThreadCode(void)
   // open index
   indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
 
+  jobNode     = NULL;
+  archiveType = ARCHIVE_ENTRY_TYPE_UNKNOWN;
   while (!quitFlag)
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -5146,6 +5148,8 @@ LOCAL void indexThreadCode(void)
 //fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(storageSpecifier.fileName));
 
       // init storage
+      startTimestamp = 0LL;
+      endTimestamp   = 0LL;
       initJobOptions(&jobOptions);
       error = Storage_init(&storageHandle,
                            &storageSpecifier,
