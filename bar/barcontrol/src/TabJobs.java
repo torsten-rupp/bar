@@ -8288,12 +8288,11 @@ widgetArchivePartSize.setListVisible(true);
       public void handleEvent(Event event)
       {
         JobData jobData = (JobData)event.data;
-
         setSelectedJob(jobData);
       }
     });
 
-    // add root devices
+    // add root devices to file tree, add device list
     addDirectoryRootDevices();
     addDevicesList();
   }
@@ -8843,19 +8842,20 @@ throw new Error("NYI");
    */
   private void clearJobData()
   {
-    Widgets.removeAllTableItems(widgetIncludeTable);
-    Widgets.removeAllListItems(widgetExcludeList);
-    Widgets.removeAllListItems(widgetCompressExcludeList);
-    Widgets.removeAllTableItems(widgetScheduleTable);
+Dprintf.dprintf("clearJobData");
+    clearFileTree();
+    clearDeviceList();
+    clearIncludeList();
+    clearExcludeList();
+    clearSourceList();
+    clearCompressExcludeList();
+    clearScheduleTable();
   }
 
   /** update selected job data
    */
   private void updateJobData()
   {
-    // clear
-    clearJobData();
-
     if (selectedJobData != null)
     {
       // get job data
@@ -8897,14 +8897,21 @@ throw new Error("NYI");
       maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0));
       BARServer.getJobOption(selectedJobData.uuid,comment);
 
-      updateFileTreeImages();
-      updateDeviceImages();
+      // update trees/tables
       updateIncludeList();
       updateExcludeList();
       updateMountList();
       updateSourceList();
       updateCompressExcludeList();
       updateScheduleTable();
+
+      // update images
+      updateFileTreeImages();
+      updateDeviceImages();
+    }
+    else
+    {
+      clearJobData();
     }
   }
 
@@ -9238,13 +9245,21 @@ throw new Error("NYI");
                 break;
               case SPECIAL:
                 {
-                  String  name         = resultMap.getString ("name"          );
-                  long    size         = resultMap.getLong   ("size",    0L   );
-                  long    dateTime     = resultMap.getLong   ("dateTime"      );
-                  boolean noBackupFlag = resultMap.getBoolean("noBackup",false);
-                  boolean noDumpFlag   = resultMap.getBoolean("noDump",  false);
+                  String  name             = resultMap.getString ("name"                          );
+                  long    size             = resultMap.getLong   ("size",       0L                );
+                  long    dateTime         = resultMap.getLong   ("dateTime"                      );
+                  boolean noBackupFlag     = resultMap.getBoolean("noBackup",   false             );
+                  boolean noDumpFlag       = resultMap.getBoolean("noDump",     false             );
+                  SpecialTypes specialType = resultMap.getEnum   ("specialType",SpecialTypes.class);
 
-                  SpecialTypes specialType = resultMap.getEnum("specialType",SpecialTypes.class);
+                  Image image;
+                  if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+                    image = IMAGE_FILE_INCLUDED;
+                  else if (excludeHashSet.contains(name) || noDumpFlag)
+                    image = IMAGE_FILE_EXCLUDED;
+                  else
+                    image = IMAGE_FILE;
+
                   switch (specialType)
                   {
                     case CHARACTER_DEVICE:
@@ -9255,7 +9270,7 @@ throw new Error("NYI");
                       Widgets.insertTreeItem(treeItem,
                                              findFilesTreeIndex(treeItem,fileTreeData),
                                              fileTreeData,
-  //                                           image,
+                                             image,
                                              false,
                                              fileTreeData.title,
                                              "CHARACTER DEVICE",
@@ -9270,7 +9285,7 @@ throw new Error("NYI");
                       Widgets.insertTreeItem(treeItem,
                                              findFilesTreeIndex(treeItem,fileTreeData),
                                              fileTreeData,
-  //                                           image,
+                                             image,
                                              false,
                                              fileTreeData.title,
                                              "BLOCK DEVICE",
@@ -9286,7 +9301,7 @@ throw new Error("NYI");
                       Widgets.insertTreeItem(treeItem,
                                              findFilesTreeIndex(treeItem,fileTreeData),
                                              fileTreeData,
-  //                                           image,
+                                             image,
                                              false,
                                              fileTreeData.title,
                                              "FIFO",
@@ -9302,7 +9317,7 @@ throw new Error("NYI");
                       Widgets.insertTreeItem(treeItem,
                                              findFilesTreeIndex(treeItem,fileTreeData),
                                              fileTreeData,
-  //                                           image,
+                                             image,
                                              false,
                                              fileTreeData.title,
                                              "SOCKET",
@@ -9317,7 +9332,7 @@ throw new Error("NYI");
                       Widgets.insertTreeItem(treeItem,
                                              findFilesTreeIndex(treeItem,fileTreeData),
                                              fileTreeData,
-  //                                           image,
+                                             image,
                                              false,
                                              fileTreeData.title,
                                              "SPECIAL",
@@ -9340,7 +9355,6 @@ throw new Error("NYI");
       }
       else
       {
-  //Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTreeData.name,fileListResult,errorCode);
          Dialogs.error(shell,BARControl.tr("Cannot get file list:\n\n{0}",resultErrorMessage[0]));
       }
     }
@@ -9355,61 +9369,60 @@ throw new Error("NYI");
    */
   private void updateFileTreeImages(TreeItem treeItem)
   {
+    FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+
+    Image image = null;
+    if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+    {
+      switch (fileTreeData.fileType)
+      {
+        case FILE:      image = IMAGE_FILE_INCLUDED;      break;
+        case DIRECTORY: image = IMAGE_DIRECTORY_INCLUDED; break;
+        case LINK:      image = IMAGE_LINK_INCLUDED;      break;
+        case HARDLINK:  image = IMAGE_LINK_INCLUDED;      break;
+        case SPECIAL:   image = IMAGE_FILE_INCLUDED;      break;
+      }
+    }
+    else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noBackup || fileTreeData.noDump )
+    {
+      switch (fileTreeData.fileType)
+      {
+        case FILE:      image = IMAGE_FILE_EXCLUDED;      break;
+        case DIRECTORY: image = IMAGE_DIRECTORY_EXCLUDED; break;
+        case LINK:      image = IMAGE_LINK_EXCLUDED;      break;
+        case HARDLINK:  image = IMAGE_LINK_EXCLUDED;      break;
+        case SPECIAL:   image = IMAGE_FILE_EXCLUDED;      break;
+      }
+    }
+    else
+    {
+      switch (fileTreeData.fileType)
+      {
+        case FILE:      image = IMAGE_FILE;      break;
+        case DIRECTORY: image = IMAGE_DIRECTORY; break;
+        case LINK:      image = IMAGE_LINK;      break;
+        case HARDLINK:  image = IMAGE_LINK;      break;
+        case SPECIAL:
+          switch (fileTreeData.specialType)
+          {
+            case CHARACTER_DEVICE: image = IMAGE_FILE;      break;
+            case BLOCK_DEVICE:     image = IMAGE_FILE;      break;
+            case FIFO:             image = IMAGE_FILE;      break;
+            case SOCKET:           image = IMAGE_FILE;      break;
+            case OTHER:            image = IMAGE_FILE;      break;
+          }
+          break;
+      }
+    }
+    treeItem.setImage(image);
+
+    // update sub-items
     if (treeItem.getExpanded())
     {
       for (TreeItem subTreeItem : treeItem.getItems())
       {
         updateFileTreeImages(subTreeItem);
       }
-    }
-    else
-    {
-      FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-
-      Image image = null;
-      if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
-      {
-        switch (fileTreeData.fileType)
-        {
-          case FILE:      image = IMAGE_FILE_INCLUDED;      break;
-          case DIRECTORY: image = IMAGE_DIRECTORY_INCLUDED; break;
-          case LINK:      image = IMAGE_LINK_INCLUDED;      break;
-          case HARDLINK:  image = IMAGE_LINK_INCLUDED;      break;
-          case SPECIAL:   image = IMAGE_FILE_INCLUDED;      break;
-        }
-      }
-      else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noBackup || fileTreeData.noDump )
-      {
-        switch (fileTreeData.fileType)
-        {
-          case FILE:      image = IMAGE_FILE_EXCLUDED;      break;
-          case DIRECTORY: image = IMAGE_DIRECTORY_EXCLUDED; break;
-          case LINK:      image = IMAGE_LINK_EXCLUDED;      break;
-          case HARDLINK:  image = IMAGE_LINK_EXCLUDED;      break;
-          case SPECIAL:   image = IMAGE_FILE_EXCLUDED;      break;
-        }
-      }
-      else
-      {
-        switch (fileTreeData.fileType)
-        {
-          case FILE:      image = IMAGE_FILE;      break;
-          case DIRECTORY: image = IMAGE_DIRECTORY; break;
-          case LINK:      image = IMAGE_LINK;      break;
-          case HARDLINK:  image = IMAGE_LINK;      break;
-          case SPECIAL:
-            switch (fileTreeData.specialType)
-            {
-              case CHARACTER_DEVICE: image = IMAGE_FILE;      break;
-              case BLOCK_DEVICE:     image = IMAGE_FILE;      break;
-              case FIFO:             image = IMAGE_FILE;      break;
-              case SOCKET:           image = IMAGE_FILE;      break;
-              case OTHER:            image = IMAGE_FILE;      break;
-            }
-            break;
-        }
-      }
-      treeItem.setImage(image);
     }
   }
 
@@ -9474,6 +9487,13 @@ throw new Error("NYI");
     {
       Dialogs.error(shell,BARControl.tr("Cannot get device list:\n\n{0}",resultErrorMessage[0]));
     }
+  }
+
+  /** clear device list
+   */
+  private void clearDeviceList()
+  {
+    Widgets.removeAllTreeItems(widgetDeviceTree);
   }
 
   /** find index for insert of tree item in sorted list of tree items
@@ -9600,6 +9620,13 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
+  /** clear include list
+   */
+  private void clearIncludeList()
+  {
+    Widgets.removeAllTableItems(widgetIncludeTable);
+  }
+
   /** update include list
    */
   private void updateIncludeList()
@@ -9652,6 +9679,13 @@ throw new Error("NYI");
         }
       }
     }
+  }
+
+  /** clea exclude list
+   */
+  private void clearExcludeList()
+  {
+    Widgets.removeAllListItems(widgetExcludeList);
   }
 
   /** update exclude list
@@ -9757,6 +9791,14 @@ throw new Error("NYI");
     }
   }
 
+  /** clear source list
+   * Note: currently not a list. Show only first source pattern.
+   */
+  private void clearSourceList()
+  {
+    deltaSource.set("");
+  }
+
   /** update source list
    * Note: currently not a list. Show only first source pattern.
    */
@@ -9804,6 +9846,13 @@ throw new Error("NYI");
         }
       }
     }
+  }
+
+  /** clear compress exclude list
+   */
+  private void clearCompressExcludeList()
+  {
+    Widgets.removeAllListItems(widgetCompressExcludeList);
   }
 
   /** update compress exclude list
@@ -12539,7 +12588,7 @@ Dprintf.dprintf("line=%s",line);
     synchronized(scheduleDataMap)
     {
       scheduleDataMap.clear();
-      widgetScheduleTable.removeAll();
+      Widgets.removeAllTableItems(widgetScheduleTable);
     }
   }
 
@@ -13329,8 +13378,6 @@ throw new Error("NYI");
   private void clear()
   {
     clearJobData();
-    clearFileTree();
-    clearScheduleTable();
   }
 
   /** update all data
@@ -13338,7 +13385,6 @@ throw new Error("NYI");
   private void update()
   {
     updateJobData();
-    updateScheduleTable();
   }
 }
 
