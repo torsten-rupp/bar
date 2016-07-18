@@ -65,6 +65,7 @@
 #define SESSION_KEY_SIZE                    1024    // number of session key bits
 
 #define MAX_NETWORK_CLIENT_THREADS          3       // number of threads for a client
+#define LOCK_TIMEOUT                        (10*60*1000)  // general lock timeout [ms]
 
 #define AUTHORIZATION_PENALITY_TIME         500     // delay processing by failCount^2*n [ms]
 #define MAX_AUTHORIZATION_HISTORY_KEEP_TIME 30000   // max. time to keep entries in authorization fail history [ms]
@@ -76,6 +77,7 @@
 #define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD (10*60)
+#define SLEEP_TIME_PURGE_EXPIRED_THREAD     ( 5*60)
 
 /***************************** Datatypes *******************************/
 
@@ -546,6 +548,7 @@ LOCAL Thread                remoteConnectThread;
 LOCAL Thread                remoteThread;
 LOCAL Thread                indexThread;
 LOCAL Thread                autoIndexThread;
+LOCAL Thread                purgeExpiredThread;
 LOCAL Semaphore             serverStateLock;
 LOCAL ServerStates          serverState;  // current server state
 LOCAL struct
@@ -1531,7 +1534,7 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
 
   storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // request volume
     jobNode->requestedVolumeNumber = volumeNumber;
@@ -1545,7 +1548,7 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
     storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
     do
     {
-      Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
+      Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
 
       if      (jobNode->volumeUnloadFlag)
       {
@@ -1945,7 +1948,7 @@ LOCAL bool isSomeJobActive(void)
   bool          activeFlag;
 
   activeFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -2001,7 +2004,7 @@ LOCAL bool isSomeJobRunning(void)
   bool          runningFlag;
 
   runningFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -2600,7 +2603,7 @@ LOCAL void updateAllJobs(void)
   JobNode       *jobNode;
   Errors        error;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -2888,7 +2891,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
     // check if readable file and not ".*"
     if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         // find/create job
         jobNode = findJobByName(baseName);
@@ -2918,7 +2921,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
   File_closeDirectoryList(&directoryListHandle);
 
   // remove not existing jobs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     jobNode = jobList.head;
     while (jobNode != NULL)
@@ -2952,7 +2955,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
   }
 
   // check for duplicate UUIDs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     jobNode1 = jobList.head;
     while (jobNode1 != NULL)
@@ -2992,7 +2995,7 @@ LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
 
   assert(jobUUIDList != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -3262,7 +3265,7 @@ LOCAL void jobThreadCode(void)
   archiveType = ARCHIVE_ENTRY_TYPE_UNKNOWN;
   while (!quitFlag)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // wait for and get next job to execute
       do
@@ -3272,7 +3275,7 @@ LOCAL void jobThreadCode(void)
         {
           jobNode = jobNode->next;
         }
-        if (jobNode == NULL) Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
+        if (jobNode == NULL) Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
       }
       while (!quitFlag && (jobNode == NULL));
       if (quitFlag)
@@ -3720,7 +3723,7 @@ NULL,//                                                        scheduleTitle,
     // done log
     doneLog(&logHandle);
 
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // free resources
       doneJobOptions(&jobOptions);
@@ -3774,7 +3777,7 @@ LOCAL void delayRemoteConnectThread(void)
   uint sleepTime;
 
   sleepTime = 0;
-  while ((sleepTime < SLEEP_TIME_REMOTE_THREAD) && !quitFlag)
+  while (!quitFlag && (sleepTime < SLEEP_TIME_REMOTE_THREAD))
   {
     Misc_udelay(10LL*MISC_US_PER_SECOND);
     sleepTime += 10;
@@ -3885,7 +3888,7 @@ LOCAL void remoteConnectThreadCode(void)
 
       // check if remote and is not connected
       tryConnectFlag = FALSE;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         jobNode = findJobByUUID(jobUUID);
         if (jobNode != NULL)
@@ -3907,7 +3910,7 @@ LOCAL void remoteConnectThreadCode(void)
     }
 
     // update list of all active remote jobs and remote host info
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       LIST_ITERATE(&jobList,jobNode)
       {
@@ -3974,7 +3977,7 @@ LOCAL void delayRemoteThread(void)
   uint sleepTime;
 
   sleepTime = 0;
-  while ((sleepTime < SLEEP_TIME_REMOTE_THREAD) && !quitFlag)
+  while (!quitFlag && (sleepTime < SLEEP_TIME_REMOTE_THREAD))
   {
     Misc_udelay(10LL*MISC_US_PER_SECOND);
     sleepTime += 10;
@@ -4126,7 +4129,7 @@ LOCAL void remoteThreadCode(void)
   while (!quitFlag)
   {
     // update list of all remote job and remote host info
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       LIST_ITERATE(&jobList,jobNode)
       {
@@ -4163,7 +4166,7 @@ LOCAL void remoteThreadCode(void)
       error = Remote_executeCommand(&remoteJobInfoNode->remoteHost,resultMap,"JOB_INFO jobUUID=%S",remoteJobInfoNode->jobUUID);
       if (error == ERROR_NONE)
       {
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
         {
           // find job
           jobNode = findJobByUUID(remoteJobInfoNode->jobUUID);
@@ -4258,7 +4261,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
 
   if (!String_isEmpty(storageName))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       // find job if possible
       jobNode = findJobByUUID(jobUUID);
@@ -4467,221 +4470,8 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : purgeExpiredEntities
-* Purpose: purge expired/surplus entities
-* Input  : indexHandle - index handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void purgeExpiredEntities(IndexHandle *indexHandle)
-{
-  const uint64 SECONDS_PER_DAY = 24*60*60;
-
-  String             jobName;
-  String             string;
-  uint64             now;
-  Errors             error;
-  IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
-  IndexId            entityId;
-  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  uint               minKeep,maxKeep,maxAge;
-  SemaphoreLock      semaphoreLock;
-  const JobNode      *jobNode;
-  const ScheduleNode *scheduleNode;
-  uint64             createdDateTime;
-  ArchiveTypes       archiveType;
-  ulong              totalEntryCount;
-  uint64             totalEntrySize;
-
-  assert(indexHandle != NULL);
-
-  if (!quitFlag)
-  {
-    // init variables
-    jobName = String_new();
-    string  = String_new();
-    now     = Misc_getCurrentDateTime();
-
-    // check entities
-    error = Index_initListEntities(&indexQueryHandle1,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   NULL,  // jobUUID
-                                   NULL,  // scheduldUUID,
-                                   NULL,  // name
-                                   DATABASE_ORDERING_ASCENDING,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      String_delete(string);
-      String_delete(jobName);
-      return;
-    }
-    while (   !quitFlag
-           && Index_getNextEntity(&indexQueryHandle1,
-                                  NULL,  // uudId,
-                                  jobUUID,
-                                  scheduleUUID,
-                                  &entityId,
-                                  NULL,  // archiveType,
-                                  NULL,  // createdDateTime,
-                                  NULL,  // lastErrorMessage
-                                  NULL,  // totalEntryCount,
-                                  NULL  // totalEntrySize,
-                                 )
-          )
-    {
-      if (!String_isEmpty(scheduleUUID))
-      {
-        // get job name, schedule min./max. keep, max. age
-        minKeep = 0;
-        maxKeep = 0;
-        maxAge  = 0;
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
-        {
-          jobNode = findJobByUUID(jobUUID);
-          if (jobNode != NULL)
-          {
-            String_set(jobName,jobNode->name);
-          }
-          else
-          {
-            String_clear(jobName);
-          }
-          scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
-          if (scheduleNode != NULL)
-          {
-            minKeep = scheduleNode->minKeep;
-            maxKeep = scheduleNode->maxKeep;
-            maxAge  = scheduleNode->maxAge;
-          }
-        }
-
-        // check if expired
-        if ((maxKeep > 0) || (maxAge > 0))
-        {
-          // delete expired entities
-          if (maxAge > 0)
-          {
-            error = Index_initListEntities(&indexQueryHandle2,
-                                           indexHandle,
-                                           INDEX_ID_ANY,  // uuidId
-                                           jobUUID,
-                                           scheduleUUID,
-                                           NULL,  // name
-                                           DATABASE_ORDERING_DESCENDING,
-                                           (ulong)minKeep,
-                                           INDEX_UNLIMITED
-                                          );
-            if (error == ERROR_NONE)
-            {
-              while (   !quitFlag
-                     && Index_getNextEntity(&indexQueryHandle2,
-                                            NULL,  // uudId,
-                                            NULL,  // jobUUID
-                                            NULL,  // scheduleUUID
-                                            &entityId,
-                                            &archiveType,
-                                            &createdDateTime,
-                                            NULL,  // lastErrorMessage
-                                            &totalEntryCount,
-                                            &totalEntrySize
-                                           )
-                    )
-              {
-                if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
-                {
-                  error = deleteEntity(indexHandle,entityId);
-                  if (error == ERROR_NONE)
-                  {
-                    ;
-                    plogMessage(NULL,  // logHandle,
-                                LOG_TYPE_INDEX,
-                                "INDEX",
-                                "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                                String_cString(jobName),
-                                ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                                String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
-                                totalEntryCount,
-                                BYTES_SHORT(totalEntrySize),
-                                BYTES_UNIT(totalEntrySize),
-                                totalEntrySize
-                               );
-                  }
-                }
-              }
-              Index_doneList(&indexQueryHandle2);
-            }
-          }
-
-          // delete surplus entities
-          if ((maxKeep > 0) && (maxKeep >= minKeep))
-          {
-            error = Index_initListEntities(&indexQueryHandle2,
-                                           indexHandle,
-                                           INDEX_ID_ANY,  // uuidId
-                                           jobUUID,
-                                           scheduleUUID,
-                                           NULL,  // name
-                                           DATABASE_ORDERING_DESCENDING,
-                                           (ulong)maxKeep,
-                                           INDEX_UNLIMITED
-                                          );
-            if (error == ERROR_NONE)
-            {
-              while (   !quitFlag
-                     && Index_getNextEntity(&indexQueryHandle2,
-                                            NULL,  // uudId,
-                                            NULL,  // jobUUID
-                                            NULL,  // scheduleUUID
-                                            &entityId,
-                                            &archiveType,
-                                            &createdDateTime,
-                                            NULL,  // lastErrorMessage
-                                            &totalEntryCount,
-                                            &totalEntrySize
-                                           )
-                    )
-              {
-                error = deleteEntity(indexHandle,entityId);
-                if (error == ERROR_NONE)
-                {
-                  plogMessage(NULL,  // logHandle,
-                              LOG_TYPE_INDEX,
-                              "INDEX",
-                              "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                              String_cString(jobName),
-                              ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                              String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
-                              totalEntryCount,
-                              BYTES_SHORT(totalEntrySize),
-                              BYTES_UNIT(totalEntrySize),
-                              totalEntrySize
-                             );
-                }
-              }
-              Index_doneList(&indexQueryHandle2);
-            }
-          }
-        }
-      }
-    }
-    Index_doneList(&indexQueryHandle1);
-
-    // free resources
-    String_delete(string);
-    String_delete(jobName);
-  }
-}
-
-/***********************************************************************\
 * Name   : delayScheduleThread
-* Purpose: delay remote connect code
+* Purpose: delay scheduler code
 * Input  : -
 * Output : -
 * Return : -
@@ -4693,7 +4483,7 @@ LOCAL void delayScheduleThread(void)
   uint sleepTime;
 
   sleepTime = 0;
-  while ((sleepTime < SLEEP_TIME_SCHEDULER_THREAD) && !quitFlag)
+  while (!quitFlag && (sleepTime < SLEEP_TIME_SCHEDULER_THREAD))
   {
     Misc_udelay(10LL*MISC_US_PER_SECOND);
     sleepTime += 10;
@@ -4732,19 +4522,13 @@ LOCAL void schedulerThreadCode(void)
     // re-read job config files
     rereadAllJobs(serverJobsDirectory);
 
-    if (indexHandle != NULL)
-    {
-      // clean-up expired/surplus entities
-      purgeExpiredEntities(indexHandle);
-    }
-
     // check for jobs triggers
     pendingFlag = FALSE;
-    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
+    Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT);
     {
       currentDateTime = Misc_getCurrentDateTime();
       jobNode         = jobList.head;
-      while ((jobNode != NULL) && !pendingFlag && !quitFlag)
+      while (!quitFlag && !pendingFlag && (jobNode != NULL))
       {
         if (!isJobActive(jobNode))
         {
@@ -4754,11 +4538,11 @@ LOCAL void schedulerThreadCode(void)
           if (executeScheduleNode == NULL)
           {
             dateTime = currentDateTime;
-            while (   ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
+            while (   !pendingFlag
+                   && !quitFlag
+                   && ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
                    && ((dateTime/60LL) > (jobNode->lastExecutedDateTime/60LL))
                    && (executeScheduleNode == NULL)
-                   && !pendingFlag
-                   && !quitFlag
                   )
             {
               // get date/time values
@@ -4902,7 +4686,7 @@ LOCAL void pauseThreadCode(void)
   while (!quitFlag)
   {
     // decrement pause time, continue
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       if (serverState == SERVER_STATE_PAUSE)
       {
@@ -4919,12 +4703,271 @@ LOCAL void pauseThreadCode(void)
 
     // sleep, check update and quit flag
     sleepTime = 0;
-    while ((sleepTime < SLEEP_TIME_PAUSE_THREAD) && !quitFlag)
+    while (!quitFlag && (sleepTime < SLEEP_TIME_PAUSE_THREAD))
     {
       Misc_udelay(10LL*MISC_US_PER_SECOND);
       sleepTime += 10;
     }
   }
+}
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : delayPurgeExpiredThread
+* Purpose: delay purge expired code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delayPurgeExpiredThread(void)
+{
+  uint sleepTime;
+
+  sleepTime = 0;
+  while (!quitFlag && (sleepTime < SLEEP_TIME_PURGE_EXPIRED_THREAD))
+  {
+    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    sleepTime += 10;
+  }
+}
+
+/***********************************************************************\
+* Name   : purgeExpiredThreadCode
+* Purpose: purge expired thread
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void purgeExpiredThreadCode(void)
+{
+  const uint64 SECONDS_PER_DAY = 24*60*60;
+
+  String             jobName;
+  String             string;
+  uint64             now;
+  IndexHandle        *indexHandle;
+  Errors             error;
+  IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
+  IndexId            entityId;
+  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  uint               minKeep,maxKeep,maxAge;
+  SemaphoreLock      semaphoreLock;
+  const JobNode      *jobNode;
+  const ScheduleNode *scheduleNode;
+  uint64             createdDateTime;
+  ArchiveTypes       archiveType;
+  ulong              totalEntryCount;
+  uint64             totalEntrySize;
+
+  // init variables
+  jobName = String_new();
+  string  = String_new();
+  now     = Misc_getCurrentDateTime();
+
+  // init index
+  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
+  if (indexHandle == NULL)
+  {
+    plogMessage(NULL,  // logHandle,
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Open index database fail - disabled purge expired\n"
+               );
+    return;
+  }
+
+  while (!quitFlag)
+  {
+    error = Index_beginTransaction(indexHandle);
+    if (error == ERROR_NONE)
+    {
+      // check entities
+      error = Index_initListEntities(&indexQueryHandle1,
+                                     indexHandle,
+                                     INDEX_ID_ANY,  // uuidId
+                                     NULL,  // jobUUID
+                                     NULL,  // scheduldUUID,
+                                     NULL,  // name
+                                     DATABASE_ORDERING_ASCENDING,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error == ERROR_NONE)
+      {
+        while (   !quitFlag
+               && !isSomeJobActive()
+               && Index_getNextEntity(&indexQueryHandle1,
+                                      NULL,  // uudId,
+                                      jobUUID,
+                                      scheduleUUID,
+                                      &entityId,
+                                      NULL,  // archiveType,
+                                      NULL,  // createdDateTime,
+                                      NULL,  // lastErrorMessage
+                                      NULL,  // totalEntryCount,
+                                      NULL  // totalEntrySize,
+                                     )
+              )
+        {
+          if (!String_isEmpty(scheduleUUID))
+          {
+            // get job name, schedule min./max. keep, max. age
+            minKeep = 0;
+            maxKeep = 0;
+            maxAge  = 0;
+            SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+            {
+              jobNode = findJobByUUID(jobUUID);
+              if (jobNode != NULL)
+              {
+                String_set(jobName,jobNode->name);
+              }
+              else
+              {
+                String_clear(jobName);
+              }
+              scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+              if (scheduleNode != NULL)
+              {
+                minKeep = scheduleNode->minKeep;
+                maxKeep = scheduleNode->maxKeep;
+                maxAge  = scheduleNode->maxAge;
+              }
+            }
+
+            // check if expired
+            if ((maxKeep > 0) || (maxAge > 0))
+            {
+              // delete expired entities
+              if (maxAge > 0)
+              {
+                error = Index_initListEntities(&indexQueryHandle2,
+                                               indexHandle,
+                                               INDEX_ID_ANY,  // uuidId
+                                               jobUUID,
+                                               scheduleUUID,
+                                               NULL,  // name
+                                               DATABASE_ORDERING_DESCENDING,
+                                               (ulong)minKeep,
+                                               INDEX_UNLIMITED
+                                              );
+                if (error == ERROR_NONE)
+                {
+                  while (   !quitFlag
+                         && !isSomeJobActive()
+                         && Index_getNextEntity(&indexQueryHandle2,
+                                                NULL,  // uudId,
+                                                NULL,  // jobUUID
+                                                NULL,  // scheduleUUID
+                                                &entityId,
+                                                &archiveType,
+                                                &createdDateTime,
+                                                NULL,  // lastErrorMessage
+                                                &totalEntryCount,
+                                                &totalEntrySize
+                                               )
+                        )
+                  {
+                    if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
+                    {
+                      error = deleteEntity(indexHandle,entityId);
+                      if (error == ERROR_NONE)
+                      {
+                        ;
+                        plogMessage(NULL,  // logHandle,
+                                    LOG_TYPE_INDEX,
+                                    "INDEX",
+                                    "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                    String_cString(jobName),
+                                    ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                                    String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                    totalEntryCount,
+                                    BYTES_SHORT(totalEntrySize),
+                                    BYTES_UNIT(totalEntrySize),
+                                    totalEntrySize
+                                   );
+                      }
+                    }
+                  }
+                  Index_doneList(&indexQueryHandle2);
+                }
+              }
+
+              // delete surplus entities
+              if ((maxKeep > 0) && (maxKeep >= minKeep))
+              {
+                error = Index_initListEntities(&indexQueryHandle2,
+                                               indexHandle,
+                                               INDEX_ID_ANY,  // uuidId
+                                               jobUUID,
+                                               scheduleUUID,
+                                               NULL,  // name
+                                               DATABASE_ORDERING_DESCENDING,
+                                               (ulong)maxKeep,
+                                               INDEX_UNLIMITED
+                                              );
+                if (error == ERROR_NONE)
+                {
+                  while (   !quitFlag
+                         && !isSomeJobActive()
+                         && Index_getNextEntity(&indexQueryHandle2,
+                                                NULL,  // uudId,
+                                                NULL,  // jobUUID
+                                                NULL,  // scheduleUUID
+                                                &entityId,
+                                                &archiveType,
+                                                &createdDateTime,
+                                                NULL,  // lastErrorMessage
+                                                &totalEntryCount,
+                                                &totalEntrySize
+                                               )
+                        )
+                  {
+                    error = deleteEntity(indexHandle,entityId);
+                    if (error == ERROR_NONE)
+                    {
+                      plogMessage(NULL,  // logHandle,
+                                  LOG_TYPE_INDEX,
+                                  "INDEX",
+                                  "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                  String_cString(jobName),
+                                  ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                                  String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                  totalEntryCount,
+                                  BYTES_SHORT(totalEntrySize),
+                                  BYTES_UNIT(totalEntrySize),
+                                  totalEntrySize
+                                 );
+                    }
+                  }
+                  Index_doneList(&indexQueryHandle2);
+                }
+              }
+            }
+          }
+        }
+        Index_doneList(&indexQueryHandle1);
+      }
+
+      (void)Index_endTransaction(indexHandle);
+    }
+
+    // sleep
+    delayScheduleThread();
+  }
+
+  // done index
+  Index_close(indexHandle);
+
+  // free resources
+  String_delete(string);
+  String_delete(jobName);
 }
 
 /*---------------------------------------------------------------------*/
@@ -5042,7 +5085,7 @@ LOCAL void delayIndexThread(void)
   uint sleepTime;
 
   sleepTime = 0;
-  while ((sleepTime < SLEEP_TIME_INDEX_THREAD) && !quitFlag)
+  while (!quitFlag && (sleepTime < SLEEP_TIME_INDEX_THREAD))
   {
     Misc_udelay(10LL*MISC_US_PER_SECOND);
     sleepTime += 10;
@@ -5107,7 +5150,7 @@ LOCAL void indexThreadCode(void)
     // get all job crypt passwords and crypt private keys (including no password and default crypt password)
     addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
     addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       LIST_ITERATE(&jobList,jobNode)
       {
@@ -5289,7 +5332,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
   // collect storage locations to check for BAR files
   storagePathName = String_new();
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -5320,7 +5363,7 @@ LOCAL void delayAutoIndexThread(void)
   uint sleepTime;
 
   sleepTime = 0;
-  while ((sleepTime < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD) && !quitFlag)
+  while (!quitFlag && (sleepTime < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD))
   {
     Misc_udelay(10LL*MISC_US_PER_SECOND);
     sleepTime += 10;
@@ -5559,7 +5602,8 @@ LOCAL void autoIndexThreadCode(void)
     {
       now    = Misc_getCurrentDateTime();
       string = String_new();
-      while (   Index_getNextStorage(&indexQueryHandle,
+      while (   !quitFlag
+             && Index_getNextStorage(&indexQueryHandle,
                                      NULL,  // uuidId
                                      NULL,  // jobUUID
                                      NULL,  // entityId
@@ -5575,7 +5619,6 @@ LOCAL void autoIndexThreadCode(void)
                                      &lastCheckedDateTime,
                                      NULL  // errorMessage
                                     )
-             && !quitFlag
             )
       {
         // get printable name (if possible)
@@ -5660,7 +5703,7 @@ LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
         (void)File_flush(clientInfo->file.fileHandle);
         break;
       case CLIENT_TYPE_NETWORK:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
         {
           (void)Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
         }
@@ -5738,7 +5781,7 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
   assert(actionCommand != NULL);
 
   error = ERROR_UNKNOWN;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // clear action
     clientInfo->action.error = ERROR_UNKNOWN;
@@ -6231,11 +6274,11 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
   pathName = String_new();
   fileName = String_new();
   if (timedOut != NULL) (*timedOut) = FALSE;
-  while (   (   !StringList_isEmpty(&directoryInfoNode->pathNameList)
+  while (   !quitFlag
+         && (   !StringList_isEmpty(&directoryInfoNode->pathNameList)
              || directoryInfoNode->directoryOpenFlag
             )
          && ((timedOut == NULL) || !(*timedOut))
-         && !quitFlag
         )
   {
     if (!directoryInfoNode->directoryOpenFlag)
@@ -6253,9 +6296,9 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
     }
 
     // read directory content
-    while (   !File_endOfDirectoryList(&directoryInfoNode->directoryListHandle)
+    while (   !quitFlag
+           && !File_endOfDirectoryList(&directoryInfoNode->directoryListHandle)
            && ((timedOut == NULL) || !(*timedOut))
-           && !quitFlag
           )
     {
       // read next directory entry
@@ -6566,7 +6609,7 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get error
     StringMap_getUInt64(argumentMap,"error",&n,ERROR_UNKNOWN);
@@ -6830,7 +6873,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
@@ -7078,7 +7121,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   serverNode->server.maxStorageSize     = maxStorageSize;
 
   // add to server list
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     List_append(&globalOptions.serverList,serverNode);
   }
@@ -7235,7 +7278,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find storage server
     serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
@@ -7369,7 +7412,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find storage server
     serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
@@ -7465,7 +7508,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
   UNUSED_VARIABLE(argumentMap);
 
   // format result
-  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER);
+  Semaphore_lock(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT);
   {
     switch (serverState)
     {
@@ -7527,7 +7570,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   }
 
   // set pause time
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     serverState = SERVER_STATE_PAUSE;
     if (modeMask == NULL)
@@ -7626,7 +7669,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
 
   // set suspend
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     serverState = SERVER_STATE_SUSPENDED;
     if (modeMask == NULL)
@@ -7697,7 +7740,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   // clear pause/suspend
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     serverState            = SERVER_STATE_RUNNING;
     pauseFlags.create      = FALSE;
@@ -8267,7 +8310,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -8377,7 +8420,7 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
 //TODO: value still not used
 UNUSED_VARIABLE(value);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -8516,7 +8559,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -8780,7 +8823,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -8868,7 +8911,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -8951,7 +8994,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -9023,7 +9066,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     jobNode = jobList.head;
     while (   (jobNode != NULL)
@@ -9118,7 +9161,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
   // init variables
   lastErrorMessage = String_new();
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -9223,7 +9266,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
   jobNode = NULL;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (String_isEmpty(master))
     {
@@ -9337,7 +9380,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // check if mew job already exists
     if (findJobByName(name) != NULL)
@@ -9441,7 +9484,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // check if job already exists
     if (findJobByName(newName) != NULL)
@@ -9522,7 +9565,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -9617,7 +9660,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -9678,7 +9721,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -9697,7 +9740,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
       {
         while (isJobRunning(jobNode))
         {
-          Semaphore_waitModified(&jobList.lock,WAIT_FOREVER);
+          Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
         }
       }
       else
@@ -9806,7 +9849,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -9886,7 +9929,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -9946,7 +9989,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10024,7 +10067,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10111,7 +10154,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10179,7 +10222,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10244,7 +10287,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10303,7 +10346,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10374,7 +10417,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10454,7 +10497,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10522,7 +10565,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10589,7 +10632,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10669,7 +10712,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
   }
 
   mountId = 0;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10756,7 +10799,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10833,7 +10876,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10899,7 +10942,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -10959,7 +11002,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11027,7 +11070,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11104,7 +11147,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11169,7 +11212,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11233,7 +11276,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11291,7 +11334,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11359,7 +11402,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11436,7 +11479,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11501,7 +11544,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11590,7 +11633,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -11929,7 +11972,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, IndexHandle *indexH
   scheduleNode->noStorage   = noStorage;
   scheduleNode->enabled     = enabled;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -12006,7 +12049,7 @@ LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, IndexHandle *ind
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -12091,7 +12134,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -12206,7 +12249,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -12308,7 +12351,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -12404,7 +12447,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -12769,7 +12812,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
   if (!String_equalsCString(jobUUID,"*"))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // find job
       jobNode = findJobByUUID(jobUUID);
@@ -12882,7 +12925,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -12933,7 +12976,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -16598,7 +16641,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     // get job name
     if (uuidId != prevUUIDId)
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         jobNode = findJobByUUID(jobUUID);
         if (jobNode != NULL)
@@ -17225,7 +17268,7 @@ LOCAL void sendSessionId(ClientInfo *clientInfo)
 
 /***********************************************************************\
 * Name   : initClient
-* Purpose: create batch client with file i/o
+* Purpose: initialize client
 * Input  : clientInfo - client info to initialize
 * Output : -
 * Return : -
@@ -17876,6 +17919,10 @@ Errors Server_run(uint             port,
         HALT_FATAL_ERROR("Cannot initialize index update thread!");
       }
     }
+    if (!Thread_init(&purgeExpiredThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
+    }
   }
 
   // run server
@@ -18189,6 +18236,7 @@ Errors Server_run(uint             port,
   Semaphore_setEnd(&jobList.lock);
   if (Index_isAvailable())
   {
+      Thread_join(&purgeExpiredThread);
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       Thread_join(&autoIndexThread);
