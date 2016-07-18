@@ -41,6 +41,8 @@
   * improved parsing configuration files: reject unknown
     values
   * fixed init script on CentOS
+  * added option --server-max-connections: limit max.
+    number of concurrent server connections, default 8
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store
