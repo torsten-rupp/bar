@@ -328,6 +328,8 @@ LOCAL void verify(IndexHandle *indexHandle,
   assert(columnName != NULL);
   assert(condition != NULL);
 
+//TODO
+#if 0
   va_start(arguments,condition);
   error = Database_vgetInteger64(&indexHandle->databaseHandle,
                                 &n,
@@ -339,6 +341,7 @@ LOCAL void verify(IndexHandle *indexHandle,
   assert(error == ERROR_NONE);
   assert(n == value);
   va_end(arguments);
+#endif
 }
 #endif /* not NDEBUG */
 
@@ -7829,8 +7832,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_FILE
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7849,8 +7851,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_IMAGE
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7869,8 +7870,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_DIRECTORY
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7889,8 +7889,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_LINK
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7909,8 +7908,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_HARDLINK
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7929,8 +7927,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_SPECIAL
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7948,7 +7945,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM storage WHERE id=%lld;",
+                             "DELETE FROM storage WHERE id=%lld",
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -11597,6 +11594,9 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
       return error;
     }
 
+//TODO
+    // mark for prune
+
     // check if storage exists
     existsStorageFlag = Database_exists(&indexHandle->databaseHandle,
                                         "storage",
@@ -11617,6 +11617,12 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
       {
         return error;
       }
+    }
+    else
+    {
+//TODO
+      // reset mark prune
+
     }
 
     return ERROR_NONE;
