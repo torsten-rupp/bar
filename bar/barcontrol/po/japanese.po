@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-07-18 11:00+0200\n"
+"POT-Creation-Date: 2016-07-18 11:37+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -248,7 +248,7 @@ msgstr ""
 "(エラー: {1})"
 
 #: src/BARWidgets.java:544 src/BARWidgets.java:574 src/BARWidgets.java:613
-#: src/BARWidgets.java:755 src/BARWidgets.java:786 src/BARWidgets.java:825
+#: src/BARWidgets.java:754 src/BARWidgets.java:784 src/BARWidgets.java:823
 #: src/TabJobs.java:4010 src/TabJobs.java:4033 src/TabJobs.java:4065
 #: src/TabJobs.java:5773 src/TabJobs.java:5796 src/TabJobs.java:5828
 #: src/TabJobs.java:7327 src/TabJobs.java:7359 src/TabJobs.java:7400
@@ -265,20 +265,20 @@ msgstr ""
 "フォーマット''n''または''n.m''に番号を入力してください。オプションユニットは"
 "KB、MBまたはGBです。"
 
-#: src/BARWidgets.java:976
+#: src/BARWidgets.java:974
 msgid "Select path name. Ctrl+Click to select local directory."
 msgstr ""
 
-#: src/BARWidgets.java:990 src/BARWidgets.java:998 src/Dialogs.java:4340
+#: src/BARWidgets.java:988 src/BARWidgets.java:996 src/Dialogs.java:4340
 #: src/TabRestore.java:8151 src/TabRestore.java:8159
 msgid "Select path"
 msgstr "パスを選択"
 
-#: src/BARWidgets.java:1096
+#: src/BARWidgets.java:1094
 msgid "Select file name. Ctrl+Click to select local file."
 msgstr ""
 
-#: src/BARWidgets.java:1110 src/BARWidgets.java:1120
+#: src/BARWidgets.java:1108 src/BARWidgets.java:1118
 #, fuzzy
 msgid "Select file"
 msgstr "ソースファイル選択"
