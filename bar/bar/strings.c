@@ -5230,6 +5230,8 @@ char* String_toCString(ConstString string)
   return cString;
 }
 
+#ifndef NDEBUG
+
 void String_debugDone(void)
 {
   pthread_once(&debugStringInitFlag,debugStringInit);
@@ -5244,8 +5246,6 @@ void String_debugDone(void)
   }
   pthread_mutex_unlock(&debugStringLock);
 }
-
-#ifndef NDEBUG
 
 void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string)
 {
