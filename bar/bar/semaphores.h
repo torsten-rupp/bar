@@ -125,7 +125,7 @@ typedef bool SemaphoreLock;
 *              ...
 *            }
 *
-*          semaphore must be unlocked manually if break is used!
+*          semaphore must be unlocked manually if 'break' is used!
 \***********************************************************************/
 
 #define SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType,timeout) \
