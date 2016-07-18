@@ -108,11 +108,12 @@ LOCAL void debugThreadStackTraceAddThread(ThreadId threadId)
 {
   pthread_mutex_lock(&debugThreadStackTraceThreadLock);
   {
-    assert(debugThreadStackTraceThreadCount < SIZE_OF_ARRAY(debugThreadStackTraceThreads));
-
-    debugThreadStackTraceThreads[debugThreadStackTraceThreadCount].id   = threadId;
-    debugThreadStackTraceThreads[debugThreadStackTraceThreadCount].name = NULL;
-    debugThreadStackTraceThreadCount++;
+    if (debugThreadStackTraceThreadCount < SIZE_OF_ARRAY(debugThreadStackTraceThreads))
+    {
+      debugThreadStackTraceThreads[debugThreadStackTraceThreadCount].id   = threadId;
+      debugThreadStackTraceThreads[debugThreadStackTraceThreadCount].name = NULL;
+      debugThreadStackTraceThreadCount++;
+    }
   }
   pthread_mutex_unlock(&debugThreadStackTraceThreadLock);
 }
