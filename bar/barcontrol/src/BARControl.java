@@ -912,6 +912,137 @@ class Units
   {
     return getByteSize(n)+getByteShortUnit(n);
   }
+
+  /** get time string
+   * @param n time
+   * @return string
+   */
+  public static String getTime(double n)
+  {
+    if      (((long)n % (7L*24L*60L*60L)) == 0) return String.format("%d",(long)(n/(7L*24L*60L*60L)));
+    else if (((long)n % (   24L*60L*60L)) == 0) return String.format("%d",(long)(n/(   24L*60L*60L)));
+    else if (((long)n % (       60L*60L)) == 0) return String.format("%d",(long)(n/(       60L*60L)));
+    else if (((long)n % (           60L)) == 0) return String.format("%d",(long)(n/(           60L)));
+    else                                        return String.format("%d",(long)n                   );
+  }
+
+  /** get time unit
+   * @param n time
+   * @return unit
+   */
+  public static String getTimeUnit(double n)
+  {
+    if      (((long)n % (7L*24L*60L*60L)) == 0) return BARControl.tr("weeks");
+    else if (((long)n % (   24L*60L*60L)) == 0) return BARControl.tr("days");
+    else if (((long)n % (       60L*60L)) == 0) return BARControl.tr("h");
+    else if (((long)n % (           60L)) == 0) return BARControl.tr("min");
+    else                                        return BARControl.tr("s");
+  }
+
+  /** parse byte size string
+   * @param string string to parse (<n>.<n>(weeks|days|h|min|s)
+   * @return time
+   */
+  public static long parseTime(String string)
+    throws NumberFormatException
+  {
+    string = string.toUpperCase();
+
+    // try to parse with default locale
+    try
+    {
+      if       (string.endsWith("WEEK"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*7L*24L*60L*60L);
+      }
+      if       (string.endsWith("WEEKS"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-5)).doubleValue()*7L*24L*60L*60L);
+      }
+      else if (string.endsWith("DAY"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-3)).doubleValue()*24L*60L*60L);
+      }
+      else if (string.endsWith("DAYS"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*24L*60L*60L);
+      }
+      else if (string.endsWith("H"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*60L*60L);
+      }
+      else if (string.endsWith("HOUR"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*60L*60L);
+      }
+      else if (string.endsWith("HOURS"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-5)).doubleValue()*60L*60L);
+      }
+      else if (string.endsWith("M"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*60L*60L);
+      }
+      else if (string.endsWith("MIN"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-3)).doubleValue()*60L);
+      }
+      else if (string.endsWith("MINS"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-4)).doubleValue()*60L);
+      }
+      else if (string.endsWith("S"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue());
+      }
+      else if (string.endsWith("SECOND"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-6)).doubleValue());
+      }
+      else if (string.endsWith("SECONDS"))
+      {
+        return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-7)).doubleValue());
+      }
+      else
+      {
+        return (long)NumberFormat.getInstance().parse(string).doubleValue();
+      }
+    }
+    catch (ParseException exception)
+    {
+      throw new NumberFormatException(exception.getMessage());
+    }
+  }
+
+  /** parse to,e string
+   * @param string string to parse (<n>.<n>(weeks|days|h|min|s)
+   * @param defaultValue default value if number cannot be parsed
+   * @return time
+   */
+  public static long parseTime(String string, long defaultValue)
+  {
+    long n;
+
+    try
+    {
+      n = Units.parseTime(string);
+    }
+    catch (NumberFormatException exception)
+    {
+      n = defaultValue;
+    }
+
+    return n;
+  }
+
+  /** format time
+   * @param n time
+   * @return string with unit
+   */
+  public static String formatTime(long n)
+  {
+    return getTime(n)+getTimeUnit(n);
+  }
 }
 
 /** actions

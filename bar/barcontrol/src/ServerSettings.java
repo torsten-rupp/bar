@@ -399,11 +399,11 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         label = Widgets.newLabel(subComposite,BARControl.tr("Max. size")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        combo = BARWidgets.newNumber(subComposite,
-                                     BARControl.tr("Size limit for temporary files."),
-                                     maxTmpSize,
-                                     new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
-                                    );
+        combo = BARWidgets.newByteSize(subComposite,
+                                       BARControl.tr("Size limit for temporary files."),
+                                       maxTmpSize,
+                                       new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
+                                      );
         Widgets.layout(combo,0,2,TableLayoutData.WE);
       }
       row++;
@@ -433,11 +433,11 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
 /*
       label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
-      combo = BARWidgets.newNumber(composite,
-                                   BARControl.tr("Max. band width to use [bits/s]."),
-                                   maxBandWidth,
-                                   new String[]{"0","64K","128K","256K","512K","1M","2M","4M","8M","16M","32M","64M","128M","256M","512M","1G","10G"}
-                                  );
+      combo = BARWidgets.newByteSize(composite,
+                                     BARControl.tr("Max. band width to use [bits/s]."),
+                                     maxBandWidth,
+                                     new String[]{"0","64K","128K","256K","512K","1M","2M","4M","8M","16M","32M","64M","128M","256M","512M","1G","10G"}
+                                    );
       Widgets.layout(combo,row,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       row++;
 */
@@ -448,11 +448,11 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       subComposite.setLayout(new TableLayout(0.0,0.0));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-        combo = BARWidgets.newNumber(subComposite,
-                                     BARControl.tr("Min. size of files for compression."),
-                                     compressMinSize,
-                                     new String[]{"0","32","64","128","256","512","1K","4K","8K"}
-                                    );
+        combo = BARWidgets.newByteSize(subComposite,
+                                       BARControl.tr("Min. size of files for compression."),
+                                       compressMinSize,
+                                       new String[]{"0","32","64","128","256","512","1K","4K","8K"}
+                                      );
         Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
         label = Widgets.newLabel(subComposite,BARControl.tr("bytes"));
         Widgets.layout(label,0,1,TableLayoutData.W);
@@ -474,11 +474,11 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       subComposite.setLayout(new TableLayout(0.0,0.0));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-        combo = BARWidgets.newNumber(subComposite,
-                                     BARControl.tr("Size limit for continuous stored entries."),
-                                     continuousMaxSize,
-                                     new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
-                                    );
+        combo = BARWidgets.newByteSize(subComposite,
+                                       BARControl.tr("Size limit for continuous stored entries."),
+                                       continuousMaxSize,
+                                       new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
+                                      );
         Widgets.layout(combo,0,0,TableLayoutData.WE);
         label = Widgets.newLabel(subComposite,BARControl.tr("bytes"));
         Widgets.layout(label,0,1,TableLayoutData.W);
@@ -511,12 +511,12 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       subComposite.setLayout(new TableLayout(0.0,0.0));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-        combo = BARWidgets.newNumber(subComposite,
-                                     BARControl.tr("Index database keep time for not existing storages."),
-                                     indexDatabaseKeepTime,
-                                     new String[]{"0","1day","3days","7days","14days","21days","30days"}
-                                    );
-        Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+        combo = BARWidgets.newTime(subComposite,
+                                   BARControl.tr("Index database keep time for not existing storages."),
+                                   indexDatabaseKeepTime,
+                                   new String[]{"0","1day","3days","7days","14days","21days","30days"}
+                                  );
+        Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       }
       row++;
     }
