@@ -101,7 +101,8 @@ void Continuous_done(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors Continuous_initNotify(ConstString     jobUUID,
+Errors Continuous_initNotify(ConstString     name,
+                             ConstString     jobUUID,
                              ConstString     scheduleUUID,
                              const EntryList *entryList
                             );
@@ -116,7 +117,8 @@ Errors Continuous_initNotify(ConstString     jobUUID,
 * Notes  : -
 \***********************************************************************/
 
-Errors Continuous_doneNotify(ConstString jobUUID,
+Errors Continuous_doneNotify(ConstString name,
+                             ConstString jobUUID,
                              ConstString scheduleUUID
                             );
 

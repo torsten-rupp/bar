@@ -112,6 +112,7 @@ typedef struct
     INIT,
     DONE
   } type;
+  String name;
   char   jobUUID[MISC_UUID_STRING_LENGTH+1];
   char   scheduleUUID[MISC_UUID_STRING_LENGTH+1];
   EntryList entryList;
@@ -1096,8 +1097,8 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          strncpy(uuidNode->jobUUID,jobUUID,sizeof(uuidNode->jobUUID));
-          strncpy(uuidNode->scheduleUUID,scheduleUUID,sizeof(uuidNode->scheduleUUID));
+          stringCopy(uuidNode->jobUUID,jobUUID,sizeof(uuidNode->jobUUID));
+          stringCopy(uuidNode->scheduleUUID,scheduleUUID,sizeof(uuidNode->scheduleUUID));
           List_append(&notifyInfo->uuidList,uuidNode);
         }
         uuidNode->cleanFlag = FALSE;
@@ -1418,6 +1419,7 @@ LOCAL void freeInitNotifyMsg(InitNotifyMsg *initNotifyMsg, void *userData)
     case DONE:
       break;
   }
+  String_delete(initNotifyMsg->name);
 }
 
 /***********************************************************************\
@@ -1454,7 +1456,7 @@ LOCAL void continuousInitThreadCode(void)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
                     "CONTINUOUS","Start initialize watches for '%s'\n",
-                    initNotifyMsg.jobUUID
+                    String_cString(initNotifyMsg.name)
                    );
 
         // mark notifies for update or clean
@@ -2022,7 +2024,8 @@ void Continuous_done(void)
   (void)closeContinuous(&continuousDatabaseHandle);
 }
 
-Errors Continuous_initNotify(ConstString     jobUUID,
+Errors Continuous_initNotify(ConstString     name,
+                             ConstString     jobUUID,
                              ConstString     scheduleUUID,
                              const EntryList *entryList
                             )
@@ -2035,8 +2038,9 @@ Errors Continuous_initNotify(ConstString     jobUUID,
 
 //fprintf(stderr,"%s, %d: Continuous_initNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = INIT;
-  strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
-  strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
+  initNotifyMsg.name = String_duplicate(name);
+  stringCopy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
+  stringCopy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
   EntryList_init(&initNotifyMsg.entryList); EntryList_copy(entryList,&initNotifyMsg.entryList,NULL,NULL);
 
   (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
@@ -2044,7 +2048,8 @@ Errors Continuous_initNotify(ConstString     jobUUID,
   return ERROR_NONE;
 }
 
-Errors Continuous_doneNotify(ConstString jobUUID,
+Errors Continuous_doneNotify(ConstString name,
+                             ConstString jobUUID,
                              ConstString scheduleUUID
                             )
 {
@@ -2055,10 +2060,11 @@ Errors Continuous_doneNotify(ConstString jobUUID,
 
 //fprintf(stderr,"%s, %d: Continuous_doneNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = DONE;
-  strncpy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
+  initNotifyMsg.name = String_duplicate(name);
+  stringCopy(initNotifyMsg.jobUUID,String_cString(jobUUID),sizeof(initNotifyMsg.jobUUID));
   if (scheduleUUID != NULL)
   {
-    strncpy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
+    stringCopy(initNotifyMsg.scheduleUUID,String_cString(scheduleUUID),sizeof(initNotifyMsg.scheduleUUID));
   }
   else
   {
