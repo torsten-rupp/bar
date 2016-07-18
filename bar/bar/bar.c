@@ -98,6 +98,7 @@
   #define DEFAULT_TLS_SERVER_CERTIFICATE_FILE ""
   #define DEFAULT_TLS_SERVER_KEY_FILE         ""
 #endif /* HAVE_GNU_TLS */
+#define DEFAULT_MAX_SERVER_CONNECTIONS        8
 #define DEFAULT_JOBS_DIRECTORY                CONFIG_DIR "/jobs"
 #define DEFAULT_CD_DEVICE_NAME                "/dev/cdrw"
 #define DEFAULT_DVD_DEVICE_NAME               "/dev/dvd"
@@ -215,6 +216,7 @@ LOCAL const char      *serverCAFileName;
 LOCAL const char      *serverCertFileName;
 LOCAL const char      *serverKeyFileName;
 LOCAL Password        *serverPassword;
+LOCAL uint            serverMaxConnections;
 LOCAL const char      *serverJobsDirectory;
 
 LOCAL const char      *continuousDatabaseFileName;
@@ -561,6 +563,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("server-cert-file",             0,  1,1,serverCertFileName,                                                                                     "TLS (SSL) server certificate file","file name"                            ),
   CMD_OPTION_CSTRING      ("server-key-file",              0,  1,1,serverKeyFileName,                                                                                      "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPassword,                                 cmdOptionParsePassword,NULL,                           "server password (use with care!)","password"                              ),
+  CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            0,65535,NULL,                                          "max. concurrent connections to server",NULL                               ),
   CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                                                                                    "server job directory","path name"                                         ),
 
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,1,globalOptions.niceLevel,                         0,19,NULL,                                             "general nice level of processes/threads",NULL                             ),
@@ -1139,6 +1142,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("server-cert-file",             &serverCertFileName,-1                                         ),
   CONFIG_VALUE_CSTRING           ("server-key-file",              &serverKeyFileName,-1                                          ),
   CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_VALUE_INTEGER           ("server-max-connections",       &serverMaxConnections,-1,                                      0,65535,NULL),
   CONFIG_VALUE_CSTRING           ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
 
   CONFIG_VALUE_STRING            ("remote-bar-executable",        &globalOptions.remoteBARExecutable,-1                          ),
@@ -3228,6 +3232,7 @@ LOCAL Errors initAll(void)
   serverCertFileName                     = DEFAULT_TLS_SERVER_CERTIFICATE_FILE;
   serverKeyFileName                      = DEFAULT_TLS_SERVER_KEY_FILE;
   serverPassword                         = Password_new();
+  serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
   serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
 
   continuousDatabaseFileName             = NULL;
@@ -7200,6 +7205,7 @@ LOCAL Errors runDaemon(void)
                      serverCertFileName,
                      serverKeyFileName,
                      serverPassword,
+                     serverMaxConnections,
                      serverJobsDirectory,
                      indexDatabaseFileName,
                      &jobOptions

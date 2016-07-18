@@ -97,6 +97,7 @@ void Server_doneAll(void);
 *          certFileName          - file with TLS cerificate or NULL
 *          keyFileName           - file with TLS key or NULL
 *          password              - server authenfication password
+*          maxConnections        - max. number of connections or 0
 *          jobsDirectory         - jobs directory
 *          defaultJobOptions     - default job options
 *          indexDatabaseFileName - index database file name or NULL
@@ -111,6 +112,7 @@ Errors Server_run(uint             serverPort,
                   const char       *certFileName,
                   const char       *keyFileName,
                   const Password   *password,
+                  uint             maxConnections,
                   const char       *jobsDirectory,
                   const char       *indexDatabaseFileName,
                   const JobOptions *defaultJobOptions

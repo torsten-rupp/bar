@@ -532,7 +532,6 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 );
 
 /***************************** Variables *******************************/
-LOCAL ClientList            clientList;
 LOCAL AuthorizationFailList authorizationFailList;
 LOCAL const char            *serverCAFileName;
 LOCAL const char            *serverCertFileName;
@@ -2179,14 +2178,16 @@ LOCAL void jobIncludeExcludeChanged(JobNode *jobNode)
     {
       if (scheduleNode->enabled)
       {
-        Continuous_initNotify(jobNode->uuid,
+        Continuous_initNotify(jobNode->name,
+                              jobNode->uuid,
                               scheduleNode->uuid,
                               &jobNode->includeEntryList
                              );
       }
       else
       {
-        Continuous_doneNotify(jobNode->uuid,
+        Continuous_doneNotify(jobNode->name,
+                              jobNode->uuid,
                               scheduleNode->uuid
                              );
       }
@@ -2216,14 +2217,16 @@ LOCAL void jobScheduleChanged(const JobNode *jobNode)
     {
       if (scheduleNode->enabled)
       {
-        Continuous_initNotify(jobNode->uuid,
+        Continuous_initNotify(jobNode->name,
+                              jobNode->uuid,
                               scheduleNode->uuid,
                               &jobNode->includeEntryList
                              );
       }
       else
       {
-        Continuous_doneNotify(jobNode->uuid,
+        Continuous_doneNotify(jobNode->name,
+                              jobNode->uuid,
                               scheduleNode->uuid
                              );
       }
@@ -3267,17 +3270,36 @@ LOCAL void jobThreadCode(void)
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      // wait for and get next job to execute
+      // wait for and get next job to execute (Note: first check for continuous, then other types)
       do
       {
         jobNode = jobList.head;
-        while ((jobNode != NULL) && (isJobRemote(jobNode) || (jobNode->state != JOB_STATE_WAITING)))
+        while (   (jobNode != NULL)
+               && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+                   || (isJobRemote(jobNode) || (jobNode->state != JOB_STATE_WAITING))
+                  )
+              )
         {
           jobNode = jobNode->next;
         }
         if (jobNode == NULL) Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
       }
       while (!quitFlag && (jobNode == NULL));
+      if (jobNode == NULL)
+      {
+        do
+        {
+          jobNode = jobList.head;
+          while (   (jobNode != NULL)
+                 && (isJobRemote(jobNode) || (jobNode->state != JOB_STATE_WAITING))
+                )
+          {
+            jobNode = jobNode->next;
+          }
+          if (jobNode == NULL) Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
+        }
+        while (!quitFlag && (jobNode == NULL));
+      }
       if (quitFlag)
       {
         Semaphore_unlock(&jobList.lock);
@@ -17692,6 +17714,7 @@ Errors Server_run(uint             port,
                   const char       *certFileName,
                   const char       *keyFileName,
                   const Password   *password,
+                  uint             maxConnections,
                   const char       *jobsDirectory,
                   const char       *indexDatabaseFileName,
                   const JobOptions *defaultJobOptions
@@ -17710,6 +17733,7 @@ Errors Server_run(uint             port,
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
   ClientNode            *clientNode;
   SocketHandle          socketHandle;
+  ClientList            clientList;
   String                clientName;
   uint                  clientPort;
   char                  buffer[256];
@@ -17729,7 +17753,6 @@ Errors Server_run(uint             port,
   jobList.activeCount     = 0;
   List_init(&jobList);
   Semaphore_init(&serverStateLock);
-  List_init(&clientList);
   List_init(&authorizationFailList);
   serverState             = SERVER_STATE_RUNNING;
   pauseFlags.create       = FALSE;
@@ -17738,9 +17761,7 @@ Errors Server_run(uint             port,
   pauseEndDateTime        = 0LL;
   quitFlag                = FALSE;
   AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&jobList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
-  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
 
   logMessage(NULL,  // logHandle,
@@ -17935,13 +17956,14 @@ Errors Server_run(uint             port,
   sigemptyset(&signalMask);
   sigaddset(&signalMask,SIGALRM);
 
+  List_init(&clientList);
   clientName = String_new();
   while (!quitFlag)
   {
-    // wait for command
+    // wait for connect or command
     FD_ZERO(&selectSet);
-    if (serverFlag   ) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
-    if (serverTLSFlag) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
+    if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
+    if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
     nowTimestamp = Misc_getTimestamp();
     waitTimeout  = 60LL*60LL*1000000LL; // wait for network connection max. 60min [us]
     LIST_ITERATE(&clientList,clientNode)
@@ -17976,8 +17998,12 @@ Errors Server_run(uint             port,
       FD_ZERO(&selectSet);
     }
 
+fprintf(stderr,"%s, %d: ------------------------------ List_count(&clientList)=%d\n",__FILE__,__LINE__,List_count(&clientList));
     // connect new clients
-    if (serverFlag && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet))
+    if (   serverFlag
+        && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
+        && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet)
+       )
     {
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
@@ -18012,7 +18038,10 @@ Errors Server_run(uint             port,
                   );
       }
     }
-    if (serverTLSFlag && FD_ISSET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet))
+    if (   serverTLSFlag
+        && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
+        && FD_ISSET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet)
+       )
     {
       error = Network_accept(&socketHandle,
                              &serverTLSSocketHandle,
@@ -18222,6 +18251,7 @@ Errors Server_run(uint             port,
     }
   }
   String_delete(clientName);
+  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
 
   // disconnect all clients
   while (!List_isEmpty(&clientList))
