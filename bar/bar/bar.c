@@ -1555,7 +1555,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError("Syntax error in %s, line %ld: '%s'\n",
+          printError("Syntax error in '%s', line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1626,7 +1626,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError("Syntax error in %s, line %ld: '%s'\n",
+          printError("xSyntax error in '%s', line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1697,7 +1697,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError("Syntax error in %s, line %ld: '%s'\n",
+          printError("Syntax error in '%s', line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1768,7 +1768,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError("Syntax error in %s, line %ld: '%s'\n",
+          printError("Syntax error in '%s', line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1838,7 +1838,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError("Syntax error in %s, line %ld: '%s'\n",
+          printError("Syntax error in '%s', line %ld: '%s'\n",
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -7058,7 +7058,7 @@ LOCAL bool readFromJob(ConstString fileName)
     }
     else
     {
-      printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+      printError("Syntax error in '%s', line %ld: '%s' - skipped\n",
                  String_cString(fileName),
                  lineNb,
                  String_cString(line)
