@@ -21,6 +21,7 @@
 #include "global.h"
 
 /****************** Conditional compilation switches *******************/
+#define _NO_STRING_EXISTS_CHECK   // disable string exists checks (performance)
 
 /***************************** Constants *******************************/
 
@@ -165,7 +166,22 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
   #define STRING_CHECKSUM(length,maxLength,data) \
     ((ulong)((length)^(ulong)(maxLength)^(ulong)(data)))
 
+  #define STRING_CHECKSUM(length,maxLength,data) \
+    ((ulong)((length)^(ulong)(maxLength)^(ulong)(data)))
+
+  /***********************************************************************\
+  * Name   : String_debugCheckValid
+  * Purpose: check if string is valod
+  * Input  : __fileName__ - file name
+  *          __lineNb__   - line number
+  *          string       - string
+  * Output : -
+  * Return : -
+  * Notes  : HALT if string is invalid
+  \***********************************************************************/
+
   void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string);
+
   #define STRING_CHECK_VALID(string) \
     do \
     { \
@@ -964,17 +980,18 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
 * Input  : string        - string
 *          index         - start index in string
 *          pattern       - pattern
-*          matchedString - string matching regular expression (can be NULL)
-*          ...           - optional matching strings of sub-patterns, last
-*                          value have to be NULL!
-* Output : nextIndex - index of next character in string not matched (can
-*                      be NULL)
+* Output : nextIndex     - index of next character in string not matched
+*                          (can be NULL)
+*          matchedString - string matching regular expression (can be
+*                          NULL)
+*          ...           - optional matching strings of sub-patterns,
+*                          last value have to be NULL!
 * Return : TRUE if pattern is matching, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool String_match(ConstString string, ulong index, ConstString pattern, long *nextIndex, String matchString, ...);
-bool String_matchCString(ConstString string, ulong index, const char *pattern, long *nextIndex, String matchString, ...);
+bool String_match(ConstString string, ulong index, ConstString pattern, long *nextIndex, String matchedString, ...);
+bool String_matchCString(ConstString string, ulong index, const char *pattern, long *nextIndex, String matchedString, ...);
 
 /***********************************************************************\
 * Name   : String_toInteger, String_toInteger64, String_toDouble,

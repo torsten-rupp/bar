@@ -46,7 +46,7 @@
 #define _FILL_MEMORY
 
 #ifndef NDEBUG
-  #define DEBUG_LIST_HASH_SIZE   4093
+  #define DEBUG_LIST_HASH_SIZE   65537
   // max. string check: print warning if to many strings allocated/strings become to long
   #define MAX_STRINGS_CHECK
   #define WARN_MAX_STRINGS       2000
@@ -2119,14 +2119,17 @@ LOCAL bool matchString(ConstString  string,
   assert(string->data != NULL);
   assert(pattern != NULL);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (index < string->length)
   {
+fprintf(stderr,"%s, %d: pattern=%s\n",__FILE__,__LINE__,pattern);
     // compile pattern
     if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
     {
       return FALSE;
     }
-
+return FALSE;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // match
     matchFlag = (regexec(&regex,
                          &string->data[index],
@@ -2136,6 +2139,7 @@ LOCAL bool matchString(ConstString  string,
                         ) == 0
                 );
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // get next index
     if (matchFlag)
     {
@@ -2146,6 +2150,7 @@ LOCAL bool matchString(ConstString  string,
       }
     }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // free resources
     regfree(&regex);
   }
@@ -2153,6 +2158,7 @@ LOCAL bool matchString(ConstString  string,
   {
     matchFlag = FALSE;
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return matchFlag;
 }
@@ -2165,10 +2171,10 @@ LOCAL bool matchString(ConstString  string,
 *          pattern           - regualar expression pattern
 *          nextIndex         - variable for index of next not matched
 *                              character (can be NULL)
-*          matchedString     - matched string (can be NULL)
-*          matchedSubStrings - matched sub-strings
+*          matchedString     - matched string variable (can be NULL)
+*          matchedSubStrings - matched sub-string variables
 * Output : nextIndex         - index of next not matched character
-*          matchedString     - matched string (can be NULL)
+*          matchedString     - matched string
 *          matchedSubStrings - matched sub-strings
 * Return : TRUE if string matched, FALSE otherwise
 * Notes  : -
@@ -4935,14 +4941,17 @@ bool String_matchCString(ConstString string, ulong index, const char *pattern, l
   va_list arguments;
   bool    matchFlag;
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (matchedString != NULL)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     va_start(arguments,matchedString);
     matchFlag = vmatchString(string,index,pattern,nextIndex,matchedString,arguments);
     va_end(arguments);
   }
   else
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     matchFlag = matchString(string,index,pattern,nextIndex);
   }
 
@@ -5221,136 +5230,6 @@ char* String_toCString(ConstString string)
   return cString;
 }
 
-#ifndef NDEBUG
-
-void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string)
-{
-  DebugStringNode *debugStringNode;
-
-  if ((string != NULL) && (string != STRING_EMPTY))
-  {
-    ulong checkSum;
-
-    checkSum = STRING_CHECKSUM(string->length,string->maxLength,string->data);
-    if (checkSum != string->checkSum)
-    {
-      if (STRING_IS_DYNAMIC(string))
-      {
-        pthread_once(&debugStringInitFlag,debugStringInit);
-
-        pthread_mutex_lock(&debugStringLock);
-        {
-          debugStringNode = debugFindString(&debugStringAllocList,string);
-          if (debugStringNode != NULL)
-          {
-            #ifdef HAVE_BACKTRACE
-              debugDumpCurrentStackTrace(stderr,0,0);
-            #endif /* HAVE_BACKTRACE */
-            HALT_INTERNAL_ERROR_AT(__fileName__,
-                                   __lineNb__,
-                                   "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) allocated at %s, %lu (expected 0x%08lx)!",
-                                   string->checkSum,
-                                   string,
-                                   string->length,
-                                   (ulong)string->maxLength,
-                                   debugStringNode->allocFileName,
-                                   debugStringNode->allocLineNb,
-                                   checkSum
-                                  );
-          }
-          else
-          {
-            debugStringNode = debugFindString(&debugStringFreeList,string);
-            if (debugStringNode != NULL)
-            {
-              fprintf(stderr,"DEBUG WARNING: string %p is not allocated at %s, %lu!\n",
-                      string,
-                      __fileName__,
-                      __lineNb__
-                     );
-            }
-            else
-            {
-              fprintf(stderr,"DEBUG WARNING: string %p is not allocated and not known at %s, %lu!\n",
-                      string,
-                      __fileName__,
-                      __lineNb__
-                     );
-            }
-            #ifdef HAVE_BACKTRACE
-              debugDumpCurrentStackTrace(stderr,0,0);
-            #endif /* HAVE_BACKTRACE */
-            HALT_INTERNAL_ERROR_AT(__fileName__,
-                                   __lineNb__,
-                                   "Invalid checksum 0x%08lx in unknown string %p, length %lu (max. %lu) (expected 0x%08lx)!",
-                                   string->checkSum,
-                                   string,
-                                   string->length,
-                                   (ulong)string->maxLength,
-                                   checkSum
-                                  );
-          }
-        }
-        pthread_mutex_unlock(&debugStringLock);
-      }
-      else
-      {
-        #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,0,0);
-        #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR_AT(__fileName__,
-                               __lineNb__,
-                               "Invalid checksum 0x%08lx in static string %p, length %lu (max. %lu) (expected 0x%08lx)!",
-                               string->checkSum,
-                               string,
-                               string->length,
-                               (ulong)string->maxLength,
-                               checkSum
-                              );
-      }
-    }
-
-    if (STRING_IS_DYNAMIC(string))
-    {
-      pthread_once(&debugStringInitFlag,debugStringInit);
-
-      pthread_mutex_lock(&debugStringLock);
-      {
-        debugStringNode = debugFindString(&debugStringAllocList,string);
-        if (debugStringNode == NULL)
-        {
-          debugStringNode = debugFindString(&debugStringFreeList,string);
-
-          #ifdef HAVE_BACKTRACE
-            debugDumpCurrentStackTrace(stderr,0,0);
-          #endif /* HAVE_BACKTRACE */
-          if (debugStringNode != NULL)
-          {
-            HALT_INTERNAL_ERROR_AT(__fileName__,
-                                   __lineNb__,
-                                   "String %p allocated at %s, %lu is already freed at %s, %lu!",
-                                   string,
-                                   debugStringNode->allocFileName,
-                                   debugStringNode->allocLineNb,
-                                   debugStringNode->deleteFileName,
-                                   debugStringNode->deleteLineNb
-                                  );
-          }
-          else
-          {
-            HALT_INTERNAL_ERROR_AT(__fileName__,
-                                   __lineNb__,
-                                   "String %p is not allocated and not known!",
-                                   string
-                                  );
-          }
-        }
-      }
-      pthread_mutex_unlock(&debugStringLock);
-    }
-  }
-}
-
 void String_debugDone(void)
 {
   pthread_once(&debugStringInitFlag,debugStringInit);
@@ -5364,6 +5243,153 @@ void String_debugDone(void)
     List_done(&debugStringAllocList,NULL,NULL);
   }
   pthread_mutex_unlock(&debugStringLock);
+}
+
+#ifndef NDEBUG
+
+void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string)
+{
+  DebugStringNode *debugStringNode;
+
+  if ((string != NULL) && (string != STRING_EMPTY))
+  {
+    ulong checkSum;
+
+    checkSum = STRING_CHECKSUM(string->length,string->maxLength,string->data);
+    if (checkSum != string->checkSum)
+    {
+      #ifndef NO_STRING_EXISTS_CHECK
+        if (STRING_IS_DYNAMIC(string))
+        {
+          pthread_once(&debugStringInitFlag,debugStringInit);
+
+          pthread_mutex_lock(&debugStringLock);
+          {
+            debugStringNode = debugFindString(&debugStringAllocList,string);
+            if (debugStringNode != NULL)
+            {
+              #ifdef HAVE_BACKTRACE
+                debugDumpCurrentStackTrace(stderr,0,0);
+              #endif /* HAVE_BACKTRACE */
+              HALT_INTERNAL_ERROR_AT(__fileName__,
+                                     __lineNb__,
+                                     "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) allocated at %s, %lu (expected 0x%08lx)!",
+                                     string->checkSum,
+                                     string,
+                                     string->length,
+                                     (ulong)string->maxLength,
+                                     debugStringNode->allocFileName,
+                                     debugStringNode->allocLineNb,
+                                     checkSum
+                                    );
+            }
+            else
+            {
+              debugStringNode = debugFindString(&debugStringFreeList,string);
+              if (debugStringNode != NULL)
+              {
+                fprintf(stderr,"DEBUG WARNING: string %p is not allocated at %s, %lu!\n",
+                        string,
+                        __fileName__,
+                        __lineNb__
+                       );
+              }
+              else
+              {
+                fprintf(stderr,"DEBUG WARNING: string %p is not allocated and not known at %s, %lu!\n",
+                        string,
+                        __fileName__,
+                        __lineNb__
+                       );
+              }
+              #ifdef HAVE_BACKTRACE
+                debugDumpCurrentStackTrace(stderr,0,0);
+              #endif /* HAVE_BACKTRACE */
+              HALT_INTERNAL_ERROR_AT(__fileName__,
+                                     __lineNb__,
+                                     "Invalid checksum 0x%08lx in unknown string %p, length %lu (max. %lu) (expected 0x%08lx)!",
+                                     string->checkSum,
+                                     string,
+                                     string->length,
+                                     (ulong)string->maxLength,
+                                     checkSum
+                                    );
+            }
+          }
+          pthread_mutex_unlock(&debugStringLock);
+        }
+        else
+        {
+          #ifdef HAVE_BACKTRACE
+            debugDumpCurrentStackTrace(stderr,0,0);
+          #endif /* HAVE_BACKTRACE */
+          HALT_INTERNAL_ERROR_AT(__fileName__,
+                                 __lineNb__,
+                                 "Invalid checksum 0x%08lx in static string %p, length %lu (max. %lu) (expected 0x%08lx)!",
+                                 string->checkSum,
+                                 string,
+                                 string->length,
+                                 (ulong)string->maxLength,
+                                 checkSum
+                                );
+        }
+      #else /* NO_STRING_EXISTS_CHECK */
+        #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,0,0);
+        #endif /* HAVE_BACKTRACE */
+        HALT_INTERNAL_ERROR_AT(__fileName__,
+                               __lineNb__,
+                               "Invalid checksum 0x%08lx in static string %p, length %lu (max. %lu) (expected 0x%08lx)!",
+                               string->checkSum,
+                               string,
+                               string->length,
+                               (ulong)string->maxLength,
+                               checkSum
+                              );
+      #endif /* not NO_STRING_EXISTS_CHECK */
+    }
+
+    #ifndef NO_STRING_EXISTS_CHECK
+      if (STRING_IS_DYNAMIC(string))
+      {
+        pthread_once(&debugStringInitFlag,debugStringInit);
+
+        pthread_mutex_lock(&debugStringLock);
+        {
+          debugStringNode = debugFindString(&debugStringAllocList,string);
+          if (debugStringNode == NULL)
+          {
+            debugStringNode = debugFindString(&debugStringFreeList,string);
+
+            #ifdef HAVE_BACKTRACE
+              debugDumpCurrentStackTrace(stderr,0,0);
+            #endif /* HAVE_BACKTRACE */
+            if (debugStringNode != NULL)
+            {
+              HALT_INTERNAL_ERROR_AT(__fileName__,
+                                     __lineNb__,
+                                     "String %p allocated at %s, %lu is already freed at %s, %lu!",
+                                     string,
+                                     debugStringNode->allocFileName,
+                                     debugStringNode->allocLineNb,
+                                     debugStringNode->deleteFileName,
+                                     debugStringNode->deleteLineNb
+                                    );
+            }
+            else
+            {
+              HALT_INTERNAL_ERROR_AT(__fileName__,
+                                     __lineNb__,
+                                     "String %p is not allocated and not known!",
+                                     string
+                                    );
+            }
+          }
+        }
+        pthread_mutex_unlock(&debugStringLock);
+      }
+    #endif /* not NO_STRING_EXISTS_CHECK */
+  }
 }
 
 void String_debugDumpInfo(FILE                   *handle,
