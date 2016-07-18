@@ -657,6 +657,7 @@ CREATE TABLE IF NOT EXISTS fileEntries(
 
   // updated by triggers
 );
+CREATE INDEX ON fileEntries (storageId);
 CREATE INDEX ON fileEntries (entryId);
 
 // insert/delete/update triggeres
@@ -734,6 +735,7 @@ CREATE TABLE IF NOT EXISTS imageEntries(
   blockOffset     INTEGER,                 // block offset [blocks]
   blockCount      INTEGER                  // block count [blocks]
 );
+CREATE INDEX ON imageEntries (storageId);
 CREATE INDEX ON imageEntries (entryId);
 
 // insert/delete/update triggeres
@@ -796,8 +798,8 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest entries
   totalEntrySizeNewest  INTEGER DEFAULT 0   // total size of newest entries [bytes]
 );
-CREATE INDEX ON directoryEntries (entryId);
 CREATE INDEX ON directoryEntries (storageId,name);
+CREATE INDEX ON directoryEntries (entryId);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON directoryEntries
@@ -873,6 +875,7 @@ CREATE TABLE IF NOT EXISTS linkEntries(
   entryId         INTEGER NOT NULL REFERENCES entries(id),
   destinationName TEXT
 );
+CREATE INDEX ON linkEntries (storageId);
 CREATE INDEX ON linkEntries (entryId);
 
 // insert/delete/update triggeres
@@ -928,6 +931,7 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
   fragmentOffset  INTEGER,
   fragmentSize    INTEGER
 );
+CREATE INDEX ON hardlinkEntries (storageId);
 CREATE INDEX ON hardlinkEntries (entryId);
 
 // insert/delete/update triggeres
@@ -992,6 +996,7 @@ CREATE TABLE IF NOT EXISTS specialEntries(
   major           INTEGER,
   minor           INTEGER
 );
+CREATE INDEX ON specialEntries (storageId);
 CREATE INDEX ON specialEntries (entryId);
 
 // insert/delete/update triggeres
