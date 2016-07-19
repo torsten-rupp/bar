@@ -21,7 +21,6 @@
 #include "global.h"
 
 /****************** Conditional compilation switches *******************/
-#define _NO_STRING_EXISTS_CHECK   // disable string exists checks (performance)
 
 /***************************** Constants *******************************/
 
