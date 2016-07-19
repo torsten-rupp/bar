@@ -7143,12 +7143,12 @@ Dprintf.dprintf("remove");
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
-          String storagePath = (String)((Object[])userData)[0];
+          final String storagePath = (String)((Object[])userData)[0];
 
           final int[] n = new int[]{0};
           busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
 
-          String[] errorMessage = new String[1];
+          final String[] errorMessage = new String[1];
           int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",
                                                                    new File(storagePath,"*").getPath()
                                                                   ),
@@ -7193,7 +7193,14 @@ Dprintf.dprintf("remove");
           }
           else
           {
-            Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path!\n\n''{0}''\n\n(error: {1})",storagePath,errorMessage[0]));
+            display.syncExec(new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path!\n\n''{0}''\n\n(error: {1})",storagePath,errorMessage[0]));
+              }
+            });
           }
         }
       };
