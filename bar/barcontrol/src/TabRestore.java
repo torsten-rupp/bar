@@ -3565,7 +3565,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
     /** trigger update of entry list
      * @param entryName new entry name or null
      * @param type type or *
-     * @param newestOnly flag for newest entries only or null
+     * @param newestOnly flag for newest entries only
      */
     public void triggerUpdate(String entryName, String type, boolean newestOnly)
     {
@@ -4142,11 +4142,16 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
   private Shell                        widgetStorageTableToolTip = null;
 //TODO: NYI
   private Menu                         widgetStorageTableAssignToMenu;
+  private Text                         widgetStorageFilter;
+  private Combo                        widgetStorageStateFilter;
   private WidgetEvent                  checkedStorageEvent = new WidgetEvent();     // triggered when checked-state of some storage changed
 
   private Label                        widgetEntryTableTitle;
   private Table                        widgetEntryTable;
   private Shell                        widgetEntryTableToolTip = null;
+  private Text                         widgetEntryFilter;
+  private Combo                        widgetEntryTypeFilter;
+  private Button                       widgetEntryNewestOnly;
   private WidgetEvent                  checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
 
   private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
@@ -5751,11 +5756,11 @@ Dprintf.dprintf("");
         label = Widgets.newLabel(composite,BARControl.tr("Filter")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        text = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
-        text.setToolTipText(BARControl.tr("Enter filter key words for storage list."));
-        text.setMessage(BARControl.tr("Enter text to filter storage list"));
-        Widgets.layout(text,0,2,TableLayoutData.WE);
-        text.addSelectionListener(new SelectionListener()
+        widgetStorageFilter = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        widgetStorageFilter.setToolTipText(BARControl.tr("Enter filter key words for storage list."));
+        widgetStorageFilter.setMessage(BARControl.tr("Enter text to filter storage list"));
+        Widgets.layout(widgetStorageFilter,0,2,TableLayoutData.WE);
+        widgetStorageFilter.addSelectionListener(new SelectionListener()
         {
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5770,7 +5775,7 @@ Dprintf.dprintf("");
             updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
           }
         });
-        text.addKeyListener(new KeyListener()
+        widgetStorageFilter.addKeyListener(new KeyListener()
         {
           @Override
           public void keyPressed(KeyEvent keyEvent)
@@ -5784,7 +5789,7 @@ Dprintf.dprintf("");
           }
         });
 //???
-        text.addFocusListener(new FocusListener()
+        widgetStorageFilter.addFocusListener(new FocusListener()
         {
           @Override
           public void focusGained(FocusEvent focusEvent)
@@ -5802,12 +5807,12 @@ Dprintf.dprintf("");
         label = Widgets.newLabel(composite,BARControl.tr("State")+":");
         Widgets.layout(label,0,3,TableLayoutData.W);
 
-        combo = Widgets.newOptionMenu(composite);
-        combo.setToolTipText(BARControl.tr("Storage states filter."));
-        combo.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested","not assigned"});
-        combo.setText("*");
-        Widgets.layout(combo,0,4,TableLayoutData.W);
-        combo.addSelectionListener(new SelectionListener()
+        widgetStorageStateFilter = Widgets.newOptionMenu(composite);
+        widgetStorageStateFilter.setToolTipText(BARControl.tr("Storage states filter."));
+        widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested","not assigned"});
+        widgetStorageStateFilter.setText("*");
+        Widgets.layout(widgetStorageStateFilter,0,4,TableLayoutData.W);
+        widgetStorageStateFilter.addSelectionListener(new SelectionListener()
         {
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6227,11 +6232,11 @@ Dprintf.dprintf("remove");
         label = Widgets.newLabel(composite,BARControl.tr("Filter")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        text = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
-        text.setToolTipText(BARControl.tr("Enter filter key words for entry list."));
-        text.setMessage(BARControl.tr("Enter text to filter entry list"));
-        Widgets.layout(text,0,2,TableLayoutData.WE);
-        text.addSelectionListener(new SelectionListener()
+        widgetEntryFilter = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        widgetEntryFilter.setToolTipText(BARControl.tr("Enter filter key words for entry list."));
+        widgetEntryFilter.setMessage(BARControl.tr("Enter text to filter entry list"));
+        Widgets.layout(widgetEntryFilter,0,2,TableLayoutData.WE);
+        widgetEntryFilter.addSelectionListener(new SelectionListener()
         {
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6246,7 +6251,7 @@ Dprintf.dprintf("remove");
             updateEntryTableThread.triggerUpdateEntryName(widget.getText());
           }
         });
-        text.addKeyListener(new KeyListener()
+        widgetEntryFilter.addKeyListener(new KeyListener()
         {
           @Override
           public void keyPressed(KeyEvent keyEvent)
@@ -6260,7 +6265,7 @@ Dprintf.dprintf("remove");
           }
         });
 //???
-        text.addFocusListener(new FocusListener()
+        widgetEntryFilter.addFocusListener(new FocusListener()
         {
           @Override
           public void focusGained(FocusEvent focusEvent)
@@ -6274,21 +6279,21 @@ Dprintf.dprintf("remove");
           }
         });
 
-        combo = Widgets.newOptionMenu(composite);
-        combo.setToolTipText(BARControl.tr("Entry type."));
-        combo.setItems(new String[]{"*","files","directories","links","hardlinks","special"});
-        Widgets.setOptionMenuItems(combo,new Object[]{"*",          EntryTypes.ANY,
-                                                      "files",      EntryTypes.FILE,
-                                                      "images",     EntryTypes.IMAGE,
-                                                      "directories",EntryTypes.DIRECTORY,
-                                                      "links",      EntryTypes.LINK,
-                                                      "hardlinks",  EntryTypes.HARDLINK,
-                                                      "special",    EntryTypes.SPECIAL
-                                                     }
+        widgetEntryTypeFilter = Widgets.newOptionMenu(composite);
+        widgetEntryTypeFilter.setToolTipText(BARControl.tr("Entry type."));
+        widgetEntryTypeFilter.setItems(new String[]{"*","files","directories","links","hardlinks","special"});
+        Widgets.setOptionMenuItems(widgetEntryTypeFilter,new Object[]{"*",          EntryTypes.ANY,
+                                                                      "files",      EntryTypes.FILE,
+                                                                      "images",     EntryTypes.IMAGE,
+                                                                      "directories",EntryTypes.DIRECTORY,
+                                                                      "links",      EntryTypes.LINK,
+                                                                      "hardlinks",  EntryTypes.HARDLINK,
+                                                                      "special",    EntryTypes.SPECIAL
+                                                                     }
                                   );
-        Widgets.setSelectedOptionMenuItem(combo,EntryTypes.ANY);
-        Widgets.layout(combo,0,3,TableLayoutData.W);
-        combo.addSelectionListener(new SelectionListener()
+        Widgets.setSelectedOptionMenuItem(widgetEntryTypeFilter,EntryTypes.ANY);
+        Widgets.layout(widgetEntryTypeFilter,0,3,TableLayoutData.W);
+        widgetEntryTypeFilter.addSelectionListener(new SelectionListener()
         {
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6307,10 +6312,10 @@ Dprintf.dprintf("remove");
           }
         });
 
-        button = Widgets.newCheckbox(composite,BARControl.tr("newest only"));
-        button.setToolTipText(BARControl.tr("When this checkbox is enabled, only show newest entry instances and hide all older entry instances."));
-        Widgets.layout(button,0,4,TableLayoutData.W);
-        button.addSelectionListener(new SelectionListener()
+        widgetEntryNewestOnly = Widgets.newCheckbox(composite,BARControl.tr("newest only"));
+        widgetEntryNewestOnly.setToolTipText(BARControl.tr("When this checkbox is enabled, only show newest entry instances and hide all older entry instances."));
+        Widgets.layout(widgetEntryNewestOnly,0,4,TableLayoutData.W);
+        widgetEntryNewestOnly.addSelectionListener(new SelectionListener()
         {
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -6362,9 +6367,15 @@ Dprintf.dprintf("remove");
     {
       public void handleEvent(Event event)
       {
-        updateStorageTreeTableThread.triggerUpdate();
+        widgetStorageFilter.setText("");
+        widgetStorageStateFilter.select(0);
+        updateStorageTreeTableThread.triggerUpdate("",INDEX_STATE_SET_ALL,EntityStates.ANY);
         setAllCheckedStorage(false);
-        updateEntryTableThread.triggerUpdate();
+
+        widgetEntryFilter.setText("");
+        Widgets.setSelectedOptionMenuItem(widgetEntryTypeFilter,EntryTypes.ANY);
+        widgetEntryNewestOnly.setSelection(false);
+        updateEntryTableThread.triggerUpdate("","*",false);
         setAllCheckedEntries(false);
       }
     });
@@ -7138,7 +7149,9 @@ Dprintf.dprintf("remove");
           busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
 
           String[] errorMessage = new String[1];
-          int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",new File(storagePath,"*").getPath()),
+          int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",
+                                                                   new File(storagePath,"*").getPath()
+                                                                  ),
                                                0,  // debugLevel
                                                errorMessage,
                                                new CommandResultHandler()
