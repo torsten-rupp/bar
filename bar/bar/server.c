@@ -72,12 +72,14 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY      64      // max. length of history of authorization fail clients
 
 // sleep times [s]
-#define SLEEP_TIME_REMOTE_THREAD            ( 5*60)
+//TODO
+//#define SLEEP_TIME_REMOTE_THREAD            ( 5*60)
+#define SLEEP_TIME_REMOTE_THREAD            ( 20)
 #define SLEEP_TIME_SCHEDULER_THREAD         ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD (10*60)
-#define SLEEP_TIME_PURGE_EXPIRED_THREAD     ( 5*60)
+#define SLEEP_TIME_PURGE_EXPIRED_THREAD     (10*60)
 
 /***************************** Datatypes *******************************/
 
@@ -1535,12 +1537,10 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    // request volume
+    // request volume, set job state
+    assert(jobNode->state == JOB_STATE_RUNNING);
     jobNode->requestedVolumeNumber = volumeNumber;
     String_format(String_clear(jobNode->runningInfo.message),"Please insert DVD #%d",volumeNumber);
-
-    // set job state
-    assert(jobNode->state == JOB_STATE_RUNNING);
     jobNode->state = JOB_STATE_REQUEST_VOLUME;
 
     // wait until volume is available or job is aborted
@@ -1564,6 +1564,9 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
       }
     }
     while (storageRequestResult == STORAGE_REQUEST_VOLUME_NONE);
+
+    // clear request volume, reset job state
+    String_clear(jobNode->runningInfo.message);
     jobNode->state = JOB_STATE_RUNNING;
   }
 
@@ -3901,6 +3904,7 @@ LOCAL void remoteConnectThreadCode(void)
 
   while (!quitFlag)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // get job UUIDs
     getAllJobUUIDs(&jobUUIDList);
 
@@ -3927,6 +3931,7 @@ LOCAL void remoteConnectThreadCode(void)
       // try to connect
       if (tryConnectFlag)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         (void)Remote_connect(&remoteHost);
       }
     }
@@ -3965,6 +3970,7 @@ LOCAL void remoteConnectThreadCode(void)
     assert(List_isEmpty(&newRemoteJobInfoList));
 
     // get remote job info
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     LIST_ITERATE(&remoteJobInfoList,remoteJobInfoNode)
     {
       // get job info
@@ -3975,7 +3981,9 @@ LOCAL void remoteConnectThreadCode(void)
     }
 
     // sleep
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     delayRemoteConnectThread();
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   // free resources
@@ -17998,7 +18006,6 @@ Errors Server_run(uint             port,
       FD_ZERO(&selectSet);
     }
 
-fprintf(stderr,"%s, %d: ------------------------------ List_count(&clientList)=%d\n",__FILE__,__LINE__,List_count(&clientList));
     // connect new clients
     if (   serverFlag
         && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
