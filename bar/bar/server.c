@@ -535,6 +535,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
 /***************************** Variables *******************************/
 LOCAL AuthorizationFailList authorizationFailList;
+LOCAL uint                  serverPort;
 LOCAL const char            *serverCAFileName;
 LOCAL const char            *serverCertFileName;
 LOCAL const char            *serverKeyFileName;
@@ -1706,7 +1707,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
     Misc_getUUID(jobNode->uuid);
   }
   jobNode->name                           = File_getFileBaseName(String_new(),fileName);
-  Remote_initHost(&jobNode->remoteHost);
+  Remote_initHost(&jobNode->remoteHost,serverPort);
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
   jobNode->includeFileCommand             = String_new();
@@ -3256,7 +3257,7 @@ LOCAL void jobThreadCode(void)
   storageName        = String_new();
   directory          = String_new();
   hostName           = String_new();
-  Remote_initHost(&remoteHost);
+  Remote_initHost(&remoteHost,serverPort);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   List_init(&mountList);
@@ -3900,7 +3901,7 @@ LOCAL void remoteConnectThreadCode(void)
   StringList_init(&jobUUIDList);
   List_init(&remoteJobInfoList);
   List_init(&newRemoteJobInfoList);
-  Remote_initHost(&remoteHost);
+  Remote_initHost(&remoteHost,serverPort);
 
   while (!quitFlag)
   {
@@ -17751,6 +17752,7 @@ Errors Server_run(uint             port,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
+  serverPort              = port;
   serverCAFileName        = caFileName;
   serverCertFileName      = certFileName;
   serverKeyFileName       = keyFileName;
