@@ -50,13 +50,14 @@ typedef struct
 /***********************************************************************\
 * Name   : Remote_initHost
 * Purpose: init remote host info
-* Input  : remoteHost - remote host variable
-* Output : -
+* Input  : remoteHost  - remote host variable
+*          defaultPort - default port
+* Output : remoteHost - remote host
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Remote_initHost(RemoteHost *remoteHost);
+void Remote_initHost(RemoteHost *remoteHost, uint defaultPort);
 
 /***********************************************************************\
 * Name   : Remote_doneHost
@@ -163,7 +164,21 @@ Errors Remote_executeCommand(const RemoteHost *remoteHost,
 /***********************************************************************\
 * Name   : Remote_jobStart
 * Purpose: start job on remote host
-* Input  : remoteHost - remote host
+* Input  : remoteHost  - remote host
+*          jobUUID
+*          scheduleUUID
+*          storageName
+*          includeEntryList
+*          excludePatternList
+*          mountList
+*          compressExcludePatternList
+*          deltaSourceList
+*          jobOptions
+*          archiveType
+*          scheduleTitle
+*          scheduleCustomText
+*          storageRequestVolumeFunction
+*          storageRequestVolumeUserData
 * Output : -
 * Return : -
 * Notes  : -

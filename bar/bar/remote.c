@@ -44,6 +44,7 @@
 
 /***************************** Datatypes *******************************/
 
+// list with remote servers
 typedef struct RemoteServerNode
 {
   LIST_NODE_HEADER(struct RemoteServerNode);
@@ -60,7 +61,6 @@ typedef struct RemoteServerNode
   SocketHandle socketHandle;
 } RemoteServerNode;
 
-// list with remote servers
 typedef struct
 {
   LIST_HEADER(RemoteServerNode);
@@ -258,12 +258,12 @@ LOCAL Errors Remote_setJobOptionPassword(const RemoteHost *remoteHost, ConstStri
 
 // ----------------------------------------------------------------------
 
-void Remote_initHost(RemoteHost *remoteHost)
+void Remote_initHost(RemoteHost *remoteHost, uint defaultPort)
 {
   assert(remoteHost != NULL);
 
   remoteHost->name     = String_new();
-  remoteHost->port     = 0;
+  remoteHost->port     = defaultPort;
   remoteHost->forceSSL = FALSE;
 
   DEBUG_ADD_RESOURCE_TRACE(remoteHost,sizeof(RemoteHost));
@@ -293,7 +293,7 @@ void Remote_duplicateHost(RemoteHost *toRemoteHost, const RemoteHost *fromRemote
   assert(toRemoteHost != NULL);
   assert(fromRemoteHost != NULL);
 
-  Remote_initHost(toRemoteHost);
+  Remote_initHost(toRemoteHost,0);
   Remote_copyHost(toRemoteHost,fromRemoteHost);
 }
 
@@ -307,6 +307,9 @@ Errors Remote_serverConnect(SocketHandle *socketHandle,
   Errors error;
 
   assert(socketHandle != NULL);
+fprintf(stderr,"%s, %d: %s:%d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
 
   // init variables
   line = String_new();
@@ -329,6 +332,7 @@ Errors Remote_serverConnect(SocketHandle *socketHandle,
     String_delete(line);
     return error;
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // authorize
   error = Network_readLine(socketHandle,line,30LL*1000);
@@ -366,11 +370,15 @@ Errors Remote_connect(const RemoteHost *remoteHost)
   // init variables
   line = String_new();
 
+//TODO
+  // get default ports
+
   // connect to remote host
   error = Network_connect(&socketHandle,
                           remoteHost->forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
                           remoteHost->name,
                           remoteHost->port,
+//TODO: SSL
                           NULL,  // loginName
                           NULL,  // password
                           NULL,  // sshPublicKey
@@ -395,7 +403,7 @@ sslFlag = TRUE;
     String_delete(line);
     return error;
   }
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx%s\n",__FILE__,__LINE__,String_cString(line));
 
   // add remote server
   remoteServerNode = LIST_NEW_NODE(RemoteServerNode);
@@ -445,10 +453,10 @@ bool Remote_isConnected(const RemoteHost *remoteHost)
 
 //TODO
 LOCAL Errors Remote_vexecuteCommand(const RemoteHost *remoteHost,
-                              StringMap  resultMap,
-                              const char *format,
-                              va_list    arguments
-                             )
+                                    StringMap        resultMap,
+                                    const char       *format,
+                                    va_list          arguments
+                                   )
 {
   String           line;
   SemaphoreLock    semaphoreLock;
@@ -619,6 +627,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   error = ERROR_NONE;
 
   // create temporary job
+fprintf(stderr,"%s, %d: Remote_executeCommand\n",__FILE__,__LINE__);
   error = Remote_executeCommand(remoteHost,NULL,"JOB_NEW uuid=%S name=%'S master=%'S",jobUUID,jobUUID/*TODO name*/,Network_getHostName(s));
   if (error != ERROR_NONE)
   {
