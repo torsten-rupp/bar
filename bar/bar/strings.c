@@ -2119,17 +2119,14 @@ LOCAL bool matchString(ConstString  string,
   assert(string->data != NULL);
   assert(pattern != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (index < string->length)
   {
-fprintf(stderr,"%s, %d: pattern=%s\n",__FILE__,__LINE__,pattern);
     // compile pattern
     if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
     {
       return FALSE;
     }
-return FALSE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
     // match
     matchFlag = (regexec(&regex,
                          &string->data[index],
@@ -2139,7 +2136,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                         ) == 0
                 );
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // get next index
     if (matchFlag)
     {
@@ -2150,7 +2146,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
     }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // free resources
     regfree(&regex);
   }
@@ -2158,7 +2153,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     matchFlag = FALSE;
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return matchFlag;
 }
@@ -4941,17 +4935,14 @@ bool String_matchCString(ConstString string, ulong index, const char *pattern, l
   va_list arguments;
   bool    matchFlag;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (matchedString != NULL)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     va_start(arguments,matchedString);
     matchFlag = vmatchString(string,index,pattern,nextIndex,matchedString,arguments);
     va_end(arguments);
   }
   else
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     matchFlag = matchString(string,index,pattern,nextIndex);
   }
 
