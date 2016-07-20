@@ -242,6 +242,10 @@ CREATE TABLE IF NOT EXISTS storage(
   totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
 );
 CREATE INDEX ON storage (entityId,name,created,state);
+CREATE INDEX ON storage (name,totalEntryCount,created,state);
+CREATE INDEX ON storage (totalEntryCount,name,created,state);
+CREATE INDEX ON storage (created,name,totalEntryCount,state);
+CREATE INDEX ON storage (state,name,totalEntryCount,created);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_storage USING FTS4(
@@ -352,8 +356,8 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
 CREATE TABLE IF NOT EXISTS entries(
   id                    INTEGER PRIMARY KEY,
   storageId             INTEGER NOT NULL REFERENCES storage(id),
-  type                  INTEGER,
   name                  TEXT,
+  type                  INTEGER,
   timeLastAccess        INTEGER,
   timeModified          INTEGER,
   timeLastChanged       INTEGER,
