@@ -80,7 +80,7 @@ typedef enum
 // database handle
 typedef struct
 {
-  uint          priority;
+  uint          priority;                   // access priority
   Semaphore     lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3       *handle;                    // SQlite3 handle
   long          timeout;                    // timeout [ms]
@@ -288,13 +288,49 @@ void Database_doneAll(void);
                        );
 #endif /* NDEBUG */
 
-bool Database_isHigherRequestPending(uint priority);
+//bool Database_isHigherRequestPending(uint priority);
+
+/***********************************************************************\
+* Name   : Database_request
+* Purpose: request long-run database access
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 bool Database_request(DatabaseHandle *databaseHandle);
 
+/***********************************************************************\
+* Name   : Database_release
+* Purpose: release long-run database access
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Database_release(DatabaseHandle *databaseHandle);
 
-bool Database_yield(DatabaseHandle *databaseHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd);
+/***********************************************************************\
+* Name   : Database_yield
+* Purpose: yield long-run database access if access with higher priority
+*          is pending
+* Input  : databaseHandle - database handle
+* Output : yieldStart     - yield start call-back code (can be NULL)
+*          userDataStart  - yield start user data
+*          yieldEnd       - yield end call-back code (can be NULL)
+*          userDataEnd    - yield end user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_yield(DatabaseHandle *databaseHandle,
+                    void           (*yieldStart)(void*),
+                    void           *userDataStart,
+                    void           (*yieldEnd)(void*),
+                    void           *userDataEnd
+                   );
 
 /***********************************************************************\
 * Name   : Database_lock

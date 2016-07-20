@@ -1713,7 +1713,7 @@ List_count(&databaseRequestList)
   Semaphore_unlock(&databaseRequest);
 }
 
-bool Database_yield(DatabaseHandle *databaseHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd)
+void Database_yield(DatabaseHandle *databaseHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd)
 {
   SemaphoreLock semaphoreLock;
 

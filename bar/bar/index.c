@@ -129,21 +129,6 @@ LOCAL bool   quitFlag;
   } \
   while (0)
 
-#define INDEX_YIELD(indexHandle,exitCode,entryCode) \
-  do \
-  { \
-    if (0) \
-    { \
-      exitCode; \
-      while () \
-      { \
-       \
-      }; \
-      entryCode; \
-    } \
-  } \
-  while (0)
-
 #ifndef NDEBUG
   #define createIndex(...) __createIndex(__FILE__,__LINE__, ## __VA_ARGS__)
   #define openIndex(...)  __openIndex(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -5924,11 +5909,11 @@ void Index_release(IndexHandle *indexHandle)
   Database_release(&indexHandle->databaseHandle);
 }
 
-bool Index_yield(IndexHandle *indexHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd)
+void Index_yield(IndexHandle *indexHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd)
 {
   assert(indexHandle != NULL);
 
-  return Database_yield(&indexHandle->databaseHandle,yieldStart,userDataStart,yieldEnd,userDataEnd);
+  Database_yield(&indexHandle->databaseHandle,yieldStart,userDataStart,yieldEnd,userDataEnd);
 }
 
 Errors Index_beginTransaction(IndexHandle *indexHandle)
