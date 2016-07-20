@@ -1279,7 +1279,8 @@ LOCAL bool waitModified(const char *fileName,
           // signal that read-lock count become 0
           __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"READ0 (wait)",&semaphore->readLockZero);
         }
-        __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
+//TODO
+//        __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
 
         #ifndef NDEBUG
           // debug trace code: temporary remove locked information
@@ -1333,7 +1334,8 @@ LOCAL bool waitModified(const char *fileName,
       semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
 
       // signal modification
-      __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
+//TODO
+//      __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
 
       // wait for modification
       if (timeout != WAIT_FOREVER)
@@ -1571,10 +1573,25 @@ void __Semaphore_unlock(const char *fileName, ulong lineNb, Semaphore *semaphore
   assert(semaphore != NULL);
 
   #ifdef NDEBUG
-    unlock(semaphore);
+    c(semaphore);
   #else /* not NDEBUG */
     unlock(fileName,lineNb,semaphore);
   #endif /* NDEBUG */
+}
+
+#ifdef NDEBUG
+void Semaphore_signalModified(Semaphore *semaphore)
+#else /* not NDEBUG */
+void __Semaphore_signalModified(const char *fileName,
+                                ulong      lineNb,
+                                Semaphore  *semaphore
+                               )
+#endif /* NDEBUG */
+{
+  assert(semaphore != NULL);
+  assert(semaphore->lockType == SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
+  __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
 }
 
 #ifdef NDEBUG
