@@ -170,10 +170,11 @@ typedef struct MountNode
 {
   LIST_NODE_HEADER(struct MountNode);
 
-  uint   id;
-  String name;
-  bool   alwaysUnmount;
-  bool   mounted;
+  uint   id;                                                  // unique mount id
+  String name;                                                // mount point
+  String device;                                              // mount device (optional)
+  bool   alwaysUnmount;                                       // TRUE for always unmount
+  bool   mounted;                                             // TRUE iff mounted by BAR
 } MountNode;
 
 typedef struct
