@@ -77,6 +77,26 @@ LOCAL const struct
   { "SPECIAL",   INDEX_TYPE_SPECIAL   },
 };
 
+LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
+{
+  [INDEX_STORAGE_SORT_MODE_NONE   ] = NULL,
+
+  [INDEX_STORAGE_SORT_MODE_NAME   ] = "storage.name",
+  [INDEX_STORAGE_SORT_MODE_SIZE   ] = "storage.totalEntrySize",
+  [INDEX_STORAGE_SORT_MODE_CREATED] = "storage.created",
+  [INDEX_STORAGE_SORT_MODE_STATE  ] = "storage.state"
+};
+
+LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
+{
+  [INDEX_ENTRY_SORT_MODE_NONE    ] = NULL,
+
+  [INDEX_ENTRY_SORT_MODE_NAME    ] = "name",
+  [INDEX_ENTRY_SORT_MODE_TYPE    ] = "type",
+  [INDEX_ENTRY_SORT_MODE_SIZE    ] = "size",
+  [INDEX_ENTRY_SORT_MODE_MODIFIED] = "timeModified"
+};
+
 // sleep time [s]
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
 
@@ -95,6 +115,34 @@ LOCAL Thread cleanupIndexThread;    // clean-up thread
 LOCAL bool   quitFlag;
 
 /****************************** Macros *********************************/
+
+#define INDEX_DOX(result,entryCode,exitCode,block) \
+  do \
+  { \
+    entryCode; \
+    result = ({ \
+               auto typeof(result) __closure__(void); \
+               \
+               typeof(result) __closure__(void)block; __closure__; \
+             })(); \
+    exitCode; \
+  } \
+  while (0)
+
+#define INDEX_YIELD(indexHandle,exitCode,entryCode) \
+  do \
+  { \
+    if (0) \
+    { \
+      exitCode; \
+      while () \
+      { \
+       \
+      }; \
+      entryCode; \
+    } \
+  } \
+  while (0)
 
 #ifndef NDEBUG
   #define createIndex(...) __createIndex(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -320,7 +368,7 @@ LOCAL void verify(IndexHandle *indexHandle,
                  )
 {
   va_list arguments;
-  Errors  error;
+//  Errors  error;
   int64   n;
 
   assert(indexHandle != NULL);
@@ -328,6 +376,7 @@ LOCAL void verify(IndexHandle *indexHandle,
   assert(columnName != NULL);
   assert(condition != NULL);
 
+UNUSED_VARIABLE(value);
 //TODO
 #if 0
   va_start(arguments,condition);
@@ -3894,6 +3943,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -4367,6 +4417,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -4407,6 +4458,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                      INDEX_STATE_SET_ALL,
                                      INDEX_MODE_SET_ALL,
                                      NULL,  // name
+                                     INDEX_STORAGE_SORT_MODE_NONE,
                                      DATABASE_ORDERING_NONE,
                                      i,  // offset
                                      INDEX_UNLIMITED
@@ -5088,6 +5140,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -5857,6 +5910,27 @@ void Index_close(IndexHandle *indexHandle)
   }
 }
 
+bool Index_request(IndexHandle *indexHandle)
+{
+  assert(indexHandle != NULL);
+
+  return Database_request(&indexHandle->databaseHandle);
+}
+
+void Index_release(IndexHandle *indexHandle)
+{
+  assert(indexHandle != NULL);
+
+  Database_release(&indexHandle->databaseHandle);
+}
+
+bool Index_yield(IndexHandle *indexHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd)
+{
+  assert(indexHandle != NULL);
+
+  return Database_yield(&indexHandle->databaseHandle,yieldStart,userDataStart,yieldEnd,userDataEnd);
+}
+
 Errors Index_beginTransaction(IndexHandle *indexHandle)
 {
   assert(indexHandle != NULL);
@@ -6117,7 +6191,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                               GROUP BY storage.id \
                               LIMIT 0,1 \
                              ",
-                             storageId
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -7532,19 +7606,20 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   return ERROR_NONE;
 }
 
-Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
-                              IndexHandle      *indexHandle,
-                              IndexId          uuidId,
-                              IndexId          entityId,
-                              ConstString      jobUUID,
-                              const IndexId    indexIds[],
-                              uint             indexIdCount,
-                              IndexStateSet    indexStateSet,
-                              IndexModeSet     indexModeSet,
-                              ConstString      name,
-                              DatabaseOrdering ordering,
-                              uint64           offset,
-                              uint64           limit
+Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
+                              IndexHandle           *indexHandle,
+                              IndexId               uuidId,
+                              IndexId               entityId,
+                              ConstString           jobUUID,
+                              const IndexId         indexIds[],
+                              uint                  indexIdCount,
+                              IndexStateSet         indexStateSet,
+                              IndexModeSet          indexModeSet,
+                              ConstString           name,
+                              IndexStorageSortModes sortMode,
+                              DatabaseOrdering      ordering,
+                              uint64                offset,
+                              uint64                limit
                              )
 {
   String ftsName;
@@ -7621,8 +7696,8 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
   filterAppend(filterString,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
   String_delete(filterIdsString);
 
-  // get ordering
-  appendOrdering(orderString,TRUE,"storage.created",ordering);
+  // get sort mode, ordering
+  appendOrdering(orderString,sortMode != INDEX_STORAGE_SORT_MODE_NONE,INDEX_STORAGE_SORT_MODE_COLUMNS[sortMode],ordering);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -7659,7 +7734,7 @@ Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-//Database_debugEnable(0);
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -7824,11 +7899,12 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // Note: do in single steps to avoid long global locking of database!
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+fprintf(stderr,"%s, %d: Index_deleteStorage file\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE storageId=%lld",
@@ -7838,6 +7914,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage file e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -7848,6 +7925,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage image\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE storageId=%lld",
@@ -7857,6 +7935,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage image e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -7867,6 +7946,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage dir\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE storageId=%lld",
@@ -7876,6 +7956,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage dir e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -7886,6 +7967,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage link\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE storageId=%lld",
@@ -7895,6 +7977,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage link e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -7905,6 +7988,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage hardlink\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE storageId=%lld",
@@ -7914,6 +7998,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage hardlink e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -7924,6 +8009,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage special\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE storageId=%lld",
@@ -7933,6 +8019,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage special e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -7943,6 +8030,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     {
       return error;
     }
+fprintf(stderr,"%s, %d: Index_deleteStorage storage\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM storage WHERE id=%lld",
@@ -7955,6 +8043,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 
     return ERROR_NONE;
   });
+fprintf(stderr,"%s, %d: Index_deleteStorage done error=%x\n",__FILE__,__LINE__,error);
+fprintf(stderr,"%s, %d: error %s\n",__FILE__,__LINE__,Error_getText(error));
 
   return error;
 }
@@ -7998,17 +8088,17 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // Note: do in single steps to avoid long-time-locking of database!
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+fprintf(stderr,"%s, %d: Index_clearStorage file\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM fileEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_FILE
+                             "DELETE FROM fileEntries WHERE storageId=%lld",
+                             Index_getDatabaseId(storageId)
                             );
+fprintf(stderr,"%s, %d: Index_clearStorage file e\n",__FILE__,__LINE__);
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -8018,28 +8108,30 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE) return error;
 
+fprintf(stderr,"%s, %d: Index_clearStorage image\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM imageEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
+                             "DELETE FROM imageEntries WHERE storageId=%lld",
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: Index_clearStorage image e\n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE
                             );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_IMAGE
-                            );
-    if (error != ERROR_NONE) return error;
 
+fprintf(stderr,"%s, %d: Index_clearStorage directory\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM directoryEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_DIRECTORY
+                             "DELETE FROM directoryEntries WHERE storageId=%lld",
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: Index_clearStorage directory e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -8048,13 +8140,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE) return error;
 
+fprintf(stderr,"%s, %d: Index_clearStorage link\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM linkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_LINK
+                             "DELETE FROM linkEntries WHERE storageId=%lld",
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: Index_clearStorage link e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -8063,13 +8156,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE) return error;
 
+fprintf(stderr,"%s, %d: Index_clearStorage hardlink\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM hardlinkEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_HARDLINK
+                             "DELETE FROM hardlinkEntries WHERE storageId=%lld",
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: Index_clearStorage hardlink e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -8078,13 +8172,14 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE) return error;
 
+fprintf(stderr,"%s, %d: Index_clearStorage special\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
-                             "DELETE FROM specialEntries WHERE entryId IN (SELECT id FROM entries WHERE storageId=%lld AND type=%d)",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_SPECIAL
+                             "DELETE FROM specialEntries WHERE storageId=%lld",
+                             Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
+fprintf(stderr,"%s, %d: Index_clearStorage special e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -11556,6 +11651,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
                                    0LL,   // offset
                                    INDEX_UNLIMITED

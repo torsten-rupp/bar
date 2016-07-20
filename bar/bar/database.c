@@ -64,7 +64,6 @@ typedef struct DatabaseHandleNode
   LIST_NODE_HEADER(struct DatabaseHandleNode);
 
   DatabaseHandle *databaseHandle;
-  uint           priority;
 } DatabaseHandleNode;
 
 typedef struct
@@ -112,8 +111,10 @@ typedef union
 
 /***************************** Variables *******************************/
 
-LOCAL pthread_mutex_t    databaseHandleLock;
-LOCAL DatabaseHandleList databaseHandleList;
+LOCAL Semaphore          databaseRequestLock;
+LOCAL DatabaseHandleList databaseRequestList;
+LOCAL uint               databaseRequestHighestPiority;
+LOCAL Semaphore          databaseRequest;
 
 #ifndef NDEBUG
   LOCAL uint databaseDebugCounter = 0;
@@ -1402,8 +1403,10 @@ Errors Database_initAll(void)
 {
   int sqliteResult;
 
-  pthread_mutex_init(&databaseHandleLock,NULL);
-  List_init(&databaseHandleList);
+  Semaphore_init(&databaseRequestLock);
+  List_init(&databaseRequestList);
+  databaseRequestHighestPiority = DATABASE_PRIORITY_LOW;
+  Semaphore_init(&databaseRequest);
 
   sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
   if (sqliteResult != SQLITE_OK)
@@ -1416,8 +1419,9 @@ Errors Database_initAll(void)
 
 void Database_doneAll(void)
 {
-  List_done(&databaseHandleList,CALLBACK(NULL,NULL));
-  pthread_mutex_destroy(&databaseHandleLock);
+  Semaphore_done(&databaseRequest);
+  List_done(&databaseRequestList,CALLBACK(NULL,NULL));
+  Semaphore_done(&databaseRequestLock);
 }
 
 #ifdef NDEBUG
@@ -1446,13 +1450,14 @@ void Database_doneAll(void)
   assert(databaseHandle != NULL);
 
   // init variables
+  databaseHandle->priority = priority;
 //TODO
 #if 0
-  databaseHandle->lock    = NULL;
+  databaseHandle->lock     = NULL;
 #else
 #endif
-  databaseHandle->handle  = NULL;
-  databaseHandle->timeout = timeout;
+  databaseHandle->handle   = NULL;
+  databaseHandle->timeout  = timeout;
   sem_init(&databaseHandle->wakeUp,0,0);
   #ifndef NDEBUG
     stringClear(databaseHandle->fileName);
@@ -1614,6 +1619,126 @@ void Database_doneAll(void)
   // free resources
   Semaphore_done(&databaseHandle->lock);
   sem_destroy(&databaseHandle->wakeUp);
+}
+
+bool Database_isHigherRequestPending(uint priority)
+{
+  return databaseRequestHighestPiority > priority;
+}
+
+bool Database_request(DatabaseHandle *databaseHandle)
+{
+  SemaphoreLock            semaphoreLock;
+  DatabaseHandleNode       *newDatabaseHandleNode;
+  const DatabaseHandleNode *databaseHandleNode;
+
+  assert(databaseHandle != NULL);
+
+  // insert request node
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseRequestLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // allocate database handle node
+    newDatabaseHandleNode = LIST_NEW_NODE(DatabaseHandleNode);
+    if (newDatabaseHandleNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    newDatabaseHandleNode->databaseHandle = databaseHandle;
+
+    // insert into request list
+    databaseHandleNode = databaseRequestList.head;
+    while ((databaseHandleNode != NULL) && (databaseHandleNode->databaseHandle->priority >= databaseHandle->priority))
+    {
+      databaseHandleNode = databaseHandleNode->next;
+    }
+    List_insert(&databaseRequestList,newDatabaseHandleNode,databaseHandleNode);
+
+    // get highest requested priority
+    databaseRequestHighestPiority = databaseRequestList.head->databaseHandle->priority;
+  }
+
+  // wait until own request is active (top at list)
+fprintf(stderr,"%s, %d: request lock my=%d hi=%d list=%d\n",__FILE__,__LINE__,
+databaseHandle->priority,
+databaseRequestHighestPiority,
+List_count(&databaseRequestList)
+);
+  Semaphore_lock(&databaseRequest,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+  while (databaseRequestList.head->databaseHandle != databaseHandle)
+  {
+fprintf(stderr,"%s, %d: request wait my=%d hi=%d list=%d\n",__FILE__,__LINE__,
+databaseHandle->priority,
+databaseRequestHighestPiority,
+List_count(&databaseRequestList)
+);
+    Semaphore_waitModified(&databaseRequest,WAIT_FOREVER);
+  }
+
+  return TRUE;
+}
+
+void Database_release(DatabaseHandle *databaseHandle)
+{
+  SemaphoreLock      semaphoreLock;
+  DatabaseHandleNode *databaseHandleNode;
+
+  assert(databaseHandle != NULL);
+  assert(Semaphore_isLocked(&databaseRequest));
+
+  // remove request node
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseRequestLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // remove from request list
+    databaseHandleNode = databaseRequestList.head;
+    while ((databaseHandleNode != NULL) && (databaseHandleNode->databaseHandle != databaseHandle))
+    {
+      databaseHandleNode = databaseHandleNode->next;
+    }
+    assert(databaseHandleNode != NULL);
+    List_remove(&databaseRequestList,databaseHandleNode);
+    LIST_DELETE_NODE(databaseHandleNode);
+
+    // get new highest requested priority
+    databaseRequestHighestPiority = !List_isEmpty(&databaseRequestList)
+                                      ? databaseRequestList.head->databaseHandle->priority
+                                      : DATABASE_PRIORITY_LOW;
+fprintf(stderr,"%s, %d: release my=%d databaseHandleHighestRequestPiority=%d list=%d\n",__FILE__,__LINE__,
+databaseHandle->priority,
+databaseRequestHighestPiority,
+List_count(&databaseRequestList)
+);
+  }
+
+  // release request
+  Semaphore_unlock(&databaseRequest);
+}
+
+bool Database_yield(DatabaseHandle *databaseHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd)
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(databaseHandle != NULL);
+  assert(Semaphore_isLocked(&databaseRequest));
+
+  if (databaseRequestHighestPiority > databaseHandle->priority)
+  {
+    // call yield start code
+    if (yieldStart != NULL) yieldStart(userDataStart);
+
+    do
+    {
+fprintf(stderr,"%s, %d: wait yuield my=%d hights=%d list=%d\n",__FILE__,__LINE__,
+databaseHandle->priority,
+databaseRequestHighestPiority,
+List_count(&databaseRequestList)
+);
+      Semaphore_waitModified(&databaseRequest,WAIT_FOREVER);
+    }
+    while (databaseRequestList.head->databaseHandle != databaseHandle);
+
+    // call yield end code
+    if (yieldEnd != NULL) yieldEnd(userDataEnd);
+  }
 }
 
 #ifdef NDEBUG

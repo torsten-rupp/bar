@@ -41,9 +41,10 @@ typedef enum
 } DatabaseOpenModes;
 
 // priorities
-#define DATABASE_PRIORITY_HIGH   0
-#define DATABASE_PRIORITY_MEDIUM 1
-#define DATABASE_PRIORITY_LOW    2
+#define DATABASE_PRIORITY_IMMEDIATE 3
+#define DATABASE_PRIORITY_HIGH      2
+#define DATABASE_PRIORITY_MEDIUM    1
+#define DATABASE_PRIORITY_LOW       0
 
 // database types
 typedef enum
@@ -79,6 +80,7 @@ typedef enum
 // database handle
 typedef struct
 {
+  uint          priority;
   Semaphore     lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3       *handle;                    // SQlite3 handle
   long          timeout;                    // timeout [ms]
@@ -286,9 +288,17 @@ void Database_doneAll(void);
                        );
 #endif /* NDEBUG */
 
+bool Database_isHigherRequestPending(uint priority);
+
+bool Database_request(DatabaseHandle *databaseHandle);
+
+void Database_release(DatabaseHandle *databaseHandle);
+
+bool Database_yield(DatabaseHandle *databaseHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd);
+
 /***********************************************************************\
 * Name   : Database_lock
-* Purpose: lock database
+* Purpose: lock database exclusive for this handle
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : -

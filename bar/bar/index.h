@@ -35,9 +35,10 @@
 #define INDEX_VERSION INDEX_CONST_VERSION
 
 // index priorities
-#define INDEX_PRIORITY_HIGH   DATABASE_PRIORITY_HIGH
-#define INDEX_PRIORITY_MEDIUM DATABASE_PRIORITY_MEDIUM
-#define INDEX_PRIORITY_LOW    DATABASE_PRIORITY_LOW
+#define INDEX_PRIORITY_IMMEDIATE DATABASE_PRIORITY_IMMEDIATE
+#define INDEX_PRIORITY_HIGH      DATABASE_PRIORITY_HIGH
+#define INDEX_PRIORITY_MEDIUM    DATABASE_PRIORITY_MEDIUM
+#define INDEX_PRIORITY_LOW       DATABASE_PRIORITY_LOW
 
 // max. limit value
 #define INDEX_UNLIMITED 9223372036854775807LL
@@ -177,6 +178,27 @@ typedef ulong IndexTypeSet;
 
 // index id
 typedef int64 IndexId;
+
+// sort modes
+typedef enum
+{
+  INDEX_STORAGE_SORT_MODE_NONE,
+
+  INDEX_STORAGE_SORT_MODE_NAME,
+  INDEX_STORAGE_SORT_MODE_SIZE,
+  INDEX_STORAGE_SORT_MODE_CREATED,
+  INDEX_STORAGE_SORT_MODE_STATE
+} IndexStorageSortModes;
+
+typedef enum
+{
+  INDEX_ENTRY_SORT_MODE_NONE,
+
+  INDEX_ENTRY_SORT_MODE_NAME,
+  INDEX_ENTRY_SORT_MODE_TYPE,
+  INDEX_ENTRY_SORT_MODE_SIZE,
+  INDEX_ENTRY_SORT_MODE_MODIFIED
+} IndexEntrySortModes;
 
 /***********************************************************************\
 * Name   : IndexPauseCallbackFunction
@@ -391,6 +413,12 @@ IndexHandle *__Index_open(const char *__fileName__,
 \***********************************************************************/
 
 void Index_close(IndexHandle *indexHandle);
+
+bool Index_request(IndexHandle *indexHandle);
+
+void Index_release(IndexHandle *indexHandle);
+
+bool Index_yield(IndexHandle *indexHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd);
 
 /***********************************************************************\
 * Name   : Index_beginTransaction
@@ -1053,20 +1081,21 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListStorages(IndexQueryHandle *indexQueryHandle,
-                              IndexHandle      *indexHandle,
-                              IndexId          uuidId,
-                              IndexId          entityId,
+Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
+                              IndexHandle           *indexHandle,
+                              IndexId               uuidId,
+                              IndexId               entityId,
 //TODO: remove?
-                              ConstString      jobUUID,
-                              const IndexId    indexIds[],
-                              uint             indexIdCount,
-                              IndexStateSet    indexStateSet,
-                              IndexModeSet     indexModeSet,
-                              ConstString      name,
-                              DatabaseOrdering ordering,
-                              uint64           offset,
-                              uint64           limit
+                              ConstString           jobUUID,
+                              const IndexId         indexIds[],
+                              uint                  indexIdCount,
+                              IndexStateSet         indexStateSet,
+                              IndexModeSet          indexModeSet,
+                              ConstString           name,
+                              IndexStorageSortModes sortMode,
+                              DatabaseOrdering      ordering,
+                              uint64                offset,
+                              uint64                limit
                              );
 
 /***********************************************************************\
