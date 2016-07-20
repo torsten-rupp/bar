@@ -847,14 +847,15 @@ bool isServerAllocationPending(uint serverId);
 * Name   : newMountNode
 * Purpose: new mount node
 * Input  : mountName     - mount name
+*          deviceName    - device name (can be NULL)
 *          alwaysUnmount - TRUE for always unmount
 * Output : -
 * Return : mount node
 * Notes  : -
 \***********************************************************************/
 
-MountNode *newMountNode(ConstString mountName, bool alwaysUnmount);
-MountNode *newMountNodeCString(const char *mountName, bool alwaysUnmount);
+MountNode *newMountNode(ConstString mountName, ConstString deviceName, bool alwaysUnmount);
+MountNode *newMountNodeCString(const char *mountName, const char *deviceName, bool alwaysUnmount);
 
 /***********************************************************************\
 * Name   : duplicateMountNode

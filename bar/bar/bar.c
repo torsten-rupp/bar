@@ -2203,7 +2203,10 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   if (!String_isEmpty(mountName))
   {
     // add to mount list
-    mountNode = newMountNode(mountName,alwaysUnmount);
+    mountNode = newMountNode(mountName,
+                             NULL,  // deviceName
+                             alwaysUnmount
+                            );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
   }
@@ -2699,7 +2702,10 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, c
   if (!stringIsEmpty(value))
   {
     // add to mount list
-    mountNode = newMountNodeCString(value,TRUE);
+    mountNode = newMountNodeCString(value,
+                                    NULL,  // deviceName
+                                    TRUE  // alwaysUnmount
+                                   );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
   }
@@ -5408,6 +5414,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
           {
             // request low priority connection
             serverNode->connection.lowPriorityRequestCount++;
+            Semaphore_signalModified(&globalOptions.serverList);
 
             // wait for free connection
             while (serverNode->connection.count >= maxConnectionCount)
@@ -5431,6 +5438,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
           {
             // request high priority connection
             serverNode->connection.highPriorityRequestCount++;
+            Semaphore_signalModified(&globalOptions.serverList);
 
             // wait for free connection
             while (serverNode->connection.count >= maxConnectionCount)
@@ -5508,14 +5516,17 @@ bool isServerAllocationPending(uint serverId)
   return pendingFlag;
 }
 
-MountNode *newMountNode(ConstString mountName, bool alwaysUnmount)
+MountNode *newMountNode(ConstString mountName, ConstString deviceName, bool alwaysUnmount)
 {
   assert(mountName != NULL);
 
-  return newMountNodeCString(String_cString(mountName),alwaysUnmount);
+  return newMountNodeCString(String_cString(mountName),
+                             String_cString(deviceName),
+                             alwaysUnmount
+                            );
 }
 
-MountNode *newMountNodeCString(const char *mountName, bool alwaysUnmount)
+MountNode *newMountNodeCString(const char *mountName, const char *deviceName, bool alwaysUnmount)
 {
   MountNode *mountNode;
 
@@ -5530,6 +5541,7 @@ MountNode *newMountNodeCString(const char *mountName, bool alwaysUnmount)
   }
   mountNode->id            = Misc_getId();
   mountNode->name          = String_newCString(mountName);
+  mountNode->device        = String_newCString(deviceName);
   mountNode->alwaysUnmount = alwaysUnmount;
   mountNode->mounted       = FALSE;
 
@@ -5546,8 +5558,10 @@ MountNode *duplicateMountNode(MountNode *fromMountNode,
 
   UNUSED_VARIABLE(userData);
 
-  // allocate node
-  mountNode = newMountNode(fromMountNode->name,fromMountNode->alwaysUnmount);
+  mountNode = newMountNode(fromMountNode->name,
+                           fromMountNode->device,
+                           fromMountNode->alwaysUnmount
+                          );
   assert(mountNode != NULL);
 
   return mountNode;
@@ -5567,6 +5581,7 @@ void freeMountNode(MountNode *mountNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
+  String_delete(mountNode->device);
   String_delete(mountNode->name);
 }
 
@@ -6290,7 +6305,10 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   if (!String_isEmpty(mountName))
   {
     // add to mount list
-    mountNode = newMountNode(mountName,alwaysUnmount);
+    mountNode = newMountNode(mountName,
+                             NULL,  // deviceName
+                             alwaysUnmount
+                            );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
   }
@@ -6753,7 +6771,10 @@ bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const
   if (!stringIsEmpty(value))
   {
     // add to mount list
-    mountNode = newMountNodeCString(value,TRUE);
+    mountNode = newMountNodeCString(value,
+                                    NULL,  // deviceName
+                                    TRUE  // alwaysUnmount
+                                   );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
   }
