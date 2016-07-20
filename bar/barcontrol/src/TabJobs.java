@@ -10423,9 +10423,11 @@ throw new Error("NYI");
     // add to mount list
     String[] resultErrorMessage = new String[1];
     ValueMap resultMap          = new ValueMap();
-    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S alwaysUnmount=%y",
+    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S device=%'S alwaysUnmount=%y",
                                                              selectedJobData.uuid,
                                                              mountData.name,
+//TODO
+                                                             "",  // device
                                                              mountData.alwaysUnmount
                                                             ),
                                          0,  // debugLevel
@@ -10470,10 +10472,12 @@ throw new Error("NYI");
 
     // add to mount list
     String[] resultErrorMessage = new String[1];
-    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S alwaysUnmount=%y",
+    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S device=%'S alwaysUnmount=%y",
                                                              selectedJobData.uuid,
                                                              mountData.id,
                                                              mountData.name,
+//TODO
+                                                             "",  // device
                                                              mountData.alwaysUnmount
                                                             ),
                                          0,  // debugLevel
