@@ -3434,6 +3434,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  archiveName,
+                                 INDEX_STORAGE_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -3579,6 +3580,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    INDEX_MODE_SET(INDEX_MODE_AUTO),
                                    NULL,  // name
+                                   INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -3776,6 +3778,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer limit=%llu\n",__FILE__,__LINE
                                    | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                    INDEX_MODE_SET(INDEX_MODE_AUTO),
                                    NULL,  // name
+                                   INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -4324,6 +4327,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                          INDEX_STATE_SET_ALL,
                                          INDEX_MODE_SET_ALL,
                                          NULL,  // archiveName,
+                                         INDEX_STORAGE_SORT_MODE_NONE,
                                          DATABASE_ORDERING_NONE,
                                          0LL,  // offset
                                          INDEX_UNLIMITED
