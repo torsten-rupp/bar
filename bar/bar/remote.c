@@ -110,6 +110,82 @@ LOCAL RemoteServerNode *findRemoteServer(const RemoteHost *remoteHost)
 }
 
 /***********************************************************************\
+* Name   : serverConnect
+* Purpose: connect to server
+* Input  : socketHandle - socket handle variable
+*          hostName     - host name
+*          hostPort     - host port
+*          hostForceSSL - TRUE to force SSL
+* Output : socketHandle - socket handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors serverConnect(SocketHandle *socketHandle,
+                           ConstString  hostName,
+                           uint         hostPort,
+                           bool         hostForceSSL
+                          )
+{
+  String line;
+  Errors error;
+
+  assert(socketHandle != NULL);
+
+  // init variables
+  line = String_new();
+
+  // connect to remote host
+  error = Network_connect(socketHandle,
+                          hostForceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
+                          hostName,
+                          hostPort,
+                          NULL,  // loginName
+                          NULL,  // password
+                          NULL,  // sshPublicKeyFileName
+                          0,
+                          NULL,  // sshPrivateKeyFileName
+                          0,
+                          SOCKET_FLAG_NONE
+                         );
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // authorize
+  error = Network_readLine(socketHandle,line,30LL*1000);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
+
+  // free resources
+  String_delete(line);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : serverDisconnect
+* Purpose: disconnect from server
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void serverDisconnect(SocketHandle *socketHandle)
+{
+  assert(socketHandle != NULL);
+
+  Network_disconnect(socketHandle);
+}
+
+/***********************************************************************\
 * Name   :
 * Purpose:
 * Input  : -
@@ -297,65 +373,6 @@ void Remote_duplicateHost(RemoteHost *toRemoteHost, const RemoteHost *fromRemote
   Remote_copyHost(toRemoteHost,fromRemoteHost);
 }
 
-Errors Remote_serverConnect(SocketHandle *socketHandle,
-                            ConstString  hostName,
-                            uint         hostPort,
-                            bool         hostForceSSL
-                           )
-{
-  String line;
-  Errors error;
-
-  assert(socketHandle != NULL);
-fprintf(stderr,"%s, %d: %s:%d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
-
-  // init variables
-  line = String_new();
-
-  // connect to remote host
-  error = Network_connect(socketHandle,
-                          hostForceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
-                          hostName,
-                          hostPort,
-                          NULL,  // loginName
-                          NULL,  // password
-                          NULL,  // sshPublicKeyFileName
-                          0,
-                          NULL,  // sshPrivateKeyFileName
-                          0,
-                          SOCKET_FLAG_NONE
-                         );
-  if (error != ERROR_NONE)
-  {
-    String_delete(line);
-    return error;
-  }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-
-  // authorize
-  error = Network_readLine(socketHandle,line,30LL*1000);
-  if (error != ERROR_NONE)
-  {
-    String_delete(line);
-    return error;
-  }
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
-
-  // free resources
-  String_delete(line);
-
-  return ERROR_NONE;
-}
-
-void Remote_serverDisconnect(SocketHandle *socketHandle)
-{
-  assert(socketHandle != NULL);
-
-  Network_disconnect(socketHandle);
-}
-
 Errors Remote_connect(const RemoteHost *remoteHost)
 {
   String           line;
@@ -480,10 +497,11 @@ LOCAL Errors Remote_vexecuteCommand(const RemoteHost *remoteHost,
     // find remote server
     remoteServerNode = findRemoteServer(remoteHost);
 
+    // check if remote server known
     if (remoteServerNode == NULL)
     {
       // try to connect
-      error = Remote_serverConnect(&socketHandle,remoteHost->name,remoteHost->port,remoteHost->forceSSL);
+      error = serverConnect(&socketHandle,remoteHost->name,remoteHost->port,remoteHost->forceSSL);
       if (error != ERROR_NONE)
       {
         Semaphore_unlock(&remoteServerList.lock);
@@ -507,7 +525,7 @@ sslFlag = TRUE;
       List_append(&remoteServerList,remoteServerNode);
     }
 
-    // new command id
+    // create new command id
     remoteServerNode->commandId++;
 
     // format command

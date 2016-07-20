@@ -97,34 +97,8 @@ void Remote_duplicateHost(RemoteHost *toRemoteHost, const RemoteHost *fromRemote
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  :
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-Errors Remote_serverConnect(SocketHandle *socketHandle,
-                            ConstString  hostName,
-                            uint         hostPort,
-                            bool         hostForceSSL
-                           );
-
-/***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : remoteHost - remote host
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Remote_serverDisconnect(SocketHandle *socketHandle);
-
-/***********************************************************************\
-* Name   :
-* Purpose:
+* Name   : Remote_connect
+* Purpose: connect to remote host
 * Input  : remoteHost - remote host
 * Output : -
 * Return : -
@@ -134,11 +108,11 @@ void Remote_serverDisconnect(SocketHandle *socketHandle);
 Errors Remote_connect(const RemoteHost *remoteHost);
 
 /***********************************************************************\
-* Name   :
-* Purpose:
+* Name   : Remote_isConnected
+* Purpose: check if remote host is connected
 * Input  : remoteHost - remote host
 * Output : -
-* Return : -
+* Return : TRUE iff connected
 * Notes  : -
 \***********************************************************************/
 
@@ -150,8 +124,10 @@ bool Remote_isConnected(const RemoteHost *remoteHost);
 * Name   : Remote_executeCommand
 * Purpose: execute command on remote host
 * Input  : remoteHost - remote host
-* Output : -
-* Return : -
+*          format     - command
+*          ...        - optional command arguments
+* Output : resultMap - result map
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -180,7 +156,7 @@ Errors Remote_executeCommand(const RemoteHost *remoteHost,
 *          storageRequestVolumeFunction
 *          storageRequestVolumeUserData
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -210,7 +186,7 @@ Errors Remote_jobStart(const RemoteHost                *remoteHost,
 * Purpose: abort job on remote host
 * Input  : remoteHost - remote host
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
