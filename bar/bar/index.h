@@ -243,6 +243,7 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 
 #ifndef NDEBUG
   #define Index_open(...) __Index_open(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Index_beginTransaction(...) __Index_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -460,12 +461,21 @@ void Index_yield(IndexHandle *indexHandle,
 * Name   : Index_beginTransaction
 * Purpose: begin transaction
 * Input  : indexHandle - index handle
+*          timeout     - timeout [ms]
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_beginTransaction(IndexHandle *indexHandle);
+#ifdef NDEBUG
+Errors Index_beginTransaction(IndexHandle *indexHandle, ulong timeout);
+#else /* not NDEBUG */
+Errors __Index_beginTransaction(const char  *__fileName__,
+                                uint        __lineNb__,
+                                IndexHandle *indexHandle,
+                                ulong       timeout
+                               );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Index_endTransaction

@@ -3440,7 +3440,7 @@ LOCAL void jobThreadCode(void)
     // run job
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      Index_request(indexHandle);
+      if (Index_request(indexHandle))
       {
         #ifdef SIMULATOR
           {
@@ -3697,8 +3697,9 @@ LOCAL void jobThreadCode(void)
             #endif /* NDEBUG */
           }
         #endif /* SIMULATOR */
+
+        Index_release(indexHandle);
       }
-      Index_release(indexHandle);
 
       logPostProcess(&logHandle,jobNode->name,&jobNode->jobOptions,archiveType,scheduleCustomText);
     }
@@ -4825,9 +4826,9 @@ LOCAL void purgeExpiredThreadCode(void)
 
   while (!quitFlag)
   {
-    Index_request(indexHandle);
+    if (Index_request(indexHandle))
     {
-      BLOCK_DO(Index_beginTransaction(indexHandle),
+      BLOCK_DO(Index_beginTransaction(indexHandle,INDEX_TIMEOUT),
                Index_endTransaction(indexHandle),
       {
         // index yield
@@ -4838,7 +4839,7 @@ LOCAL void purgeExpiredThreadCode(void)
                     },indexHandle),
                     CALLBACK_INLINE(void,(IndexHandle *indexHandle),
                     {
-                      Index_beginTransaction(indexHandle);
+                      Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
                     },indexHandle)
                    );
 
@@ -5010,8 +5011,9 @@ LOCAL void purgeExpiredThreadCode(void)
           Index_doneList(&indexQueryHandle1);
         }
       });
+
+      Index_release(indexHandle);
     }
-    Index_release(indexHandle);
 
     // sleep
     delayScheduleThread();
@@ -5491,7 +5493,7 @@ LOCAL void autoIndexThreadCode(void)
     // collect storage locations to check for BAR files
     getStorageDirectories(&storageDirectoryList);
 
-    Index_request(indexHandle);
+    if (Index_request(indexHandle))
     {
       // check storage locations for BAR files, send index update request
       initDuplicateJobOptions(&jobOptions,serverDefaultJobOptions);
@@ -5711,8 +5713,9 @@ LOCAL void autoIndexThreadCode(void)
         Index_doneList(&indexQueryHandle);
         String_delete(string);
       }
+
+      Index_release(indexHandle);
     }
-    Index_release(indexHandle);
 
     // sleep
     delayAutoIndexThread();
@@ -14139,10 +14142,10 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
 
-  Index_request(indexHandle);
+  if (Index_request(indexHandle))
   {
     BLOCK_DOX(error,
-              Index_beginTransaction(indexHandle),
+              Index_beginTransaction(indexHandle,INDEX_TIMEOUT),
               Index_endTransaction(indexHandle),
     {
       // delete all storage files with job UUID
@@ -14177,8 +14180,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 
       return ERROR_NONE;
     });
+
+    Index_release(indexHandle);
   }
-  Index_release(indexHandle);
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
@@ -16252,7 +16256,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  Index_request(indexHandle);
+  if (Index_request(indexHandle))
   {
     if (   (uuidId == INDEX_ID_NONE)
         && (storageId == INDEX_ID_NONE)
@@ -16378,8 +16382,9 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         return;
       }
     }
+
+    Index_release(indexHandle);
   }
-  Index_release(indexHandle);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 

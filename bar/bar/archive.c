@@ -10625,12 +10625,12 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     return error;
   }
 
-  Index_request(indexHandle);
+  if (Index_request(indexHandle))
   {
 fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStorageName));
     // index archive contents
     printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-    error = Index_beginTransaction(indexHandle);
+    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
     {
       Archive_close(&archiveInfo);
@@ -10703,7 +10703,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
                   },indexHandle),
                   CALLBACK_INLINE(void,(IndexHandle *indexHandle),
                   {
-                    Index_beginTransaction(indexHandle);
+                    Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
                   },indexHandle)
                  );
 #if 1
@@ -10743,7 +10743,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
 #endif /* 0 */
 
         // start transaction
-        error = Index_beginTransaction(indexHandle);
+        error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
         if (error != ERROR_NONE)
         {
           break;
@@ -11101,7 +11101,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
                   },indexHandle),
                   CALLBACK_INLINE(void,(IndexHandle *indexHandle),
                   {
-                    Index_beginTransaction(indexHandle);
+                    Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
                   },indexHandle)
                  );
 #if 1
@@ -11140,7 +11140,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
   #endif /* 0 */
 
         // start transacation
-        error = Index_beginTransaction(indexHandle);
+        error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
         if (error != ERROR_NONE)
         {
           break;
@@ -11165,8 +11165,8 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
     {
       (void)Index_rollbackTransaction(indexHandle);
     }
+    Index_release(indexHandle);
   }
-  Index_release(indexHandle);
 
   if      (error != ERROR_NONE)
   {

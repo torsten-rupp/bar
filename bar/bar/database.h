@@ -294,12 +294,13 @@ void Database_doneAll(void);
 * Name   : Database_request
 * Purpose: request long-run database access
 * Input  : databaseHandle - database handle
+*          timeout        - timeout request long-run [ms]
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool Database_request(DatabaseHandle *databaseHandle);
+bool Database_request(DatabaseHandle *databaseHandle, ulong timeout);
 
 /***********************************************************************\
 * Name   : Database_release
@@ -331,6 +332,17 @@ void Database_yield(DatabaseHandle *databaseHandle,
                     void           (*yieldEnd)(void*),
                     void           *userDataEnd
                    );
+
+/***********************************************************************\
+* Name   : Database_isRequestRunning
+* Purpose: check if long-run database access is running now
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : TRUE iff running
+* Notes  : -
+\***********************************************************************/
+
+bool Database_isRequestRunning(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_lock

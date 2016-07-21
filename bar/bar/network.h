@@ -188,9 +188,9 @@ bool Network_hostExistsCString(const char *hostName);
 * Input  : socketType          - socket type; see SOCKET_TYPE_*
 *          hostName            - host name
 *          hostPort            - host port (host byte order)
-*          loginName           -  login user name
-*          password            - SSH password
-*          sshPublicKeyData    - SSh public key data for login or NULL
+*          loginName           - login user name
+*          password            - SSH private key password
+*          sshPublicKeyData    - SSH public key data for login or NULL
 *          sshPublicKeyLength  - SSH public key data length
 *          sshPrivateKeyData   - SSH private key data for login or NULL
 *          sshPrivateKeyLength - SSH private key data length
@@ -207,9 +207,9 @@ Errors Network_connect(SocketHandle *socketHandle,
                        ConstString  loginName,
                        Password     *password,
                        const void   *sshPublicKeyData,
-                       uint         sshPublicKeyDataLength,
+                       uint         sshPublicKeyLength,
                        const void   *sshPrivateKeyData,
-                       uint         sshPrivateKeyDataLength,
+                       uint         sshPrivateKeyLength,
                        uint         flags
                       );
 
@@ -405,15 +405,15 @@ Errors Network_accept(SocketHandle             *socketHandle,
                      );
 
 /***********************************************************************\
-* Name   : Network_startSSL
+* Name   : Network_startServerSSL
 * Purpose: start SSL encryption on socket connection
-* Input  : serverSocketHandle - server socket handle
-*          caFileName        - file with TLS CA or NULL
-*          certFileName      - file with TLS cerificate or NULL
-*          keyFileName       - file with TLS key or NULL
+* Input  : socketHandle - socket handle
+*          caFileName   - file with TLS CA or NULL
+*          certFileName - file with TLS cerificate or NULL
+*          keyFileName  - file with TLS key or NULL
 * Output : -
 * Return : ERROR_NONE or errorcode
-* Notes  : -
+* Notes  : call after Network_accept() to establish a SSL encryption
 \***********************************************************************/
 
 Errors Network_startSSL(SocketHandle *socketHandle,

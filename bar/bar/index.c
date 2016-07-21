@@ -3811,7 +3811,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   n = 0L;
 
   // clean-up
-  error = Index_beginTransaction(indexHandle);
+  error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     String_delete(storageName);
@@ -5899,7 +5899,8 @@ bool Index_request(IndexHandle *indexHandle)
 {
   assert(indexHandle != NULL);
 
-  return Database_request(&indexHandle->databaseHandle);
+//TODO
+  return Database_request(&indexHandle->databaseHandle,1000*1000);
 }
 
 void Index_release(IndexHandle *indexHandle)
@@ -5916,11 +5917,23 @@ void Index_yield(IndexHandle *indexHandle, void(*yieldStart)(void*), void *userD
   Database_yield(&indexHandle->databaseHandle,yieldStart,userDataStart,yieldEnd,userDataEnd);
 }
 
-Errors Index_beginTransaction(IndexHandle *indexHandle)
+#ifdef NDEBUG
+Errors Index_beginTransaction(IndexHandle *indexHandle, ulong timeout)
+#else /* not NDEBUG */
+Errors __Index_beginTransaction(const char  *__fileName__,
+                                uint        __lineNb__,
+                                IndexHandle *indexHandle,
+                                ulong       timeout
+                               )
+#endif /* NDEBUG */
 {
   assert(indexHandle != NULL);
 
-  return Database_beginTransaction(&indexHandle->databaseHandle);
+  #ifdef NDEBUG
+    return Database_beginTransaction(&indexHandle->databaseHandle);
+  #else /* not NDEBUG */
+    return __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle);
+  #endif /* NDEBUG */
 }
 
 Errors Index_endTransaction(IndexHandle *indexHandle)

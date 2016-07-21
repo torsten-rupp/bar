@@ -6601,8 +6601,9 @@ Errors Command_create(ConstString                  jobUUID,
   entityId = INDEX_ID_NONE;
   if (indexHandle != NULL)
   {
+Index_request(indexHandle);
     // start index database transaction
-    error = Index_beginTransaction(indexHandle);
+    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
@@ -6788,6 +6789,7 @@ Errors Command_create(ConstString                  jobUUID,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
+Index_release(indexHandle);
   }
 
   // write incremental list
