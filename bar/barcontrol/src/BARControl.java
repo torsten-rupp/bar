@@ -2279,6 +2279,29 @@ public class BARControl
         if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection lost"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
         {
           while (   !connectOkFlag
+                )
+          {
+            // try to connect to server
+            try
+            {
+              BARServer.connect(loginData.serverName,
+                                loginData.serverPort,
+                                loginData.serverTLSPort,
+                                loginData.password,
+                                Settings.serverKeyFileName
+                               );
+              connectOkFlag = true;
+              Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+            }
+            catch (ConnectionError reconnectError)
+            {
+              if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+              {
+                break;
+              }
+            }
+          }
+          while (   !connectOkFlag
                  && getLoginData(loginData)
                  && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0))
                 )
