@@ -6601,7 +6601,6 @@ Errors Command_create(ConstString                  jobUUID,
   entityId = INDEX_ID_NONE;
   if (indexHandle != NULL)
   {
-Index_request(indexHandle);
     // start index database transaction
     error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
@@ -6789,7 +6788,6 @@ Index_request(indexHandle);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-Index_release(indexHandle);
   }
 
   // write incremental list

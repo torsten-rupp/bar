@@ -42,7 +42,7 @@
 #include "database.h"
 
 /****************** Conditional compilation switches *******************/
-#define DATABASE_SUPPORT_TRANSACTIONS
+#define _DATABASE_SUPPORT_TRANSACTIONS
 
 /***************************** Constants *******************************/
 #if 1
@@ -111,10 +111,12 @@ typedef union
 
 /***************************** Variables *******************************/
 
+//TODO: remove
+#if 0
 LOCAL Semaphore          databaseRequestLock;
 LOCAL DatabaseHandleList databaseRequestList;
 LOCAL uint               databaseRequestHighestPiority;
-//LOCAL Semaphore          databaseRequest;
+#endif
 uint transactionCount = 0;
 
 #ifndef NDEBUG
@@ -1404,10 +1406,12 @@ Errors Database_initAll(void)
 {
   int sqliteResult;
 
+//TODO: remove
+#if 0
   Semaphore_init(&databaseRequestLock);
   List_init(&databaseRequestList);
   databaseRequestHighestPiority = DATABASE_PRIORITY_LOW;
-//  Semaphore_init(&databaseRequest);
+#endif
 
   sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
   if (sqliteResult != SQLITE_OK)
@@ -1420,9 +1424,11 @@ Errors Database_initAll(void)
 
 void Database_doneAll(void)
 {
-//  Semaphore_done(&databaseRequest);
+//TODO: remove
+#if 0
   List_done(&databaseRequestList,CALLBACK(NULL,NULL));
   Semaphore_done(&databaseRequestLock);
+#endif
 }
 
 #ifdef NDEBUG
@@ -1622,6 +1628,8 @@ void Database_doneAll(void)
   sem_destroy(&databaseHandle->wakeUp);
 }
 
+//TODO: remove
+#if 0
 bool Database_isHigherRequestPending(uint priority)
 {
   return databaseRequestHighestPiority > priority;
@@ -1667,47 +1675,24 @@ bool Database_request(DatabaseHandle *databaseHandle, ulong timeout)
 
     // get new highest requested priority
     databaseRequestHighestPiority = databaseRequestList.head->databaseHandle->priority;
-#if 0
-  }
-  // request
-  if (!Semaphore_lock(&databaseRequest,SEMAPHORE_LOCK_TYPE_READ_WRITE,timeout))
-  {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseRequestLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+
+    // wait until own request is active (first in list)
+dumpRequest("after insert",databaseHandle);
+    t = Misc_getTimestamp();
+    while (   (databaseRequestList.head->databaseHandle != databaseHandle)
+//           && ((Misc_getTimestamp()-t)/1000LL > timeout)
+          )
+    {
+fprintf(stderr,"%s, %d: request wait my=%d hi=%d list=%d\n",__FILE__,__LINE__,databaseHandle->priority, databaseRequestHighestPiority, List_count(&databaseRequestList) );
+      Semaphore_waitModified(&databaseRequestLock,WAIT_FOREVER);
+    }
+    if (databaseRequestList.head->databaseHandle != databaseHandle)
     {
       List_remove(&databaseRequestList,databaseHandleNode);
       LIST_DELETE_NODE(databaseHandleNode);
       databaseRequestHighestPiority = !List_isEmpty(&databaseRequestList)
                                         ? databaseRequestList.head->databaseHandle->priority
                                         : DATABASE_PRIORITY_LOW;
-    }
-    return FALSE;
-  }
-#endif
-
-    // wait until own request is active (first in list)
-dumpRequest("after insert",databaseHandle);
-    t = Misc_getTimestamp();
-    while //(   !Database_isRequestRunning(databaseHandle)
-          (   (databaseRequestList.head->databaseHandle != databaseHandle)
-//           && ((Misc_getTimestamp()-t)/1000LL > timeout)
-          )
-    {
-fprintf(stderr,"%s, %d: request wait my=%d hi=%d list=%d\n",__FILE__,__LINE__,databaseHandle->priority, databaseRequestHighestPiority, List_count(&databaseRequestList) );
-  //    Semaphore_waitModified(&databaseRequest,WAIT_FOREVER);
-      Semaphore_waitModified(&databaseRequestLock,WAIT_FOREVER);
-    }
-  //  if (Database_isRequestRunning(databaseHandle))
-    if (databaseRequestList.head->databaseHandle != databaseHandle)
-    {
-  //    SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseRequestLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        List_remove(&databaseRequestList,databaseHandleNode);
-        LIST_DELETE_NODE(databaseHandleNode);
-        databaseRequestHighestPiority = !List_isEmpty(&databaseRequestList)
-                                          ? databaseRequestList.head->databaseHandle->priority
-                                          : DATABASE_PRIORITY_LOW;
-      }
-  //    Semaphore_unlock(&databaseRequest);
 dumpRequest("FAIL",databaseHandle);
       Semaphore_unlock(&databaseRequestLock);
       return FALSE;
@@ -1725,7 +1710,6 @@ void Database_release(DatabaseHandle *databaseHandle)
   DatabaseHandleNode *databaseHandleNode;
 
   assert(databaseHandle != NULL);
-//  assert(Semaphore_isLocked(&databaseRequest));
 
   // remove request node, update highest request priority
   SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseRequestLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -1747,9 +1731,6 @@ void Database_release(DatabaseHandle *databaseHandle)
 
 dumpRequest("after release",databaseHandle);
   }
-
-  // release request
-//  Semaphore_unlock(&databaseRequest);
 }
 
 void Database_yield(DatabaseHandle *databaseHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd)
@@ -1757,7 +1738,6 @@ void Database_yield(DatabaseHandle *databaseHandle, void(*yieldStart)(void*), vo
   SemaphoreLock semaphoreLock;
 
   assert(databaseHandle != NULL);
-//  assert(Semaphore_isLocked(&databaseRequest));
 
   if (databaseRequestHighestPiority > databaseHandle->priority)
   {
@@ -1780,24 +1760,7 @@ dumpRequest("yield",databaseHandle);
     if (yieldEnd != NULL) yieldEnd(userDataEnd);
   }
 }
-
-bool Database_isRequestRunning(DatabaseHandle *databaseHandle)
-{
-  SemaphoreLock semaphoreLock;
-  bool          isRunning;
-
-  assert(databaseHandle != NULL);
-//  assert(Semaphore_isLocked(&databaseRequest));
-
-  isRunning = FALSE;
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseRequestLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    isRunning = (databaseRequestList.head->databaseHandle == databaseHandle);
-  }
-
-  return isRunning;
-}
+#endif
 
 #ifdef NDEBUG
   void Database_lock(DatabaseHandle *databaseHandle)
@@ -3068,7 +3031,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
 transactionCount++;
 fprintf(stderr,"%s, %d: begin trans %d %p\n",__fileName__,__lineNb__,transactionCount,databaseHandle);
-dumpRequest("trasn",databaseHandle);
 
   return ERROR_NONE;
 }

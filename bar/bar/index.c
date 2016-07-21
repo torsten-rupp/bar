@@ -5895,28 +5895,6 @@ void Index_close(IndexHandle *indexHandle)
   }
 }
 
-bool Index_request(IndexHandle *indexHandle)
-{
-  assert(indexHandle != NULL);
-
-//TODO
-  return Database_request(&indexHandle->databaseHandle,1000*1000);
-}
-
-void Index_release(IndexHandle *indexHandle)
-{
-  assert(indexHandle != NULL);
-
-  Database_release(&indexHandle->databaseHandle);
-}
-
-void Index_yield(IndexHandle *indexHandle, void(*yieldStart)(void*), void *userDataStart, void(*yieldEnd)(void*), void *userDataEnd)
-{
-  assert(indexHandle != NULL);
-
-  Database_yield(&indexHandle->databaseHandle,yieldStart,userDataStart,yieldEnd,userDataEnd);
-}
-
 #ifdef NDEBUG
 Errors Index_beginTransaction(IndexHandle *indexHandle, ulong timeout)
 #else /* not NDEBUG */

@@ -178,12 +178,6 @@ void DeltaSourceList_doneAll(void)
 
   DeltaSourceList_init(deltaSourceList);
   DeltaSourceList_copy(fromDeltaSourceList,deltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode);
-
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,sizeof(DeltaSourceList));
-  #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG

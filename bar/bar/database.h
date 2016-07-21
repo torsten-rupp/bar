@@ -290,6 +290,8 @@ void Database_doneAll(void);
 
 //bool Database_isHigherRequestPending(uint priority);
 
+//TODO: remove
+#if 0
 /***********************************************************************\
 * Name   : Database_request
 * Purpose: request long-run database access
@@ -332,17 +334,7 @@ void Database_yield(DatabaseHandle *databaseHandle,
                     void           (*yieldEnd)(void*),
                     void           *userDataEnd
                    );
-
-/***********************************************************************\
-* Name   : Database_isRequestRunning
-* Purpose: check if long-run database access is running now
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : TRUE iff running
-* Notes  : -
-\***********************************************************************/
-
-bool Database_isRequestRunning(DatabaseHandle *databaseHandle);
+#endif
 
 /***********************************************************************\
 * Name   : Database_lock

@@ -416,48 +416,6 @@ IndexHandle *__Index_open(const char *__fileName__,
 void Index_close(IndexHandle *indexHandle);
 
 /***********************************************************************\
-* Name   : Index_request
-* Purpose: request long-run index database access
-* Input  : indexHandle - index handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-bool Index_request(IndexHandle *indexHandle);
-
-/***********************************************************************\
-* Name   : Index_release
-* Purpose: release long-run index database access
-* Input  : indexHandle - index handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Index_release(IndexHandle *indexHandle);
-
-/***********************************************************************\
-* Name   : Index_yield
-* Purpose: yield long-run index database access if access with higher
-*          priority is pending
-* Input  : indexHandle - index handle
-* Output : yieldStart     - yield start call-back code (can be NULL)
-*          userDataStart  - yield start user data
-*          yieldEnd       - yield end call-back code (can be NULL)
-*          userDataEnd    - yield end user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Index_yield(IndexHandle *indexHandle,
-                 void        (*yieldStart)(void*),
-                 void        *userDataStart,
-                 void        (*yieldEnd)(void*),
-                 void        *userDataEnd
-                );
-
-/***********************************************************************\
 * Name   : Index_beginTransaction
 * Purpose: begin transaction
 * Input  : indexHandle - index handle
