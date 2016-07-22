@@ -1604,14 +1604,16 @@ public class BARControl
 
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Login BAR server"),250,SWT.DEFAULT);
 
-    // get sorted server list
-    ArrayList<String> serverDataList = new ArrayList<String>();
-    for (Settings.Server server : Settings.servers)
+    // get sorted servers
+    Settings.Server servers[] = Settings.servers.toArray(new Settings.Server[Settings.servers.size()]);
+    Arrays.sort(servers,new Comparator<Settings.Server>()
     {
-      serverDataList.add(server.getData());
-    }
-    String serverData[] = serverDataList.toArray(new String[serverDataList.size()]);
-    Arrays.sort(serverData);
+      public int compare(Settings.Server server1, Settings.Server server2)
+      {
+        return server1.getData().compareTo(server2.getData());
+      }
+    });
+    Array
 
     // password
     final Combo   widgetServerName;
@@ -1631,7 +1633,7 @@ public class BARControl
       subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
       {
         widgetServerName = new Combo(subComposite,SWT.LEFT|SWT.BORDER);
-        widgetServerName.setItems(serverData);
+        widgetServerName.setItems(servers);
         if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
         widgetServerName.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
 
@@ -1812,12 +1814,24 @@ public class BARControl
    */
   private void updateServerMenu()
   {
+    // clear menu
     while (serverMenu.getItemCount() > 2)
     {
       serverMenu.getItem(2).dispose();
     }
 
-    for (final Settings.Server server : Settings.servers)
+    // get sorted servers
+    Settings.Server servers[] = Settings.servers.toArray(new Settings.Server[Settings.servers.size()]);
+    Arrays.sort(servers,new Comparator<Settings.Server>()
+    {
+      public int compare(Settings.Server server1, Settings.Server server2)
+      {
+        return server1.getData().compareTo(server2.getData());
+      }
+    });
+
+    // create server menu items
+    for (final Settings.Server server : servers)
     {
       MenuItem menuItem = Widgets.addMenuRadio(serverMenu,server.name+":"+server.port);
       menuItem.setData(server);
@@ -1842,12 +1856,12 @@ public class BARControl
                               Settings.serverKeyFileName
                              );
             shell.setText("BAR control: "+BARServer.getInfo());
-            Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
           }
           catch (ConnectionError error)
           {
             Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
           }
+          Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
         }
       });
     }
