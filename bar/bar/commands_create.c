@@ -3468,7 +3468,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
         && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
        )
     {
-      // delete old storage index
+      // delete old index of storage
       error = Index_deleteStorage(indexHandle,oldStorageId);
       if (error != ERROR_NONE)
       {
@@ -3668,7 +3668,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
         Storage_done(&storageHandle);
       }
 
-      // delete database entry
+      // delete index of storage
       error = Index_deleteStorage(indexHandle,oldestStorageId);
       if (error != ERROR_NONE)
       {
@@ -3871,7 +3871,7 @@ fprintf(stderr,"%s, %d: start purgeStorageByServer limit=%llu\n",__FILE__,__LINE
         Storage_done(&storageHandle);
       }
 
-      // delete database entry
+      // delete index of storage
       error = Index_deleteStorage(indexHandle,oldestStorageId);
       if (error != ERROR_NONE)
       {
@@ -4277,7 +4277,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           continue;
         }
 
-        // delete storage (is empty now)
+        // delete index of storage (is empty now)
         assert(Index_isEmptyStorage(createInfo->indexHandle,storageMsg.storageId));
         (void)Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
 
