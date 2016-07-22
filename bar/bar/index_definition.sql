@@ -13,6 +13,7 @@ const STATE_CREATE           = 2
 const STATE_UPDATE_REQUESTED = 3
 const STATE_UPDATE           = 4
 const STATE_ERROR            = 5
+const STATE_DELETE           = 6
 
 // modes
 const MODE_MANUAL = 0
@@ -370,7 +371,7 @@ CREATE TABLE IF NOT EXISTS entries(
   size                  INTEGER DEFAULT 0   // Note: redundancy for faster access
 );
 CREATE INDEX ON entries (storageId,type,name);
-CREATE INDEX ON entries (name);
+CREATE INDEX ON entries (name,offset,size);
 CREATE INDEX ON entries (type,name);
 
 // newest entries (updated by triggers)
@@ -393,7 +394,6 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
 CREATE INDEX ON entriesNewest (entryId,name,offset,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (name,offset,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (type,name);
-CREATE INDEX ON entriesNewest (entryId);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_entries USING FTS4(
