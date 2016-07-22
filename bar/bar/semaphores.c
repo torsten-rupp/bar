@@ -1573,7 +1573,7 @@ void __Semaphore_unlock(const char *fileName, ulong lineNb, Semaphore *semaphore
   assert(semaphore != NULL);
 
   #ifdef NDEBUG
-    c(semaphore);
+    unlock(semaphore);
   #else /* not NDEBUG */
     unlock(fileName,lineNb,semaphore);
   #endif /* NDEBUG */
