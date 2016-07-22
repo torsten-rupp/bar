@@ -1605,7 +1605,7 @@ public class BARControl
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Login BAR server"),250,SWT.DEFAULT);
 
     // get sorted servers
-    Settings.Server servers[] = Settings.servers.toArray(new Settings.Server[Settings.servers.size()]);
+    final Settings.Server servers[] = Settings.servers.toArray(new Settings.Server[Settings.servers.size()]);
     Arrays.sort(servers,new Comparator<Settings.Server>()
     {
       public int compare(Settings.Server server1, Settings.Server server2)
@@ -1613,7 +1613,13 @@ public class BARControl
         return server1.getData().compareTo(server2.getData());
       }
     });
-    Array
+
+    // get server data
+    String serverData[] = new String[servers.length];
+    for (int i = 0; i < servers.length; i++)
+    {
+      serverData[i] = servers[i].getData();
+    }
 
     // password
     final Combo   widgetServerName;
@@ -1633,7 +1639,7 @@ public class BARControl
       subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
       {
         widgetServerName = new Combo(subComposite,SWT.LEFT|SWT.BORDER);
-        widgetServerName.setItems(servers);
+        widgetServerName.setItems(serverData);
         if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
         widgetServerName.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
 
@@ -1699,9 +1705,9 @@ public class BARControl
       }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        String s[] = widgetServerName.getText().split(":");
-        if (s.length >= 1) widgetServerName.setText(s[0]);
-        if (s.length >= 2) widgetServerPort.setSelection(Integer.parseInt(s[1]));
+        Settings.Server server = servers[widgetServerName.getSelectionIndex()];
+        widgetServerName.setText(server.name);
+        widgetServerPort.setSelection(server.port);
       }
     });
     widgetPassword.addSelectionListener(new SelectionListener()
