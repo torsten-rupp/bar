@@ -1655,6 +1655,7 @@ public class BARControl
       label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
 
       widgetPassword = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+      if ((loginData.password != null) && !loginData.password.isEmpty()) widgetPassword.setText(loginData.password);
       widgetPassword.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE));
     }
 
@@ -1706,8 +1707,9 @@ public class BARControl
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Settings.Server server = servers[widgetServerName.getSelectionIndex()];
-        widgetServerName.setText(server.name);
+        widgetServerName.setText((server.name != null) ? server.name : "");
         widgetServerPort.setSelection(server.port);
+        widgetPassword.setText(((server.password != null) && !server.password.isEmpty()) ? server.password : "");
       }
     });
     widgetPassword.addSelectionListener(new SelectionListener()

@@ -579,7 +579,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       label = Widgets.newLabel(composite,BARControl.tr("Password")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       text = BARWidgets.newPassword(composite,
-                                    BARControl.tr("BAR password."),
+                                    BARControl.tr("BAR server password."),
                                     serverPassword
                                    );
       Widgets.layout(text,row,1,TableLayoutData.WE);

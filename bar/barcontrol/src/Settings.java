@@ -376,11 +376,18 @@ public class Settings
     {
       Server server = null;
 
-      Object[] data = new Object[2];
-      if      (StringParser.parse(string,"%s:%d",data,StringUtils.QUOTE_CHARS))
+      Object[] data = new Object[3];
+      if      (StringParser.parse(string,"%s:%d:%'s",data,StringUtils.QUOTE_CHARS))
       {
-        String name = (String)data[0];
-        int    port = (Integer)data[1];
+        String name     = (String)data[0];
+        int    port     = (Integer)data[1];
+        String password = (String)data[2];
+        server = new Server(name,port,password);
+      }
+      else if (StringParser.parse(string,"%s:%d",data,StringUtils.QUOTE_CHARS))
+      {
+        String name     = (String)data[0];
+        int    port     = (Integer)data[1];
         server = new Server(name,port);
       }
       else
@@ -397,7 +404,14 @@ public class Settings
      */
     public String toString(Server server) throws Exception
     {
-      return server.name+":"+server.port;
+      if ((server.password != null) && !server.password.isEmpty())
+      {
+        return StringParser.format("%s:%d:%'s",server.name,server.port,server.password);
+      }
+      else
+      {
+        return StringParser.format("%s:%d",server.name,server.port);
+      }
     }
 
     /** compare servers
